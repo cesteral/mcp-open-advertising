@@ -468,7 +468,8 @@ export const duplicateLineItem: Dv360WriteFixture = {
   args: {
     entityType: "lineItem",
     ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
-    data: { entityStatus: "ENTITY_STATUS_PAUSED" },
+    // DV360 forces line-item copies to DRAFT (must start as DRAFT).
+    data: { entityStatus: "ENTITY_STATUS_DRAFT" },
     updateMask: "entityStatus",
   },
   preState: {
@@ -484,11 +485,11 @@ export const duplicateLineItem: Dv360WriteFixture = {
     platformEntityId: "li-REDACTED-NEW",
     displayName: "Source Line Item",
     accountId: advertiserId,
-    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    status: { canonical: "unknown", platformRaw: "ENTITY_STATUS_DRAFT" },
     budget: { daily: null, lifetime: null, segments: null },
     schedule: { startAt: null, endAt: null },
   },
-  description: "duplicate: line-item copy lands PAUSED (projected from source)",
+  description: "duplicate: line-item copy lands DRAFT (projected from source)",
 };
 
 export const allFixtures: readonly Dv360WriteFixture[] = [

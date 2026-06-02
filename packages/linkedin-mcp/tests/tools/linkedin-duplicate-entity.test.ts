@@ -60,10 +60,27 @@ describe("linkedin_duplicate_entity governance contract", () => {
       platformRaw: "DRAFT",
     });
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+    // The copy is renamed `Copy of {source}` by default — the dry-run predicts it.
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Source Campaign");
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "campaign",
     });
+  });
+
+  it("dry_run honors an explicit newName in the projected copy name", async () => {
+    svc.getEntity.mockResolvedValue({ name: "Source Campaign", status: "ACTIVE" });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        entityUrn: "urn:li:sponsoredCampaign:1",
+        newName: "Q2 Brand (Copy)",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Q2 Brand (Copy)");
   });
 
   it("execute normalizes the returned new entity into after (no before)", async () => {

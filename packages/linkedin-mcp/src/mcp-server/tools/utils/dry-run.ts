@@ -304,16 +304,18 @@ export interface LinkedInDuplicateDryRunArgs {
   entityType: string;
   /** URN of the SOURCE entity being duplicated. */
   entityUrn: string;
+  /** Custom name for the copy; defaults to `Copy of {source name}`. */
+  newName?: string;
 }
 
 /**
  * Symbolic dry-run for `linkedin_duplicate_entity`. The copy does not exist yet
  * (no `before`). LinkedIn has no native copy API — the tool re-creates the
- * entity in DRAFT regardless of source status — so the expected post-state is
- * the SOURCE re-projected as the copy: read the source, overlay `status:
- * "DRAFT"`, and emit it with an empty `platformEntityId` (the new URN is
- * assigned on execute). Out-of-scope kinds are token-gated but not
- * snapshot-governed.
+ * entity in DRAFT and renames it (`newName`, or `Copy of {source name}`) — so
+ * the expected post-state is the SOURCE re-projected as the copy: read the
+ * source, overlay `status: "DRAFT"` plus the copy's name, and emit it with an
+ * empty `platformEntityId` (the new URN is assigned on execute). Out-of-scope
+ * kinds are token-gated but not snapshot-governed.
  */
 export async function runLinkedInDuplicateDryRun(
   args: LinkedInDuplicateDryRunArgs,
@@ -330,7 +332,11 @@ export async function runLinkedInDuplicateDryRun(
       | Record<string, unknown>
       | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildLinkedInSnapshot(args.entityType, "", source, { status: "DRAFT" });
+      // The tool renames the copy before creating it (mirror that here).
+      const sourceName = typeof source.name === "string" ? source.name : undefined;
+      const copyName = args.newName ?? (sourceName != null ? `Copy of ${sourceName}` : undefined);
+      const overlay = { status: "DRAFT", ...(copyName != null ? { name: copyName } : {}) };
+      const snapshot = buildLinkedInSnapshot(args.entityType, "", source, overlay);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

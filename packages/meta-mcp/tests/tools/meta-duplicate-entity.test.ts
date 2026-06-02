@@ -78,6 +78,23 @@ describe("meta_duplicate_entity governance contract", () => {
     expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
   });
 
+  it("dry_run applies renameOptions (prefix/suffix) to the projected copy name", async () => {
+    svc.getEntity.mockResolvedValue({ name: "Summer Sale", status: "ACTIVE", account_id: "act-1" });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        entityId: "camp-SRC-1",
+        renameOptions: { prefix: "Copy of ", suffix: " (v2)" },
+        dry_run: true,
+      } as any,
+      ctx(),
+      sdk()
+    );
+    // execute sends rename_options to /copies → the copy is renamed; the
+    // dry-run must predict the same display name.
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Summer Sale (v2)");
+  });
+
   it("execute re-reads the created copy by its new ID into the after snapshot (no before)", async () => {
     // First getEntity call is the copy re-read (capture-snapshot).
     svc.getEntity.mockResolvedValue({

@@ -46,7 +46,7 @@ describe("dv360_duplicate_entity governance contract", () => {
       {
         entityType: "insertionOrder",
         advertiserId: "adv-1",
-        entityId: "io-SRC-1",
+        insertionOrderId: "io-SRC-1",
         dry_run: true,
       } as any,
       ctx,
@@ -68,9 +68,43 @@ describe("dv360_duplicate_entity governance contract", () => {
     });
   });
 
+  it("dry_run projects a DRAFT copy for line items (DV360 forces DRAFT)", async () => {
+    svc.getEntity.mockResolvedValue({
+      lineItemId: "li-SRC-1",
+      displayName: "Source LI",
+      entityStatus: "ENTITY_STATUS_ACTIVE",
+    });
+
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "lineItem",
+        advertiserId: "adv-1",
+        lineItemId: "li-SRC-1",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+
+    expect(svc.getEntity).toHaveBeenCalledWith(
+      "lineItem",
+      { advertiserId: "adv-1", lineItemId: "li-SRC-1" },
+      ctx
+    );
+    // ENTITY_STATUS_DRAFT canonicalizes to "unknown".
+    expect(result.dryRun?.expectedPostState?.status).toEqual({
+      canonical: "unknown",
+      platformRaw: "ENTITY_STATUS_DRAFT",
+    });
+    expect(result.dispatchedCapability).toEqual({
+      operation: "duplicate",
+      canonicalEntityKind: "line_item",
+    });
+  });
+
   it("execute re-reads the created copy by its new ID into after (no before)", async () => {
     const result = await duplicateEntityLogic(
-      { entityType: "insertionOrder", advertiserId: "adv-1", entityId: "io-SRC-1" } as any,
+      { entityType: "insertionOrder", advertiserId: "adv-1", insertionOrderId: "io-SRC-1" } as any,
       ctx,
       sdk
     );

@@ -235,7 +235,7 @@ const extraGovernedSurfaces = [
     readTool: "pinterest_get_entity",
     contractToolSlug: "duplicate_entity",
     readContractToolSlug: "get_entity",
-    pairs: { duplicate: ["campaign", "ad_group", "ad"] },
+    pairs: { duplicate: ["campaign"] },
   },
   {
     packageDir: "tiktok-mcp",

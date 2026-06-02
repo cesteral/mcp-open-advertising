@@ -310,6 +310,8 @@ export interface MetaDuplicateDryRunArgs {
   entityId: string;
   /** Status the copy lands in. Default (undefined) → PAUSED. */
   statusOption?: "ACTIVE" | "PAUSED" | "INHERITED";
+  /** Naming applied to the copy, mirroring `/copies` `rename_options`. */
+  renameOptions?: { prefix?: string; suffix?: string };
 }
 
 /**
@@ -339,13 +341,21 @@ export async function runMetaDuplicateDryRun(
     if (source && typeof source === "object") {
       // The copy lands PAUSED by default; ACTIVE if requested; INHERITED keeps
       // the source status (no overlay).
-      const landing =
+      const statusOverlay =
         args.statusOption === "ACTIVE"
           ? { status: "ACTIVE" }
           : args.statusOption === "INHERITED"
             ? {}
             : { status: "PAUSED" };
-      const snapshot = buildMetaSnapshot(entityType, "", source, landing);
+      // `/copies` `rename_options` wraps the source name with prefix/suffix; the
+      // dry-run must predict the copy's display name when the caller renames it.
+      const sourceName = typeof source.name === "string" ? source.name : undefined;
+      const renamed =
+        sourceName != null && (args.renameOptions?.prefix || args.renameOptions?.suffix)
+          ? `${args.renameOptions.prefix ?? ""}${sourceName}${args.renameOptions.suffix ?? ""}`
+          : undefined;
+      const overlay = { ...statusOverlay, ...(renamed != null ? { name: renamed } : {}) };
+      const snapshot = buildMetaSnapshot(entityType, "", source, overlay);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

@@ -362,68 +362,6 @@ export const duplicateCampaign: PinterestWriteFixture = {
   description: "duplicate: campaign copy lands PAUSED (projected from source)",
 };
 
-export const duplicateAdGroup: PinterestWriteFixture = {
-  contractToolSlug: "duplicate_entity",
-  operation: "duplicate",
-  entityKind: "adGroup",
-  args: {
-    entityType: "adGroup",
-    adAccountId,
-    entityId: "",
-    data: { status: "PAUSED" },
-  },
-  preState: {
-    id: "adgroup-REDACTED-9",
-    name: "Source Ad Group",
-    status: "ACTIVE",
-    ad_account_id: adAccountId,
-    budget_in_micro_currency: 50_000_000,
-    budget_type: "DAILY",
-  },
-  expectedPostState: {
-    schemaVersion: 1,
-    platform: "pinterest",
-    entityKind: "ad_group",
-    platformEntityId: "",
-    displayName: "Source Ad Group",
-    accountId: adAccountId,
-    status: { canonical: "paused", platformRaw: "PAUSED" },
-    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
-    schedule: { startAt: null, endAt: null },
-  },
-  description: "duplicate: adGroup copy lands PAUSED, budget preserved (projected from source)",
-};
-
-export const duplicateAd: PinterestWriteFixture = {
-  contractToolSlug: "duplicate_entity",
-  operation: "duplicate",
-  entityKind: "ad",
-  args: {
-    entityType: "ad",
-    adAccountId,
-    entityId: "",
-    data: { status: "PAUSED" },
-  },
-  preState: {
-    id: "ad-REDACTED-9",
-    name: "Source Ad",
-    status: "ACTIVE",
-    ad_account_id: adAccountId,
-  },
-  expectedPostState: {
-    schemaVersion: 1,
-    platform: "pinterest",
-    entityKind: "ad",
-    platformEntityId: "",
-    displayName: "Source Ad",
-    accountId: adAccountId,
-    status: { canonical: "paused", platformRaw: "PAUSED" },
-    budget: { daily: null, lifetime: null },
-    schedule: { startAt: null, endAt: null },
-  },
-  description: "duplicate: ad copy lands PAUSED (projected from source)",
-};
-
 export const allFixtures: readonly PinterestWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -434,6 +372,4 @@ export const allFixtures: readonly PinterestWriteFixture[] = [
   resumeAdGroup,
   resumeAd,
   duplicateCampaign,
-  duplicateAdGroup,
-  duplicateAd,
 ];

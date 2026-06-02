@@ -60,7 +60,7 @@ export const DuplicateEntityOutputSchema = z
       "Present only when the request was made with `dry_run: true`. No copy was created."
     ),
     after: NormalizedEntitySnapshotSchema.optional().describe(
-      "Post-duplicate canonical snapshot of the created copy (in-scope kinds: campaign, ad_group, ad). Duplicate has no `before`."
+      "Post-duplicate canonical snapshot of the created copy (in-scope kind: campaign — the only Pinterest kind that supports duplication). Duplicate has no `before`."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to. Present on every response."
@@ -165,7 +165,9 @@ export const duplicateEntityTool = {
       contractPlatformSlug: "pinterest",
       contractToolSlug: "duplicate_entity",
       operation: ["duplicate"],
-      entityKinds: ["campaign", "ad_group", "ad"],
+      // Only `campaign` supports duplication on Pinterest (PinterestService
+      // rejects adGroup/ad); the tool's input enum already restricts to it.
+      entityKinds: ["campaign"],
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "pinterest_get_entity",

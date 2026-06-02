@@ -286,11 +286,12 @@ export interface Dv360DuplicateDryRunArgs {
 
 /**
  * Symbolic dry-run for `dv360_duplicate_entity`. The copy does not exist yet
- * (no `before`). DV360's duplicate forces the copy to `ENTITY_STATUS_PAUSED`
- * (never starts spending without re-activation), so the expected post-state is
- * the SOURCE re-projected as the copy: read the source, overlay the paused
- * status, and emit it with an empty `platformEntityId` (the new ID is assigned
- * on execute — the parent IDs in `ids` only supply `accountId`).
+ * (no `before`). DV360's duplicate forces the copy to a non-running state —
+ * line-item copies to `ENTITY_STATUS_DRAFT`, insertion-order copies to
+ * `ENTITY_STATUS_PAUSED` — so the expected post-state is the SOURCE re-projected
+ * as the copy: read the source, overlay that landing status, and emit it with
+ * an empty `platformEntityId` (the new ID is assigned on execute — the parent
+ * IDs in `ids` only supply `accountId`).
  */
 export async function runDv360DuplicateDryRun(
   args: Dv360DuplicateDryRunArgs,
@@ -308,7 +309,11 @@ export async function runDv360DuplicateDryRun(
       any
     >;
     if (source && typeof source === "object") {
-      const applied = { ...source, entityStatus: "ENTITY_STATUS_PAUSED" };
+      // DV360 forces line-item copies to DRAFT and insertion-order copies to
+      // PAUSED (line items must start as DRAFT) — mirror that per entity type.
+      const landingStatus =
+        args.entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
+      const applied = { ...source, entityStatus: landingStatus };
       const snapshot = buildDv360Snapshot(args.entityType, args.ids, source, applied);
       if (snapshot) {
         // The copy has no entity ID yet pre-duplicate; the parent IDs would

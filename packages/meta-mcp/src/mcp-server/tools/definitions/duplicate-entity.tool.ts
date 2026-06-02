@@ -99,7 +99,12 @@ export async function duplicateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runMetaDuplicateDryRun(
-      { entityType: input.entityType, entityId: input.entityId, statusOption: input.statusOption },
+      {
+        entityType: input.entityType,
+        entityId: input.entityId,
+        statusOption: input.statusOption,
+        renameOptions: input.renameOptions,
+      },
       metaService,
       context
     );

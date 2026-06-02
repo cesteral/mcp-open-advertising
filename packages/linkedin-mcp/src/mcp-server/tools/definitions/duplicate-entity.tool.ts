@@ -89,7 +89,7 @@ export async function duplicateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runLinkedInDuplicateDryRun(
-      { entityType: input.entityType, entityUrn: input.entityUrn },
+      { entityType: input.entityType, entityUrn: input.entityUrn, newName: input.newName },
       linkedInService,
       context
     );

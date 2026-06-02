@@ -203,9 +203,9 @@ export const createCampaign: LinkedInWriteFixture = {
 
 /**
  * duplicate fixture. LinkedIn has no native copy API — the tool re-creates the
- * entity in DRAFT regardless of source status. The copy has no URN yet, so
- * `entityUrn` is empty and `data` is the DRAFT landing overlay the dry-run
- * applies to the SOURCE (`preState`).
+ * entity in DRAFT and renames it (`Copy of {source name}` by default). The copy
+ * has no URN yet, so `entityUrn` is empty and `data` is the DRAFT + renamed
+ * overlay the dry-run applies to the SOURCE (`preState`).
  */
 export const duplicateCampaign: LinkedInWriteFixture = {
   contractToolSlug: "duplicate_entity",
@@ -214,7 +214,7 @@ export const duplicateCampaign: LinkedInWriteFixture = {
   args: {
     entityType: "campaign",
     entityUrn: "",
-    data: { status: "DRAFT" },
+    data: { status: "DRAFT", name: "Copy of Source Campaign" },
   },
   preState: {
     name: "Source Campaign",
@@ -226,13 +226,13 @@ export const duplicateCampaign: LinkedInWriteFixture = {
     platform: "linkedin_ads",
     entityKind: "campaign",
     platformEntityId: "",
-    displayName: "Source Campaign",
+    displayName: "Copy of Source Campaign",
     accountId: accountUrn,
     status: { canonical: "unknown", platformRaw: "DRAFT" },
     budget: { daily: null, lifetime: null },
     schedule: { startAt: null, endAt: null },
   },
-  description: "duplicate: campaign copy lands DRAFT (projected from source)",
+  description: "duplicate: campaign copy lands DRAFT, renamed 'Copy of …' (projected from source)",
 };
 
 export const allFixtures: readonly LinkedInWriteFixture[] = [
