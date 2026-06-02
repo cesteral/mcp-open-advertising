@@ -185,6 +185,8 @@ export const updateEntityTool = {
     destructiveHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "pinterest",
       contractPlatformSlug: "pinterest",
       contractToolSlug: "update_entity",

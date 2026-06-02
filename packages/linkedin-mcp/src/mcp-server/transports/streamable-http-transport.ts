@@ -41,6 +41,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-LinkedIn-Client-Id",
       "X-LinkedIn-Client-Secret",
       "X-LinkedIn-Refresh-Token",

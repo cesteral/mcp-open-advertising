@@ -40,6 +40,97 @@ function sortKeysDeep(value: unknown): unknown {
 }
 
 /**
+ * Canonical JSON string: deep key-sorted, JSON-compatible ONLY.
+ *
+ * Throws on BigInt / Date / NaN / Infinity / function / symbol / class instance
+ * and on root `undefined`, rather than silently coercing — Zod output may not be
+ * JSON, and a silent coercion would diverge from `cesteral-intelligence`'s
+ * `stableStringify` (lib/features/governance/utils.ts). For valid wire JSON the
+ * byte output is identical to that implementation (both deep-sort keys and use
+ * JSON.stringify for keys/primitives with no whitespace).
+ *
+ * Undefined object properties are DROPPED (JSON semantics); undefined array
+ * elements are REJECTED (JSON.stringify would coerce them to null).
+ */
+export function stableStringify(value: unknown): string {
+  if (typeof value === "undefined") {
+    throw new Error("stableStringify: undefined is not valid JSON at the root");
+  }
+  return JSON.stringify(sortKeysDeep(assertJsonCompatible(value)));
+}
+
+function assertJsonCompatible(value: unknown): unknown {
+  const t = typeof value;
+  if (t === "bigint") throw new Error("stableStringify: BigInt is not JSON-serializable");
+  if (t === "function") throw new Error("stableStringify: function is not JSON-serializable");
+  if (t === "symbol") throw new Error("stableStringify: symbol is not JSON-serializable");
+  if (t === "number" && !Number.isFinite(value as number))
+    throw new Error("stableStringify: NaN/Infinity are not valid JSON");
+  if (value !== null && t === "object") {
+    if (value instanceof Date) throw new Error("stableStringify: Date is not JSON-serializable");
+    const proto = Object.getPrototypeOf(value);
+    if (!Array.isArray(value) && proto !== Object.prototype && proto !== null)
+      throw new Error("stableStringify: class instance is not JSON-serializable");
+    if (Array.isArray(value)) {
+      value.forEach((el) => {
+        if (typeof el === "undefined")
+          throw new Error("stableStringify: undefined array element is not valid JSON");
+        assertJsonCompatible(el);
+      });
+    } else {
+      for (const v of Object.values(value as Record<string, unknown>)) {
+        if (typeof v === "undefined") continue; // JSON.stringify drops undefined object props
+        assertJsonCompatible(v);
+      }
+    }
+  }
+  return value;
+}
+
+/**
+ * Canonical "executable write args" that both connector and governance hash.
+ *
+ * Hashes the raw wire arguments MINUS:
+ *   - `__`-prefixed internal execution args (mirrors `cesteral-intelligence`
+ *     `stripInternalExecutionArgs`, lib/features/mcp/tools/external-governance.ts), and
+ *   - the per-contract control fields declared in `executableArgsExclude` (e.g. `dry_run`).
+ *
+ * Operates on the RAW wire shape, NOT the Zod-parsed output, so Zod
+ * defaults/coercions/transforms/unknown-key stripping cannot diverge the hash
+ * across repos. Only top-level keys are removed; nested values are preserved
+ * verbatim and key-sorted at hash time.
+ *
+ * NOTE: governance currently strips `__*` only (not `executableArgsExclude`),
+ * so actionHash parity holds today only for execute calls whose wire args carry
+ * no excluded control field. Full parity requires governance to adopt this
+ * function. See the connector design doc §12.
+ */
+export function canonicalizeExecutableArgs(opts: { rawArgs: unknown; exclude: string[] }): unknown {
+  const { rawArgs, exclude } = opts;
+  if (rawArgs === null || typeof rawArgs !== "object" || Array.isArray(rawArgs)) return rawArgs;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawArgs as Record<string, unknown>)) {
+    if (k.startsWith("__")) continue;
+    if (exclude.includes(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * SHA-256 over `stableStringify(value)` — the canonical hash of a write
+ * action's executable arguments. Returns lowercase hex, no prefix.
+ *
+ * Cross-repo source of truth: `cesteral-intelligence` mints decision-token
+ * `actionHash` claims with the equivalent computation
+ * (lib/features/governance/decisions/mutations.ts). The connector recomputes it
+ * from the received args to bind the token to the actual write.
+ */
+export function hashActionInput(value: unknown): string {
+  return createHash("sha256").update(stableStringify(value), "utf8").digest("hex");
+}
+
+/**
  * SHA-256 over the canonical governance projection of an MCP tool.
  *
  * Stable across key reorderings, sensitive to any change in

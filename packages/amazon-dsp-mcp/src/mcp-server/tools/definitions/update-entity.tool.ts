@@ -177,6 +177,8 @@ export const updateEntityTool = {
     destructiveHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "amazon_dsp",
       contractPlatformSlug: "amazon_dsp",
       contractToolSlug: "update_entity",

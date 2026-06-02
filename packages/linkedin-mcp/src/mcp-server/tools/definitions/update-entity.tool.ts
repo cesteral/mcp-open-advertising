@@ -175,6 +175,8 @@ export const updateEntityTool = {
     destructiveHint: true,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "linkedin_ads",
       contractPlatformSlug: "linkedin_ads",
       contractToolSlug: "update_entity",

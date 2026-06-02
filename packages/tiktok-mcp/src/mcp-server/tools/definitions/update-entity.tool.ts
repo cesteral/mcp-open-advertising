@@ -166,6 +166,8 @@ export const updateEntityTool = {
     destructiveHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "tiktok",
       contractPlatformSlug: "tiktok",
       contractToolSlug: "update_entity",

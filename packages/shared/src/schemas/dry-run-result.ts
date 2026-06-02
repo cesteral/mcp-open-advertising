@@ -83,9 +83,33 @@ export const DryRunResultSchema = z.object({
  * Zod mirror of the {@link DispatchedCapability} interface in
  * `../types/dry-run-result.ts`. Governed write tools place this on every
  * structured-content response; the governance layer parses it with the same
- * shape (`{ operation, canonicalEntityKind }`, both non-empty strings).
+ * shape: `operation` is a non-empty string, and `canonicalEntityKind` is a
+ * non-empty string for entity writes or `null` for effect writes.
  */
 export const DispatchedCapabilitySchema = z.object({
   operation: z.string().min(1),
-  canonicalEntityKind: z.string().min(1),
+  // Nullable: effect-class writes (uploads, schedules, conversion uploads)
+  // have no canonical entity kind.
+  canonicalEntityKind: z.string().min(1).nullable(),
+});
+
+/**
+ * Zod mirror of the {@link EffectResult} interface. `summary` is scalar-only
+ * (no nested objects/arrays) so it stays a flat, auditable identity record.
+ */
+export const EffectResultSchema = z.object({
+  effectKind: z.string().min(1),
+  summary: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+});
+
+/**
+ * Zod mirror of the {@link EffectDryRunResult} interface — the effect-class
+ * parallel to {@link DryRunResultSchema}.
+ */
+export const EffectDryRunResultSchema = z.object({
+  wouldSucceed: z.boolean(),
+  validationErrors: z.array(DryRunValidationErrorSchema),
+  validationSource: z.enum(["symbolic", "none"]),
+  expectedEffectSource: z.enum(["symbolic", "none"]),
+  expectedEffect: EffectResultSchema.optional(),
 });

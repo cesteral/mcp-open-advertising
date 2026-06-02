@@ -184,6 +184,8 @@ export const updateEntityTool = {
     idempotentHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "google_ads",
       contractPlatformSlug: "google_ads",
       contractToolSlug: "update_entity",

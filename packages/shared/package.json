@@ -51,6 +51,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@cesteral/contract-hash": "workspace:*",
     "@google-cloud/opentelemetry-cloud-monitoring-exporter": "^0.20.0",
     "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.0.0",
     "@hono/mcp": "^0.2.3",

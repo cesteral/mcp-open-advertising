@@ -6,8 +6,17 @@ import { z } from "zod";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
 } from "../../src/schemas/dry-run-result.js";
-import type { DryRunResult, NormalizedEntitySnapshot } from "../../src/index.js";
+import type {
+  DryRunResult,
+  NormalizedEntitySnapshot,
+  DispatchedCapability,
+  EffectResult,
+  EffectDryRunResult,
+} from "../../src/index.js";
 
 /**
  * The Zod schema and the TS interface for `DryRunResult` are two
@@ -67,5 +76,70 @@ describe("DryRunResultSchema ↔ DryRunResult interface parity", () => {
       expectedStateSource: "none",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("DispatchedCapability nullable canonicalEntityKind", () => {
+  it("accepts a non-null kind for entity writes", () => {
+    const v: DispatchedCapability = { operation: "update", canonicalEntityKind: "campaign" };
+    expect(DispatchedCapabilitySchema.parse(v).canonicalEntityKind).toBe("campaign");
+  });
+  it("accepts null for effect writes", () => {
+    const v: DispatchedCapability = { operation: "upload", canonicalEntityKind: null };
+    expect(DispatchedCapabilitySchema.parse(v).canonicalEntityKind).toBeNull();
+  });
+  it("still rejects empty-string operation", () => {
+    expect(
+      DispatchedCapabilitySchema.safeParse({ operation: "", canonicalEntityKind: null }).success
+    ).toBe(false);
+  });
+  it("schema ↔ interface parity", () => {
+    type Inferred = z.infer<typeof DispatchedCapabilitySchema>;
+    expectTypeOf<Inferred>().toMatchTypeOf<DispatchedCapability>();
+    expectTypeOf<DispatchedCapability>().toMatchTypeOf<Inferred>();
+  });
+});
+
+describe("EffectResult / EffectDryRunResult schemas", () => {
+  it("validates an effect result with a scalar summary", () => {
+    const v: EffectResult = {
+      effectKind: "asset_created",
+      summary: { assetId: "a1", bytes: 1024, accepted: true, note: null },
+    };
+    expect(EffectResultSchema.parse(v)).toEqual(v);
+  });
+  it("rejects a non-scalar summary value", () => {
+    expect(
+      EffectResultSchema.safeParse({ effectKind: "x", summary: { nested: { a: 1 } } }).success
+    ).toBe(false);
+  });
+  it("validates a symbolic effect dry-run with an expected effect", () => {
+    const v: EffectDryRunResult = {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect: { effectKind: "schedule_created", summary: { scheduleId: "s1" } },
+    };
+    expect(EffectDryRunResultSchema.parse(v)).toEqual(v);
+  });
+  it("allows omitting expectedEffect when source is none", () => {
+    const v: EffectDryRunResult = {
+      wouldSucceed: false,
+      validationErrors: [{ code: "bad", message: "nope" }],
+      validationSource: "none",
+      expectedEffectSource: "none",
+    };
+    expect(EffectDryRunResultSchema.parse(v)).toEqual(v);
+  });
+  it("EffectResult schema ↔ interface parity", () => {
+    type Inferred = z.infer<typeof EffectResultSchema>;
+    expectTypeOf<Inferred>().toMatchTypeOf<EffectResult>();
+    expectTypeOf<EffectResult>().toMatchTypeOf<Inferred>();
+  });
+  it("EffectDryRunResult schema ↔ interface parity", () => {
+    type Inferred = z.infer<typeof EffectDryRunResultSchema>;
+    expectTypeOf<Inferred>().toMatchTypeOf<EffectDryRunResult>();
+    expectTypeOf<EffectDryRunResult>().toMatchTypeOf<Inferred>();
   });
 });

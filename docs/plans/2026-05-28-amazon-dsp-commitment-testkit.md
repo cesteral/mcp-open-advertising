@@ -15,6 +15,7 @@
 You are on `main` at commit `0847b601`. The design doc is already committed. All work happens in `packages/amazon-dsp-mcp/`. Use a worktree if you want isolation (`@superpowers:using-git-worktrees`) — otherwise work directly on `main` and push the tag at the end.
 
 Read these files end-to-end before starting:
+
 - `packages/amazon-dsp-mcp/src/testkit/types.ts`
 - `packages/amazon-dsp-mcp/src/testkit/index.ts`
 - `packages/amazon-dsp-mcp/src/testkit/fixtures/index.ts`
@@ -28,6 +29,7 @@ Read these files end-to-end before starting:
 Write the failing assertion first — this is the contract every subsequent task is making green.
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/tests/testkit/conformance.test.ts:24-32`
 
 **Step 1: Add the new pair assertion**
@@ -61,6 +63,7 @@ git commit -m "test(amazon-dsp): require update::commitment in testkit conforman
 ### Task 2: Widen testkit union types
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/testkit/types.ts:21,27`
 
 **Step 1: Widen `AmazonDspOperation`**
@@ -136,6 +139,7 @@ git commit -m "feat(amazon-dsp): widen testkit unions for commitment surface"
 ### Task 3: Add `applyCommitmentPatch` wrapper
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/mcp-server/tools/utils/commitment-dry-run.ts` (append after `buildCommitmentSnapshot`, around line 154)
 
 **Step 1: Add the wrapper**
@@ -178,6 +182,7 @@ git commit -m "feat(amazon-dsp): add applyCommitmentPatch symbolic-apply entry"
 ### Task 4: Dispatch on `entityKind` in `assertContract` and re-export the wrapper
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/testkit/index.ts`
 
 **Step 1: Add the import + re-export**
@@ -199,31 +204,31 @@ export { applyCommitmentPatch } from "../mcp-server/tools/utils/commitment-dry-r
 Replace the symbolic-apply call inside `assertContract` (currently lines 65–70):
 
 ```ts
-  const got = applyAmazonDspPatch(
-    fixture.args.entityType,
-    fixture.args.entityId,
-    fixture.preState,
-    fixture.args.data
-  );
+const got = applyAmazonDspPatch(
+  fixture.args.entityType,
+  fixture.args.entityId,
+  fixture.preState,
+  fixture.args.data
+);
 ```
 
 with:
 
 ```ts
-  const got =
-    fixture.entityKind === "commitment"
-      ? applyCommitmentPatch(
-          fixture.args.entityId,
-          fixture.args.profileId,
-          fixture.preState,
-          fixture.args.data
-        )
-      : applyAmazonDspPatch(
-          fixture.args.entityType,
-          fixture.args.entityId,
-          fixture.preState,
-          fixture.args.data
-        );
+const got =
+  fixture.entityKind === "commitment"
+    ? applyCommitmentPatch(
+        fixture.args.entityId,
+        fixture.args.profileId,
+        fixture.preState,
+        fixture.args.data
+      )
+    : applyAmazonDspPatch(
+        fixture.args.entityType,
+        fixture.args.entityId,
+        fixture.preState,
+        fixture.args.data
+      );
 ```
 
 **Step 3: Typecheck + run conformance**
@@ -248,6 +253,7 @@ git commit -m "feat(amazon-dsp): dispatch testkit assertContract by entityKind"
 The existing `src/testkit/fixtures/index.ts` mixes the six entity fixtures and the `allFixtures` export. Split so commitment fixtures live in their own file.
 
 **Files:**
+
 - Rename: `packages/amazon-dsp-mcp/src/testkit/fixtures/index.ts` → `packages/amazon-dsp-mcp/src/testkit/fixtures/entity.ts`
 - Create: `packages/amazon-dsp-mcp/src/testkit/fixtures/index.ts` (new barrel)
 
@@ -331,6 +337,7 @@ git commit -m "refactor(amazon-dsp): split testkit fixtures into per-surface mod
 ### Task 6: Add commitment fixture 1 — `committedSpend` change (first GREEN)
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/src/testkit/fixtures/commitment.ts`
 - Modify: `packages/amazon-dsp-mcp/src/testkit/fixtures/index.ts`
 
@@ -452,6 +459,7 @@ git commit -m "test(amazon-dsp): add commitment committedSpend fixture (GREEN)"
 These two pin the snapshot-invariance contract: non-snapshot fields round-trip without dirtying `budget` or `schedule`.
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/testkit/fixtures/commitment.ts`
 
 **Step 1: Append fixtures 2 + 3**
@@ -530,7 +538,8 @@ export const updateSpendCalculationMode: AmazonDspWriteFixture = {
     },
     schedule: { startAt: "2026-02-01T00:00:00Z", endAt: "2026-08-31T23:59:59Z" },
   },
-  description: "update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant)",
+  description:
+    "update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant)",
 };
 ```
 
@@ -561,6 +570,7 @@ git commit -m "test(amazon-dsp): add commitment fulfillmentLevel + spendCalculat
 ### Task 8: Add commitment fixture 4 — `endDateTime` schedule extend
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/testkit/fixtures/commitment.ts`
 
 **Step 1: Append fixture 4**
@@ -672,6 +682,7 @@ Expected: PASS across all packages. Other packages should be untouched.
 Run: `cd packages/amazon-dsp-mcp && pnpm pack && tar -tzf cesteral-amazon-dsp-mcp-*.tgz | grep testkit && rm cesteral-amazon-dsp-mcp-*.tgz && cd ../..`
 
 Expected output includes:
+
 ```
 package/dist/testkit/fixtures/commitment.js
 package/dist/testkit/fixtures/commitment.d.ts
@@ -700,6 +711,7 @@ If the hash changed, STOP — investigate before tagging. The contract-hash is w
 ### Task 10: Bump version and tag
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/package.json:4`
 
 **Step 1: Bump the version**
@@ -751,11 +763,13 @@ Run: `npm view @cesteral/amazon-dsp-mcp@1.2.0 dist.tarball`
 Expected: a tarball URL. If `404`, the publish hasn't completed yet or the workflow failed.
 
 Optionally download and re-inspect the tarball:
+
 ```bash
 npm pack @cesteral/amazon-dsp-mcp@1.2.0
 tar -tzf cesteral-amazon-dsp-mcp-1.2.0.tgz | grep "testkit/fixtures/commitment"
 rm cesteral-amazon-dsp-mcp-1.2.0.tgz
 ```
+
 Expected: `package/dist/testkit/fixtures/commitment.{js,d.ts}` present.
 
 ---

@@ -255,6 +255,8 @@ export const updateEntityTool = {
     destructiveHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "msads",
       contractPlatformSlug: "msads",
       contractToolSlug: "update_entity",

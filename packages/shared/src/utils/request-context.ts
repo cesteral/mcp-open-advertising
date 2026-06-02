@@ -20,6 +20,13 @@ export interface RequestContext {
   timestamp: string;
   service?: string;
   operation?: string;
+  /**
+   * Raw `X-Cesteral-Decision-Token` header value, when present on the incoming
+   * request. The HTTP transport sets this; the tool-handler factory reads it to
+   * verify governed write calls. Typed explicitly (not left to the index
+   * signature) so consumers get `string | undefined`, not `unknown`.
+   */
+  decisionToken?: string;
   [key: string]: unknown;
 }
 

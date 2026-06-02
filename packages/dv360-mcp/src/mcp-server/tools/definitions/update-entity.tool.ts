@@ -299,6 +299,8 @@ export const updateEntityTool = {
     idempotentHint: true,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "dv360",
       contractPlatformSlug: "dv360",
       contractToolSlug: "update_entity",

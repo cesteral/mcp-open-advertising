@@ -34,6 +34,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-Google-Auth-Type",
       "X-Google-Credentials",
       "X-Google-Client-Id",

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, expectTypeOf } from "vitest";
 import {
   createRequestContext,
   runWithRequestContext,
@@ -6,6 +6,7 @@ import {
   getRequestId,
   extractRequestId,
 } from "../src/utils/request-context.js";
+import type { RequestContext } from "../src/utils/request-context.js";
 
 describe("createRequestContext", () => {
   it("creates context with requestId and service", () => {
@@ -20,6 +21,17 @@ describe("createRequestContext", () => {
   it("includes userId when provided", () => {
     const ctx = createRequestContext("test-service", "user-123");
     expect(ctx.userId).toBe("user-123");
+  });
+
+  it("carries an optional typed decisionToken across the ALS boundary", async () => {
+    const ctx = createRequestContext("test-service");
+    ctx.decisionToken = "eyJhbGciOiJIUzI1NiJ9.payload.sig";
+    const seen = await runWithRequestContext(ctx, async () => getRequestContext()?.decisionToken);
+    expect(seen).toBe("eyJhbGciOiJIUzI1NiJ9.payload.sig");
+  });
+
+  it("types decisionToken as an explicit optional string (not the index signature)", () => {
+    expectTypeOf<RequestContext["decisionToken"]>().toEqualTypeOf<string | undefined>();
   });
 });
 

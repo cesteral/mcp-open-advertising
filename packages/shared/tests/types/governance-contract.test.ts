@@ -12,45 +12,124 @@ import type {
   DryRunResult,
   ToolDefinition,
 } from "../../src/index.js";
+import { isEntityWrite, isEffectWrite } from "../../src/index.js";
 import { NormalizedEntitySnapshotSchema } from "../../src/schemas/dry-run-result.js";
 
 describe("CesteralToolAnnotations", () => {
-  it("accepts a minimal valid write value with only required fields", () => {
+  it("accepts a minimal valid entity write value with only required fields", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
+      writeClass: "entity",
       platform: "meta_ads",
       contractPlatformSlug: "meta",
       contractToolSlug: "update_entity",
       operation: ["pause"],
       entityKinds: ["campaign"],
       entityIdArgs: ["entityId"],
+      executableArgsExclude: ["dry_run"],
       readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
       schemaVersion: 1,
       contractId: "meta.update_entity.v1",
+      supportsBeforeAfterSnapshot: true,
       requiresValidation: true,
       requiresSimulation: true,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
 
-  it("accepts a multi-operation write tool that dispatches by input args", () => {
+  it("accepts a multi-operation entity write tool that dispatches by input args", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
+      writeClass: "entity",
       platform: "meta_ads",
       contractPlatformSlug: "meta",
       contractToolSlug: "update_entity",
       operation: ["update_budget", "pause", "resume", "update_status", "update"],
       entityKinds: ["campaign", "ad_set", "ad"],
       entityIdArgs: ["entityId"],
+      executableArgsExclude: ["dry_run"],
       readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
       schemaVersion: 1,
       contractId: "meta.update_entity.v1",
-      supportsDryRun: false,
-      supportsBeforeAfterSnapshot: false,
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
       requiresValidation: true,
       requiresSimulation: true,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
+  });
+
+  it("accepts an effect write tool with no readPartner and relaxed promises", () => {
+    const value: CesteralToolAnnotations = {
+      kind: "write",
+      writeClass: "effect",
+      platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "upload_image",
+      operation: ["upload"],
+      entityKinds: [],
+      entityIdArgs: [],
+      executableArgsExclude: ["dry_run"],
+      schemaVersion: 1,
+      contractId: "meta.upload_image.v1",
+      supportsDryRun: false,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: false,
+      requiresSimulation: false,
+    };
+    expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
+  });
+
+  it("discriminates writeClass via isEntityWrite / isEffectWrite guards", () => {
+    const entity: CesteralToolAnnotations = {
+      kind: "write",
+      writeClass: "entity",
+      platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "update_entity",
+      operation: ["pause"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["entityId"],
+      executableArgsExclude: ["dry_run"],
+      readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
+      schemaVersion: 1,
+      contractId: "meta.update_entity.v1",
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    };
+    const effect: CesteralToolAnnotations = {
+      kind: "write",
+      writeClass: "effect",
+      platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "upload_image",
+      operation: ["upload"],
+      entityKinds: [],
+      entityIdArgs: [],
+      executableArgsExclude: ["dry_run"],
+      schemaVersion: 1,
+      contractId: "meta.upload_image.v1",
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: false,
+      requiresSimulation: false,
+    };
+    const read: CesteralToolAnnotations = {
+      kind: "read",
+      platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "get_entity",
+      entityKinds: ["campaign"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "meta.get_entity.v1",
+    };
+    expect(isEntityWrite(entity)).toBe(true);
+    expect(isEffectWrite(entity)).toBe(false);
+    expect(isEffectWrite(effect)).toBe(true);
+    expect(isEntityWrite(effect)).toBe(false);
+    expect(isEntityWrite(read)).toBe(false);
+    expect(isEffectWrite(read)).toBe(false);
   });
 
   it("accepts a read tool with no operation or readPartner", () => {
@@ -69,7 +148,25 @@ describe("CesteralToolAnnotations", () => {
 
   it("constrains write operations to the canonical union", () => {
     expectTypeOf<CesteralWriteToolAnnotations["operation"][number]>().toEqualTypeOf<
-      "update_budget" | "pause" | "resume" | "update_status" | "create" | "update"
+      | "update_budget"
+      | "pause"
+      | "resume"
+      | "update_status"
+      | "update_schedule"
+      | "create"
+      | "update"
+      | "delete"
+      | "duplicate"
+      | "archive"
+      | "bulk_update_status"
+      | "adjust_bids"
+      | "upload"
+      | "create_schedule"
+      | "delete_schedule"
+      | "submit_report"
+      | "upload_conversions"
+      | "bulk_job"
+      | "manage"
     >();
   });
 
@@ -87,12 +184,14 @@ describe("CesteralToolAnnotations", () => {
   it("accepts insertion_order so DV360 InsertionOrder writes can be annotated without weakening the type", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
+      writeClass: "entity",
       platform: "dv360",
       contractPlatformSlug: "dv360",
       contractToolSlug: "update_entity",
       operation: ["update_budget", "pause", "resume", "update_status", "update"],
       entityKinds: ["insertion_order", "line_item", "campaign"],
       entityIdArgs: ["insertionOrderId", "lineItemId", "campaignId", "advertiserId"],
+      executableArgsExclude: ["dry_run"],
       readPartner: {
         toolName: "dv360_get_entity",
         argMap: {
@@ -104,6 +203,7 @@ describe("CesteralToolAnnotations", () => {
       },
       schemaVersion: 1,
       contractId: "dv360.update_entity.v1",
+      supportsBeforeAfterSnapshot: true,
       requiresValidation: true,
       requiresSimulation: true,
     };
@@ -113,18 +213,21 @@ describe("CesteralToolAnnotations", () => {
   it("accepts commitment so Amazon DSP commitment writes can be annotated and snapshotted", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
+      writeClass: "entity",
       platform: "amazon_dsp",
       contractPlatformSlug: "amazon_dsp",
       contractToolSlug: "update_commitment",
       operation: ["update"],
       entityKinds: ["commitment"],
       entityIdArgs: ["commitmentId"],
+      executableArgsExclude: ["dry_run"],
       readPartner: {
         toolName: "amazon_dsp_get_commitment",
         argMap: { commitmentId: "commitmentId" },
       },
       schemaVersion: 1,
       contractId: "amazon_dsp.update_commitment.v1",
+      supportsBeforeAfterSnapshot: true,
       requiresValidation: true,
       requiresSimulation: true,
     };
@@ -268,12 +371,14 @@ describe("ToolDefinition.cesteral", () => {
         idempotentHint: true,
         cesteral: {
           kind: "write",
+          writeClass: "entity",
           platform: "meta_ads",
           contractPlatformSlug: "meta",
           contractToolSlug: "update_entity",
           operation: ["pause"],
           entityKinds: ["campaign", "ad_set"],
           entityIdArgs: ["entityId"],
+          executableArgsExclude: ["dry_run"],
           readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
           schemaVersion: 1,
           contractId: "meta.update_entity.v1",

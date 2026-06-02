@@ -5,6 +5,7 @@
 export * from "./utils/index.js";
 export * from "./auth/index.js";
 export * from "./constants/index.js";
+export * from "./governance/index.js";
 export * from "./schemas/report-status.js";
 export * from "./schemas/report-schedule.js";
 export {
@@ -12,6 +13,8 @@ export {
   DryRunValidationErrorSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
 } from "./schemas/dry-run-result.js";
 export type {
   ToolDefinition,
@@ -22,8 +25,12 @@ export type {
 export type {
   CesteralToolAnnotations,
   CesteralWriteToolAnnotations,
+  CesteralEntityWriteToolAnnotations,
+  CesteralEffectWriteToolAnnotations,
   CesteralReadToolAnnotations,
+  CesteralWriteOperation,
 } from "./types/cesteral-annotations.js";
+export { isEntityWrite, isEffectWrite } from "./types/cesteral-annotations.js";
 export type {
   NormalizedEntitySnapshot,
   CanonicalEntityKind,
@@ -38,4 +45,6 @@ export type {
   DryRunResult,
   DryRunValidationError,
   DispatchedCapability,
+  EffectResult,
+  EffectDryRunResult,
 } from "./types/dry-run-result.js";

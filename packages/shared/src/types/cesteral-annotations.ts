@@ -66,25 +66,75 @@ interface CesteralToolAnnotationsBase {
 }
 
 /**
- * Governed write tool. A single tool may dispatch to several canonical
- * operations based on its input args (e.g. Meta `update_entity` covers
- * `update_budget`, `pause`, `resume`, `update_status`); declare the union
- * and let consumers decide the effective operation per-call from the args.
+ * Canonical write operations. Multi-operation dispatchers (e.g. an
+ * `update_entity` tool that switches on `data.status` vs `data.daily_budget`)
+ * declare the union and let consumers decide the effective operation per call.
+ * Entity-class ops describe canonical mutations; effect-class ops describe
+ * writes with no canonical entity snapshot (uploads, report schedules, etc.).
  */
-export interface CesteralWriteToolAnnotations extends CesteralToolAnnotationsBase {
+export type CesteralWriteOperation =
+  // entity-class
+  | "update_budget"
+  | "pause"
+  | "resume"
+  | "update_status"
+  | "update_schedule"
+  | "create"
+  | "update"
+  | "delete"
+  | "duplicate"
+  | "archive"
+  | "bulk_update_status"
+  | "adjust_bids"
+  // effect-class
+  | "upload"
+  | "create_schedule"
+  | "delete_schedule"
+  | "submit_report"
+  | "upload_conversions"
+  | "bulk_job"
+  | "manage";
+
+/** Fields shared by every governed write tool, regardless of `writeClass`. */
+interface CesteralWriteToolAnnotationsBase extends CesteralToolAnnotationsBase {
   kind: "write";
 
   /**
-   * Canonical operations this tool can perform. The catch-all `"update"` is
-   * appropriate for multi-operation dispatchers (e.g. an `update_entity` tool
-   * that switches behavior on `data.status` vs `data.daily_budget`).
+   * Discriminates the contract surface:
+   * - `"entity"` — mutates a canonical entity; carries a `readPartner` and
+   *   returns before/after `NormalizedEntitySnapshot`s.
+   * - `"effect"` — a write with no canonical entity snapshot (uploads, report
+   *   schedule CRUD, conversion uploads, bulk jobs); returns an `effect` object.
    */
-  operation: Array<"update_budget" | "pause" | "resume" | "update_status" | "create" | "update">;
+  writeClass: "entity" | "effect";
+
+  /** Canonical operations this tool can perform. */
+  operation: CesteralWriteOperation[];
 
   /**
-   * Read tool that returns the canonical pre/post snapshot for this entity.
-   * Required for write tools so the control plane can capture before/after
-   * state without maintaining an out-of-band pairing.
+   * Top-level input arg names excluded from the `actionHash` binding — control
+   * fields that are not part of the executable write identity (e.g. `dry_run`).
+   * `__`-prefixed internal execution args are always excluded implicitly. The
+   * decision-token verifier hashes the wire args minus this set.
+   */
+  executableArgsExclude: string[];
+
+  /** Declares the tool honors the `dry_run` input flag and returns a dry-run result. */
+  supportsDryRun?: boolean;
+}
+
+/**
+ * Governed entity write tool. Mutates a canonical entity, so it MUST declare a
+ * `readPartner` and promises validation + simulation (the governance admission
+ * layer rejects the tool otherwise).
+ */
+export interface CesteralEntityWriteToolAnnotations extends CesteralWriteToolAnnotationsBase {
+  writeClass: "entity";
+
+  /**
+   * Read tool that returns the canonical pre/post snapshot for this entity, so
+   * the control plane can capture before/after state without an out-of-band
+   * pairing.
    */
   readPartner: {
     toolName: string;
@@ -92,26 +142,60 @@ export interface CesteralWriteToolAnnotations extends CesteralToolAnnotationsBas
     argMap: Record<string, string>;
   };
 
-  /** Declares the tool honors the `dry_run` input flag and returns a `DryRunResult`. */
-  supportsDryRun?: boolean;
-
-  /** Declares the tool returns canonical `before` / `after` snapshots in its output. */
-  supportsBeforeAfterSnapshot?: boolean;
+  /** Entity writes always return canonical `before` / `after` snapshots. */
+  supportsBeforeAfterSnapshot: true;
 
   /**
    * Contract promise: every governed call validates the proposed mutation
    * (native validator or symbolic) and never returns `validationSource:
-   * "none"`. Always `true` for a governed write tool — the governance
-   * admission layer rejects the tool otherwise.
+   * "none"`. Always `true` for an entity write — admission rejects otherwise.
    */
   requiresValidation: true;
 
   /**
    * Contract promise: every governed call produces an expected post-state
    * (native simulator or symbolic apply) and never returns
-   * `expectedStateSource: "none"`. Always `true` for a governed write tool.
+   * `expectedStateSource: "none"`. Always `true` for an entity write.
    */
   requiresSimulation: true;
+}
+
+/**
+ * Governed effect write tool. Has no canonical entity snapshot, so it carries
+ * no `readPartner` and its validation/simulation promises are honest booleans
+ * (some effect writes — e.g. fire-and-forget uploads — can neither validate
+ * nor simulate). Returns an `effect` object instead of before/after snapshots.
+ */
+export interface CesteralEffectWriteToolAnnotations extends CesteralWriteToolAnnotationsBase {
+  writeClass: "effect";
+
+  /** Effect writes never produce canonical before/after snapshots. */
+  supportsBeforeAfterSnapshot: false;
+
+  /** Whether the tool validates the proposed write (symbolic where feasible). */
+  requiresValidation: boolean;
+
+  /** Whether the tool produces an expected effect (symbolic where feasible). */
+  requiresSimulation: boolean;
+}
+
+/**
+ * Governed write tool — discriminated on `writeClass`. A single tool may
+ * dispatch to several canonical operations based on its input args; declare the
+ * union and let consumers decide the effective operation per-call from the args.
+ */
+export type CesteralWriteToolAnnotations =
+  | CesteralEntityWriteToolAnnotations
+  | CesteralEffectWriteToolAnnotations;
+
+/** Type guard: governed entity write annotation. */
+export function isEntityWrite(a: CesteralToolAnnotations): a is CesteralEntityWriteToolAnnotations {
+  return a.kind === "write" && a.writeClass === "entity";
+}
+
+/** Type guard: governed effect write annotation. */
+export function isEffectWrite(a: CesteralToolAnnotations): a is CesteralEffectWriteToolAnnotations {
+  return a.kind === "write" && a.writeClass === "effect";
 }
 
 /**

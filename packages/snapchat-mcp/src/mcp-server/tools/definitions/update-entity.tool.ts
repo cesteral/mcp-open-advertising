@@ -196,6 +196,8 @@ export const updateEntityTool = {
     destructiveHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "snapchat",
       contractPlatformSlug: "snapchat",
       contractToolSlug: "update_entity",

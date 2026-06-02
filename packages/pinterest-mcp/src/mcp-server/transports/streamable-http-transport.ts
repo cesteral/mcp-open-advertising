@@ -37,6 +37,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-Pinterest-Ad-Account-Id",
       "X-Pinterest-App-Id",
       "X-Pinterest-App-Secret",
