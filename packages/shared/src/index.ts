@@ -22,8 +22,12 @@ export type {
 export type {
   CesteralToolAnnotations,
   CesteralWriteToolAnnotations,
+  CesteralEntityWriteToolAnnotations,
+  CesteralEffectWriteToolAnnotations,
   CesteralReadToolAnnotations,
+  CesteralWriteOperation,
 } from "./types/cesteral-annotations.js";
+export { isEntityWrite, isEffectWrite } from "./types/cesteral-annotations.js";
 export type {
   NormalizedEntitySnapshot,
   CanonicalEntityKind,
