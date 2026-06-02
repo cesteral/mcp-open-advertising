@@ -18,7 +18,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import {
   adjustBidsLogic,
   adjustBidsResponseFormatter,
+  AdjustBidsOutputSchema,
 } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
+import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -95,6 +97,28 @@ describe("meta_adjust_bids governance contract (effect class)", () => {
       operation: "adjust_bids",
       canonicalEntityKind: null,
     });
+  });
+
+  it("dry-run and execute outputs parse cleanly through the declared schemas", async () => {
+    // Dry-run output → AdjustBidsOutputSchema + the effect dry-run shape.
+    const dry = await adjustBidsLogic(
+      { adjustments: [{ adSetId: "as-1", bidAmount: 250 }], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(() => AdjustBidsOutputSchema.parse(dry)).not.toThrow();
+    expect(() => EffectDryRunResultSchema.parse(dry.dryRun)).not.toThrow();
+    // expectedEffect is an EffectResult.
+    expect(() => EffectResultSchema.parse(dry.dryRun!.expectedEffect)).not.toThrow();
+
+    // Execute output → AdjustBidsOutputSchema + the effect identity.
+    const exec = await adjustBidsLogic(
+      { adjustments: [{ adSetId: "as-1", bidAmount: 250 }] } as any,
+      ctx,
+      sdk
+    );
+    expect(() => AdjustBidsOutputSchema.parse(exec)).not.toThrow();
+    expect(() => EffectResultSchema.parse(exec.effect)).not.toThrow();
   });
 
   it("formatter renders a dry-run message without a false success", () => {
