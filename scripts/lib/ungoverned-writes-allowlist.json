@@ -71,7 +71,6 @@
     ],
     "sa360-mcp": ["sa360_insert_conversions", "sa360_submit_report", "sa360_update_conversions"],
     "snapchat-mcp": [
-      "snapchat_adjust_bids",
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
