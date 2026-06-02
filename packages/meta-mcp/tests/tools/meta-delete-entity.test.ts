@@ -146,6 +146,33 @@ describe("deleteEntityLogic governance contract", () => {
     });
   });
 
+  it("dry_run on an ACTIVE entity reports wouldSucceed:false (Meta rejects ACTIVE deletes)", async () => {
+    svc.getEntity.mockResolvedValue({ ...campaign, status: "ACTIVE" });
+    const result = await deleteEntityLogic(
+      { entityType: "campaign" as any, entityId: "c-1", dry_run: true },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain("ACTIVE_NOT_DELETABLE");
+    // Still simulates a post-state (requiresSimulation honored).
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+  });
+
+  it("out-of-scope entity kinds resolve to canonicalEntityKind: null (not a fake kind)", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "adCreative" as any, entityId: "cr-1" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    // Non-canonical delete still executes (and is token-gated under enforce).
+    expect(svc.deleteEntity).toHaveBeenCalledOnce();
+    expect(result.before).toBeUndefined();
+    expect(result.after).toBeUndefined();
+  });
+
   it("execute captures before (live) and after (deleted) snapshots + dispatchedCapability", async () => {
     const result = await deleteEntityLogic(
       { entityType: "campaign" as any, entityId: "c-1" },

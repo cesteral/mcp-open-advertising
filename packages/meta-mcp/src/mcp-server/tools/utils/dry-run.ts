@@ -162,12 +162,16 @@ export async function runMetaUpdateDryRun(
 /**
  * Resolve the `(operation, entityKind)` for a `meta_delete_entity` call. Delete
  * is single-operation; the entity kind comes from the target `entityType`.
- * Pure (no I/O).
+ *
+ * Out-of-scope types (adCreative, customAudience, …) resolve to
+ * `canonicalEntityKind: null` — honest "no canonical entity" rather than a fake
+ * kind. Such deletes still execute and are still token-gated under enforce
+ * (the tool is `kind:"write"`); they simply carry no canonical snapshot. Pure.
  */
 export function resolveMetaDeleteCapability(entityType: string | undefined): DispatchedCapability {
   return {
     operation: "delete",
-    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || entityType || "unknown",
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || null,
   };
 }
 
@@ -189,6 +193,7 @@ export async function runMetaDeleteDryRun(
   metaService: MetaServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
@@ -200,6 +205,15 @@ export async function runMetaDeleteDryRun(
       context
     )) as Record<string, unknown> | undefined;
     if (current && typeof current === "object") {
+      // Meta rejects deletion of ACTIVE entities (must be paused first). A
+      // governed dry-run must not approve a delete the real API will reject.
+      if (current.status === "ACTIVE") {
+        validationErrors.push({
+          code: "ACTIVE_NOT_DELETABLE",
+          message: "ACTIVE entities must be paused before deletion",
+          field: "entityId",
+        });
+      }
       const snapshot = buildMetaSnapshot(args.entityType, args.entityId, current, {
         status: "DELETED",
       });
@@ -212,8 +226,8 @@ export async function runMetaDeleteDryRun(
 
   return assertGovernedDryRunResult(
     {
-      wouldSucceed: expectedPostState !== undefined,
-      validationErrors: [],
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
       validationSource: "symbolic",
       expectedStateSource,
       ...(expectedPostState ? { expectedPostState } : {}),
