@@ -5,10 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import {
-  loadManifestDefinitionHashes,
-  createDefinitionHashResolver,
-} from "../../src/index.js";
+import { loadManifestDefinitionHashes, createDefinitionHashResolver } from "../../src/index.js";
 
 const MANIFEST = {
   manifestVersion: 1,

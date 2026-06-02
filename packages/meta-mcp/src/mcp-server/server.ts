@@ -12,6 +12,7 @@ import { sessionServiceStore } from "../services/session-services.js";
 import {
   extractZodShape,
   registerToolsFromDefinitions,
+  createDefinitionHashResolver,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   registerTemplatedResourcesFromDefinitions,
@@ -94,6 +95,9 @@ export async function createMcpServer(
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
+    resolveDefinitionHash: createDefinitionHashResolver(
+      new URL("../cesteral-manifest.json", import.meta.url)
+    ),
     createRequestContext: (params) =>
       createOperationContext({
         operation: params.operation,
