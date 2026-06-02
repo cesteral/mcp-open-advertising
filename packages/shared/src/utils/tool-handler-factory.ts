@@ -31,6 +31,22 @@ import {
   type RequestContext,
 } from "./request-context.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
+import { JsonRpcErrorCode } from "./mcp-errors.js";
+import { hashActionInput, canonicalizeExecutableArgs } from "@cesteral/contract-hash";
+import { resolveTokenMode } from "../governance/config.js";
+import { verifyDecisionToken } from "../governance/decision-token.js";
+import { logDecisionTokenVerdict } from "../governance/audit.js";
+import { InMemoryJtiStore, type JtiStore } from "../governance/jti-store.js";
+import type { CesteralToolAnnotations } from "../types/cesteral-annotations.js";
+
+/** Default decision-token jti TTL (10 min) — must be ≥ the token's own TTL. */
+const DEFAULT_JTI_TTL_MS = 600_000;
+
+/** Lazily-created in-memory jti store, used when no JtiStore is injected. */
+let fallbackJtiStore: JtiStore | undefined;
+function getFallbackJtiStore(): JtiStore {
+  return (fallbackJtiStore ??= new InMemoryJtiStore());
+}
 
 /**
  * Default maximum character length for text content blocks in tool responses.
@@ -138,6 +154,13 @@ export interface ToolSdkContext {
     logger?: string;
     data?: unknown;
   }) => Promise<void>;
+  /**
+   * Idempotency key for governed writes — the verified decision token's `jti`
+   * (falls back to the actionHash). Tool logic forwards it to the platform API
+   * where an idempotency key is supported. Present only on verified governed
+   * write calls.
+   */
+  idempotencyKey?: string;
   [key: string]: unknown;
 }
 
@@ -284,6 +307,26 @@ export interface RegisterToolsOptions {
    * Defaults to RESPONSE_CHARACTER_LIMIT (25,000).
    */
   responseCharacterLimit?: number;
+  /**
+   * Decision-token replay store. Defaults to a shared in-memory store (correct
+   * for stdio / single-instance). On multi-instance Cloud Run with enforcement,
+   * inject a distributed store via `selectJtiStore`.
+   */
+  jtiStore?: JtiStore;
+  /** jti TTL in ms (≥ token TTL). Defaults to 600_000. */
+  jtiTtlMs?: number;
+  /**
+   * Resolves a governed tool's published `definitionHash` (from the attested
+   * `cesteral-manifest.json`) by tool name — the same value governance puts in
+   * the token. Without it, the definition-hash binding cannot be verified:
+   * `warn` logs the gap and proceeds; `enforce` fails closed.
+   */
+  resolveDefinitionHash?: (toolName: string) => string | undefined;
+  /**
+   * Env source for decision-token mode + secrets. Defaults to `process.env`;
+   * injectable for tests.
+   */
+  governanceEnv?: Record<string, string | undefined>;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -348,6 +391,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     interactionLogger,
     authContextResolver,
     responseCharacterLimit = RESPONSE_CHARACTER_LIMIT,
+    resolveDefinitionHash,
   } = opts;
 
   if (!Number.isFinite(responseCharacterLimit) || responseCharacterLimit < 1) {
@@ -357,6 +401,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   }
 
   const auditLogger = logger.child({ component: "audit" });
+  const governanceEnv = opts.governanceEnv ?? process.env;
+  const jtiStore = opts.jtiStore ?? getFallbackJtiStore();
+  const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
 
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
@@ -507,6 +554,85 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
+            // ── Governance decision-token verification (governed writes) ──
+            // Runs AFTER advertiser-scope authz (above) so an unauthorized call
+            // never reaches jti consumption, and BEFORE tool.logic so an
+            // enforced rejection prevents the mutation. Gated to cesteral write
+            // annotations; global default mode is `off` (no behavior change).
+            let idempotencyKey: string | undefined;
+            const cesteralAnnotation = (
+              tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
+            )?.cesteral;
+            if (cesteralAnnotation?.kind === "write") {
+              const mode = resolveTokenMode({
+                contractId: cesteralAnnotation.contractId,
+                env: governanceEnv,
+              });
+              if (mode !== "off") {
+                const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
+                if (expectedDefinitionHash === undefined) {
+                  // Cannot verify the definition-hash binding without the
+                  // published manifest value. Fail closed under enforce; warn
+                  // and proceed otherwise.
+                  logger.warn(
+                    {
+                      component: "governance-audit",
+                      event: "decision_token_verification",
+                      status: "skipped",
+                      reasonCode: "DEFINITION_HASH_UNRESOLVED",
+                      mode,
+                      contractId: cesteralAnnotation.contractId,
+                      toolName: tool.name,
+                    },
+                    "decision token: definition hash unresolved (no manifest resolver)"
+                  );
+                  if (mode === "enforce") {
+                    recordToolExecution(tool.name, "error", Date.now() - startTime);
+                    throw new McpError(
+                      JsonRpcErrorCode.Unauthorized,
+                      `Governance: cannot verify decision token for ${tool.name} ` +
+                        `(definition hash unavailable)`
+                    );
+                  }
+                } else {
+                  const executableArgs = canonicalizeExecutableArgs({
+                    rawArgs: args,
+                    exclude: cesteralAnnotation.executableArgsExclude,
+                  });
+                  const verdict = await verifyDecisionToken({
+                    token: getRequestContext()?.decisionToken,
+                    secrets: {
+                      current: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET ?? "",
+                      previous: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS,
+                    },
+                    expected: {
+                      contractId: cesteralAnnotation.contractId,
+                      definitionHash: expectedDefinitionHash,
+                      actionHash: hashActionInput(executableArgs),
+                    },
+                    jtiStore,
+                    jtiTtlMs,
+                  });
+                  logDecisionTokenVerdict(logger, {
+                    verdict,
+                    mode,
+                    contractId: cesteralAnnotation.contractId,
+                    toolName: tool.name,
+                  });
+                  if (mode === "enforce" && !verdict.ok) {
+                    recordToolExecution(tool.name, "error", Date.now() - startTime);
+                    throw new McpError(
+                      JsonRpcErrorCode.Unauthorized,
+                      `Governance decision token rejected: ${verdict.reasonCode}`
+                    );
+                  }
+                  if (verdict.ok && verdict.claims?.jti) {
+                    idempotencyKey = verdict.claims.jti;
+                  }
+                }
+              }
+            }
+
             // Only expose elicitInput when the connected client advertises the
             // elicitation capability. Gating here means the `!sdkContext.elicitInput`
             // fallback in shared elicitation-helpers triggers cleanly for stdio /
@@ -526,6 +652,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               sendLoggingMessage: async (params) => {
                 return server.sendLoggingMessage(params);
               },
+              idempotencyKey,
             };
             const interactionContext: ToolInteractionContext = {
               toolName: tool.name,
