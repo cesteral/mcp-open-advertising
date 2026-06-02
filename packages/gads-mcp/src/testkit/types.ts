@@ -18,7 +18,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * payload (no separate operation input). Fixtures pin one operation per
  * fixture so consumers can filter.
  */
-export type GAdsOperation = "update_budget" | "pause" | "resume" | "delete";
+export type GAdsOperation = "update_budget" | "pause" | "resume" | "delete" | "create";
 
 /**
  * Governed entity kinds, labelled with the upstream camelCase `entityType`
@@ -45,7 +45,7 @@ export interface GAdsFixtureArgs {
  */
 export interface GAdsWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity" | "remove_entity";
+  contractToolSlug: "update_entity" | "remove_entity" | "create_entity";
   /** Canonical operation this fixture exercises. */
   operation: GAdsOperation;
   /** Upstream entity-kind key. */

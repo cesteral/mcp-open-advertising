@@ -148,6 +148,15 @@ const extraGovernedSurfaces = [
     pairs: { delete: ["campaign", "ad_group", "campaign_budget"] },
   },
   {
+    packageDir: "gads-mcp",
+    platformSlug: "google_ads",
+    writeTool: "gads_create_entity",
+    readTool: "gads_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_group", "campaign_budget"] },
+  },
+  {
     packageDir: "meta-mcp",
     platformSlug: "meta",
     writeTool: "meta_delete_entity",
