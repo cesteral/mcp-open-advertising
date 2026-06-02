@@ -138,6 +138,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_commitment",
     pairs: { update: ["commitment"] },
   },
+  {
+    packageDir: "gads-mcp",
+    platformSlug: "google_ads",
+    writeTool: "gads_remove_entity",
+    readTool: "gads_get_entity",
+    contractToolSlug: "remove_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { delete: ["campaign", "ad_group", "campaign_budget"] },
+  },
 ];
 
 const entityKindAliases = {

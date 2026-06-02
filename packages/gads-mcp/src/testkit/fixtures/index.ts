@@ -188,10 +188,116 @@ export const updateBudgetCampaignBudget: GAdsWriteFixture = {
   description: "update_budget: campaign-budget daily amount increase $50 → $75 (micros)",
 };
 
+/**
+ * delete (remove): campaign → REMOVED. Google Ads "remove" is a status
+ * transition to REMOVED (permanent; canonical `deleted`), so the symbolic apply
+ * is a status patch — `applyGAdsPatch` produces the deleted post-state.
+ */
+export const removeCampaign: GAdsWriteFixture = {
+  contractToolSlug: "remove_entity",
+  operation: "delete",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    customerId,
+    entityId: "campaign-REDACTED-3",
+    data: { status: "REMOVED" },
+    updateMask: "status",
+  },
+  preState: {
+    id: "campaign-REDACTED-3",
+    name: "Retired Search Campaign",
+    status: "PAUSED",
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-3",
+    displayName: "Retired Search Campaign",
+    accountId: customerId,
+    status: { canonical: "deleted", platformRaw: "REMOVED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: "2026-01-01", endAt: "2026-12-31" },
+  },
+  description: "delete: campaign transition PAUSED → REMOVED (canonical deleted)",
+};
+
+/** delete (remove): adGroup → REMOVED. */
+export const removeAdGroup: GAdsWriteFixture = {
+  contractToolSlug: "remove_entity",
+  operation: "delete",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    customerId,
+    entityId: "adgroup-REDACTED-3",
+    data: { status: "REMOVED" },
+    updateMask: "status",
+  },
+  preState: {
+    id: "adgroup-REDACTED-3",
+    name: "Retired Ad Group",
+    status: "PAUSED",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "ad_group",
+    platformEntityId: "adgroup-REDACTED-3",
+    displayName: "Retired Ad Group",
+    accountId: customerId,
+    status: { canonical: "deleted", platformRaw: "REMOVED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: adGroup transition PAUSED → REMOVED (canonical deleted)",
+};
+
+/** delete (remove): campaignBudget → REMOVED. */
+export const removeCampaignBudget: GAdsWriteFixture = {
+  contractToolSlug: "remove_entity",
+  operation: "delete",
+  entityKind: "campaignBudget",
+  args: {
+    entityType: "campaignBudget",
+    customerId,
+    entityId: "budget-REDACTED-2",
+    data: { status: "REMOVED" },
+    updateMask: "status",
+  },
+  preState: {
+    id: "budget-REDACTED-2",
+    name: "Retired Shared Budget",
+    amountMicros: "50000000",
+    status: "ENABLED",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "campaign_budget",
+    platformEntityId: "budget-REDACTED-2",
+    displayName: "Retired Shared Budget",
+    accountId: customerId,
+    status: { canonical: "deleted", platformRaw: "REMOVED" },
+    budget: {
+      daily: { amountMinor: 5000, currency: "USD" },
+      lifetime: null,
+    },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: campaignBudget transition ENABLED → REMOVED (canonical deleted)",
+};
+
 export const allFixtures: readonly GAdsWriteFixture[] = [
   pauseCampaign,
   resumeCampaign,
   pauseAdGroup,
   resumeAdGroup,
   updateBudgetCampaignBudget,
+  removeCampaign,
+  removeAdGroup,
+  removeCampaignBudget,
 ];
