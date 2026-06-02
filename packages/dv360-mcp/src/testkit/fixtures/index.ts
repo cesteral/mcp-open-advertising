@@ -407,6 +407,90 @@ export const deleteLineItem: Dv360WriteFixture = {
   description: "delete: line-item → ENTITY_STATUS_DELETED (canonical deleted)",
 };
 
+/**
+ * duplicate fixtures. The copy does not exist yet; its new ID is a placeholder
+ * (`*-REDACTED-NEW`) folded into `ids` — mirroring how the tool's `after`
+ * snapshot identifies the created copy. DV360 forces the copy to
+ * `ENTITY_STATUS_PAUSED`, so `data` overlays only `entityStatus` (the rest of
+ * the config is preserved from the SOURCE `preState`).
+ */
+export const duplicateInsertionOrder: Dv360WriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "insertionOrder",
+  args: {
+    entityType: "insertionOrder",
+    ids: { advertiserId, insertionOrderId: "io-REDACTED-NEW" },
+    data: { entityStatus: "ENTITY_STATUS_PAUSED" },
+    updateMask: "entityStatus",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/insertionOrders/io-REDACTED-1`,
+    insertionOrderId: "io-REDACTED-1",
+    displayName: "Source Insertion Order",
+    entityStatus: "ENTITY_STATUS_ACTIVE",
+    budget: {
+      budgetUnit: "BUDGET_UNIT_CURRENCY",
+      automationType: "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+      budgetSegments: [baseSegment],
+    },
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "insertion_order",
+    platformEntityId: "io-REDACTED-NEW",
+    displayName: "Source Insertion Order",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: {
+      daily: null,
+      lifetime: { amountMinor: 5000, currency: "USD" },
+      segments: [
+        {
+          amountMinor: 5000,
+          currency: "USD",
+          startAt: "2026-01-01",
+          endAt: "2026-12-31",
+        },
+      ],
+    },
+    schedule: { startAt: null, endAt: null },
+  },
+  description:
+    "duplicate: insertion-order copy lands PAUSED, budget preserved (projected from source)",
+};
+
+export const duplicateLineItem: Dv360WriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "lineItem",
+  args: {
+    entityType: "lineItem",
+    ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
+    data: { entityStatus: "ENTITY_STATUS_PAUSED" },
+    updateMask: "entityStatus",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/lineItems/li-REDACTED-1`,
+    lineItemId: "li-REDACTED-1",
+    displayName: "Source Line Item",
+    entityStatus: "ENTITY_STATUS_ACTIVE",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "line_item",
+    platformEntityId: "li-REDACTED-NEW",
+    displayName: "Source Line Item",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: line-item copy lands PAUSED (projected from source)",
+};
+
 export const allFixtures: readonly Dv360WriteFixture[] = [
   updateBudgetIncreaseInsertionOrder,
   updateBudgetDecreaseLineItem,
@@ -417,4 +501,6 @@ export const allFixtures: readonly Dv360WriteFixture[] = [
   deleteCampaign,
   deleteInsertionOrder,
   deleteLineItem,
+  duplicateInsertionOrder,
+  duplicateLineItem,
 ];

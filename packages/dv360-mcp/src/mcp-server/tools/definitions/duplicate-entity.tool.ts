@@ -3,8 +3,20 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runDv360DuplicateDryRun, resolveDv360DuplicateCapability } from "../utils/dry-run.js";
+import { snapshotFromDv360Entity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_duplicate_entity";
 const TOOL_TITLE = "Duplicate DV360 Entity";
@@ -43,6 +55,13 @@ export const DuplicateEntityInputSchema = z
       .string()
       .optional()
       .describe("Optional display name for the copy (defaults to 'Copy of {original}')"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in ENTITY_STATUS_PAUSED, projected from the source) without calling the DV360 API. No copy is created."
+      ),
   })
   .describe("Parameters for duplicating a DV360 entity");
 
@@ -52,6 +71,15 @@ export const DuplicateEntityOutputSchema = z
     sourceEntityId: z.string().describe("ID of the source entity"),
     entityType: z.string().describe("Type of entity duplicated"),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No copy was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-duplicate canonical snapshot of the created copy (in-scope kinds: insertion_order, line_item). Duplicate has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity duplication result");
 
@@ -73,17 +101,66 @@ export async function duplicateEntityLogic(
     [entityIdField]: input.entityId,
   };
 
-  const newEntity = await dv360Service.duplicateEntity(entityType, ids, input.displayName, context);
+  const dispatchedCapability = resolveDv360DuplicateCapability(entityType);
+
+  if (input.dry_run === true) {
+    const dryRun = await runDv360DuplicateDryRun({ entityType, ids }, dv360Service, context);
+    return {
+      duplicatedEntity: {},
+      sourceEntityId: input.entityId,
+      entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const newEntity = (await dv360Service.duplicateEntity(
+    entityType,
+    ids,
+    input.displayName,
+    context
+  )) as Record<string, unknown>;
+
+  // The duplicate returns the created copy. Fold its new ID into the ids so the
+  // `after` snapshot's `platformEntityId` reflects the copy, not the source.
+  // Duplicate has no `before`. Best-effort: undefined for out-of-scope kinds.
+  const newId = newEntity?.[entityIdField];
+  const idsForAfter =
+    typeof newId === "string" || typeof newId === "number"
+      ? { advertiserId: input.advertiserId, [entityIdField]: String(newId) }
+      : ids;
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromDv360Entity(
+    entityType,
+    idsForAfter,
+    newEntity ?? {}
+  );
 
   return {
-    duplicatedEntity: newEntity as Record<string, unknown>,
+    duplicatedEntity: newEntity,
     sourceEntityId: input.entityId,
     entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: duplicating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No copy was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const entity = result.duplicatedEntity;
   const newId = entity[`${result.entityType}Id`] ?? entity.name ?? "unknown";
 
@@ -115,6 +192,32 @@ export const duplicateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "duplicate_entity",
+      operation: ["duplicate"],
+      // Only insertionOrder / lineItem are duplicatable; both are governed
+      // kinds with a canonical snapshot.
+      entityKinds: ["insertion_order", "line_item"],
+      entityIdArgs: ["advertiserId", "entityId"],
+      readPartner: {
+        toolName: "dv360_get_entity",
+        argMap: { advertiserId: "advertiserId", entityId: "entityId" },
+      },
+      schemaVersion: 1,
+      contractId: "dv360.duplicate_entity.v1",
+      // `dry_run` = symbolic: read the source and project it as the
+      // ENTITY_STATUS_PAUSED copy (empty new ID). `after` re-reads the created
+      // copy by its new ID. No `before`.
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

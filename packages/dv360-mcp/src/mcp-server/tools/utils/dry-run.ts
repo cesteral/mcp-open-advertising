@@ -264,3 +264,69 @@ export async function runDv360UpdateDryRun(
     "dv360_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `dv360_duplicate_entity` call.
+ * Only insertionOrder / lineItem are duplicatable and both are governed kinds,
+ * so `canonicalEntityKind` is non-null for every valid input; the `?? null`
+ * keeps the contract honest if the tool's enum ever widens. Pure.
+ */
+export function resolveDv360DuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface Dv360DuplicateDryRunArgs {
+  entityType: string;
+  /** Parent + source-entity IDs (advertiserId + `<entityType>Id`). */
+  ids: Record<string, string>;
+}
+
+/**
+ * Symbolic dry-run for `dv360_duplicate_entity`. The copy does not exist yet
+ * (no `before`). DV360's duplicate forces the copy to `ENTITY_STATUS_PAUSED`
+ * (never starts spending without re-activation), so the expected post-state is
+ * the SOURCE re-projected as the copy: read the source, overlay the paused
+ * status, and emit it with an empty `platformEntityId` (the new ID is assigned
+ * on execute — the parent IDs in `ids` only supply `accountId`).
+ */
+export async function runDv360DuplicateDryRun(
+  args: Dv360DuplicateDryRunArgs,
+  dv360Service: Dv360ServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && dv360Service.getEntity) {
+    const source = (await dv360Service.getEntity(args.entityType, args.ids, context)) as Record<
+      string,
+      any
+    >;
+    if (source && typeof source === "object") {
+      const applied = { ...source, entityStatus: "ENTITY_STATUS_PAUSED" };
+      const snapshot = buildDv360Snapshot(args.entityType, args.ids, source, applied);
+      if (snapshot) {
+        // The copy has no entity ID yet pre-duplicate; the parent IDs would
+        // otherwise mislabel platformEntityId with the source's ID.
+        expectedPostState = { ...snapshot, platformEntityId: "" };
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "dv360_duplicate_entity") : result;
+}

@@ -246,6 +246,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { duplicate: ["campaign", "ad_group", "ad"] },
   },
+  {
+    packageDir: "dv360-mcp",
+    platformSlug: "dv360",
+    writeTool: "dv360_duplicate_entity",
+    readTool: "dv360_get_entity",
+    contractToolSlug: "duplicate_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { duplicate: ["insertion_order", "line_item"] },
+  },
 ];
 
 const entityKindAliases = {
