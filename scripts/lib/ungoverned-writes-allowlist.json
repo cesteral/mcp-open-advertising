@@ -103,7 +103,6 @@
       "tiktok_bulk_update_status",
       "tiktok_create_entity",
       "tiktok_delete_entity",
-      "tiktok_duplicate_entity",
       "tiktok_submit_report",
       "tiktok_upload_image",
       "tiktok_upload_video"

@@ -163,3 +163,76 @@ export async function runTiktokUpdateDryRun(
     "tiktok_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `tiktok_duplicate_entity` call.
+ * Out-of-scope types resolve to `canonicalEntityKind: null` — token-gated, no
+ * canonical snapshot. Pure.
+ */
+export function resolveTiktokDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+/**
+ * The disabled (paused) lifecycle status a duplicated entity lands in, keyed by
+ * `entityType`. TikTok `status` enums are suffix-canonicalized (`_DISABLE` →
+ * paused); the prefix is per-kind.
+ */
+const DUPLICATE_LANDING_STATUS: Record<string, string> = {
+  campaign: "CAMPAIGN_STATUS_DISABLE",
+  adGroup: "ADGROUP_STATUS_DISABLE",
+  ad: "AD_STATUS_DISABLE",
+};
+
+export interface TiktokDuplicateDryRunArgs {
+  entityType: string;
+  /** ID of the SOURCE entity being duplicated. */
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `tiktok_duplicate_entity`. The copy does not exist yet
+ * (no `before`). The copy lands in a disabled (paused) state, so the expected
+ * post-state is the SOURCE re-projected as the copy: read the source, overlay
+ * the disabled `status`, and emit it with an empty `platformEntityId` (the new
+ * ID is assigned on execute). Out-of-scope kinds are token-gated but not
+ * snapshot-governed.
+ */
+export async function runTiktokDuplicateDryRun(
+  args: TiktokDuplicateDryRunArgs,
+  service: TiktokServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(args.entityType, args.entityId, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (source && typeof source === "object") {
+      const landing = DUPLICATE_LANDING_STATUS[args.entityType] ?? "CAMPAIGN_STATUS_DISABLE";
+      const snapshot = buildTiktokSnapshot(args.entityType, "", source, { status: landing });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "tiktok_duplicate_entity") : result;
+}

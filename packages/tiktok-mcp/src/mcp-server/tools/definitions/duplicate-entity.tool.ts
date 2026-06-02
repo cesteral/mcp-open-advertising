@@ -4,8 +4,20 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runTiktokDuplicateDryRun, resolveTiktokDuplicateCapability } from "../utils/dry-run.js";
+import { snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_duplicate_entity";
 const TOOL_TITLE = "Duplicate TikTok Ads Entity";
@@ -25,6 +37,13 @@ export const DuplicateEntityInputSchema = z
       .record(z.any())
       .optional()
       .describe("Optional copy options (e.g., new name, target campaign ID)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in a disabled state, projected from the source) without calling the TikTok API. No copy is created."
+      ),
   })
   .describe("Parameters for duplicating a TikTok Ads entity");
 
@@ -34,6 +53,15 @@ export const DuplicateEntityOutputSchema = z
     sourceEntityId: z.string(),
     entityType: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No copy was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-duplicate canonical snapshot of the created copy (in-scope kinds: campaign, ad_group, ad). Duplicate has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity duplication result");
 
@@ -46,23 +74,68 @@ export async function duplicateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
   const { tiktokService } = resolveSessionServices(sdkContext);
+  const dispatchedCapability = resolveTiktokDuplicateCapability(input.entityType);
 
-  const newEntity = await tiktokService.duplicateEntity(
+  if (input.dry_run === true) {
+    const dryRun = await runTiktokDuplicateDryRun(
+      { entityType: input.entityType, entityId: input.entityId },
+      tiktokService,
+      context
+    );
+    return {
+      newEntity: {},
+      sourceEntityId: input.entityId,
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const newEntity = (await tiktokService.duplicateEntity(
     input.entityType as TikTokEntityType,
     input.entityId,
     input.options,
     context
+  )) as unknown as Record<string, unknown>;
+
+  // The duplicate returns the full new entity, so normalize it directly for the
+  // canonical `after` snapshot (no re-read needed). Duplicate has no `before`.
+  // Best-effort: undefined for out-of-scope kinds.
+  const newId = String(
+    newEntity?.campaign_id ?? newEntity?.adgroup_id ?? newEntity?.ad_id ?? newEntity?.id ?? ""
+  );
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromTiktokEntity(
+    input.entityType,
+    newId,
+    newEntity
   );
 
   return {
-    newEntity: newEntity as unknown as Record<string, unknown>,
+    newEntity,
     sourceEntityId: input.entityId,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: duplicating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No copy was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -82,6 +155,30 @@ export const duplicateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "tiktok",
+      contractPlatformSlug: "tiktok",
+      contractToolSlug: "duplicate_entity",
+      operation: ["duplicate"],
+      entityKinds: ["campaign", "ad_group", "ad"],
+      entityIdArgs: ["entityId"],
+      readPartner: {
+        toolName: "tiktok_get_entity",
+        argMap: { advertiserId: "advertiserId", entityId: "entityId" },
+      },
+      schemaVersion: 1,
+      contractId: "tiktok.duplicate_entity.v1",
+      // `dry_run` = symbolic: read the source and project it as the disabled
+      // copy (empty new ID). `after` is normalized from the returned new entity.
+      // No `before`.
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

@@ -18,7 +18,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * operation input). Fixtures pin one operation per fixture so consumers can
  * filter.
  */
-export type TiktokOperation = "update_budget" | "pause" | "resume";
+export type TiktokOperation = "update_budget" | "pause" | "resume" | "duplicate";
 
 /**
  * Governed entity kinds, labelled with the upstream `entityType` input key.
@@ -44,7 +44,7 @@ export interface TiktokFixtureArgs {
  */
 export interface TiktokWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "duplicate_entity";
   /** Canonical operation this fixture exercises. */
   operation: TiktokOperation;
   /** Upstream entity-kind key. */
