@@ -19,7 +19,6 @@
       "cm360_submit_report"
     ],
     "dv360-mcp": [
-      "dv360_adjust_line_item_bids",
       "dv360_bulk_create_entities",
       "dv360_bulk_update_entities",
       "dv360_bulk_update_status",
