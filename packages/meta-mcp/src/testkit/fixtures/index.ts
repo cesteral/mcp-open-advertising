@@ -331,6 +331,89 @@ export const deleteAd: MetaWriteFixture = {
   description: "delete: ad transition PAUSED → DELETED (canonical deleted)",
 };
 
+/**
+ * create: the would-be-created entity is the `data` payload normalized (empty
+ * pre-state), so the symbolic apply is `applyMetaPatch({}, createData)`. The
+ * platformEntityId is a placeholder (the server assigns the real ID on execute).
+ * One fixture per governed kind (campaign / ad_set / ad).
+ */
+export const createCampaign: MetaWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityId: "campaign-REDACTED-NEW",
+    data: { name: "New Campaign", objective: "OUTCOME_TRAFFIC", status: "PAUSED" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, status PAUSED)",
+};
+
+export const createAdSet: MetaWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adSet",
+  args: {
+    entityType: "adSet",
+    entityId: "adset-REDACTED-NEW",
+    data: {
+      name: "New Ad Set",
+      campaign_id: "campaign-REDACTED-1",
+      daily_budget: 5000,
+      status: "PAUSED",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad_set",
+    platformEntityId: "adset-REDACTED-NEW",
+    displayName: "New Ad Set",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 5000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adSet (would-be-created, daily budget $50, status PAUSED)",
+};
+
+export const createAd: MetaWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    entityId: "ad-REDACTED-NEW",
+    data: { name: "New Ad", adset_id: "adset-REDACTED-1", status: "PAUSED" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad",
+    platformEntityId: "ad-REDACTED-NEW",
+    displayName: "New Ad",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: ad (would-be-created, status PAUSED)",
+};
+
 export const allFixtures: readonly MetaWriteFixture[] = [
   updateBudgetIncreaseCampaign,
   updateBudgetDecreaseAdSet,
@@ -341,4 +424,7 @@ export const allFixtures: readonly MetaWriteFixture[] = [
   deleteCampaign,
   deleteAdSet,
   deleteAd,
+  createCampaign,
+  createAdSet,
+  createAd,
 ];

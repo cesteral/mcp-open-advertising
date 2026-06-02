@@ -59,7 +59,6 @@
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
-      "meta_create_entity",
       "meta_duplicate_entity",
       "meta_manage_budget_schedule",
       "meta_submit_report",
