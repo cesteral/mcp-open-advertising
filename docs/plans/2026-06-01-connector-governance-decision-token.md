@@ -877,6 +877,22 @@ Export: `verifyDecisionToken`, `DecisionTokenVerdict`, `JtiStore`, `InMemoryJtiS
 
 Each governed write tool follows ONE of two templates. Batch by operation family; one PR per family per ~2-3 servers; **every batch stays warn-only** and carries a downstream-governance checklist.
 
+### Rollout status (entity-write families) — updated 2026-06-02
+
+Template-A entity-write families merged to `main` so far (all warn-eligible; none flipped to `enforce` yet):
+
+| Family                            | Status                                                                                                                                      | PRs                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `update_entity`                   | merged — all governed servers                                                                                                               | rounds 1–4 (≤ #35 + later)                                                                 |
+| `create_entity`                   | merged — **fleet-wide** (11 platforms)                                                                                                      | #48 (meta/gads/linkedin), #51 (tiktok/snapchat/pinterest/msads/amazon-dsp/ttd/dv360/cm360) |
+| `delete_entity` / `remove_entity` | merged — meta/gads/dv360/linkedin                                                                                                           | #47 (testkit), #52 (out-of-scope dry-run fix)                                              |
+| `duplicate_entity`                | merged — meta/linkedin/amazon-dsp/pinterest/tiktok/dv360                                                                                    | #53                                                                                        |
+| `bulk_update_status`              | **not started** (next Template-A family; all 12 platforms; needs a bulk before/after-array snapshot decision the plan does not yet specify) | —                                                                                          |
+
+**Out-of-scope dry-run rule (clarified during #51/#52, now canon).** An out-of-scope `entityType` resolves `canonicalEntityKind: null`, is token-gated, and emits **no** snapshot — on dry-run **and** execute. Critically, an out-of-scope `dry_run` must **NOT** call `assertGovernedDryRunResult` (which fails on `expectedStateSource: "none"`); the in-scope simulation guard applies only to declared `entityKinds`. Out-of-scope dry-runs return an honest no-snapshot `DryRunResult` instead of throwing. Every per-platform dry-run helper gates the guard on `ENTITY_KIND_MAP` membership.
+
+**Dry-run must mirror the service's actual copy/create transformation (clarified during #53).** For `duplicate_entity`, the symbolic dry-run reads the SOURCE and projects the copy exactly as the service builds it — landing status (e.g. DV360 forces lineItem→DRAFT, IO→PAUSED; Pinterest forces nothing and clones source status; TikTok forces DISABLE server-side) **and** naming/`options` (meta `rename_options`, linkedin/dv360 `Copy of {source}`, the generic `options` overlay). A dry-run that drops these diverges from the `after` snapshot.
+
 ### HARD ROLLOUT BLOCKER — wire definitionHash resolution before any warn enrollment
 
 > **Before moving any contract to `warn`, wire manifest-backed `definitionHash` resolution for that server and verify `definitionHashVerified: true` in the governance audit log for that contract.**
@@ -953,3 +969,5 @@ Per-contract, once governance re-attests the new `definitionHash` and coverage f
 4. **Executable-args shape** (wire-minus-`__*`-minus-`executableArgsExclude`) must be confirmed identical on the governance side before any `enforce` flip.
 
 5. **Firestore TTL policy** must be provisioned (Terraform) for `FirestoreJtiStore` in hosted enforce mode.
+
+6. **`readPartner.argMap` self-containment (tracked follow-up, deferred from #53 by reviewer agreement, 2026-06-02).** The merged DV360 governed tools (`update_entity`/`delete_entity`/`duplicate_entity`) map only `advertiserId` + the typed IDs and **omit the `entityType` discriminator**, even though `dv360_get_entity` requires it — consumers derive it by convention (the write call carries `entityType`), so the manifest read is satisfiable but the `argMap` is not self-describing, and the gate does not assert argMap-against-read-input completeness. **Resolution:** its own small contract-hardening PR that (a) adds the required discriminator/args to `readPartner.argMap` across DV360 update/delete/duplicate **together** (no one-off — that was explicitly rejected for #53), (b) adds a release-gate assertion that every governed write tool's `argMap` covers all **required** args of its `readPartner.toolName` input schema, and (c) sweeps fleet-wide for other gaps. Until then, the existing convention stands; this is a self-describing-manifest improvement, not a live-traffic bug.
