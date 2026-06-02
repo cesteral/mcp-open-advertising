@@ -201,6 +201,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign"] },
   },
+  {
+    packageDir: "tiktok-mcp",
+    platformSlug: "tiktok",
+    writeTool: "tiktok_create_entity",
+    readTool: "tiktok_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_group", "ad"] },
+  },
 ];
 
 const entityKindAliases = {

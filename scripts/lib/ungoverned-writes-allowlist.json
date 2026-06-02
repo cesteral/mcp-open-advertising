@@ -105,7 +105,6 @@
       "tiktok_bulk_create_entities",
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
-      "tiktok_create_entity",
       "tiktok_delete_entity",
       "tiktok_duplicate_entity",
       "tiktok_submit_report",
