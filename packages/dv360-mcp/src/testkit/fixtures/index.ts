@@ -311,6 +311,102 @@ export const resumeInsertionOrderFromPaused: Dv360WriteFixture = {
   description: "resume: insertion-order PAUSED → ACTIVE (budget preserved)",
 };
 
+/**
+ * delete: DV360 hard-deletes; the canonical post-state is the entity with
+ * `ENTITY_STATUS_DELETED` (canonical `deleted`). Modeled as an entityStatus
+ * patch so `applyDv360Patch` yields the deleted post-state. One per governed
+ * kind (campaign / insertion_order / line_item).
+ */
+export const deleteCampaign: Dv360WriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    ids: { advertiserId, campaignId: "campaign-REDACTED-9" },
+    data: { entityStatus: "ENTITY_STATUS_DELETED" },
+    updateMask: "entityStatus",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/campaigns/campaign-REDACTED-9`,
+    campaignId: "campaign-REDACTED-9",
+    displayName: "Retired Campaign",
+    entityStatus: "ENTITY_STATUS_ARCHIVED",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-9",
+    displayName: "Retired Campaign",
+    accountId: advertiserId,
+    status: { canonical: "deleted", platformRaw: "ENTITY_STATUS_DELETED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: campaign → ENTITY_STATUS_DELETED (canonical deleted)",
+};
+
+export const deleteInsertionOrder: Dv360WriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "insertionOrder",
+  args: {
+    entityType: "insertionOrder",
+    ids: { advertiserId, insertionOrderId: "io-REDACTED-9" },
+    data: { entityStatus: "ENTITY_STATUS_DELETED" },
+    updateMask: "entityStatus",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/insertionOrders/io-REDACTED-9`,
+    insertionOrderId: "io-REDACTED-9",
+    displayName: "Retired Insertion Order",
+    entityStatus: "ENTITY_STATUS_ARCHIVED",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "insertion_order",
+    platformEntityId: "io-REDACTED-9",
+    displayName: "Retired Insertion Order",
+    accountId: advertiserId,
+    status: { canonical: "deleted", platformRaw: "ENTITY_STATUS_DELETED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: insertion-order → ENTITY_STATUS_DELETED (canonical deleted)",
+};
+
+export const deleteLineItem: Dv360WriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "lineItem",
+  args: {
+    entityType: "lineItem",
+    ids: { advertiserId, lineItemId: "li-REDACTED-9" },
+    data: { entityStatus: "ENTITY_STATUS_DELETED" },
+    updateMask: "entityStatus",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/lineItems/li-REDACTED-9`,
+    lineItemId: "li-REDACTED-9",
+    displayName: "Retired Line Item",
+    entityStatus: "ENTITY_STATUS_ARCHIVED",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "line_item",
+    platformEntityId: "li-REDACTED-9",
+    displayName: "Retired Line Item",
+    accountId: advertiserId,
+    status: { canonical: "deleted", platformRaw: "ENTITY_STATUS_DELETED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: line-item → ENTITY_STATUS_DELETED (canonical deleted)",
+};
+
 export const allFixtures: readonly Dv360WriteFixture[] = [
   updateBudgetIncreaseInsertionOrder,
   updateBudgetDecreaseLineItem,
@@ -318,4 +414,7 @@ export const allFixtures: readonly Dv360WriteFixture[] = [
   pauseInsertionOrderFromActive,
   resumeLineItemFromPaused,
   resumeInsertionOrderFromPaused,
+  deleteCampaign,
+  deleteInsertionOrder,
+  deleteLineItem,
 ];

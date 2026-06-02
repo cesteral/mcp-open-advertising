@@ -18,7 +18,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * operation input). Fixtures pin one operation per fixture so consumers can
  * filter.
  */
-export type LinkedInOperation = "update_budget" | "pause" | "resume";
+export type LinkedInOperation = "update_budget" | "pause" | "resume" | "delete";
 
 /**
  * Governed entity kinds, labelled with the upstream `entityType` input key.
@@ -42,7 +42,7 @@ export interface LinkedInFixtureArgs {
  */
 export interface LinkedInWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "delete_entity";
   /** Canonical operation this fixture exercises. */
   operation: LinkedInOperation;
   /** Upstream entity-kind key. */

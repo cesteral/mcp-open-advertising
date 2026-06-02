@@ -147,6 +147,33 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { delete: ["campaign", "ad_group", "campaign_budget"] },
   },
+  {
+    packageDir: "meta-mcp",
+    platformSlug: "meta",
+    writeTool: "meta_delete_entity",
+    readTool: "meta_get_entity",
+    contractToolSlug: "delete_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { delete: ["campaign", "ad_set", "ad"] },
+  },
+  {
+    packageDir: "dv360-mcp",
+    platformSlug: "dv360",
+    writeTool: "dv360_delete_entity",
+    readTool: "dv360_get_entity",
+    contractToolSlug: "delete_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { delete: ["campaign", "insertion_order", "line_item"] },
+  },
+  {
+    packageDir: "linkedin-mcp",
+    platformSlug: "linkedin_ads",
+    writeTool: "linkedin_delete_entity",
+    readTool: "linkedin_get_entity",
+    contractToolSlug: "delete_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { delete: ["campaign"] },
+  },
 ];
 
 const entityKindAliases = {
