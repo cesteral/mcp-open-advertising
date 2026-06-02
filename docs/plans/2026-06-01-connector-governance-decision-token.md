@@ -352,7 +352,7 @@ it("type guards discriminate writeClass", () => {
 - Export `isEntityWrite`, `isEffectWrite` guards.
 - Keep `operation` union; widen to include effect ops (`upload`, `create_schedule`, `delete_schedule`, `submit_report`, `upload_conversions`, `bulk_job`, `adjust_bids`, `delete`, etc.).
 
-**Step 4: Run-pass** (shared package only). The discriminated union now makes all 13 existing `update_entity` annotations across servers fail to typecheck (they lack `writeClass`/`executableArgsExclude`). This is a **hard migration** — the repo rule forbids leaving compat shims, and a half-migrated repo is not shippable. Task 5b (below) is therefore **mandatory in PR 1**, not deferred.
+**Step 4: Run-pass** (shared package only). The discriminated union now makes all 12 existing governed write annotations across servers fail to typecheck (they lack `writeClass`/`executableArgsExclude`). This is a **hard migration** — the repo rule forbids leaving compat shims, and a half-migrated repo is not shippable. Task 5b (below) is therefore **mandatory in PR 1**, not deferred.
 
 **Step 5: Commit shared types**
 ```bash
@@ -361,11 +361,11 @@ git commit -am "feat(shared): writeClass-discriminated cesteral write annotation
 
 ---
 
-### Task 5b (MANDATORY, PR 1): migrate the 13 existing `update_entity` annotations
+### Task 5b (MANDATORY, PR 1): migrate the 12 existing governed write annotations
 
 The discriminated union from Task 5 breaks `pnpm run typecheck` until every existing governed write declares the new fields. PR 1 is not complete until the whole repo typechecks.
 
-**Files:** the 13 `packages/*/src/mcp-server/tools/definitions/update-entity.tool.ts` (+ amazon-dsp `update-commitment.tool.ts` = 14 annotations total).
+**Files:** the 11 `packages/*/src/mcp-server/tools/definitions/update-entity.tool.ts` (+ amazon-dsp `update-commitment.tool.ts` = 12 annotations total). (dbm-mcp and sa360-mcp have no `update_entity` surface.)
 
 **Per file:**
 1. Add `writeClass: "entity"` and `executableArgsExclude: ["dry_run"]` to the `cesteral` block (keep `satisfies CesteralWriteToolAnnotations`).
@@ -727,7 +727,7 @@ Export: `verifyDecisionToken`, `DecisionTokenVerdict`, `JtiStore`, `InMemoryJtiS
 **Steps:**
 1. `pnpm run build && pnpm run typecheck` — expect clean across ALL packages (Task 5b is mandatory, so no package is left half-migrated).
 2. `pnpm run test` — all green.
-3. **Critical regression:** `pnpm run generate:manifests` then `git diff` the `dist/cesteral-manifest.json` files. Adding `writeClass`/`executableArgsExclude` to the 13 `update_entity` annotations **changes their `definitionHash`** (annotations are in the hash projection). This is expected and must be coordinated with governance (the signed manifest + downstream attestation). **Document the hash delta in the PR description** and flag for the governance team — this is the "definitionHash matches connector's current tool definition" claim source. Until governance re-attests, those contracts stay in `warn`/`off`.
+3. **Critical regression:** `pnpm run generate:manifests` then `git diff` the `dist/cesteral-manifest.json` files. Adding `writeClass`/`executableArgsExclude` to the 12 governed write annotations **changes their `definitionHash`** (annotations are in the hash projection). This is expected and must be coordinated with governance (the signed manifest + downstream attestation). **Document the hash delta in the PR description** and flag for the governance team — this is the "definitionHash matches connector's current tool definition" claim source. Until governance re-attests, those contracts stay in `warn`/`off`.
 4. Commit any regenerated manifests: `git commit -am "chore: regenerate manifests after writeClass migration"`.
 
 **PR 1 done.** Open the PR with: behavior unchanged at default (`off`); hash-delta note; the three open governance items from the design doc §12.
@@ -780,10 +780,12 @@ Per-contract, once governance re-attests the new `definitionHash` and coverage f
 
    | Aspect | Governance (today) | Connector (this plan) | Live-traffic impact |
    |---|---|---|---|
-   | stableStringify bytes | manual builder | `JSON.stringify(sortKeysDeep)` | **None for valid JSON** — byte-identical (both sort keys, JSON.stringify keys+primitives, no spaces). Diverges only on `undefined`/non-JSON, which can't appear in wire JSON-RPC args. |
+   | stableStringify bytes | manual builder | `JSON.stringify(sortKeysDeep)` | **None for valid JSON** — byte-identical (both sort with `Object.keys().sort()`, JSON.stringify keys+primitives, no spaces). Diverges only on `undefined`/non-JSON, which can't appear in wire JSON-RPC args. |
    | `undefined` object prop | kept as literal `undefined` (invalid JSON) | dropped (JSON semantics) | None on the wire (no `undefined` in JSON). |
-   | key stripping | `__*` only | `__*` **and** `executableArgsExclude` | **Real divergence** when an execute call's wire args contain a control field like `dry_run`. |
+   | key stripping | `__*` only | `__*` **and** `executableArgsExclude` | **Real divergence** when an execute call's wire args contain a control field like `dry_run`. `__*` is moot (see invariant below); `executableArgsExclude` is the sole live gap. |
    | shared package | own copy | `@cesteral/contract-hash` | drift risk until governance imports the package. |
+
+   **Verified transmit==hash invariant.** `stripInternalExecutionArgs(args)` (`external-governance.ts:165`) yields the `executableArgs` governance both **transmits** (`executeMcpTool(..., executableArgs)`, `:645-646`) and **hashes** (`hashActionInput(executableArgs)`, `:858`). So `__*` is removed upstream and never reaches the connector's wire (the connector's `__*` strip is a defensive no-op for governance traffic), and governance's `actionHash` is over exactly the bytes it sends. The connector re-hashes those bytes minus `executableArgsExclude` → that exclude set is the **only** thing that can produce an `ACTION_HASH_MISMATCH` on real governance-originated traffic.
 
    **Resolution (governance-side, out of this repo):** governance imports `@cesteral/contract-hash` (`stableStringify`/`hashActionInput`) and extends stripping to `executableArgsExclude` per contract. **Until done, keep enforce OFF; vectors `pending`.** This is design §12.1/§12.2 made concrete.
 

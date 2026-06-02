@@ -83,7 +83,8 @@ export const DryRunResultSchema = z.object({
  * Zod mirror of the {@link DispatchedCapability} interface in
  * `../types/dry-run-result.ts`. Governed write tools place this on every
  * structured-content response; the governance layer parses it with the same
- * shape (`{ operation, canonicalEntityKind }`, both non-empty strings).
+ * shape: `operation` is a non-empty string, and `canonicalEntityKind` is a
+ * non-empty string for entity writes or `null` for effect writes.
  */
 export const DispatchedCapabilitySchema = z.object({
   operation: z.string().min(1),
