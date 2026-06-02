@@ -62,7 +62,6 @@
       "msads_submit_report"
     ],
     "pinterest-mcp": [
-      "pinterest_adjust_bids",
       "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
