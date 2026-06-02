@@ -45,7 +45,7 @@ export interface GAdsDryRunServiceLike extends GAdsServiceLike {
     entityType: any,
     customerId: string,
     data: Record<string, unknown>,
-    mode: "create" | "update",
+    mode: "create" | "update" | "remove",
     entityId?: string,
     updateMask?: string,
     context?: RequestContext
@@ -131,16 +131,44 @@ export interface GAdsRemoveDryRunArgs {
 }
 
 /**
- * Symbolic dry-run for `gads_remove_entity`. Google Ads "remove" sets status to
- * `REMOVED` (permanent; canonical `deleted`). The expected post-state is the
- * current entity with canonical status `deleted`. Out-of-scope types / read
- * failures fail the governed dry-run via `assertGovernedDryRunResult`.
+ * Dry-run for `gads_remove_entity`. Validation is NATIVE — Google Ads `:mutate`
+ * with `validateOnly: true` on a `remove` operation, so platform-side rejections
+ * (e.g. removing an entity that cannot be removed) are caught in the dry-run
+ * rather than surfacing only on execute. Expected post-state is symbolic: the
+ * current entity with canonical status `deleted` (Google Ads `REMOVED`).
+ *
+ * A failed validate *verdict* is a normal dry-run result; a *thrown* validate
+ * call propagates (governed dry-run must never report validationSource "none").
  */
 export async function runGAdsRemoveDryRun(
   args: GAdsRemoveDryRunArgs,
-  gadsService: GAdsServiceLike,
+  gadsService: GAdsDryRunServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
+  // ── Validation: native Google Ads validateOnly on a remove operation ──
+  let validationErrors: DryRunValidationError[] = [];
+  let validationSource: DryRunResult["validationSource"] = "none";
+  if (gadsService.validateEntity) {
+    const verdict = await gadsService.validateEntity(
+      args.entityType,
+      args.customerId,
+      {},
+      "remove",
+      args.entityId,
+      undefined,
+      context
+    );
+    validationSource = "native_validator";
+    if (!verdict.valid) {
+      validationErrors = (
+        verdict.errors && verdict.errors.length > 0
+          ? verdict.errors
+          : ["Google Ads rejected the removal"]
+      ).map((message) => ({ code: "GOOGLE_ADS_VALIDATION", message }));
+    }
+  }
+
+  // ── Expected post-state: symbolic (entity with canonical status `deleted`) ──
   const before = await captureGAdsSnapshot(
     gadsService,
     args.entityType,
@@ -154,9 +182,9 @@ export async function runGAdsRemoveDryRun(
 
   return assertGovernedDryRunResult(
     {
-      wouldSucceed: expectedPostState !== undefined,
-      validationErrors: [],
-      validationSource: "symbolic",
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource,
       expectedStateSource: expectedPostState ? "server_symbolic_apply" : "none",
       ...(expectedPostState ? { expectedPostState } : {}),
     },

@@ -165,6 +165,19 @@ export async function removeEntityLogic(
 }
 
 export function removeEntityResponseFormatter(result: RemoveEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const outcome = result.dryRun.wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = result.dryRun.validationErrors.map((e) => e.message).join("; ");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry-run: removing ${result.entityType} ${result.entityId} ${outcome}.` +
+          (errs ? `\nValidation: ${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {

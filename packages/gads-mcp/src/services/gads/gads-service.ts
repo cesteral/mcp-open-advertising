@@ -260,12 +260,13 @@ export class GAdsService {
    *
    * - "create" mode: validates a create operation
    * - "update" mode: validates an update operation (requires entityId + updateMask)
+   * - "remove" mode: validates a remove operation (requires entityId)
    */
   async validateEntity(
     entityType: GAdsEntityType,
     customerId: string,
     data: Record<string, unknown>,
-    mode: "create" | "update",
+    mode: "create" | "update" | "remove",
     entityId?: string,
     updateMask?: string,
     context?: RequestContext
@@ -297,6 +298,11 @@ export class GAdsService {
           updateMask,
         },
       ];
+    } else if (mode === "remove") {
+      if (!entityId) {
+        return { valid: false, errors: ["entityId is required for remove mode validation"] };
+      }
+      operations = [{ remove: buildResourceName(entityType, customerId, entityId) }];
     } else {
       operations = [{ create: data }];
     }

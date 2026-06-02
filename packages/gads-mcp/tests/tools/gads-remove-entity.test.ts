@@ -10,6 +10,7 @@ const mockResolveSessionServices = vi.mocked(resolveSessionServices);
 import {
   RemoveEntityInputSchema,
   removeEntityLogic,
+  removeEntityResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/remove-entity.tool.js";
 
 const ctx = { requestId: "r", timestamp: new Date().toISOString(), operation: "t" } as any;
@@ -83,7 +84,11 @@ describe("RemoveEntityInputSchema", () => {
 });
 
 describe("removeEntityLogic governance contract", () => {
-  let svc: { getEntity: ReturnType<typeof vi.fn>; removeEntity: ReturnType<typeof vi.fn> };
+  let svc: {
+    getEntity: ReturnType<typeof vi.fn>;
+    removeEntity: ReturnType<typeof vi.fn>;
+    validateEntity: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,22 +99,47 @@ describe("removeEntityLogic governance contract", () => {
       removeEntity: vi
         .fn()
         .mockResolvedValue({ results: [{ resourceName: "customers/1/campaigns/456" }] }),
+      validateEntity: vi.fn().mockResolvedValue({ valid: true }),
     };
     mockResolveSessionServices.mockReturnValue({ gadsService: svc } as any);
   });
 
-  it("dry_run returns a deleted expected post-state and does not remove", async () => {
+  it("dry_run uses native validateOnly, returns a deleted expected post-state, does not remove", async () => {
     const result = await removeEntityLogic(
       { entityType: "campaign", customerId: "1", entityId: "456", dry_run: true } as any,
       ctx,
       sdk
     );
     expect(svc.removeEntity).not.toHaveBeenCalled();
+    // Native validate-only remove was invoked.
+    expect(svc.validateEntity).toHaveBeenCalledWith(
+      "campaign",
+      "1",
+      {},
+      "remove",
+      "456",
+      undefined,
+      expect.anything()
+    );
+    expect(result.dryRun?.validationSource).toBe("native_validator");
+    expect(result.dryRun?.wouldSucceed).toBe(true);
     expect(result.dryRun?.expectedPostState?.status.canonical).toBe("deleted");
     expect(result.dispatchedCapability).toEqual({
       operation: "delete",
       canonicalEntityKind: "campaign",
     });
+  });
+
+  it("dry_run surfaces a native validation rejection (wouldSucceed:false)", async () => {
+    svc.validateEntity.mockResolvedValue({ valid: false, errors: ["cannot be removed"] });
+    const result = await removeEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "456", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors[0].code).toBe("GOOGLE_ADS_VALIDATION");
+    expect(svc.removeEntity).not.toHaveBeenCalled();
   });
 
   it("execute captures before (live) and after (REMOVED→deleted) snapshots", async () => {
@@ -137,5 +167,24 @@ describe("removeEntityLogic governance contract", () => {
     expect(result.before).toBeUndefined();
     expect(result.after).toBeUndefined();
     expect(svc.removeEntity).toHaveBeenCalledOnce();
+  });
+
+  it("formatter shows a dry-run message, not a false removal success", () => {
+    const content = removeEntityResponseFormatter({
+      confirmed: true,
+      mutateResult: {},
+      entityType: "campaign",
+      entityId: "456",
+      timestamp: new Date().toISOString(),
+      dryRun: {
+        wouldSucceed: true,
+        validationErrors: [],
+        validationSource: "native_validator",
+        expectedStateSource: "server_symbolic_apply",
+      },
+      dispatchedCapability: { operation: "delete", canonicalEntityKind: "campaign" },
+    } as any);
+    expect((content[0] as any).text).toMatch(/dry-run/i);
+    expect((content[0] as any).text).not.toMatch(/removed/i);
   });
 });
