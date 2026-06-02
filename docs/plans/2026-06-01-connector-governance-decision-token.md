@@ -197,7 +197,11 @@ describe("canonicalizeExecutableArgs", () => {
     const canon = canonicalizeExecutableArgs({ rawArgs: raw, exclude: ["dry_run"] });
     expect(canon).toEqual({ customerId: "1", entityId: "2", data: { status: "PAUSED" } });
   });
-  it("leaves args untouched when nothing is excluded", () => {
+  it("ALSO strips __-prefixed internal execution args (mirrors governance stripInternalExecutionArgs)", () => {
+    const raw = { entityId: "2", __traceId: "t", __agent: "a", status: "PAUSED" };
+    expect(canonicalizeExecutableArgs({ rawArgs: raw, exclude: [] })).toEqual({ entityId: "2", status: "PAUSED" });
+  });
+  it("leaves non-control, non-__ args untouched", () => {
     const raw = { a: 1, b: 2 };
     expect(canonicalizeExecutableArgs({ rawArgs: raw, exclude: [] })).toEqual(raw);
   });
@@ -225,14 +229,20 @@ describe("canonicalizeExecutableArgs", () => {
 export function canonicalizeExecutableArgs(opts: { rawArgs: unknown; exclude: string[] }): unknown {
   const { rawArgs, exclude } = opts;
   if (rawArgs === null || typeof rawArgs !== "object" || Array.isArray(rawArgs)) return rawArgs;
-  if (exclude.length === 0) return rawArgs;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(rawArgs as Record<string, unknown>)) {
-    if (!exclude.includes(k)) out[k] = v;
+    // Drop governance's internal execution args (__*) — mirrors
+    // cesteral-intelligence stripInternalExecutionArgs — AND the per-contract
+    // control fields declared in executableArgsExclude (e.g. dry_run).
+    if (k.startsWith("__")) continue;
+    if (exclude.includes(k)) continue;
+    out[k] = v;
   }
   return out;
 }
 ```
+
+> **Governance parity (see Risks §3):** governance currently hashes `stableStringify(stripInternalExecutionArgs(args))`, which strips `__*` only — NOT `executableArgsExclude`. Stripping `__*` here converges us with governance's existing behavior; the residual gap is `executableArgsExclude` (e.g. `dry_run`), which governance does not yet strip. So actionHash parity holds today **only for execute calls whose wire args contain no `executableArgsExclude` field**. Full parity requires governance to (a) import `@cesteral/contract-hash`'s `stableStringify`/`hashActionInput` and (b) strip `executableArgsExclude` per contract. Until then: vectors stay `pending`, contracts stay in `warn`.
 
 **Step 4: Run-pass.**
 
@@ -758,7 +768,25 @@ Per-contract, once governance re-attests the new `definitionHash` and coverage f
 ---
 
 ## Risks / open items (track in PR descriptions)
+
 1. **definitionHash delta** from the `writeClass` migration must be re-attested downstream before enforce.
+
 2. **Golden vectors** are connector-generated until governance provides authoritative ones (design §12.1).
-3. **Executable-args shape** (wire-minus-exclude) must be confirmed identical on the governance side (design §12.2).
-4. **Firestore TTL policy** must be provisioned (Terraform) for `FirestoreJtiStore` in hosted enforce mode.
+
+3. **Known governance `actionHash` divergences (verified against `cesteral-intelligence` on `main`, 2026-06-02).** Governance computes `actionHash = sha256(stableStringify(stripInternalExecutionArgs(args)))`:
+   - `cesteral-intelligence/lib/features/governance/decisions/mutations.ts:33` — `hashActionInput`.
+   - `cesteral-intelligence/lib/features/governance/utils.ts:19` — `stableStringify` (manual recursive key-sort).
+   - `cesteral-intelligence/lib/features/mcp/tools/external-governance.ts:960` — `stripInternalExecutionArgs` strips `__*` only.
+
+   | Aspect | Governance (today) | Connector (this plan) | Live-traffic impact |
+   |---|---|---|---|
+   | stableStringify bytes | manual builder | `JSON.stringify(sortKeysDeep)` | **None for valid JSON** — byte-identical (both sort keys, JSON.stringify keys+primitives, no spaces). Diverges only on `undefined`/non-JSON, which can't appear in wire JSON-RPC args. |
+   | `undefined` object prop | kept as literal `undefined` (invalid JSON) | dropped (JSON semantics) | None on the wire (no `undefined` in JSON). |
+   | key stripping | `__*` only | `__*` **and** `executableArgsExclude` | **Real divergence** when an execute call's wire args contain a control field like `dry_run`. |
+   | shared package | own copy | `@cesteral/contract-hash` | drift risk until governance imports the package. |
+
+   **Resolution (governance-side, out of this repo):** governance imports `@cesteral/contract-hash` (`stableStringify`/`hashActionInput`) and extends stripping to `executableArgsExclude` per contract. **Until done, keep enforce OFF; vectors `pending`.** This is design §12.1/§12.2 made concrete.
+
+4. **Executable-args shape** (wire-minus-`__*`-minus-`executableArgsExclude`) must be confirmed identical on the governance side before any `enforce` flip.
+
+5. **Firestore TTL policy** must be provisioned (Terraform) for `FirestoreJtiStore` in hosted enforce mode.
