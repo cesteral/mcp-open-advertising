@@ -47,7 +47,6 @@
       "linkedin_upload_video"
     ],
     "meta-mcp": [
-      "meta_adjust_bids",
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
