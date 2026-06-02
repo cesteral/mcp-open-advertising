@@ -385,5 +385,28 @@ describe("dv360_create_entity", () => {
       });
       expect(result.after).toBeUndefined();
     });
+
+    it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+      mockDv360Service.createEntity.mockClear();
+      const result = await createEntityLogic(
+        {
+          entityType: "creative",
+          advertiserId: "adv-1",
+          data: { displayName: "Banner" },
+          dry_run: true,
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(mockDv360Service.createEntity).not.toHaveBeenCalled();
+      expect(result.dispatchedCapability).toEqual({
+        operation: "create",
+        canonicalEntityKind: null,
+      });
+      expect(result.dryRun).toBeDefined();
+      expect(result.dryRun?.expectedPostState).toBeUndefined();
+      expect(result.dryRun?.expectedStateSource).toBe("none");
+    });
   });
 });

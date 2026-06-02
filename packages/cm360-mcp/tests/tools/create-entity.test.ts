@@ -296,4 +296,21 @@ describe("cm360_create_entity governance contract", () => {
     expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
     expect(result.after).toBeUndefined();
   });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await createEntityLogic(
+      {
+        profileId: "123",
+        entityType: "floodlightActivity" as const,
+        data: { name: "Floodlight" },
+        dry_run: true,
+      } as any,
+      mockContext
+    );
+    expect(mockState.cm360Service.createEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
 });

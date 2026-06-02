@@ -145,4 +145,18 @@ describe("msads_create_entity governance contract", () => {
     expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
     expect(result.after).toBeUndefined();
   });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    (mockServices.msadsService.createEntity as any).mockClear();
+    const result = await createEntityLogic(
+      { entityType: "keyword", data: { Keywords: [{ Text: "shoes" }] }, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(mockServices.msadsService.createEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
 });

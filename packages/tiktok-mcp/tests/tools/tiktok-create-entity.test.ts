@@ -229,4 +229,18 @@ describe("tiktok_create_entity governance contract", () => {
     expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
     expect(result.after).toBeUndefined();
   });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    mockCreateEntity.mockClear();
+    const result = await createEntityLogic(
+      { entityType: "creative", advertiserId: "1", data: {}, dry_run: true } as any,
+      baseContext,
+      baseSdk
+    );
+    expect(mockCreateEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
 });

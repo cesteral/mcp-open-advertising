@@ -228,4 +228,23 @@ describe("ttd_create_entity governance contract", () => {
     expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
     expect(result.after).toBeUndefined();
   });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    mockTtdService.createEntity.mockClear();
+    const result = await createEntityLogic(
+      {
+        entityType: "creative" as any,
+        advertiserId: "adv-1",
+        data: { CreativeName: "Banner" },
+        dry_run: true,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(mockTtdService.createEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
 });
