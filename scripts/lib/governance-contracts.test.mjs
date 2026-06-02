@@ -210,6 +210,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign", "ad_group", "ad"] },
   },
+  {
+    packageDir: "snapchat-mcp",
+    platformSlug: "snapchat",
+    writeTool: "snapchat_create_entity",
+    readTool: "snapchat_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_group", "ad"] },
+  },
 ];
 
 const entityKindAliases = {
