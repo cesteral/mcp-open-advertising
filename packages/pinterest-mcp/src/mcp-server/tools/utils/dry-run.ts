@@ -118,6 +118,51 @@ export function resolvePinterestDispatchedCapability(
   };
 }
 
+/** Resolve `(operation, entityKind)` for a `pinterest_create_entity` call. Pure. */
+export function resolvePinterestCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface PinterestCreateDryRunArgs {
+  entityType: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `pinterest_create_entity`. No pre-state; the expected
+ * post-state is the would-be-created entity (the `data` payload normalized,
+ * empty pre-state). `platformEntityId` is empty — assigned by the server.
+ */
+export async function runPinterestCreateDryRun(
+  args: PinterestCreateDryRunArgs,
+  _service: unknown,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(args.data);
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildPinterestSnapshot(args.entityType, "", {}, args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "pinterest_create_entity"
+  );
+}
+
 export interface PinterestDryRunArgs {
   entityType: string;
   adAccountId: string;

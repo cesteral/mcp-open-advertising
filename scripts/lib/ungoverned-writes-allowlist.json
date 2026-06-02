@@ -82,7 +82,6 @@
       "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
-      "pinterest_create_entity",
       "pinterest_delete_entity",
       "pinterest_duplicate_entity",
       "pinterest_submit_report",
