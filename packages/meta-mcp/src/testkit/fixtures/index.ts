@@ -239,6 +239,98 @@ export const resumeAdSetFromPaused: MetaWriteFixture = {
   description: "resume: ad set transition PAUSED → ACTIVE",
 };
 
+/**
+ * delete: Meta "delete" sets status DELETED (canonical `deleted`), so the
+ * symbolic apply is a status patch — `applyMetaPatch` yields the deleted
+ * post-state. One fixture per governed kind (campaign / ad_set / ad).
+ */
+export const deleteCampaign: MetaWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityId: "campaign-REDACTED-9",
+    data: { status: "DELETED" },
+  },
+  preState: {
+    id: "campaign-REDACTED-9",
+    name: "Retired Campaign",
+    status: "PAUSED",
+    account_id: "act_REDACTED_001",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-9",
+    displayName: "Retired Campaign",
+    accountId: "act_REDACTED_001",
+    status: { canonical: "deleted", platformRaw: "DELETED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: campaign transition PAUSED → DELETED (canonical deleted)",
+};
+
+export const deleteAdSet: MetaWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "adSet",
+  args: {
+    entityType: "adSet",
+    entityId: "adset-REDACTED-9",
+    data: { status: "DELETED" },
+  },
+  preState: {
+    id: "adset-REDACTED-9",
+    name: "Retired Ad Set",
+    status: "PAUSED",
+    account_id: "act_REDACTED_001",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad_set",
+    platformEntityId: "adset-REDACTED-9",
+    displayName: "Retired Ad Set",
+    accountId: "act_REDACTED_001",
+    status: { canonical: "deleted", platformRaw: "DELETED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: adSet transition PAUSED → DELETED (canonical deleted)",
+};
+
+export const deleteAd: MetaWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    entityId: "ad-REDACTED-9",
+    data: { status: "DELETED" },
+  },
+  preState: {
+    id: "ad-REDACTED-9",
+    name: "Retired Ad",
+    status: "PAUSED",
+    account_id: "act_REDACTED_001",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad",
+    platformEntityId: "ad-REDACTED-9",
+    displayName: "Retired Ad",
+    accountId: "act_REDACTED_001",
+    status: { canonical: "deleted", platformRaw: "DELETED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: ad transition PAUSED → DELETED (canonical deleted)",
+};
+
 export const allFixtures: readonly MetaWriteFixture[] = [
   updateBudgetIncreaseCampaign,
   updateBudgetDecreaseAdSet,
@@ -246,4 +338,7 @@ export const allFixtures: readonly MetaWriteFixture[] = [
   pauseAdSetFromActive,
   resumeCampaignFromPaused,
   resumeAdSetFromPaused,
+  deleteCampaign,
+  deleteAdSet,
+  deleteAd,
 ];

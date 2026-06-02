@@ -138,8 +138,43 @@ export const resumeCampaign: LinkedInWriteFixture = {
   description: "resume: campaign transition PAUSED → ACTIVE (budget preserved)",
 };
 
+/**
+ * delete: LinkedIn "delete" retires the campaign (status REMOVED → canonical
+ * `deleted`). Modeled as a status patch so `applyLinkedInPatch` yields the
+ * deleted post-state. Governed scope is `campaign`.
+ */
+export const deleteCampaign: LinkedInWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityUrn: "urn:li:sponsoredCampaign:REDACTED-9",
+    data: { status: "REMOVED" },
+  },
+  preState: {
+    id: 9,
+    name: "Retired Campaign",
+    status: "PAUSED",
+    account: accountUrn,
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "linkedin_ads",
+    entityKind: "campaign",
+    platformEntityId: "urn:li:sponsoredCampaign:REDACTED-9",
+    displayName: "Retired Campaign",
+    accountId: accountUrn,
+    status: { canonical: "deleted", platformRaw: "REMOVED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: campaign transition PAUSED → REMOVED (canonical deleted)",
+};
+
 export const allFixtures: readonly LinkedInWriteFixture[] = [
   updateBudgetCampaign,
   pauseCampaign,
   resumeCampaign,
+  deleteCampaign,
 ];

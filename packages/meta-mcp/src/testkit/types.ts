@@ -16,7 +16,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * tool dispatches to these via the `data` payload (no separate operation
  * input). Fixtures pin one operation per fixture so consumers can filter.
  */
-export type MetaOperation = "update_budget" | "pause" | "resume";
+export type MetaOperation = "update_budget" | "pause" | "resume" | "delete";
 
 /**
  * Round-1 entity kinds with canonical-snapshot coverage.
@@ -38,7 +38,7 @@ export interface MetaFixtureArgs {
  */
 export interface MetaWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "delete_entity";
   /** Canonical operation this fixture exercises. */
   operation: MetaOperation;
   /** Canonical entity kind. */
