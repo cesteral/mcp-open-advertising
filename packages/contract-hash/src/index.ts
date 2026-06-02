@@ -40,6 +40,54 @@ function sortKeysDeep(value: unknown): unknown {
 }
 
 /**
+ * Canonical JSON string: deep key-sorted, JSON-compatible ONLY.
+ *
+ * Throws on BigInt / Date / NaN / Infinity / function / symbol / class instance
+ * and on root `undefined`, rather than silently coercing — Zod output may not be
+ * JSON, and a silent coercion would diverge from `cesteral-intelligence`'s
+ * `stableStringify` (lib/features/governance/utils.ts). For valid wire JSON the
+ * byte output is identical to that implementation (both deep-sort keys and use
+ * JSON.stringify for keys/primitives with no whitespace).
+ *
+ * Undefined object properties are DROPPED (JSON semantics); undefined array
+ * elements are REJECTED (JSON.stringify would coerce them to null).
+ */
+export function stableStringify(value: unknown): string {
+  if (typeof value === "undefined") {
+    throw new Error("stableStringify: undefined is not valid JSON at the root");
+  }
+  return JSON.stringify(sortKeysDeep(assertJsonCompatible(value)));
+}
+
+function assertJsonCompatible(value: unknown): unknown {
+  const t = typeof value;
+  if (t === "bigint") throw new Error("stableStringify: BigInt is not JSON-serializable");
+  if (t === "function") throw new Error("stableStringify: function is not JSON-serializable");
+  if (t === "symbol") throw new Error("stableStringify: symbol is not JSON-serializable");
+  if (t === "number" && !Number.isFinite(value as number))
+    throw new Error("stableStringify: NaN/Infinity are not valid JSON");
+  if (value !== null && t === "object") {
+    if (value instanceof Date) throw new Error("stableStringify: Date is not JSON-serializable");
+    const proto = Object.getPrototypeOf(value);
+    if (!Array.isArray(value) && proto !== Object.prototype && proto !== null)
+      throw new Error("stableStringify: class instance is not JSON-serializable");
+    if (Array.isArray(value)) {
+      value.forEach((el) => {
+        if (typeof el === "undefined")
+          throw new Error("stableStringify: undefined array element is not valid JSON");
+        assertJsonCompatible(el);
+      });
+    } else {
+      for (const v of Object.values(value as Record<string, unknown>)) {
+        if (typeof v === "undefined") continue; // JSON.stringify drops undefined object props
+        assertJsonCompatible(v);
+      }
+    }
+  }
+  return value;
+}
+
+/**
  * SHA-256 over the canonical governance projection of an MCP tool.
  *
  * Stable across key reorderings, sensitive to any change in
