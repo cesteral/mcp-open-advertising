@@ -121,6 +121,75 @@ export function resolveLinkedInDispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(operation, entityKind)` for a `linkedin_delete_entity` call.
+ * Out-of-scope types (campaignGroup, creative, …) resolve to
+ * `canonicalEntityKind: null` — still token-gated under enforce, no canonical
+ * snapshot. Pure.
+ */
+export function resolveLinkedInDeleteCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface LinkedInDeleteDryRunArgs {
+  entityType: string;
+  entityUrn: string;
+}
+
+/**
+ * Symbolic dry-run for `linkedin_delete_entity`. Validation is symbolic; the
+ * expected post-state is the current entity with status `REMOVED` (canonical
+ * `deleted`). LinkedIn rejects deleting an ACTIVE campaign (must be paused
+ * first), so a governed dry-run surfaces that rather than approving a delete
+ * the real API will reject.
+ */
+export async function runLinkedInDeleteDryRun(
+  args: LinkedInDeleteDryRunArgs,
+  service: LinkedInServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (ENTITY_KIND_MAP[args.entityType] && service.getEntity) {
+    const current = (await service.getEntity(args.entityType, args.entityUrn, context)) as Record<
+      string,
+      unknown
+    >;
+    if (current && typeof current === "object") {
+      if (current.status === "ACTIVE") {
+        validationErrors.push({
+          code: "ACTIVE_NOT_DELETABLE",
+          message: "ACTIVE campaigns must be paused before deletion",
+          field: "status",
+        });
+      }
+      const snapshot = buildLinkedInSnapshot(args.entityType, args.entityUrn, current, {
+        status: "REMOVED",
+      });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "linkedin_delete_entity"
+  );
+}
+
 export interface LinkedInDryRunArgs {
   entityType: string;
   entityUrn: string;

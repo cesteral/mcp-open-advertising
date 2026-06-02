@@ -51,7 +51,6 @@
       "linkedin_bulk_update_entities",
       "linkedin_bulk_update_status",
       "linkedin_create_entity",
-      "linkedin_delete_entity",
       "linkedin_duplicate_entity",
       "linkedin_upload_image",
       "linkedin_upload_video"
