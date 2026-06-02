@@ -179,6 +179,8 @@ export const updateEntityTool = {
     idempotentHint: false,
     cesteral: {
       kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
       platform: "ttd",
       contractPlatformSlug: "ttd",
       contractToolSlug: "update_entity",
