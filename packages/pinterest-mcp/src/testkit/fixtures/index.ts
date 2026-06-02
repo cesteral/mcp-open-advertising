@@ -324,6 +324,106 @@ export const resumeAd: PinterestWriteFixture = {
   description: "resume: ad transition PAUSED → ACTIVE",
 };
 
+/**
+ * duplicate fixtures. The copy does not exist yet, so `entityId` is the empty
+ * placeholder and `data` is the landing-status overlay (the copy lands PAUSED)
+ * the dry-run applies to the SOURCE (`preState`).
+ */
+export const duplicateCampaign: PinterestWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    adAccountId,
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    id: "campaign-REDACTED-9",
+    name: "Source Campaign",
+    status: "ACTIVE",
+    ad_account_id: adAccountId,
+    daily_spend_cap: 100_000_000,
+    start_time: 1767225600,
+    end_time: 1798675200,
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "Source Campaign",
+    accountId: adAccountId,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: "2026-01-01T00:00:00.000Z", endAt: "2026-12-31T00:00:00.000Z" },
+  },
+  description: "duplicate: campaign copy lands PAUSED (projected from source)",
+};
+
+export const duplicateAdGroup: PinterestWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    adAccountId,
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    id: "adgroup-REDACTED-9",
+    name: "Source Ad Group",
+    status: "ACTIVE",
+    ad_account_id: adAccountId,
+    budget_in_micro_currency: 50_000_000,
+    budget_type: "DAILY",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "ad_group",
+    platformEntityId: "",
+    displayName: "Source Ad Group",
+    accountId: adAccountId,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: adGroup copy lands PAUSED, budget preserved (projected from source)",
+};
+
+export const duplicateAd: PinterestWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    adAccountId,
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    id: "ad-REDACTED-9",
+    name: "Source Ad",
+    status: "ACTIVE",
+    ad_account_id: adAccountId,
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "ad",
+    platformEntityId: "",
+    displayName: "Source Ad",
+    accountId: adAccountId,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: ad copy lands PAUSED (projected from source)",
+};
+
 export const allFixtures: readonly PinterestWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -333,4 +433,7 @@ export const allFixtures: readonly PinterestWriteFixture[] = [
   resumeCampaign,
   resumeAdGroup,
   resumeAd,
+  duplicateCampaign,
+  duplicateAdGroup,
+  duplicateAd,
 ];

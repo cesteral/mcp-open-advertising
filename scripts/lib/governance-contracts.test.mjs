@@ -228,6 +228,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { duplicate: ["order", "line_item"] },
   },
+  {
+    packageDir: "pinterest-mcp",
+    platformSlug: "pinterest",
+    writeTool: "pinterest_duplicate_entity",
+    readTool: "pinterest_get_entity",
+    contractToolSlug: "duplicate_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { duplicate: ["campaign", "ad_group", "ad"] },
+  },
 ];
 
 const entityKindAliases = {

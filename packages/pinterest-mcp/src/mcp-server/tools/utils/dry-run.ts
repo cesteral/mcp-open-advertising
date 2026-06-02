@@ -170,3 +170,68 @@ export async function runPinterestUpdateDryRun(
     "pinterest_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `pinterest_duplicate_entity`
+ * call. Out-of-scope types resolve to `canonicalEntityKind: null` —
+ * token-gated, no canonical snapshot. Pure.
+ */
+export function resolvePinterestDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface PinterestDuplicateDryRunArgs {
+  entityType: string;
+  adAccountId: string;
+  /** ID of the SOURCE entity being duplicated. */
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `pinterest_duplicate_entity`. The copy does not exist
+ * yet (no `before`). The copy lands in a non-running state, so the expected
+ * post-state is the SOURCE re-projected as the copy: read the source, overlay
+ * `status: "PAUSED"`, and emit it with an empty `platformEntityId` (the new ID
+ * is assigned on execute). Out-of-scope kinds are token-gated but not
+ * snapshot-governed.
+ */
+export async function runPinterestDuplicateDryRun(
+  args: PinterestDuplicateDryRunArgs,
+  service: PinterestServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(
+      args.entityType,
+      { adAccountId: args.adAccountId },
+      args.entityId,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (source && typeof source === "object") {
+      const snapshot = buildPinterestSnapshot(args.entityType, "", source, { status: "PAUSED" });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "pinterest_duplicate_entity") : result;
+}
