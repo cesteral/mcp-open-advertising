@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { elicitBidChangeConfirmation } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitBidChangeConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_adjust_bids";
 const TOOL_TITLE = "LinkedIn Ads Bid Adjustment";
@@ -41,6 +55,13 @@ export const AdjustBidsInputSchema = z
       .max(50)
       .describe("Bid adjustments to apply (max 50)"),
     reason: z.string().optional().describe("Optional reason for the bid adjustment"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bid adjustments and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bid-adjustment batch) without calling the LinkedIn API or prompting for confirmation. No bids are changed."
+      ),
   })
   .describe("Parameters for batch bid adjustment on LinkedIn campaigns");
 
@@ -61,6 +82,15 @@ export const AdjustBidsOutputSchema = z
       })
     ),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No bids were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bids_adjusted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `adjust_bids` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Bid adjustment results");
 
@@ -80,6 +110,27 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  // Effect-class write: no canonical entity snapshot. Capability is
+  // `adjust_bids` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "adjust_bids",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    return {
+      confirmed: true,
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "campaign",
@@ -96,6 +147,7 @@ export async function adjustBidsLogic(
       totalFailed: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -123,6 +175,16 @@ export async function adjustBidsLogic(
 
   const totalSucceeded = results.filter((r) => r.success).length;
 
+  const effect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: {
+      entity_label: "campaign",
+      requested: input.adjustments.length,
+      succeeded: totalSucceeded,
+      failed: input.adjustments.length - totalSucceeded,
+    },
+  };
+
   return {
     confirmed: true,
     totalRequested: input.adjustments.length,
@@ -130,10 +192,66 @@ export async function adjustBidsLogic(
     totalFailed: input.adjustments.length - totalSucceeded,
     results,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `adjust_bids`. Validates the batch (each `amount`
+ * parses to a positive number) and projects the would-be effect — a bid
+ * adjustment over N campaigns. LinkedIn has no native bid validate/preview, so
+ * both axes are symbolic. Pure (no I/O).
+ */
+function buildAdjustBidsEffectDryRun(
+  adjustments: AdjustBidsInput["adjustments"]
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  adjustments.forEach((a, i) => {
+    if (!Number.isFinite(Number(a.amount)) || Number(a.amount) <= 0) {
+      validationErrors.push({
+        code: "INVALID_BID_AMOUNT",
+        message: `amount must be a positive decimal string — got ${String(a.amount)}`,
+        field: `adjustments.${i}.amount`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: { entity_label: "campaign", requested: adjustments.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    "linkedin_adjust_bids",
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? result.totalRequested;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: adjusting bids on ${n} campaign(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bids were changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -179,6 +297,23 @@ export const adjustBidsTool = {
     openWorldHint: true,
     idempotentHint: true,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "linkedin_ads",
+      contractPlatformSlug: "linkedin_ads",
+      contractToolSlug: "adjust_bids",
+      operation: ["adjust_bids"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "linkedin_ads.adjust_bids.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
