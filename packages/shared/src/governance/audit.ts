@@ -34,6 +34,7 @@ export function logDecisionTokenVerdict(
     status: verdict.ok ? "ok" : "rejected",
     reasonCode: verdict.reasonCode,
     detail: verdict.detail,
+    definitionHashVerified: verdict.definitionHashVerified,
     mode,
     contractId,
     toolName,

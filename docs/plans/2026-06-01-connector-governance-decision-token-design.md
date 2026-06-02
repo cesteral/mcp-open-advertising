@@ -93,20 +93,23 @@ Runs after `tool.inputSchema.parse(args)` and **after advertiser-scope authz**, 
    - `MISSING_TOKEN`
    - `MALFORMED_TOKEN` (not 3 segments / undecodable header / claim present but wrong type)
    - `UNSUPPORTED_ALG` (header `alg !== "HS256"`)
+   - `SECRET_UNCONFIGURED` (no non-empty secret configured — fail closed; an empty/whitespace secret is never used as an HS256 key)
    - `INVALID_SIGNATURE` (incl. unknown/mismatched `kid`; `kid` pins its secret with no fallback)
    - `MISSING_CLAIM` — **any** of the required claims absent: `jti`, `exp`, `iat`, `sub`, `contractId`, `definitionHash`, `actionHash`. A signed token missing `jti`/`exp` must NEVER reach `OK` or `consumeOnce`.
    - `EXPIRED` (small clock-skew leeway)
    - `WRONG_ISSUER` / `WRONG_AUDIENCE`
    - `CONTRACT_MISMATCH` (`contractId` ≠ tool annotation `contractId`)
-   - `DEFINITION_HASH_MISMATCH` (≠ live `computeDefinitionHash(tool)`)
+   - `DEFINITION_HASH_MISMATCH` (≠ resolved manifest hash). The expected hash is **optional**: when the caller has no manifest resolver, this check is skipped and the verdict reports `definitionHashVerified: false` — every OTHER binding still runs. The factory fails closed under `enforce` when the hash is unresolved (never silently skips the whole verifier).
    - `ACTION_HASH_MISMATCH` (≠ `hashActionInput(canonicalizeExecutableArgs(...))`)
    - `REPLAYED_JTI` (**consume last**, only after all above pass)
    - else `OK`
-5. **`jti` consumed only on an otherwise-valid token** — a missing-claim / malformed / expired / mismatched / unauthorized call never burns a legitimate `jti`. `jose.jwtVerify` checks signature/`exp`/`iss`/`aud` but knows nothing of `contractId`/`definitionHash`/`actionHash`, so required-claim presence+type is an explicit step before any binding check.
+5. **`jti` consumed only on an otherwise-valid token** — a missing-claim / malformed / expired / mismatched / unauthorized call never burns a legitimate `jti`. Signature is verified with `jose.compactVerify` (signature only), so the connector owns claim-check ordering; required-claim presence+type is an explicit step before any binding check. **Replay TTL = `max(jtiTtlMs, token-remaining-lifetime)`** so a short `jtiTtlMs` can never let an un-expired token replay after the store entry lapses.
 6. Apply mode:
    - `warn` → log verdict (incl. failures), **proceed** with write.
-   - `enforce` → any non-`OK` → throw `McpError(JsonRpcErrorCode.Unauthorized)` with reason code; write never runs (maps to HTTP 401 via existing handling).
+   - `enforce` → any non-`OK` → throw `McpError(JsonRpcErrorCode.Unauthorized)` with reason code; write never runs (surfaced as an `isError` tool result carrying JSON-RPC `-32006`).
 7. Forward `jti` (preferred) or `actionHash` as upstream **idempotency key** where the platform API supports one, via `sdkContext.idempotencyKey`.
+
+**Deployment guard:** if any governed write resolves to `enforce` but no distributed `JtiStore` is injected, the factory logs a one-time registration WARNING (in-memory replay protection is per-instance only).
 
 ### Ordering vs advertiser-scope authz
 Scope authz runs **before** token verification/jti consumption, so unauthorized calls are rejected without burning a valid `jti`.

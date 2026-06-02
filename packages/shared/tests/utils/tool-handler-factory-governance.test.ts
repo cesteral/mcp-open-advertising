@@ -226,6 +226,46 @@ describe("tool-handler-factory governance verification", () => {
     expect(writeTool.logic).not.toHaveBeenCalled();
   });
 
+  it("enforce mode: missing secret fails closed (SECRET_UNCONFIGURED)", async () => {
+    // resolver present (default), but GOVERNANCE_DECISION_TOKEN_SECRET unset.
+    register({ env: { GOVERNANCE_TOKEN_MODE: "enforce" }, server, logger });
+    const token = await mintToken({ entityId: "1" });
+    const res = (await callWithToken(server, { entityId: "1" }, token)) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("SECRET_UNCONFIGURED");
+    expect(writeTool.logic).not.toHaveBeenCalled();
+  });
+
+  it("warns at registration when enforce resolves with no injected jti store", () => {
+    register({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      server,
+      logger,
+    });
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const hit = warn.calls.some(
+      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
+    );
+    expect(hit).toBe(true);
+  });
+
+  it("does NOT warn at registration when a jti store is injected", () => {
+    register({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      jtiStore: new InMemoryJtiStore(),
+      server,
+      logger,
+    });
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const hit = warn.calls.some(
+      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
+    );
+    expect(hit).toBe(false);
+  });
+
   it("authz denial happens before jti consume (valid token not burned)", async () => {
     const jtiStore = { consumeOnce: vi.fn(async () => "fresh" as const) };
     register({

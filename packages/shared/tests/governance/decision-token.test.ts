@@ -206,4 +206,60 @@ describe("verifyDecisionToken", () => {
     const v = await verify(await sign(basePayload()));
     expect(v.reasonCode).toBe("OK");
   });
+
+  describe("secret hardening", () => {
+    it("SECRET_UNCONFIGURED when no secret is set (empty current, no previous)", async () => {
+      const v = await verify(await sign(basePayload()), { secrets: { current: "" } });
+      expect(v.reasonCode).toBe("SECRET_UNCONFIGURED");
+    });
+
+    it("fails closed (never accepts) when the server secret is empty", async () => {
+      // A perfectly valid token signed with the real secret must STILL be
+      // rejected if the server has no secret configured — never silently
+      // accepted via an empty-string key.
+      const validToken = await sign(basePayload(), { secret: CURRENT });
+      const v = await verify(validToken, { secrets: { current: "  " } });
+      expect(v.ok).toBe(false);
+      expect(v.reasonCode).toBe("SECRET_UNCONFIGURED");
+    });
+  });
+
+  describe("unresolved definition hash", () => {
+    it("verifies all other bindings and reports definitionHashVerified:false", async () => {
+      const v = await verify(await sign(basePayload()), {
+        expected: { contractId: CONTRACT_ID, actionHash: ACTION_HASH }, // no definitionHash
+      });
+      expect(v.reasonCode).toBe("OK");
+      expect(v.definitionHashVerified).toBe(false);
+    });
+
+    it("still catches a bad actionHash when definition hash is unresolved", async () => {
+      const v = await verify(await sign({ ...basePayload(), actionHash: "wrong" }), {
+        expected: { contractId: CONTRACT_ID, actionHash: ACTION_HASH },
+      });
+      expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+    });
+
+    it("reports definitionHashVerified:true when the hash is checked", async () => {
+      const v = await verify(await sign(basePayload()));
+      expect(v.definitionHashVerified).toBe(true);
+    });
+  });
+
+  it("replay TTL covers the token lifetime even when jtiTtlMs is short", async () => {
+    const clock = { ms: 1_000_000_000 };
+    const store = new InMemoryJtiStore(() => clock.ms);
+    const now = () => clock.ms;
+    // exp ~1h out; jtiTtlMs deliberately tiny.
+    const exp = Math.floor(clock.ms / 1000) + 3600;
+    const token = await sign({ ...basePayload(), exp });
+
+    const first = await verify(token, { jtiTtlMs: 1, now }, store);
+    expect(first.reasonCode).toBe("OK");
+
+    // Advance well past jtiTtlMs but while the token is still valid.
+    clock.ms += 60_000;
+    const replay = await verify(token, { jtiTtlMs: 1, now }, store);
+    expect(replay.reasonCode).toBe("REPLAYED_JTI");
+  });
 });

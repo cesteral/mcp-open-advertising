@@ -405,6 +405,28 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   const jtiStore = opts.jtiStore ?? getFallbackJtiStore();
   const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
 
+  // Deployment footgun guard: if any governed write resolves to `enforce` but no
+  // distributed jti store was injected, replay protection is only per-instance.
+  // Warn once at registration so this surfaces before the first enforce flip,
+  // not as a silent multi-instance gap.
+  if (!opts.jtiStore) {
+    const anyEnforce = tools.some((t) => {
+      const c = (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral;
+      return (
+        c?.kind === "write" &&
+        resolveTokenMode({ contractId: c.contractId, env: governanceEnv }) === "enforce"
+      );
+    });
+    if (anyEnforce) {
+      logger.warn(
+        { component: "governance", jtiStore: "in-memory" },
+        "Decision-token enforcement is enabled with the in-memory fallback jti store — " +
+          "replay protection does not hold across multiple instances. Inject a distributed " +
+          "JtiStore (selectJtiStore + GOVERNANCE_JTI_STORE=firestore)."
+      );
+    }
+  }
+
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
     const transformedInputSchema = transformSchema(tool.inputSchema);
@@ -570,65 +592,68 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               });
               if (mode !== "off") {
                 const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
-                if (expectedDefinitionHash === undefined) {
-                  // Cannot verify the definition-hash binding without the
-                  // published manifest value. Fail closed under enforce; warn
-                  // and proceed otherwise.
+                // Under enforce, an unresolved definition hash means the binding
+                // cannot be fully verified — fail closed rather than admit a
+                // partially-bound token.
+                if (mode === "enforce" && expectedDefinitionHash === undefined) {
                   logger.warn(
                     {
                       component: "governance-audit",
                       event: "decision_token_verification",
-                      status: "skipped",
+                      status: "rejected",
                       reasonCode: "DEFINITION_HASH_UNRESOLVED",
                       mode,
                       contractId: cesteralAnnotation.contractId,
                       toolName: tool.name,
                     },
-                    "decision token: definition hash unresolved (no manifest resolver)"
+                    "decision token: definition hash unresolved under enforce (no manifest resolver)"
                   );
-                  if (mode === "enforce") {
-                    recordToolExecution(tool.name, "error", Date.now() - startTime);
-                    throw new McpError(
-                      JsonRpcErrorCode.Unauthorized,
-                      `Governance: cannot verify decision token for ${tool.name} ` +
-                        `(definition hash unavailable)`
-                    );
-                  }
-                } else {
-                  const executableArgs = canonicalizeExecutableArgs({
-                    rawArgs: args,
-                    exclude: cesteralAnnotation.executableArgsExclude,
-                  });
-                  const verdict = await verifyDecisionToken({
-                    token: getRequestContext()?.decisionToken,
-                    secrets: {
-                      current: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET ?? "",
-                      previous: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS,
-                    },
-                    expected: {
-                      contractId: cesteralAnnotation.contractId,
-                      definitionHash: expectedDefinitionHash,
-                      actionHash: hashActionInput(executableArgs),
-                    },
-                    jtiStore,
-                    jtiTtlMs,
-                  });
-                  logDecisionTokenVerdict(logger, {
-                    verdict,
-                    mode,
+                  recordToolExecution(tool.name, "error", Date.now() - startTime);
+                  throw new McpError(
+                    JsonRpcErrorCode.Unauthorized,
+                    `Governance: cannot verify decision token for ${tool.name} ` +
+                      `(definition hash unavailable)`
+                  );
+                }
+
+                // Warn (or enforce with a resolver): verify every binding. When
+                // the definition hash is unresolved (warn only), it is passed as
+                // undefined so the OTHER bindings — signature, claims, expiry,
+                // issuer/audience, actionHash, replay — all still run, and the
+                // verdict reports definitionHashVerified:false.
+                const executableArgs = canonicalizeExecutableArgs({
+                  rawArgs: args,
+                  exclude: cesteralAnnotation.executableArgsExclude,
+                });
+                const verdict = await verifyDecisionToken({
+                  token: getRequestContext()?.decisionToken,
+                  secrets: {
+                    current: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET ?? "",
+                    previous: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS,
+                  },
+                  expected: {
                     contractId: cesteralAnnotation.contractId,
-                    toolName: tool.name,
-                  });
-                  if (mode === "enforce" && !verdict.ok) {
-                    recordToolExecution(tool.name, "error", Date.now() - startTime);
-                    throw new McpError(
-                      JsonRpcErrorCode.Unauthorized,
-                      `Governance decision token rejected: ${verdict.reasonCode}`
-                    );
-                  }
-                  if (verdict.ok && verdict.claims?.jti) {
-                    idempotencyKey = verdict.claims.jti;
-                  }
+                    definitionHash: expectedDefinitionHash,
+                    actionHash: hashActionInput(executableArgs),
+                  },
+                  jtiStore,
+                  jtiTtlMs,
+                });
+                logDecisionTokenVerdict(logger, {
+                  verdict,
+                  mode,
+                  contractId: cesteralAnnotation.contractId,
+                  toolName: tool.name,
+                });
+                if (mode === "enforce" && !verdict.ok) {
+                  recordToolExecution(tool.name, "error", Date.now() - startTime);
+                  throw new McpError(
+                    JsonRpcErrorCode.Unauthorized,
+                    `Governance decision token rejected: ${verdict.reasonCode}`
+                  );
+                }
+                if (verdict.ok && verdict.claims?.jti) {
+                  idempotencyKey = verdict.claims.jti;
                 }
               }
             }
