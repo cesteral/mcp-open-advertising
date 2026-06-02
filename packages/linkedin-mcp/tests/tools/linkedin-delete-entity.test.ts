@@ -89,4 +89,17 @@ describe("linkedin_delete_entity governance contract", () => {
     expect(result.after).toBeUndefined();
     expect(svc.deleteEntity).toHaveBeenCalledOnce();
   });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "creative", entityUrn: "urn:li:sponsoredCreative:5", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
 });

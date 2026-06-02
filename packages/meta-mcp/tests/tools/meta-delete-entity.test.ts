@@ -173,6 +173,19 @@ describe("deleteEntityLogic governance contract", () => {
     expect(result.after).toBeUndefined();
   });
 
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "adCreative" as any, entityId: "cr-1", dry_run: true },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
+
   it("execute captures before (live) and after (deleted) snapshots + dispatchedCapability", async () => {
     const result = await deleteEntityLogic(
       { entityType: "campaign" as any, entityId: "c-1" },
