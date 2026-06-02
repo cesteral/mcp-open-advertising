@@ -190,6 +190,55 @@ export async function runLinkedInDeleteDryRun(
   );
 }
 
+/**
+ * Resolve the `(operation, entityKind)` for a `linkedin_create_entity` call.
+ * Out-of-scope types (campaignGroup, creative) resolve to null. Pure.
+ */
+export function resolveLinkedInCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface LinkedInCreateDryRunArgs {
+  entityType: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `linkedin_create_entity`. No pre-state; the expected
+ * post-state is the would-be-created entity (the `data` payload normalized via
+ * `buildLinkedInSnapshot`, empty pre-state). `platformEntityId` is empty — the
+ * server assigns the real URN on execute.
+ */
+export async function runLinkedInCreateDryRun(
+  args: LinkedInCreateDryRunArgs,
+  _service: LinkedInServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(args.data);
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildLinkedInSnapshot(args.entityType, "", {}, args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "linkedin_create_entity"
+  );
+}
+
 export interface LinkedInDryRunArgs {
   entityType: string;
   entityUrn: string;
