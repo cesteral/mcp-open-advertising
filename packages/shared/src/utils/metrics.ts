@@ -128,3 +128,27 @@ export function recordRateLimitHit(keyPattern: string): void {
   }
   rateLimitHitCounter.add(1, { key_pattern: keyPattern });
 }
+
+// ---------------------------------------------------------------------------
+// Governance decision-token metrics
+// ---------------------------------------------------------------------------
+
+let decisionTokenVerificationCounter: Counter | undefined;
+
+/**
+ * Record a decision-token verification outcome, labelled by reason code and the
+ * enforcement mode in effect. Lets ops chart rejection reasons and the
+ * warn→enforce rollout per reason.
+ */
+export function recordDecisionTokenVerification(reasonCode: string, mode: string): void {
+  if (!decisionTokenVerificationCounter) {
+    decisionTokenVerificationCounter = getMeter().createCounter(
+      "mcp.governance.decision_token.verification.count",
+      {
+        description: "Number of decision-token verifications by reason code and mode",
+        unit: "1",
+      }
+    );
+  }
+  decisionTokenVerificationCounter.add(1, { reason_code: reasonCode, mode });
+}
