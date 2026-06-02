@@ -80,7 +80,6 @@
       "snapchat_upload_video"
     ],
     "tiktok-mcp": [
-      "tiktok_adjust_bids",
       "tiktok_bulk_create_entities",
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
