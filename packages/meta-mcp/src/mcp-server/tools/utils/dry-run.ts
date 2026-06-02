@@ -158,3 +158,66 @@ export async function runMetaUpdateDryRun(
     "meta_update_entity"
   );
 }
+
+/**
+ * Resolve the `(operation, entityKind)` for a `meta_delete_entity` call. Delete
+ * is single-operation; the entity kind comes from the target `entityType`.
+ * Pure (no I/O).
+ */
+export function resolveMetaDeleteCapability(entityType: string | undefined): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || entityType || "unknown",
+  };
+}
+
+export interface MetaDeleteDryRunArgs {
+  entityType: string | undefined;
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `meta_delete_entity`. Validation is symbolic (Meta has
+ * no validate-only delete); the expected post-state is the current entity with
+ * canonical status `deleted`, produced by reading the entity and overlaying a
+ * `DELETED` status. As with update, a governed dry-run that cannot simulate
+ * (out-of-scope entity type / read failure) fails the call via
+ * `assertGovernedDryRunResult` rather than returning an incomplete payload.
+ */
+export async function runMetaDeleteDryRun(
+  args: MetaDeleteDryRunArgs,
+  metaService: MetaServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (args.entityType && ENTITY_KIND_MAP[args.entityType] && metaService.getEntity) {
+    const current = (await metaService.getEntity(
+      args.entityType,
+      args.entityId,
+      undefined,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildMetaSnapshot(args.entityType, args.entityId, current, {
+        status: "DELETED",
+      });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: expectedPostState !== undefined,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "meta_delete_entity"
+  );
+}

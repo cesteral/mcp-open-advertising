@@ -111,6 +111,72 @@ describe("deleteEntityLogic", () => {
   });
 });
 
+describe("deleteEntityLogic governance contract", () => {
+  const campaign = {
+    id: "c-1",
+    name: "Spring",
+    status: "PAUSED",
+    account_id: "act_9",
+    currency: "USD",
+  };
+  let svc: { deleteEntity: ReturnType<typeof vi.fn>; getEntity: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = {
+      deleteEntity: vi.fn().mockResolvedValue({ success: true }),
+      getEntity: vi.fn().mockResolvedValue(campaign),
+    };
+    mockResolveSessionServices.mockReturnValue({ metaService: svc });
+  });
+
+  it("dry_run returns a DryRunResult with a deleted expected post-state and does not delete", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "campaign" as any, entityId: "c-1", dry_run: true },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.validationSource).toBe("symbolic");
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("deleted");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "delete",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute captures before (live) and after (deleted) snapshots + dispatchedCapability", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "campaign" as any, entityId: "c-1" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(svc.deleteEntity).toHaveBeenCalledOnce();
+    expect(result.before?.status.canonical).toBe("paused");
+    expect(result.after?.status.canonical).toBe("deleted");
+    expect(result.dispatchedCapability.operation).toBe("delete");
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("campaign");
+  });
+
+  it("dispatchedCapability is present even when the user declines", async () => {
+    // No elicitInput → confirmation auto-passes; force a decline via a stubbed sdk.
+    const declineSdk = {
+      sessionId: "s",
+      elicitInput: vi.fn().mockResolvedValue({ action: "decline" }),
+    } as any;
+    const result = await deleteEntityLogic(
+      { entityType: "campaign" as any, entityId: "c-1" },
+      createMockContext(),
+      declineSdk
+    );
+    expect(result.confirmed).toBe(false);
+    expect(result.success).toBe(false);
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability.operation).toBe("delete");
+  });
+});
+
 describe("deleteEntityResponseFormatter", () => {
   it("shows success message", () => {
     const result = {
