@@ -122,6 +122,77 @@ export function resolveDv360DispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(operation, entityKind)` for a `dv360_delete_entity` call.
+ * Out-of-scope types (creative, adGroup, advertiser, …) resolve to
+ * `canonicalEntityKind: null` — still token-gated under enforce, just no
+ * canonical snapshot. Pure.
+ */
+export function resolveDv360DeleteCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || null,
+  };
+}
+
+export interface Dv360DeleteDryRunArgs {
+  entityType: string;
+  ids: Record<string, string>;
+}
+
+/**
+ * Symbolic dry-run for `dv360_delete_entity`. Validation is symbolic; the
+ * expected post-state is the current entity with `ENTITY_STATUS_DELETED`
+ * (canonical `deleted`). DV360 rejects deleting a line item that is not
+ * archived, so a governed dry-run surfaces that as a validation error rather
+ * than approving a delete the real API will reject.
+ */
+export async function runDv360DeleteDryRun(
+  args: Dv360DeleteDryRunArgs,
+  dv360Service: Dv360ServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (ENTITY_KIND_MAP[args.entityType] && dv360Service.getEntity) {
+    const current = (await dv360Service.getEntity(args.entityType, args.ids, context)) as Record<
+      string,
+      any
+    >;
+    if (current && typeof current === "object") {
+      if (args.entityType === "lineItem" && current.entityStatus !== "ENTITY_STATUS_ARCHIVED") {
+        validationErrors.push({
+          code: "LINE_ITEM_NOT_ARCHIVED",
+          message:
+            "Line items must be in ENTITY_STATUS_ARCHIVED before deletion (set via dv360_bulk_update_status)",
+          field: "entityStatus",
+        });
+      }
+      const snapshot = buildDv360Snapshot(args.entityType, args.ids, current, {
+        ...current,
+        entityStatus: "ENTITY_STATUS_DELETED",
+      });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "dv360_delete_entity"
+  );
+}
+
 export interface Dv360DryRunArgs {
   entityType: string;
   ids: Record<string, string>;
