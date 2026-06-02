@@ -49,7 +49,6 @@
       "meta_upload_video"
     ],
     "msads-mcp": [
-      "msads_adjust_bids",
       "msads_bulk_create_entities",
       "msads_bulk_update_entities",
       "msads_bulk_update_status",
