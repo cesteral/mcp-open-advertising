@@ -304,6 +304,22 @@ describe("dv360_delete_entity", () => {
       expect(result.after).toBeUndefined();
       expect(mockDv360Service.deleteEntity).toHaveBeenCalledOnce();
     });
+
+    it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+      const result = await deleteEntityLogic(
+        { entityType: "creative", advertiserId: "adv-1", creativeId: "cr-1", dry_run: true } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(mockDv360Service.deleteEntity).not.toHaveBeenCalled();
+      expect(result.dispatchedCapability).toEqual({
+        operation: "delete",
+        canonicalEntityKind: null,
+      });
+      expect(result.dryRun).toBeDefined();
+      expect(result.dryRun?.expectedPostState).toBeUndefined();
+      expect(result.dryRun?.expectedStateSource).toBe("none");
+    });
   });
 
   describe("deleteEntityResponseFormatter", () => {

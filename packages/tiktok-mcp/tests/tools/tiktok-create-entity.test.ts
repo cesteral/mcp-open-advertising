@@ -172,3 +172,75 @@ describe("tiktok_create_entity tool", () => {
     });
   });
 });
+
+describe("tiktok_create_entity governance contract", () => {
+  const baseContext = { requestId: "r" } as any;
+  const baseSdk = { sessionId: "s" } as any;
+
+  beforeEach(() => {
+    mockCreateEntity.mockReset().mockResolvedValue({
+      campaign_id: "c-999",
+      campaign_name: "New Campaign",
+      status: "CAMPAIGN_STATUS_ENABLE",
+    });
+    mockResolveSession.mockReturnValue({
+      tiktokService: { createEntity: mockCreateEntity },
+    } as any);
+  });
+
+  it("dry_run returns a symbolic post-state and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign",
+        advertiserId: "1",
+        data: { campaign_name: "New Campaign", budget_mode: "BUDGET_MODE_DAY", budget: 100 },
+        dry_run: true,
+      } as any,
+      baseContext,
+      baseSdk
+    );
+    expect(mockCreateEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      { entityType: "campaign", advertiserId: "1", data: { campaign_name: "New Campaign" } } as any,
+      baseContext,
+      baseSdk
+    );
+    expect(mockCreateEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("active");
+    expect((result as any).before).toBeUndefined();
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("campaign");
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    mockCreateEntity.mockResolvedValue({ id: "x" });
+    const result = await createEntityLogic(
+      { entityType: "creative", advertiserId: "1", data: {} } as any,
+      baseContext,
+      baseSdk
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+  });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    mockCreateEntity.mockClear();
+    const result = await createEntityLogic(
+      { entityType: "creative", advertiserId: "1", data: {}, dry_run: true } as any,
+      baseContext,
+      baseSdk
+    );
+    expect(mockCreateEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
+});

@@ -149,10 +149,102 @@ describe("createEntityResponseFormatter", () => {
   it("renders created entity output", () => {
     const text = createEntityResponseFormatter({
       entity: { CampaignId: "cmp-001" },
+      entityType: "campaign",
       timestamp: new Date().toISOString(),
+      dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
     })[0].text;
 
     expect(text).toContain("Entity created successfully");
     expect(text).toContain('"CampaignId": "cmp-001"');
+  });
+});
+
+describe("ttd_create_entity governance contract", () => {
+  let mockTtdService: { createEntity: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTtdService = {
+      createEntity: vi.fn().mockResolvedValue({
+        CampaignId: "cmp-999",
+        CampaignName: "New Campaign",
+        Availability: "Paused",
+      }),
+    };
+    mockResolveSessionServices.mockReturnValue({ ttdService: mockTtdService });
+  });
+
+  it("dry_run returns a symbolic post-state and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign" as any,
+        advertiserId: "adv-1",
+        data: {
+          CampaignName: "New Campaign",
+          Availability: "Paused",
+          Budget: { Amount: 30000, CurrencyCode: "USD" },
+        },
+        dry_run: true,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(mockTtdService.createEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dryRun?.expectedPostState?.budget.lifetime?.amountMinor).toBe(3_000_000);
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign" as any,
+        advertiserId: "adv-1",
+        data: { CampaignName: "New Campaign", Availability: "Paused" },
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(mockTtdService.createEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("paused");
+    expect(result.after?.platformEntityId).toBe("cmp-999");
+    expect((result as any).before).toBeUndefined();
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    mockTtdService.createEntity.mockResolvedValue({ CreativeId: "cr-1" });
+    const result = await createEntityLogic(
+      {
+        entityType: "creative" as any,
+        advertiserId: "adv-1",
+        data: { CreativeName: "Banner" },
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+  });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    mockTtdService.createEntity.mockClear();
+    const result = await createEntityLogic(
+      {
+        entityType: "creative" as any,
+        advertiserId: "adv-1",
+        data: { CreativeName: "Banner" },
+        dry_run: true,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(mockTtdService.createEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
   });
 });

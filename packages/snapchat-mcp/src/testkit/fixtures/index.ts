@@ -326,6 +326,91 @@ export const resumeAd: SnapchatWriteFixture = {
   description: "resume: ad transition PAUSED → ACTIVE",
 };
 
+/**
+ * create: the would-be-created entity is the `data` payload normalized (empty
+ * pre-state). The account ID is a top-level param (not in `data`), so the
+ * symbolic post-state `accountId` is null. One per governed kind.
+ */
+export const createCampaign: SnapchatWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    adAccountId,
+    entityId: "campaign-REDACTED-NEW",
+    data: {
+      name: "New Campaign",
+      status: "PAUSED",
+      objective: "WEB_CONVERSION",
+      daily_budget_micro: 100_000_000,
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "snapchat",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, $100 daily)",
+};
+
+export const createAdGroup: SnapchatWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    adAccountId,
+    entityId: "adsquad-REDACTED-NEW",
+    data: { name: "New Ad Squad", status: "PAUSED", daily_budget_micro: 50_000_000 },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "snapchat",
+    entityKind: "ad_group",
+    platformEntityId: "adsquad-REDACTED-NEW",
+    displayName: "New Ad Squad",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, $50 daily)",
+};
+
+export const createAd: SnapchatWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    adAccountId,
+    entityId: "ad-REDACTED-NEW",
+    data: { name: "New Ad", status: "PAUSED", creative_id: "creative-REDACTED-1" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "snapchat",
+    entityKind: "ad",
+    platformEntityId: "ad-REDACTED-NEW",
+    displayName: "New Ad",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: ad (would-be-created, no budget)",
+};
+
 export const allFixtures: readonly SnapchatWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -335,4 +420,7 @@ export const allFixtures: readonly SnapchatWriteFixture[] = [
   resumeCampaign,
   resumeAdGroup,
   resumeAd,
+  createCampaign,
+  createAdGroup,
+  createAd,
 ];

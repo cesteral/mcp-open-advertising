@@ -408,11 +408,109 @@ export const deleteLineItem: Dv360WriteFixture = {
 };
 
 /**
+ * create fixtures. Create has no pre-existing entity, so `preState` is empty
+ * and the new entity's own ID is a placeholder (`*-REDACTED-NEW`) folded into
+ * `ids` — mirroring how the tool's `after` snapshot identifies the created
+ * resource. `updateMask` names every create field so `applyDv360Patch` overlays
+ * them onto the empty base.
+ */
+export const createCampaign: Dv360WriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    ids: { advertiserId, campaignId: "campaign-REDACTED-NEW" },
+    data: { displayName: "New Campaign", entityStatus: "ENTITY_STATUS_PAUSED" },
+    updateMask: "displayName,entityStatus",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, paused)",
+};
+
+export const createInsertionOrder: Dv360WriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "insertionOrder",
+  args: {
+    entityType: "insertionOrder",
+    ids: { advertiserId, insertionOrderId: "io-REDACTED-NEW" },
+    data: {
+      displayName: "New Insertion Order",
+      entityStatus: "ENTITY_STATUS_PAUSED",
+      budget: { budgetSegments: [baseSegment] },
+    },
+    updateMask: "displayName,entityStatus,budget.budgetSegments",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "insertion_order",
+    platformEntityId: "io-REDACTED-NEW",
+    displayName: "New Insertion Order",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: {
+      daily: null,
+      lifetime: { amountMinor: 5000, currency: "USD" },
+      segments: [
+        {
+          amountMinor: 5000,
+          currency: "USD",
+          startAt: "2026-01-01",
+          endAt: "2026-12-31",
+        },
+      ],
+    },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: insertion-order (would-be-created, $50 single-segment)",
+};
+
+export const createLineItem: Dv360WriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "lineItem",
+  args: {
+    entityType: "lineItem",
+    ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
+    data: { displayName: "New Line Item", entityStatus: "ENTITY_STATUS_PAUSED" },
+    updateMask: "displayName,entityStatus",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "line_item",
+    platformEntityId: "li-REDACTED-NEW",
+    displayName: "New Line Item",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: line-item (would-be-created, paused)",
+};
+
+/**
  * duplicate fixtures. The copy does not exist yet; its new ID is a placeholder
  * (`*-REDACTED-NEW`) folded into `ids` — mirroring how the tool's `after`
- * snapshot identifies the created copy. DV360 forces the copy to
- * `ENTITY_STATUS_PAUSED`, so `data` overlays only `entityStatus` (the rest of
- * the config is preserved from the SOURCE `preState`).
+ * snapshot identifies the created copy. DV360 forces the copy to a non-running
+ * state (DRAFT for line items, PAUSED for insertion orders) and renames it
+ * `Copy of {source}`, so `data` overlays `entityStatus` + `displayName` (the
+ * rest of the config is preserved from the SOURCE `preState`).
  */
 export const duplicateInsertionOrder: Dv360WriteFixture = {
   contractToolSlug: "duplicate_entity",
@@ -504,6 +602,9 @@ export const allFixtures: readonly Dv360WriteFixture[] = [
   deleteCampaign,
   deleteInsertionOrder,
   deleteLineItem,
+  createCampaign,
+  createInsertionOrder,
+  createLineItem,
   duplicateInsertionOrder,
   duplicateLineItem,
 ];

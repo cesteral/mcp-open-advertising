@@ -169,6 +169,19 @@ describe("removeEntityLogic governance contract", () => {
     expect(svc.removeEntity).toHaveBeenCalledOnce();
   });
 
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await removeEntityLogic(
+      { entityType: "ad", customerId: "1", entityId: "789~456", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.removeEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
+
   it("formatter shows a dry-run message, not a false removal success", () => {
     const content = removeEntityResponseFormatter({
       confirmed: true,

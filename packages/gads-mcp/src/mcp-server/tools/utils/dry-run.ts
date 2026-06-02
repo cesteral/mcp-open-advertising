@@ -180,16 +180,20 @@ export async function runGAdsRemoveDryRun(
     ? { ...before, status: { canonical: "deleted", platformRaw: "REMOVED" } }
     : undefined;
 
-  return assertGovernedDryRunResult(
-    {
-      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
-      validationErrors,
-      validationSource,
-      expectedStateSource: expectedPostState ? "server_symbolic_apply" : "none",
-      ...(expectedPostState ? { expectedPostState } : {}),
-    },
-    "gads_remove_entity"
-  );
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): they legitimately resolve canonicalEntityKind: null and emit
+  // no canonical snapshot — on dry-run as well as execute. The in-scope
+  // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
+  // for them; applying it would fail an honest no-snapshot result.
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource,
+    expectedStateSource: expectedPostState ? "server_symbolic_apply" : "none",
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "gads_remove_entity") : result;
 }
 
 /**

@@ -324,6 +324,86 @@ export const resumeAd: PinterestWriteFixture = {
   description: "resume: ad transition PAUSED → ACTIVE",
 };
 
+export const createCampaign: PinterestWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    adAccountId,
+    entityId: "campaign-REDACTED-NEW",
+    data: { name: "New Campaign", status: "PAUSED", daily_spend_cap: 100_000_000 },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, $100 daily)",
+};
+
+export const createAdGroup: PinterestWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    adAccountId,
+    entityId: "adgroup-REDACTED-NEW",
+    data: {
+      name: "New Ad Group",
+      status: "PAUSED",
+      budget_in_micro_currency: 50_000_000,
+      budget_type: "DAILY",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "ad_group",
+    platformEntityId: "adgroup-REDACTED-NEW",
+    displayName: "New Ad Group",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, $50 daily)",
+};
+
+export const createAd: PinterestWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    adAccountId,
+    entityId: "ad-REDACTED-NEW",
+    data: { name: "New Ad", status: "PAUSED", creative_id: "creative-REDACTED-1" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "ad",
+    platformEntityId: "ad-REDACTED-NEW",
+    displayName: "New Ad",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: ad (would-be-created, no budget)",
+};
+
 /**
  * duplicate fixture. Pinterest has no native copy API — the service re-creates
  * the entity as `{ ...source, ...options }`, so with no `options` the copy is a
@@ -373,5 +453,8 @@ export const allFixtures: readonly PinterestWriteFixture[] = [
   resumeCampaign,
   resumeAdGroup,
   resumeAd,
+  createCampaign,
+  createAdGroup,
+  createAd,
   duplicateCampaign,
 ];

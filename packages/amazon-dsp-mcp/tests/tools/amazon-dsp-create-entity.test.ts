@@ -123,6 +123,7 @@ describe("amazonDsp_create_entity tool", () => {
         entity: { orderId: "ord_999888777", name: "Test" },
         entityType: "order",
         timestamp: "2026-03-04T00:00:00.000Z",
+        dispatchedCapability: { operation: "create", canonicalEntityKind: "order" },
       };
 
       const formatted = createEntityResponseFormatter(result);
@@ -164,5 +165,85 @@ describe("amazonDsp_create_entity tool", () => {
       });
       expect(result.success).toBe(false);
     });
+  });
+});
+
+describe("amazon_dsp_create_entity governance contract", () => {
+  const ctx = { requestId: "r" } as any;
+  const sdk = { sessionId: "s" } as any;
+  beforeEach(() => {
+    mockCreateEntity
+      .mockReset()
+      .mockResolvedValue({ orderId: "ord_999", name: "New Order", state: "PAUSED" });
+    mockResolveSession.mockReturnValue({
+      amazonDspService: { createEntity: mockCreateEntity },
+    } as any);
+  });
+
+  it("dry_run returns a symbolic post-state and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "order",
+        profileId: "1",
+        data: {
+          name: "New Order",
+          state: "PAUSED",
+          advertiserId: "adv_1",
+          budget: 40000,
+          budgetType: "LIFETIME",
+        },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(mockCreateEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dryRun?.expectedPostState?.budget.lifetime?.amountMinor).toBe(4_000_000);
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "order",
+    });
+  });
+
+  it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "order",
+        profileId: "1",
+        data: { name: "New Order", state: "PAUSED", advertiserId: "adv_1" },
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(mockCreateEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("paused");
+    expect(result.after?.platformEntityId).toBe("ord_999");
+    expect((result as any).before).toBeUndefined();
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    mockCreateEntity.mockResolvedValue({ creativeId: "cr_1" });
+    const result = await createEntityLogic(
+      { entityType: "creative", profileId: "1", data: {} } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+  });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    mockCreateEntity.mockClear();
+    const result = await createEntityLogic(
+      { entityType: "creative", profileId: "1", data: {}, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(mockCreateEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
   });
 });

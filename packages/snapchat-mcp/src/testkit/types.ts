@@ -18,7 +18,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * operation input). Fixtures pin one operation per fixture so consumers can
  * filter.
  */
-export type SnapchatOperation = "update_budget" | "pause" | "resume";
+export type SnapchatOperation = "update_budget" | "pause" | "resume" | "create";
 
 /**
  * Governed entity kinds, labelled with the upstream `entityType` input key.
@@ -44,7 +44,7 @@ export interface SnapchatFixtureArgs {
  */
 export interface SnapchatWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "create_entity";
   /** Canonical operation this fixture exercises. */
   operation: SnapchatOperation;
   /** Upstream entity-kind key. */

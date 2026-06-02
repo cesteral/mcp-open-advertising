@@ -14,9 +14,23 @@ import {
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedCreateEntityInputSchema } from "../utils/simplified-schemas.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runDv360CreateDryRun, resolveDv360CreateCapability } from "../utils/dry-run.js";
+import { snapshotFromDv360Entity } from "../utils/capture-snapshot.js";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_create_entity";
 const TOOL_TITLE = "Create DV360 Entity";
@@ -146,6 +160,15 @@ export const CreateEntityOutputSchema = z
   .object({
     entity: z.record(z.any()).describe("Created entity data"),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entity was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-create canonical snapshot, normalized from the created entity (in-scope kinds: campaign, insertion_order, line_item). Create has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity creation result");
 
@@ -177,17 +200,73 @@ export async function createEntityLogic(
   // Extract parent IDs using utility
   const parentIds = extractParentIds(validatedInput);
 
+  // The (operation, entityKind) this call resolves to. Required on every
+  // governed response.
+  const dispatchedCapability = resolveDv360CreateCapability(validatedInput.entityType);
+
+  if (input.dry_run === true) {
+    const dryRun = await runDv360CreateDryRun(
+      { entityType: validatedInput.entityType, ids: parentIds, data: mergedData },
+      dv360Service,
+      context,
+      (entityType, data) => {
+        const errors: DryRunValidationError[] = [];
+        try {
+          getEntitySchemaForOperation(entityType, "create").parse(data);
+        } catch (err: any) {
+          if (err?.issues && Array.isArray(err.issues)) {
+            for (const issue of err.issues) {
+              errors.push({
+                code: issue.code ?? "ZOD",
+                message: issue.message ?? String(err),
+                field: Array.isArray(issue.path) ? issue.path.join(".") : undefined,
+              });
+            }
+          } else {
+            errors.push({ code: "ZOD", message: err?.message ?? String(err) });
+          }
+        }
+        return errors;
+      }
+    );
+    return {
+      entity: dryRun.expectedPostState
+        ? (dryRun.expectedPostState as unknown as Record<string, any>)
+        : {},
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   // Create entity
-  const entity = await dv360Service.createEntity(
+  const entity = (await dv360Service.createEntity(
     validatedInput.entityType,
     parentIds,
     mergedData,
     context
+  )) as Record<string, any>;
+
+  // Normalize the created entity for the canonical `after` snapshot. The new
+  // entity carries its own ID under `<entityType>Id`; fold it into the ids so
+  // `platformEntityId` reflects the created resource. Create has no `before`.
+  const ownIdField = `${validatedInput.entityType}Id`;
+  const newId = entity?.[ownIdField];
+  const idsForAfter =
+    typeof newId === "string" || typeof newId === "number"
+      ? { ...parentIds, [ownIdField]: String(newId) }
+      : parentIds;
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromDv360Entity(
+    validatedInput.entityType,
+    idsForAfter,
+    entity ?? {}
   );
 
   return {
-    entity: entity as Record<string, any>,
+    entity,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
@@ -195,6 +274,19 @@ export async function createEntityLogic(
  * Format response for MCP client
  */
 export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errorLines = validationErrors.length
+      ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
+      : "";
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: create ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No entity was created.${errorLines}\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -275,6 +367,39 @@ export const createEntityTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "create_entity",
+      operation: ["create"],
+      // Governed scope mirrors `dv360_update_entity` — campaign /
+      // insertion_order / line_item carry a canonical snapshot. The tool
+      // accepts more DV360 types (creatives, ad groups, advertisers, …); those
+      // resolve canonicalEntityKind: null and emit no snapshot.
+      entityKinds: ["campaign", "insertion_order", "line_item"],
+      entityIdArgs: ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"],
+      readPartner: {
+        toolName: "dv360_get_entity",
+        argMap: {
+          advertiserId: "advertiserId",
+          campaignId: "campaignId",
+          insertionOrderId: "insertionOrderId",
+          lineItemId: "lineItemId",
+        },
+      },
+      schemaVersion: 1,
+      contractId: "dv360.create_entity.v1",
+      // Symbolic create dry-run: the DV360 create Zod schema is the validator;
+      // expected post-state is the would-be-created entity (no native validate
+      // mode). `after` is normalized from the created resource (no `before`).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
