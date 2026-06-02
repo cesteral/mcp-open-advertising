@@ -88,6 +88,19 @@ function assertJsonCompatible(value: unknown): unknown {
 }
 
 /**
+ * SHA-256 over `stableStringify(value)` — the canonical hash of a write
+ * action's executable arguments. Returns lowercase hex, no prefix.
+ *
+ * Cross-repo source of truth: `cesteral-intelligence` mints decision-token
+ * `actionHash` claims with the equivalent computation
+ * (lib/features/governance/decisions/mutations.ts). The connector recomputes it
+ * from the received args to bind the token to the actual write.
+ */
+export function hashActionInput(value: unknown): string {
+  return createHash("sha256").update(stableStringify(value), "utf8").digest("hex");
+}
+
+/**
  * SHA-256 over the canonical governance projection of an MCP tool.
  *
  * Stable across key reorderings, sensitive to any change in
