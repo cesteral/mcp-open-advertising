@@ -211,15 +211,30 @@ function buildAdjustBidsEffectDryRun(
   adjustments: AdjustBidsInput["adjustments"]
 ): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
+  // Google Ads CPC/CPM bids are int64 **micros strings** on the wire — a
+  // positive integer decimal string. The execute path forwards the string
+  // verbatim to the `:mutate` API, so the dry-run must reject anything that is
+  // not a valid positive int64 micros value (e.g. "1.5", "1e6", "-1", "0") to
+  // avoid approving a mutation the API will reject.
+  const isPositiveIntMicros = (s: string): boolean => {
+    const t = s.trim();
+    if (!/^\d+$/.test(t) || !/[1-9]/.test(t)) return false; // digits only, > 0
+    try {
+      // Guard the int64 upper bound (9223372036854775807).
+      return BigInt(t) <= 9223372036854775807n;
+    } catch {
+      return false;
+    }
+  };
   adjustments.forEach((a, i) => {
     for (const [field, micros] of [
       ["cpcBidMicros", a.cpcBidMicros],
       ["cpmBidMicros", a.cpmBidMicros],
     ] as const) {
-      if (micros !== undefined && (!Number.isFinite(Number(micros)) || Number(micros) <= 0)) {
+      if (micros !== undefined && !isPositiveIntMicros(micros)) {
         validationErrors.push({
           code: "INVALID_BID_MICROS",
-          message: `${field} must be a positive micros amount — got ${String(micros)}`,
+          message: `${field} must be a positive int64 micros string (digits only, e.g. "1500000") — got ${String(micros)}`,
           field: `adjustments.${i}.${field}`,
         });
       }

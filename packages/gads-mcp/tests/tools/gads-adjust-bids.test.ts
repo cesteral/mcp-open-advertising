@@ -60,18 +60,36 @@ describe("gads_adjust_bids governance contract (effect class)", () => {
     expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
   });
 
-  it("dry_run flags a non-positive micros bid", async () => {
+  it("dry_run rejects micros strings that are not valid positive int64 micros", async () => {
+    // The execute path forwards the string verbatim to :mutate, which requires
+    // an int64 micros value — so "1.5", "1e6", "-1", "0" must all be rejected.
+    for (const bad of ["0", "1.5", "1e6", "-1", "abc", "00"]) {
+      const result = await adjustBidsLogic(
+        {
+          customerId: "1",
+          adjustments: [{ adGroupId: "ag-1", cpcBidMicros: bad }],
+          dry_run: true,
+        } as any,
+        ctx,
+        sdk
+      );
+      expect(result.dryRun?.wouldSucceed, `expected ${bad} to be rejected`).toBe(false);
+      expect(result.dryRun?.validationErrors[0].code).toBe("INVALID_BID_MICROS");
+    }
+  });
+
+  it("dry_run accepts a valid positive int64 micros string", async () => {
     const result = await adjustBidsLogic(
       {
         customerId: "1",
-        adjustments: [{ adGroupId: "ag-1", cpcBidMicros: "0" }],
+        adjustments: [{ adGroupId: "ag-1", cpcBidMicros: "1500000" }],
         dry_run: true,
       } as any,
       ctx,
       sdk
     );
-    expect(result.dryRun?.wouldSucceed).toBe(false);
-    expect(result.dryRun?.validationErrors[0].code).toBe("INVALID_BID_MICROS");
+    expect(result.dryRun?.wouldSucceed).toBe(true);
+    expect(result.dryRun?.validationErrors).toHaveLength(0);
   });
 
   it("execute returns the effect identity + null-kind capability", async () => {
