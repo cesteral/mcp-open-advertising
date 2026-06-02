@@ -4,8 +4,23 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  runLinkedInDuplicateDryRun,
+  resolveLinkedInDuplicateCapability,
+} from "../utils/dry-run.js";
+import { snapshotFromLinkedInEntity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_duplicate_entity";
 const TOOL_TITLE = "Duplicate LinkedIn Ads Entity";
@@ -33,6 +48,13 @@ export const DuplicateEntityInputSchema = z
       .string()
       .optional()
       .describe("Name for the new entity (defaults to 'Copy of {original name}')"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in DRAFT, projected from the source) without creating anything."
+      ),
   })
   .describe("Parameters for duplicating a LinkedIn Ads entity");
 
@@ -42,6 +64,15 @@ export const DuplicateEntityOutputSchema = z
     newEntity: z.record(z.any()).describe("The newly created entity"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No copy was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-duplicate canonical snapshot of the created copy (in-scope kind: campaign). Duplicate has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Duplication result");
 
@@ -54,23 +85,66 @@ export async function duplicateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
+  const dispatchedCapability = resolveLinkedInDuplicateCapability(input.entityType);
 
-  const newEntity = await linkedInService.duplicateEntity(
+  if (input.dry_run === true) {
+    const dryRun = await runLinkedInDuplicateDryRun(
+      { entityType: input.entityType, entityUrn: input.entityUrn },
+      linkedInService,
+      context
+    );
+    return {
+      sourceUrn: input.entityUrn,
+      newEntity: {},
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const newEntity = (await linkedInService.duplicateEntity(
     input.entityType as LinkedInEntityType,
     input.entityUrn,
     { newName: input.newName },
     context
+  )) as unknown as Record<string, unknown>;
+
+  // The duplicate returns the full new entity, so normalize it directly for the
+  // canonical `after` snapshot (no re-read needed). Duplicate has no `before`.
+  // Best-effort: undefined for out-of-scope kinds.
+  const newUrn = newEntity?.id != null ? String(newEntity.id) : "";
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromLinkedInEntity(
+    input.entityType,
+    newUrn,
+    newEntity
   );
 
   return {
     sourceUrn: input.entityUrn,
-    newEntity: newEntity as unknown as Record<string, unknown>,
+    newEntity,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: duplicating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No copy was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -90,6 +164,32 @@ export const duplicateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "linkedin_ads",
+      contractPlatformSlug: "linkedin_ads",
+      contractToolSlug: "duplicate_entity",
+      operation: ["duplicate"],
+      // Governed scope is campaign. campaignGroup / creative duplicate but
+      // resolve canonicalEntityKind:null — still token-gated.
+      entityKinds: ["campaign"],
+      entityIdArgs: ["entityUrn"],
+      readPartner: {
+        toolName: "linkedin_get_entity",
+        argMap: { entityUrn: "entityUrn" },
+      },
+      schemaVersion: 1,
+      contractId: "linkedin_ads.duplicate_entity.v1",
+      // `dry_run` = symbolic: read the source and project it as the DRAFT copy
+      // (empty new URN). `after` is normalized from the returned new entity
+      // (the LinkedIn duplicate re-creates and returns it). No `before`.
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

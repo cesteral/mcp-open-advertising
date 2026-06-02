@@ -210,6 +210,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign"] },
   },
+  {
+    packageDir: "linkedin-mcp",
+    platformSlug: "linkedin_ads",
+    writeTool: "linkedin_duplicate_entity",
+    readTool: "linkedin_get_entity",
+    contractToolSlug: "duplicate_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { duplicate: ["campaign"] },
+  },
 ];
 
 const entityKindAliases = {
