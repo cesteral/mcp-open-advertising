@@ -91,8 +91,10 @@ Runs after `tool.inputSchema.parse(args)` and **after advertiser-scope authz**, 
 3. Read `X-Cesteral-Decision-Token` from `RequestContext.decisionToken` (typed field; see §6).
 4. Verify in order, each with a distinct `reasonCode`:
    - `MISSING_TOKEN`
-   - `UNSUPPORTED_ALG`
-   - `INVALID_SIGNATURE`
+   - `MALFORMED_TOKEN` (not 3 segments / undecodable header / claim present but wrong type)
+   - `UNSUPPORTED_ALG` (header `alg !== "HS256"`)
+   - `INVALID_SIGNATURE` (incl. unknown/mismatched `kid`; `kid` pins its secret with no fallback)
+   - `MISSING_CLAIM` — **any** of the required claims absent: `jti`, `exp`, `iat`, `sub`, `contractId`, `definitionHash`, `actionHash`. A signed token missing `jti`/`exp` must NEVER reach `OK` or `consumeOnce`.
    - `EXPIRED` (small clock-skew leeway)
    - `WRONG_ISSUER` / `WRONG_AUDIENCE`
    - `CONTRACT_MISMATCH` (`contractId` ≠ tool annotation `contractId`)
@@ -100,7 +102,7 @@ Runs after `tool.inputSchema.parse(args)` and **after advertiser-scope authz**, 
    - `ACTION_HASH_MISMATCH` (≠ `hashActionInput(canonicalizeExecutableArgs(...))`)
    - `REPLAYED_JTI` (**consume last**, only after all above pass)
    - else `OK`
-5. **`jti` consumed only on an otherwise-valid token** — a malformed/mismatched/unauthorized call never burns a legitimate `jti`.
+5. **`jti` consumed only on an otherwise-valid token** — a missing-claim / malformed / expired / mismatched / unauthorized call never burns a legitimate `jti`. `jose.jwtVerify` checks signature/`exp`/`iss`/`aud` but knows nothing of `contractId`/`definitionHash`/`actionHash`, so required-claim presence+type is an explicit step before any binding check.
 6. Apply mode:
    - `warn` → log verdict (incl. failures), **proceed** with write.
    - `enforce` → any non-`OK` → throw `McpError(JsonRpcErrorCode.Unauthorized)` with reason code; write never runs (maps to HTTP 401 via existing handling).
@@ -186,7 +188,7 @@ interface JtiStore { consumeOnce(jti: string, ttlMs: number): Promise<"fresh" | 
 ## 9. Error handling & telemetry
 
 - `warn`-mode failures never break execution; `enforce` → 401 via `McpError(Unauthorized)`.
-- Structured Pino audit logs (`component: "governance-audit"`) for **all** verdict states: `MISSING_TOKEN`, `UNSUPPORTED_ALG`, `INVALID_SIGNATURE`, `EXPIRED`, `WRONG_ISSUER`/`WRONG_AUDIENCE`, `CONTRACT_MISMATCH`, `DEFINITION_HASH_MISMATCH`, `ACTION_HASH_MISMATCH`, `REPLAYED_JTI`, `OK`. Fields: `sub` (tenant), `contractId`, `toolName`, `jti`, `status`, `reasonCode`, `mode`. **Never log raw token or secret.**
+- Structured Pino audit logs (`component: "governance-audit"`) for **all** verdict states: `MISSING_TOKEN`, `MALFORMED_TOKEN`, `UNSUPPORTED_ALG`, `INVALID_SIGNATURE`, `MISSING_CLAIM`, `EXPIRED`, `WRONG_ISSUER`/`WRONG_AUDIENCE`, `CONTRACT_MISMATCH`, `DEFINITION_HASH_MISMATCH`, `ACTION_HASH_MISMATCH`, `REPLAYED_JTI`, `OK`. Fields: `sub` (tenant), `contractId`, `toolName`, `jti`, `status`, `reasonCode`, `detail` (e.g. missing claim name), `mode`. **Never log raw token or secret.**
 - Metric: `recordDecisionTokenVerification(reasonCode, mode)` counter alongside existing OTEL metrics.
 
 ---
