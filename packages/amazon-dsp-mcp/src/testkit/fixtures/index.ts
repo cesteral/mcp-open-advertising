@@ -9,11 +9,14 @@
 import type { AmazonDspWriteFixture } from "../types.js";
 import { allEntityFixtures } from "./entity.js";
 import { allCommitmentFixtures } from "./commitment.js";
+import { allCreateFixtures } from "./create.js";
 
 export * from "./entity.js";
 export * from "./commitment.js";
+export * from "./create.js";
 
 export const allFixtures: readonly AmazonDspWriteFixture[] = [
   ...allEntityFixtures,
   ...allCommitmentFixtures,
+  ...allCreateFixtures,
 ];

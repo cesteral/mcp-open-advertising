@@ -120,6 +120,58 @@ export function resolveTiktokDispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(operation, entityKind)` for a `tiktok_create_entity` call.
+ * Out-of-scope types resolve to `canonicalEntityKind: null`. Pure.
+ */
+export function resolveTiktokCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface TiktokCreateDryRunArgs {
+  entityType: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `tiktok_create_entity`. No pre-state; expected post-state
+ * is the would-be-created entity (the `data` payload normalized, empty
+ * pre-state). `platformEntityId` is empty — assigned by the server on execute.
+ */
+export async function runTiktokCreateDryRun(
+  args: TiktokCreateDryRunArgs,
+  _service: unknown,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(args.data);
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildTiktokSnapshot(args.entityType, "", {}, args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): they legitimately resolve canonicalEntityKind: null and emit
+  // no canonical snapshot — on dry-run as well as execute. The in-scope
+  // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
+  // for them; applying it would fail an honest no-snapshot result.
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "tiktok_create_entity") : result;
+}
+
 export interface TiktokDryRunArgs {
   entityType: string;
   entityId: string;

@@ -215,10 +215,79 @@ export const resumeAdGroup: TtdWriteFixture = {
   description: "resume: ad-group transition Paused → Available (budget out of scope)",
 };
 
+/** create: campaign (would-be-created, $30,000 lifetime + $300 daily). */
+export const createCampaign: TtdWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    advertiserId,
+    entityId: "",
+    data: {
+      CampaignName: "New Campaign",
+      AdvertiserId: advertiserId,
+      Availability: "Paused",
+      Budget: { Amount: 30000, CurrencyCode: "USD" },
+      DailyBudget: { Amount: 300, CurrencyCode: "USD" },
+      StartDateInclusiveUTC: "2026-07-01T00:00:00Z",
+      EndDateExclusiveUTC: "2026-12-31T00:00:00Z",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "ttd",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "New Campaign",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "Paused" },
+    budget: {
+      daily: { amountMinor: 30_000, currency: "USD" },
+      lifetime: { amountMinor: 3_000_000, currency: "USD" },
+    },
+    schedule: { startAt: "2026-07-01T00:00:00Z", endAt: "2026-12-31T00:00:00Z" },
+  },
+  description: "create: campaign (would-be-created, $30,000 lifetime + $300 daily)",
+};
+
+/** create: ad group (would-be-created, no round-3-scoped budget). */
+export const createAdGroup: TtdWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    advertiserId,
+    entityId: "",
+    data: {
+      AdGroupName: "New Ad Group",
+      AdvertiserId: advertiserId,
+      Availability: "Paused",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "ttd",
+    entityKind: "ad_group",
+    platformEntityId: "",
+    displayName: "New Ad Group",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "Paused" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, no round-3-scoped budget)",
+};
+
 export const allFixtures: readonly TtdWriteFixture[] = [
   updateBudgetCampaign,
   pauseCampaign,
   resumeCampaign,
   pauseAdGroup,
   resumeAdGroup,
+  createCampaign,
+  createAdGroup,
 ];

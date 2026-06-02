@@ -22,7 +22,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * coverable operation here. Campaigns expose only an `archived` flag (no
  * platform-native paused state), so `pause` / `resume` are ad-only.
  */
-export type Cm360Operation = "pause" | "resume" | "update_status";
+export type Cm360Operation = "pause" | "resume" | "update_status" | "create";
 
 /**
  * Governed entity kinds, labelled with the upstream `entityType` input key.
@@ -46,7 +46,7 @@ export interface Cm360FixtureArgs {
  */
 export interface Cm360WriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "create_entity";
   /** Canonical operation this fixture exercises. */
   operation: Cm360Operation;
   /** Upstream entity-kind key. */

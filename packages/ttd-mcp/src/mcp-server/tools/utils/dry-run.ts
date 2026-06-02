@@ -108,6 +108,65 @@ export function resolveTtdDispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(create, entityKind)` capability for `ttd_create_entity`.
+ * Out-of-scope kinds (advertiser / creative / conversionTracker) resolve to
+ * `canonicalEntityKind: null` — the call is still token-gated but emits no
+ * snapshot. Pure (no I/O).
+ */
+export function resolveTtdCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface TtdCreateDryRunArgs {
+  entityType: string;
+  /** The merged create payload (parent IDs already folded into the entity data). */
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic create dry-run. TTD exposes no native validate mode for the create
+ * endpoints, so both axes are symbolic: validation runs the same business
+ * rules as update; the expected post-state is the would-be-created entity
+ * (symbolic apply of the create payload over an empty base — create has no
+ * `before`). Pure (no I/O).
+ */
+export async function runTtdCreateDryRun(
+  input: TtdCreateDryRunArgs,
+  _service: TtdServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(input.data);
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[input.entityType]) {
+    const snapshot = buildTtdSnapshot(input.entityType, "", {}, input.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): they legitimately resolve canonicalEntityKind: null and emit
+  // no canonical snapshot — on dry-run as well as execute. The in-scope
+  // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
+  // for them; applying it would fail an honest no-snapshot result.
+  const inScope = Boolean(ENTITY_KIND_MAP[input.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "ttd_create_entity") : result;
+}
+
 export interface TtdDryRunArgs {
   entityType: string;
   entityId: string;

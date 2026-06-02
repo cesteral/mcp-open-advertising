@@ -318,6 +318,97 @@ export const resumeAd: TiktokWriteFixture = {
   description: "resume: ad operation_status ENABLE (read status preserved, no budget)",
 };
 
+/**
+ * create: the would-be-created entity is the `data` payload normalized (empty
+ * pre-state). TikTok create payloads carry no status field, so the symbolic
+ * post-state status is `unknown` (honest — the server assigns the live status).
+ * One per governed kind.
+ */
+export const createCampaign: TiktokWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    advertiserId,
+    entityId: "camp-REDACTED-NEW",
+    data: {
+      campaign_name: "New Campaign",
+      objective_type: "TRAFFIC",
+      budget_mode: "BUDGET_MODE_DAY",
+      budget: 100,
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "campaign",
+    platformEntityId: "camp-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: null,
+    status: { canonical: "unknown", platformRaw: "" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, $100 daily)",
+};
+
+export const createAdGroup: TiktokWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    advertiserId,
+    entityId: "ag-REDACTED-NEW",
+    data: {
+      adgroup_name: "New Ad Group",
+      campaign_id: "camp-REDACTED-1",
+      budget_mode: "BUDGET_MODE_DAY",
+      budget: 50,
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "ad_group",
+    platformEntityId: "ag-REDACTED-NEW",
+    displayName: "New Ad Group",
+    accountId: null,
+    status: { canonical: "unknown", platformRaw: "" },
+    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, $50 daily)",
+};
+
+export const createAd: TiktokWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    advertiserId,
+    entityId: "ad-REDACTED-NEW",
+    data: { ad_name: "New Ad", adgroup_id: "ag-REDACTED-1" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "ad",
+    platformEntityId: "ad-REDACTED-NEW",
+    displayName: "New Ad",
+    accountId: null,
+    status: { canonical: "unknown", platformRaw: "" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: ad (would-be-created, no budget)",
+};
+
 export const allFixtures: readonly TiktokWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -327,4 +418,7 @@ export const allFixtures: readonly TiktokWriteFixture[] = [
   resumeCampaign,
   resumeAdGroup,
   resumeAd,
+  createCampaign,
+  createAdGroup,
+  createAd,
 ];

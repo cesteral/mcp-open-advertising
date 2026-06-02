@@ -170,9 +170,79 @@ export const archiveAd: Cm360WriteFixture = {
   description: "update_status: ad archive (archived false → true)",
 };
 
+/** create: campaign (would-be-created, active/unarchived). */
+export const createCampaign: Cm360WriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    profileId,
+    entityId: "",
+    data: {
+      name: "New Campaign",
+      accountId: "acct-REDACTED-1",
+      advertiserId: "adv-REDACTED-1",
+      archived: false,
+      startDate: "2026-07-01",
+      endDate: "2026-12-31",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "cm360",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "New Campaign",
+    accountId: "acct-REDACTED-1",
+    status: { canonical: "active", platformRaw: "archived=false" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: "2026-07-01", endAt: "2026-12-31" },
+  },
+  description: "create: campaign (would-be-created, active/unarchived)",
+};
+
+/** create: ad (would-be-created, paused — active false). */
+export const createAd: Cm360WriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    profileId,
+    entityId: "",
+    data: {
+      name: "New Ad",
+      accountId: "acct-REDACTED-1",
+      advertiserId: "adv-REDACTED-1",
+      campaignId: "camp-REDACTED-1",
+      active: false,
+      archived: false,
+      startTime: "2026-07-01T00:00:00Z",
+      endTime: "2026-12-31T00:00:00Z",
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "cm360",
+    entityKind: "ad",
+    platformEntityId: "",
+    displayName: "New Ad",
+    accountId: "acct-REDACTED-1",
+    status: { canonical: "paused", platformRaw: "active=false,archived=false" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: "2026-07-01T00:00:00Z", endAt: "2026-12-31T00:00:00Z" },
+  },
+  description: "create: ad (would-be-created, paused)",
+};
+
 export const allFixtures: readonly Cm360WriteFixture[] = [
   archiveCampaign,
   pauseAd,
   resumeAd,
   archiveAd,
+  createCampaign,
+  createAd,
 ];

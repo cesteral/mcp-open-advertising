@@ -112,6 +112,64 @@ export function resolveCm360DispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(create, entityKind)` capability for `cm360_create_entity`.
+ * Out-of-scope kinds (floodlightActivity, creative, …) resolve to
+ * `canonicalEntityKind: null` — the call is still token-gated but emits no
+ * snapshot. Pure (no I/O).
+ */
+export function resolveCm360CreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface Cm360CreateDryRunArgs {
+  entityType: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic create dry-run. CM360 exposes no native validate mode for the
+ * `*.insert` endpoints, so both axes are symbolic: validation runs the same
+ * status-boolean business rules as update; the expected post-state is the
+ * would-be-created entity (symbolic apply of the create payload over an empty
+ * base — create has no `before`). Pure (no I/O).
+ */
+export async function runCm360CreateDryRun(
+  input: Cm360CreateDryRunArgs,
+  _service: Cm360ServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(input.data);
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[input.entityType]) {
+    const snapshot = buildCm360Snapshot(input.entityType, "", {}, input.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): they legitimately resolve canonicalEntityKind: null and emit
+  // no canonical snapshot — on dry-run as well as execute. The in-scope
+  // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
+  // for them; applying it would fail an honest no-snapshot result.
+  const inScope = Boolean(ENTITY_KIND_MAP[input.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "cm360_create_entity") : result;
+}
+
 export interface Cm360DryRunArgs {
   entityType: string;
   profileId: string;

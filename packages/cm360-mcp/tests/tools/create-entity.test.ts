@@ -208,7 +208,9 @@ describe("createEntityResponseFormatter", () => {
   it("includes 'Entity created successfully' in text", () => {
     const result = createEntityResponseFormatter({
       entity: { id: "1" },
+      entityType: "campaign",
       timestamp: "2026-01-01T00:00:00.000Z",
+      dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
     });
     expect(result[0].text).toContain("Entity created successfully");
   });
@@ -217,7 +219,9 @@ describe("createEntityResponseFormatter", () => {
     const entity = { id: "42", name: "Test" };
     const result = createEntityResponseFormatter({
       entity,
+      entityType: "campaign",
       timestamp: "2026-01-01T00:00:00.000Z",
+      dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
     });
     expect(result[0].text).toContain(JSON.stringify(entity, null, 2));
   });
@@ -226,8 +230,87 @@ describe("createEntityResponseFormatter", () => {
     const ts = "2026-03-15T12:00:00.000Z";
     const result = createEntityResponseFormatter({
       entity: {},
+      entityType: "campaign",
       timestamp: ts,
+      dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
     });
     expect(result[0].text).toContain(ts);
+  });
+});
+
+describe("cm360_create_entity governance contract", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("dry_run returns a symbolic post-state and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        profileId: "123",
+        entityType: "campaign" as const,
+        data: { name: "New Campaign", accountId: "acct-1", archived: false },
+        dry_run: true,
+      } as any,
+      mockContext
+    );
+    expect(mockState.cm360Service.createEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
+    expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+    mockState.cm360Service.createEntity.mockResolvedValue({
+      id: "camp-999",
+      name: "New Campaign",
+      accountId: "acct-1",
+      archived: false,
+    });
+    const result = await createEntityLogic(
+      {
+        profileId: "123",
+        entityType: "campaign" as const,
+        data: { name: "New Campaign", accountId: "acct-1", archived: false },
+      } as any,
+      mockContext
+    );
+    expect(mockState.cm360Service.createEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("active");
+    expect(result.after?.platformEntityId).toBe("camp-999");
+    expect((result as any).before).toBeUndefined();
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    mockState.cm360Service.createEntity.mockResolvedValue({ id: "fl-1", name: "Floodlight" });
+    const result = await createEntityLogic(
+      {
+        profileId: "123",
+        entityType: "floodlightActivity" as const,
+        data: { name: "Floodlight" },
+      } as any,
+      mockContext
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+  });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await createEntityLogic(
+      {
+        profileId: "123",
+        entityType: "floodlightActivity" as const,
+        data: { name: "Floodlight" },
+        dry_run: true,
+      } as any,
+      mockContext
+    );
+    expect(mockState.cm360Service.createEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
   });
 });
