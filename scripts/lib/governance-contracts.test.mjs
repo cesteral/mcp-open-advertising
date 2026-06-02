@@ -175,6 +175,15 @@ const extraGovernedSurfaces = [
     pairs: { create: ["campaign", "ad_set", "ad"] },
   },
   {
+    packageDir: "meta-mcp",
+    platformSlug: "meta",
+    writeTool: "meta_duplicate_entity",
+    readTool: "meta_get_entity",
+    contractToolSlug: "duplicate_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { duplicate: ["campaign", "ad_set", "ad"] },
+  },
+  {
     packageDir: "dv360-mcp",
     platformSlug: "dv360",
     writeTool: "dv360_delete_entity",

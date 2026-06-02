@@ -289,3 +289,78 @@ export async function runMetaCreateDryRun(
     "meta_create_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `meta_duplicate_entity` call.
+ * Out-of-scope types resolve to `canonicalEntityKind: null` — token-gated under
+ * enforce, no canonical snapshot. Pure.
+ */
+export function resolveMetaDuplicateCapability(
+  entityType: string | undefined
+): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || null,
+  };
+}
+
+export interface MetaDuplicateDryRunArgs {
+  entityType: string | undefined;
+  /** ID of the SOURCE entity being duplicated. */
+  entityId: string;
+  /** Status the copy lands in. Default (undefined) → PAUSED. */
+  statusOption?: "ACTIVE" | "PAUSED" | "INHERITED";
+}
+
+/**
+ * Symbolic dry-run for `meta_duplicate_entity`. The copy does not exist yet, so
+ * there is no `before` for it. The expected post-state is the SOURCE entity's
+ * canonical snapshot re-projected as the copy: read the source, overlay the
+ * copy's landing status (Meta copies land PAUSED unless `statusOption` says
+ * otherwise; INHERITED keeps the source status), and emit it with an empty
+ * `platformEntityId` (the new ID is assigned on execute). Out-of-scope kinds
+ * are token-gated but not snapshot-governed.
+ */
+export async function runMetaDuplicateDryRun(
+  args: MetaDuplicateDryRunArgs,
+  metaService: MetaServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const entityType = args.entityType;
+  const inScope = Boolean(entityType && ENTITY_KIND_MAP[entityType]);
+  if (entityType && inScope && metaService.getEntity) {
+    const source = (await metaService.getEntity(entityType, args.entityId, undefined, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (source && typeof source === "object") {
+      // The copy lands PAUSED by default; ACTIVE if requested; INHERITED keeps
+      // the source status (no overlay).
+      const landing =
+        args.statusOption === "ACTIVE"
+          ? { status: "ACTIVE" }
+          : args.statusOption === "INHERITED"
+            ? {}
+            : { status: "PAUSED" };
+      const snapshot = buildMetaSnapshot(entityType, "", source, landing);
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "meta_duplicate_entity") : result;
+}
