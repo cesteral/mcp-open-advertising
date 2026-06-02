@@ -30,24 +30,15 @@ cross-platform execution from one governed environment.
 
 ---
 
-## Start With One Workflow
+## Two Ways to Use This
 
-This repo should be read as an **open connector layer**, not as the full product.
+This repo is an **open connector layer**, not the full product.
 
-- **Primary launch pair**: Google Ads + Meta Ads
-- **Primary wedge**: AI-managed optimization with human approval
-- **Secondary proof of depth**: DV360
-
-If you just need direct platform access, self-host a connector. If the workflow
-needs approvals, credential control, audit trails, or cross-platform coordination,
-that is the handoff point to **Cesteral Intelligence**.
-
-## Choose Your Path
-
-- **Use OSS connectors** when you want transparency, self-hosting, and direct
-  control of credentials and infrastructure.
-- **Use Cesteral Intelligence** when you need governed writes, team approvals,
-  credential brokering, auditability, and multi-platform execution.
+- **Self-host a connector** for transparency and direct control of your
+  credentials, infrastructure, and platform access.
+- **Use Cesteral Intelligence** when the workflow needs governed writes, team
+  approvals, credential brokering, auditability, and cross-platform
+  coordination — see [when you need it](#when-you-need-cesteral-intelligence) below.
 
 ---
 
@@ -266,10 +257,9 @@ Cesteral uses a **GCP-native architecture** with thirteen independently deployab
 - **Independent deployment**: Each server can be deployed and scaled separately
 - **Composable**: Use one server or all thirteen -- they work independently or together
 
-### Access Model
-
-- **Self-hosted**: AI clients connect directly to one or more MCP servers
-- **Cesteral Intelligence**: Hosted product layers tenancy, credentials, approvals, orchestration, and governance above the connector fleet
+AI clients connect directly to one or more MCP servers over HTTPS; there is no
+shared gateway to provision. Cesteral Intelligence, when used, layers tenancy,
+credentials, approvals, and governance above the same fleet.
 
 ### Repository Structure
 
