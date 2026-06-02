@@ -2,3 +2,4 @@
 // See LICENSE.md in the project root for full license terms.
 
 export * from "./config.js";
+export * from "./jti-store.js";
