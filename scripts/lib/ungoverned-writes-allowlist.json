@@ -31,7 +31,6 @@
       "dv360_create_custom_bidding_algorithm",
       "dv360_create_entity",
       "dv360_delete_assigned_targeting",
-      "dv360_delete_entity",
       "dv360_duplicate_entity",
       "dv360_manage_custom_bidding_rules",
       "dv360_manage_custom_bidding_script",

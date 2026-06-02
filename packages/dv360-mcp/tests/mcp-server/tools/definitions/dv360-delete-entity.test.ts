@@ -233,6 +233,79 @@ describe("dv360_delete_entity", () => {
     });
   });
 
+  describe("governance contract", () => {
+    it("dry_run on an archived line item would succeed and does not delete", async () => {
+      mockDv360Service.getEntity.mockResolvedValue({
+        displayName: "LI",
+        entityStatus: "ENTITY_STATUS_ARCHIVED",
+        lineItemId: "li-999",
+        advertiserId: "adv-1",
+      });
+      const result = await deleteEntityLogic(
+        {
+          entityType: "lineItem",
+          advertiserId: "adv-1",
+          lineItemId: "li-999",
+          dry_run: true,
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(mockDv360Service.deleteEntity).not.toHaveBeenCalled();
+      expect(result.dryRun?.wouldSucceed).toBe(true);
+      expect(result.dryRun?.expectedPostState?.status.canonical).toBe("deleted");
+      expect(result.dispatchedCapability).toEqual({
+        operation: "delete",
+        canonicalEntityKind: "line_item",
+      });
+    });
+
+    it("dry_run on a non-archived line item reports wouldSucceed:false", async () => {
+      // default mock is ENTITY_STATUS_PAUSED
+      const result = await deleteEntityLogic(
+        {
+          entityType: "lineItem",
+          advertiserId: "adv-1",
+          lineItemId: "li-999",
+          dry_run: true,
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain(
+        "LINE_ITEM_NOT_ARCHIVED"
+      );
+      expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    });
+
+    it("execute captures before (live) and after (deleted) snapshots", async () => {
+      const result = await deleteEntityLogic(
+        { entityType: "lineItem", advertiserId: "adv-1", lineItemId: "li-999" } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.before?.status.canonical).toBe("paused");
+      expect(result.after?.status.canonical).toBe("deleted");
+      expect(result.dispatchedCapability.canonicalEntityKind).toBe("line_item");
+    });
+
+    it("out-of-scope kind resolves canonicalEntityKind:null and skips snapshots", async () => {
+      const result = await deleteEntityLogic(
+        { entityType: "creative", advertiserId: "adv-1", creativeId: "cr-1" } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.dispatchedCapability).toEqual({
+        operation: "delete",
+        canonicalEntityKind: null,
+      });
+      expect(result.before).toBeUndefined();
+      expect(result.after).toBeUndefined();
+      expect(mockDv360Service.deleteEntity).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("deleteEntityResponseFormatter", () => {
     it("includes the deleted entity data in the response", () => {
       const result = deleteEntityResponseFormatter({
