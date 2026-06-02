@@ -88,6 +88,36 @@ function assertJsonCompatible(value: unknown): unknown {
 }
 
 /**
+ * Canonical "executable write args" that both connector and governance hash.
+ *
+ * Hashes the raw wire arguments MINUS:
+ *   - `__`-prefixed internal execution args (mirrors `cesteral-intelligence`
+ *     `stripInternalExecutionArgs`, lib/features/mcp/tools/external-governance.ts), and
+ *   - the per-contract control fields declared in `executableArgsExclude` (e.g. `dry_run`).
+ *
+ * Operates on the RAW wire shape, NOT the Zod-parsed output, so Zod
+ * defaults/coercions/transforms/unknown-key stripping cannot diverge the hash
+ * across repos. Only top-level keys are removed; nested values are preserved
+ * verbatim and key-sorted at hash time.
+ *
+ * NOTE: governance currently strips `__*` only (not `executableArgsExclude`),
+ * so actionHash parity holds today only for execute calls whose wire args carry
+ * no excluded control field. Full parity requires governance to adopt this
+ * function. See the connector design doc §12.
+ */
+export function canonicalizeExecutableArgs(opts: { rawArgs: unknown; exclude: string[] }): unknown {
+  const { rawArgs, exclude } = opts;
+  if (rawArgs === null || typeof rawArgs !== "object" || Array.isArray(rawArgs)) return rawArgs;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawArgs as Record<string, unknown>)) {
+    if (k.startsWith("__")) continue;
+    if (exclude.includes(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
  * SHA-256 over `stableStringify(value)` — the canonical hash of a write
  * action's executable arguments. Returns lowercase hex, no prefix.
  *
