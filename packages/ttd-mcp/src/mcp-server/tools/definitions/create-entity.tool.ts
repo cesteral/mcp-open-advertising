@@ -5,8 +5,20 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runTtdCreateDryRun, resolveTtdCreateCapability } from "../utils/dry-run.js";
+import { snapshotFromTtdEntity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_create_entity";
 const TOOL_TITLE = "Create TTD Entity";
@@ -36,6 +48,13 @@ export const CreateEntityInputSchema = z
       .describe(
         "Set TTD-Strict-Mode header — TTD returns 400 on unrecognized properties or read-only field assignments. Recommended for development/CI; avoid in production where harmless extra fields would otherwise succeed (per TTD Foundations §10)."
       ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the creation and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created entity) without calling the TTD API. No entity is created."
+      ),
   })
   .superRefine((input, ctx) => {
     const topLevelPartnerId =
@@ -62,7 +81,17 @@ export const CreateEntityInputSchema = z
 export const CreateEntityOutputSchema = z
   .object({
     entity: z.record(z.any()).describe("Created entity data"),
+    entityType: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entity was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-create canonical snapshot, normalized from the created entity (in-scope kinds: campaign, ad_group). Create has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity creation result");
 
@@ -75,20 +104,61 @@ export async function createEntityLogic(
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
+  const dispatchedCapability = resolveTtdCreateCapability(input.entityType);
 
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
 
-  const entity = await ttdService.createEntity(input.entityType as TtdEntityType, data, context, {
+  if (input.dry_run === true) {
+    const dryRun = await runTtdCreateDryRun(
+      { entityType: input.entityType, data },
+      ttdService,
+      context
+    );
+    return {
+      entity: {},
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const entity = (await ttdService.createEntity(input.entityType as TtdEntityType, data, context, {
     strictMode: input.strictMode,
-  });
+  })) as unknown as Record<string, any>;
+
+  // Normalize the created entity for the canonical `after` snapshot. Create has
+  // no `before`. Best-effort: undefined for out-of-scope kinds.
+  const createdId = String(entity?.CampaignId ?? entity?.AdGroupId ?? entity?.Id ?? "");
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromTtdEntity(
+    input.entityType,
+    createdId,
+    entity
+  );
 
   return {
-    entity: entity as unknown as Record<string, any>,
+    entity,
+    entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errorLines = validationErrors.length
+      ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
+      : "";
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: creating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No entity was created.${errorLines}\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -108,6 +178,35 @@ export const createEntityTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "create_entity",
+      operation: ["create"],
+      // Governed scope mirrors `ttd_update_entity` — campaign + ad_group carry
+      // a canonical Availability status. advertiser / creative /
+      // conversionTracker are out of scope (resolve canonicalEntityKind: null,
+      // no snapshot).
+      entityKinds: ["campaign", "ad_group"],
+      entityIdArgs: [],
+      readPartner: {
+        toolName: "ttd_get_entity",
+        argMap: {},
+      },
+      schemaVersion: 1,
+      contractId: "ttd.create_entity.v1",
+      // Symbolic create dry-run — TTD has no native validate mode. Validation
+      // runs symbolic business rules; expected post-state is the
+      // would-be-created entity. `after` is normalized from the created entity
+      // (create has no `before`).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

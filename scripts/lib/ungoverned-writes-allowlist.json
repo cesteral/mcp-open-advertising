@@ -115,7 +115,6 @@
       "ttd_bulk_update_entities",
       "ttd_bulk_update_status",
       "ttd_cancel_report_execution",
-      "ttd_create_entity",
       "ttd_create_report_schedule",
       "ttd_create_report_template",
       "ttd_create_template_schedule",
