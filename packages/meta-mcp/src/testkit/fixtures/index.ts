@@ -414,6 +414,98 @@ export const createAd: MetaWriteFixture = {
   description: "create: ad (would-be-created, status PAUSED)",
 };
 
+/**
+ * duplicate fixtures. The copy does not exist yet, so `entityId` is the empty
+ * placeholder and `data` is the landing-status overlay the dry-run applies to
+ * the SOURCE (`preState`). `applyMetaPatch(entityType, "", source, overlay)`
+ * must yield the copy's canonical projection — exactly what the tool's dry-run
+ * `expectedPostState` produces.
+ */
+export const duplicateCampaign: MetaWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    name: "Source Campaign",
+    status: "ACTIVE",
+    account_id: "act-REDACTED-1",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "Source Campaign",
+    accountId: "act-REDACTED-1",
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: campaign copy lands PAUSED (projected from source)",
+};
+
+export const duplicateAdSet: MetaWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "adSet",
+  args: {
+    entityType: "adSet",
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    name: "Source Ad Set",
+    status: "ACTIVE",
+    account_id: "act-REDACTED-1",
+    daily_budget: 5000,
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad_set",
+    platformEntityId: "",
+    displayName: "Source Ad Set",
+    accountId: "act-REDACTED-1",
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: { amountMinor: 5000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: adSet copy lands PAUSED, budget preserved (projected from source)",
+};
+
+export const duplicateAd: MetaWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    entityId: "",
+    data: { status: "PAUSED" },
+  },
+  preState: {
+    name: "Source Ad",
+    status: "ACTIVE",
+    account_id: "act-REDACTED-1",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "meta_ads",
+    entityKind: "ad",
+    platformEntityId: "",
+    displayName: "Source Ad",
+    accountId: "act-REDACTED-1",
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: ad copy lands PAUSED (projected from source)",
+};
+
 export const allFixtures: readonly MetaWriteFixture[] = [
   updateBudgetIncreaseCampaign,
   updateBudgetDecreaseAdSet,
@@ -427,4 +519,7 @@ export const allFixtures: readonly MetaWriteFixture[] = [
   createCampaign,
   createAdSet,
   createAd,
+  duplicateCampaign,
+  duplicateAdSet,
+  duplicateAd,
 ];

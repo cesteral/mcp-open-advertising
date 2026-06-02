@@ -404,6 +404,46 @@ export const createAd: PinterestWriteFixture = {
   description: "create: ad (would-be-created, no budget)",
 };
 
+/**
+ * duplicate fixture. Pinterest has no native copy API — the service re-creates
+ * the entity as `{ ...source, ...options }`, so with no `options` the copy is a
+ * faithful clone of the source (status preserved; Pinterest does not force a
+ * pause). `entityId` is the empty placeholder and `data` is the `options`
+ * overlay (empty here) the dry-run applies to the SOURCE (`preState`).
+ */
+export const duplicateCampaign: PinterestWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    adAccountId,
+    entityId: "",
+    data: {},
+  },
+  preState: {
+    id: "campaign-REDACTED-9",
+    name: "Source Campaign",
+    status: "ACTIVE",
+    ad_account_id: adAccountId,
+    daily_spend_cap: 100_000_000,
+    start_time: 1767225600,
+    end_time: 1798675200,
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "pinterest",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "Source Campaign",
+    accountId: adAccountId,
+    status: { canonical: "active", platformRaw: "ACTIVE" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: "2026-01-01T00:00:00.000Z", endAt: "2026-12-31T00:00:00.000Z" },
+  },
+  description: "duplicate: campaign copy clones the source (no options; status preserved)",
+};
+
 export const allFixtures: readonly PinterestWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -416,4 +456,5 @@ export const allFixtures: readonly PinterestWriteFixture[] = [
   createCampaign,
   createAdGroup,
   createAd,
+  duplicateCampaign,
 ];

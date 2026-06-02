@@ -291,3 +291,71 @@ export async function runLinkedInUpdateDryRun(
     "linkedin_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `linkedin_duplicate_entity` call.
+ * Out-of-scope types (campaignGroup, creative) resolve to `canonicalEntityKind:
+ * null` — token-gated, no canonical snapshot. Pure.
+ */
+export function resolveLinkedInDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface LinkedInDuplicateDryRunArgs {
+  entityType: string;
+  /** URN of the SOURCE entity being duplicated. */
+  entityUrn: string;
+  /** Custom name for the copy; defaults to `Copy of {source name}`. */
+  newName?: string;
+}
+
+/**
+ * Symbolic dry-run for `linkedin_duplicate_entity`. The copy does not exist yet
+ * (no `before`). LinkedIn has no native copy API — the tool re-creates the
+ * entity in DRAFT and renames it (`newName`, or `Copy of {source name}`) — so
+ * the expected post-state is the SOURCE re-projected as the copy: read the
+ * source, overlay `status: "DRAFT"` plus the copy's name, and emit it with an
+ * empty `platformEntityId` (the new URN is assigned on execute). Out-of-scope
+ * kinds are token-gated but not snapshot-governed.
+ */
+export async function runLinkedInDuplicateDryRun(
+  args: LinkedInDuplicateDryRunArgs,
+  service: LinkedInServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(args.entityType, args.entityUrn, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (source && typeof source === "object") {
+      // The tool renames the copy before creating it (mirror that here).
+      const sourceName = typeof source.name === "string" ? source.name : undefined;
+      const copyName = args.newName ?? (sourceName != null ? `Copy of ${sourceName}` : undefined);
+      const overlay = { status: "DRAFT", ...(copyName != null ? { name: copyName } : {}) };
+      const snapshot = buildLinkedInSnapshot(args.entityType, "", source, overlay);
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "linkedin_duplicate_entity") : result;
+}

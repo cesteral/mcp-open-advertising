@@ -1,0 +1,164 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("../../src/services/session-services.js", () => ({
+  sessionServiceStore: {
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getAuthContext: vi.fn(),
+  },
+}));
+
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return {
+    ...actual,
+    resolveSessionServicesFromStore: vi.fn(),
+  };
+});
+
+import { resolveSessionServicesFromStore } from "@cesteral/shared";
+const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
+
+import {
+  duplicateEntityLogic,
+  duplicateEntityResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
+
+const ctx = { requestId: "r" } as any;
+const sdk = { sessionId: "s" } as any;
+
+describe("tiktok_duplicate_entity governance contract", () => {
+  let svc: {
+    duplicateEntity: ReturnType<typeof vi.fn>;
+    getEntity: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = {
+      duplicateEntity: vi.fn().mockResolvedValue({
+        campaign_id: "camp-COPY-1",
+        campaign_name: "Source Campaign (copy)",
+        status: "CAMPAIGN_STATUS_DISABLE",
+        advertiser_id: "adv-1",
+      }),
+      getEntity: vi.fn(),
+    };
+    mockResolveSession.mockReturnValue({ tiktokService: svc } as any);
+  });
+
+  it("dry_run reads the source and projects the disabled copy, no API call", async () => {
+    svc.getEntity.mockResolvedValue({
+      campaign_id: "camp-SRC-1",
+      campaign_name: "Source Campaign",
+      status: "CAMPAIGN_STATUS_ENABLE",
+      advertiser_id: "adv-1",
+    });
+
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        advertiserId: "adv-1",
+        entityId: "camp-SRC-1",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+
+    expect(svc.duplicateEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status).toEqual({
+      canonical: "paused",
+      platformRaw: "CAMPAIGN_STATUS_DISABLE",
+    });
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Campaign");
+    expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "duplicate",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("dry_run applies options (rename) but keeps the TikTok-forced disabled status", async () => {
+    svc.getEntity.mockResolvedValue({
+      campaign_id: "camp-SRC-1",
+      campaign_name: "Source Campaign",
+      status: "CAMPAIGN_STATUS_ENABLE",
+      advertiser_id: "adv-1",
+    });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        advertiserId: "adv-1",
+        entityId: "camp-SRC-1",
+        options: { campaign_name: "Copy of Source", status: "CAMPAIGN_STATUS_ENABLE" },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Source");
+    // TikTok controls the copy status server-side → stays disabled/paused.
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+  });
+
+  it("execute normalizes the returned new entity into after (no before)", async () => {
+    const result = await duplicateEntityLogic(
+      { entityType: "campaign", advertiserId: "adv-1", entityId: "camp-SRC-1" } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.duplicateEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("paused");
+    expect(result.after?.platformEntityId).toBe("camp-COPY-1");
+    expect((result as any).before).toBeUndefined();
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null and skips snapshots", async () => {
+    svc.duplicateEntity.mockResolvedValue({ id: "cr-COPY-1" });
+    const result = await duplicateEntityLogic(
+      { entityType: "creative", advertiserId: "adv-1", entityId: "cr-SRC-1" } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dispatchedCapability).toEqual({
+      operation: "duplicate",
+      canonicalEntityKind: null,
+    });
+    expect(result.after).toBeUndefined();
+  });
+
+  it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
+    const result = await duplicateEntityLogic(
+      { entityType: "creative", advertiserId: "adv-1", entityId: "cr-SRC-1", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.duplicateEntity).not.toHaveBeenCalled();
+    expect(result.dispatchedCapability).toEqual({
+      operation: "duplicate",
+      canonicalEntityKind: null,
+    });
+    expect(result.dryRun?.expectedPostState).toBeUndefined();
+    expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
+
+  it("formatter renders a dry-run message without a false success", () => {
+    const content = duplicateEntityResponseFormatter({
+      newEntity: {},
+      sourceEntityId: "camp-SRC-1",
+      entityType: "campaign",
+      timestamp: "2026-06-02T00:00:00.000Z",
+      dispatchedCapability: { operation: "duplicate", canonicalEntityKind: "campaign" },
+      dryRun: {
+        wouldSucceed: true,
+        validationErrors: [],
+        validationSource: "symbolic",
+        expectedStateSource: "server_symbolic_apply",
+      } as any,
+    });
+    expect(content[0].text).toContain("Dry run: duplicating campaign would succeed");
+    expect(content[0].text).not.toContain("duplicated successfully");
+  });
+});

@@ -409,6 +409,108 @@ export const createAd: TiktokWriteFixture = {
   description: "create: ad (would-be-created, no budget)",
 };
 
+/**
+ * duplicate fixtures. The copy does not exist yet, so `entityId` is the empty
+ * placeholder and `data` is the disabled-status overlay (the copy lands in a
+ * `*_STATUS_DISABLE` → paused state) the dry-run applies to the SOURCE
+ * (`preState`).
+ */
+export const duplicateCampaign: TiktokWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    advertiserId,
+    entityId: "",
+    data: { status: "CAMPAIGN_STATUS_DISABLE" },
+  },
+  preState: {
+    campaign_id: "camp-REDACTED-9",
+    campaign_name: "Source Campaign",
+    advertiser_id: advertiserId,
+    status: "CAMPAIGN_STATUS_ENABLE",
+    objective_type: "TRAFFIC",
+    budget: 100,
+    budget_mode: "BUDGET_MODE_DAY",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "Source Campaign",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "CAMPAIGN_STATUS_DISABLE" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: campaign copy lands disabled/paused (projected from source)",
+};
+
+export const duplicateAdGroup: TiktokWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    advertiserId,
+    entityId: "",
+    data: { status: "ADGROUP_STATUS_DISABLE" },
+  },
+  preState: {
+    adgroup_id: "ag-REDACTED-9",
+    adgroup_name: "Source Ad Group",
+    advertiser_id: advertiserId,
+    status: "ADGROUP_STATUS_ENABLE",
+    budget: 50,
+    budget_mode: "BUDGET_MODE_DAY",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "ad_group",
+    platformEntityId: "",
+    displayName: "Source Ad Group",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ADGROUP_STATUS_DISABLE" },
+    budget: { daily: { amountMinor: 5_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description:
+    "duplicate: adGroup copy lands disabled/paused, budget preserved (projected from source)",
+};
+
+export const duplicateAd: TiktokWriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    advertiserId,
+    entityId: "",
+    data: { status: "AD_STATUS_DISABLE" },
+  },
+  preState: {
+    ad_id: "ad-REDACTED-9",
+    ad_name: "Source Ad",
+    advertiser_id: advertiserId,
+    status: "AD_STATUS_ENABLE",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "tiktok",
+    entityKind: "ad",
+    platformEntityId: "",
+    displayName: "Source Ad",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "AD_STATUS_DISABLE" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: ad copy lands disabled/paused (projected from source)",
+};
+
 export const allFixtures: readonly TiktokWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetAdGroup,
@@ -421,4 +523,7 @@ export const allFixtures: readonly TiktokWriteFixture[] = [
   createCampaign,
   createAdGroup,
   createAd,
+  duplicateCampaign,
+  duplicateAdGroup,
+  duplicateAd,
 ];

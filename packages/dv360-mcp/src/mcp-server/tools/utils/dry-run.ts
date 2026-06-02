@@ -331,3 +331,85 @@ export async function runDv360UpdateDryRun(
     "dv360_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `dv360_duplicate_entity` call.
+ * Only insertionOrder / lineItem are duplicatable and both are governed kinds,
+ * so `canonicalEntityKind` is non-null for every valid input; the `?? null`
+ * keeps the contract honest if the tool's enum ever widens. Pure.
+ */
+export function resolveDv360DuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface Dv360DuplicateDryRunArgs {
+  entityType: string;
+  /** Parent + source-entity IDs (advertiserId + `<entityType>Id`). */
+  ids: Record<string, string>;
+  /** Custom name for the copy; defaults to `Copy of {source displayName}`. */
+  displayName?: string;
+}
+
+/**
+ * Symbolic dry-run for `dv360_duplicate_entity`. The copy does not exist yet
+ * (no `before`). DV360's duplicate forces the copy to a non-running state —
+ * line-item copies to `ENTITY_STATUS_DRAFT`, insertion-order copies to
+ * `ENTITY_STATUS_PAUSED` — so the expected post-state is the SOURCE re-projected
+ * as the copy: read the source, overlay that landing status, and emit it with
+ * an empty `platformEntityId` (the new ID is assigned on execute — the parent
+ * IDs in `ids` only supply `accountId`).
+ */
+export async function runDv360DuplicateDryRun(
+  args: Dv360DuplicateDryRunArgs,
+  dv360Service: Dv360ServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && dv360Service.getEntity) {
+    const source = (await dv360Service.getEntity(args.entityType, args.ids, context)) as Record<
+      string,
+      any
+    >;
+    if (source && typeof source === "object") {
+      // DV360 forces line-item copies to DRAFT and insertion-order copies to
+      // PAUSED (line items must start as DRAFT) — mirror that per entity type.
+      const landingStatus =
+        args.entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
+      // The service renames the copy: `displayName` if supplied, else
+      // `Copy of {source displayName}`.
+      const sourceName = typeof source.displayName === "string" ? source.displayName : undefined;
+      const copyName =
+        args.displayName ?? (sourceName != null ? `Copy of ${sourceName}` : undefined);
+      const applied = {
+        ...source,
+        entityStatus: landingStatus,
+        ...(copyName != null ? { displayName: copyName } : {}),
+      };
+      const snapshot = buildDv360Snapshot(args.entityType, args.ids, source, applied);
+      if (snapshot) {
+        // The copy has no entity ID yet pre-duplicate; the parent IDs would
+        // otherwise mislabel platformEntityId with the source's ID.
+        expectedPostState = { ...snapshot, platformEntityId: "" };
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "dv360_duplicate_entity") : result;
+}

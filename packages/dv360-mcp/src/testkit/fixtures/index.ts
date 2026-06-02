@@ -504,6 +504,94 @@ export const createLineItem: Dv360WriteFixture = {
   description: "create: line-item (would-be-created, paused)",
 };
 
+/**
+ * duplicate fixtures. The copy does not exist yet; its new ID is a placeholder
+ * (`*-REDACTED-NEW`) folded into `ids` — mirroring how the tool's `after`
+ * snapshot identifies the created copy. DV360 forces the copy to a non-running
+ * state (DRAFT for line items, PAUSED for insertion orders) and renames it
+ * `Copy of {source}`, so `data` overlays `entityStatus` + `displayName` (the
+ * rest of the config is preserved from the SOURCE `preState`).
+ */
+export const duplicateInsertionOrder: Dv360WriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "insertionOrder",
+  args: {
+    entityType: "insertionOrder",
+    ids: { advertiserId, insertionOrderId: "io-REDACTED-NEW" },
+    // The copy is forced to PAUSED and renamed `Copy of {source}`.
+    data: { entityStatus: "ENTITY_STATUS_PAUSED", displayName: "Copy of Source Insertion Order" },
+    updateMask: "entityStatus,displayName",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/insertionOrders/io-REDACTED-1`,
+    insertionOrderId: "io-REDACTED-1",
+    displayName: "Source Insertion Order",
+    entityStatus: "ENTITY_STATUS_ACTIVE",
+    budget: {
+      budgetUnit: "BUDGET_UNIT_CURRENCY",
+      automationType: "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+      budgetSegments: [baseSegment],
+    },
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "insertion_order",
+    platformEntityId: "io-REDACTED-NEW",
+    displayName: "Copy of Source Insertion Order",
+    accountId: advertiserId,
+    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    budget: {
+      daily: null,
+      lifetime: { amountMinor: 5000, currency: "USD" },
+      segments: [
+        {
+          amountMinor: 5000,
+          currency: "USD",
+          startAt: "2026-01-01",
+          endAt: "2026-12-31",
+        },
+      ],
+    },
+    schedule: { startAt: null, endAt: null },
+  },
+  description:
+    "duplicate: insertion-order copy lands PAUSED, budget preserved (projected from source)",
+};
+
+export const duplicateLineItem: Dv360WriteFixture = {
+  contractToolSlug: "duplicate_entity",
+  operation: "duplicate",
+  entityKind: "lineItem",
+  args: {
+    entityType: "lineItem",
+    ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
+    // DV360 forces line-item copies to DRAFT (must start as DRAFT) and renames
+    // the copy `Copy of {source}`.
+    data: { entityStatus: "ENTITY_STATUS_DRAFT", displayName: "Copy of Source Line Item" },
+    updateMask: "entityStatus,displayName",
+  },
+  preState: {
+    name: `advertisers/${advertiserId}/lineItems/li-REDACTED-1`,
+    lineItemId: "li-REDACTED-1",
+    displayName: "Source Line Item",
+    entityStatus: "ENTITY_STATUS_ACTIVE",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "dv360",
+    entityKind: "line_item",
+    platformEntityId: "li-REDACTED-NEW",
+    displayName: "Copy of Source Line Item",
+    accountId: advertiserId,
+    status: { canonical: "unknown", platformRaw: "ENTITY_STATUS_DRAFT" },
+    budget: { daily: null, lifetime: null, segments: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "duplicate: line-item copy lands DRAFT (projected from source)",
+};
+
 export const allFixtures: readonly Dv360WriteFixture[] = [
   updateBudgetIncreaseInsertionOrder,
   updateBudgetDecreaseLineItem,
@@ -517,4 +605,6 @@ export const allFixtures: readonly Dv360WriteFixture[] = [
   createCampaign,
   createInsertionOrder,
   createLineItem,
+  duplicateInsertionOrder,
+  duplicateLineItem,
 ];

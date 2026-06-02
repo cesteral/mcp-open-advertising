@@ -219,3 +219,71 @@ export async function runPinterestUpdateDryRun(
     "pinterest_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for a `pinterest_duplicate_entity`
+ * call. Out-of-scope types resolve to `canonicalEntityKind: null` —
+ * token-gated, no canonical snapshot. Pure.
+ */
+export function resolvePinterestDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface PinterestDuplicateDryRunArgs {
+  entityType: string;
+  adAccountId: string;
+  /** ID of the SOURCE entity being duplicated. */
+  entityId: string;
+  /** Copy overrides forwarded to the create call (may rename or re-state the copy). */
+  options?: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `pinterest_duplicate_entity`. The copy does not exist
+ * yet (no `before`). Pinterest has no native copy API — the service re-creates
+ * the entity as `{ ...source(minus system fields), ...options }`, so the copy
+ * KEEPS the source status unless the caller overrides it via `options` (there
+ * is no forced pause). The expected post-state reads the source, applies the
+ * caller's `options` overlay, and emits it with an empty `platformEntityId`.
+ * Out-of-scope kinds are token-gated but not snapshot-governed.
+ */
+export async function runPinterestDuplicateDryRun(
+  args: PinterestDuplicateDryRunArgs,
+  service: PinterestServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(
+      args.entityType,
+      { adAccountId: args.adAccountId },
+      args.entityId,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (source && typeof source === "object") {
+      const snapshot = buildPinterestSnapshot(args.entityType, "", source, args.options ?? {});
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "pinterest_duplicate_entity") : result;
+}

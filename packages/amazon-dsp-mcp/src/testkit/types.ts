@@ -19,7 +19,13 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * and matches `resolveCommitmentDispatchedCapability()` in commitment-dry-run.ts.
  * Fixtures pin one operation each so consumers can filter.
  */
-export type AmazonDspOperation = "update_budget" | "pause" | "resume" | "update" | "create";
+export type AmazonDspOperation =
+  | "update_budget"
+  | "pause"
+  | "resume"
+  | "update"
+  | "create"
+  | "duplicate";
 
 /**
  * Governed entity kinds, labelled with the upstream input key. `order` is the
@@ -94,6 +100,18 @@ export type AmazonDspWriteFixture =
        * Inputs to `amazon_dsp_create_entity` (scrubbed). Reuses the
        * update-entity arg shape; `entityId` is the would-be-created placeholder
        * (empty string) since create has no pre-existing ID.
+       */
+      args: AmazonDspUpdateEntityFixtureArgs;
+    })
+  | (AmazonDspFixtureBase & {
+      /** Governed write contract this fixture proves. */
+      contractToolSlug: "duplicate_entity";
+      /** Upstream entity-kind key. */
+      entityKind: Exclude<AmazonDspEntityKindKey, "commitment">;
+      /**
+       * Inputs to `amazon_dsp_duplicate_entity` (scrubbed). Reuses the
+       * update-entity arg shape; `entityId` is the would-be-created copy
+       * placeholder (empty string) and `data` the landing-status overlay.
        */
       args: AmazonDspUpdateEntityFixtureArgs;
     });

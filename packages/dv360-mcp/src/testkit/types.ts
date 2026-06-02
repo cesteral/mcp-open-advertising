@@ -10,7 +10,13 @@
 
 import type { NormalizedEntitySnapshot } from "@cesteral/shared";
 
-export type Dv360Operation = "update_budget" | "pause" | "resume" | "delete" | "create";
+export type Dv360Operation =
+  | "update_budget"
+  | "pause"
+  | "resume"
+  | "delete"
+  | "create"
+  | "duplicate";
 
 export type Dv360EntityKindKey = "campaign" | "insertionOrder" | "lineItem";
 
@@ -30,7 +36,7 @@ export interface Dv360FixtureArgs {
 
 export interface Dv360WriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity" | "delete_entity" | "create_entity";
+  contractToolSlug: "update_entity" | "delete_entity" | "create_entity" | "duplicate_entity";
   operation: Dv360Operation;
   entityKind: Dv360EntityKindKey;
   args: Dv360FixtureArgs;
