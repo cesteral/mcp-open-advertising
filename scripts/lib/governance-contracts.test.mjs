@@ -237,6 +237,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign", "ad_group", "ad", "campaign_budget"] },
   },
+  {
+    packageDir: "amazon-dsp-mcp",
+    platformSlug: "amazon_dsp",
+    writeTool: "amazon_dsp_create_entity",
+    readTool: "amazon_dsp_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["order", "line_item"] },
+  },
 ];
 
 const entityKindAliases = {

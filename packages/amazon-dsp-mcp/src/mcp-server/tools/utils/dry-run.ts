@@ -113,6 +113,60 @@ export function resolveAmazonDspDispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(create, entityKind)` capability for `amazon_dsp_create_entity`.
+ * Out-of-scope kinds (creative / target / creativeAssociation) resolve to
+ * `canonicalEntityKind: null` — the call is still token-gated but emits no
+ * snapshot. Pure (no I/O).
+ */
+export function resolveAmazonDspCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface AmazonDspCreateDryRunArgs {
+  entityType: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic create dry-run. Amazon DSP exposes no native validate mode for the
+ * create endpoints, so both axes are symbolic: validation runs the same
+ * business rules as update; the expected post-state is the would-be-created
+ * entity (symbolic apply of the create payload over an empty base — create has
+ * no `before`). Pure (no I/O).
+ */
+export async function runAmazonDspCreateDryRun(
+  input: AmazonDspCreateDryRunArgs,
+  _service: AmazonDspServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(input.data);
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[input.entityType]) {
+    const snapshot = buildAmazonDspSnapshot(input.entityType, "", {}, input.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "amazon_dsp_create_entity"
+  );
+}
+
 export interface AmazonDspDryRunArgs {
   entityType: string;
   entityId: string;

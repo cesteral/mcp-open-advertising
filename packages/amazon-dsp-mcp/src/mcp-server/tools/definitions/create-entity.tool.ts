@@ -4,8 +4,20 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runAmazonDspCreateDryRun, resolveAmazonDspCreateCapability } from "../utils/dry-run.js";
+import { snapshotFromAmazonDspEntity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_create_entity";
 const TOOL_TITLE = "Create AmazonDsp Ads Entity";
@@ -30,6 +42,13 @@ export const CreateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the creation and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created entity) without calling the Amazon DSP API. No entity is created."
+      ),
   })
   .describe("Parameters for creating a AmazonDsp Ads entity");
 
@@ -38,6 +57,15 @@ export const CreateEntityOutputSchema = z
     entity: z.record(z.any()).describe("Created entity data (includes entity ID)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entity was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-create canonical snapshot, normalized from the created entity (in-scope kinds: order, line_item). Create has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity creation result");
 
@@ -50,21 +78,61 @@ export async function createEntityLogic(
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
+  const dispatchedCapability = resolveAmazonDspCreateCapability(input.entityType);
 
-  const entity = await amazonDspService.createEntity(
+  if (input.dry_run === true) {
+    const dryRun = await runAmazonDspCreateDryRun(
+      { entityType: input.entityType, data: input.data },
+      amazonDspService,
+      context
+    );
+    return {
+      entity: {},
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const entity = (await amazonDspService.createEntity(
     input.entityType as AmazonDspEntityType,
     input.data,
     context
+  )) as unknown as Record<string, unknown>;
+
+  // Normalize the created entity for the canonical `after` snapshot. Create has
+  // no `before`. Best-effort: undefined for out-of-scope kinds.
+  const createdId = String(entity?.orderId ?? entity?.lineItemId ?? entity?.id ?? "");
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromAmazonDspEntity(
+    input.entityType,
+    createdId,
+    entity
   );
 
   return {
-    entity: entity as unknown as Record<string, unknown>,
+    entity,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errorLines = validationErrors.length
+      ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
+      : "";
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: creating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No entity was created.${errorLines}\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -84,6 +152,35 @@ export const createEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "amazon_dsp",
+      contractPlatformSlug: "amazon_dsp",
+      contractToolSlug: "create_entity",
+      operation: ["create"],
+      // Governed scope mirrors `amazon_dsp_update_entity` — order
+      // (campaign-equivalent) and lineItem (ad-group-equivalent) carry a
+      // canonical kind. creative / target / creativeAssociation are out of
+      // scope (resolve canonicalEntityKind: null, no snapshot).
+      entityKinds: ["order", "line_item"],
+      entityIdArgs: [],
+      readPartner: {
+        toolName: "amazon_dsp_get_entity",
+        argMap: { profileId: "profileId" },
+      },
+      schemaVersion: 1,
+      contractId: "amazon_dsp.create_entity.v1",
+      // Symbolic create dry-run — Amazon DSP has no native validate mode.
+      // Validation runs symbolic business rules; expected post-state is the
+      // would-be-created entity. `after` is normalized from the created entity
+      // (create has no `before`).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

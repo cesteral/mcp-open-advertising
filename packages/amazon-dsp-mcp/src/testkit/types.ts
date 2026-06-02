@@ -19,7 +19,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * and matches `resolveCommitmentDispatchedCapability()` in commitment-dry-run.ts.
  * Fixtures pin one operation each so consumers can filter.
  */
-export type AmazonDspOperation = "update_budget" | "pause" | "resume" | "update";
+export type AmazonDspOperation = "update_budget" | "pause" | "resume" | "update" | "create";
 
 /**
  * Governed entity kinds, labelled with the upstream input key. `order` is the
@@ -84,4 +84,16 @@ export type AmazonDspWriteFixture =
       entityKind: "commitment";
       /** Inputs to the write tool (scrubbed). */
       args: AmazonDspUpdateCommitmentFixtureArgs;
+    })
+  | (AmazonDspFixtureBase & {
+      /** Governed write contract this fixture proves. */
+      contractToolSlug: "create_entity";
+      /** Upstream entity-kind key. */
+      entityKind: Exclude<AmazonDspEntityKindKey, "commitment">;
+      /**
+       * Inputs to `amazon_dsp_create_entity` (scrubbed). Reuses the
+       * update-entity arg shape; `entityId` is the would-be-created placeholder
+       * (empty string) since create has no pre-existing ID.
+       */
+      args: AmazonDspUpdateEntityFixtureArgs;
     });
