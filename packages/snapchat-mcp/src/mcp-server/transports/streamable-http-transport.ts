@@ -37,6 +37,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-Snapchat-Advertiser-Id",
       "X-Snapchat-Org-Id",
       "X-Snapchat-App-Id",

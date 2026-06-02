@@ -336,6 +336,10 @@ export function createMcpHttpTransport(
     const requestId = extractRequestId(extractHeadersMap(c.req.raw.headers));
     const reqCtx = createRequestContext(config.serviceName);
     reqCtx.requestId = requestId;
+    // Governance decision token (if present) — the tool-handler factory reads it
+    // from the request context to verify governed write calls. Header lookup is
+    // case-insensitive via Hono.
+    reqCtx.decisionToken = c.req.header("x-cesteral-decision-token");
 
     return runWithRequestContext(reqCtx, async () => {
       // Validate MCP-Protocol-Version header

@@ -37,6 +37,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-SA360-Client-Id",
       "X-SA360-Client-Secret",
       "X-SA360-Refresh-Token",

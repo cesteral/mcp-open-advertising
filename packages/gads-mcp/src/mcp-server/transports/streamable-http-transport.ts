@@ -37,6 +37,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Cesteral-Decision-Token",
       "X-GAds-Developer-Token",
       "X-GAds-Client-Id",
       "X-GAds-Client-Secret",
