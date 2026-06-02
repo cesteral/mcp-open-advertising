@@ -41,15 +41,13 @@
       "gads_adjust_bids",
       "gads_bulk_create_entities",
       "gads_bulk_mutate",
-      "gads_bulk_update_status",
-      "gads_create_entity"
+      "gads_bulk_update_status"
     ],
     "linkedin-mcp": [
       "linkedin_adjust_bids",
       "linkedin_bulk_create_entities",
       "linkedin_bulk_update_entities",
       "linkedin_bulk_update_status",
-      "linkedin_create_entity",
       "linkedin_duplicate_entity",
       "linkedin_upload_image",
       "linkedin_upload_video"
@@ -59,7 +57,6 @@
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
-      "meta_create_entity",
       "meta_duplicate_entity",
       "meta_manage_budget_schedule",
       "meta_submit_report",

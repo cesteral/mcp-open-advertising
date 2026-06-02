@@ -148,6 +148,15 @@ const extraGovernedSurfaces = [
     pairs: { delete: ["campaign", "ad_group", "campaign_budget"] },
   },
   {
+    packageDir: "gads-mcp",
+    platformSlug: "google_ads",
+    writeTool: "gads_create_entity",
+    readTool: "gads_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_group", "campaign_budget"] },
+  },
+  {
     packageDir: "meta-mcp",
     platformSlug: "meta",
     writeTool: "meta_delete_entity",
@@ -155,6 +164,15 @@ const extraGovernedSurfaces = [
     contractToolSlug: "delete_entity",
     readContractToolSlug: "get_entity",
     pairs: { delete: ["campaign", "ad_set", "ad"] },
+  },
+  {
+    packageDir: "meta-mcp",
+    platformSlug: "meta",
+    writeTool: "meta_create_entity",
+    readTool: "meta_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_set", "ad"] },
   },
   {
     packageDir: "dv360-mcp",
@@ -173,6 +191,15 @@ const extraGovernedSurfaces = [
     contractToolSlug: "delete_entity",
     readContractToolSlug: "get_entity",
     pairs: { delete: ["campaign"] },
+  },
+  {
+    packageDir: "linkedin-mcp",
+    platformSlug: "linkedin_ads",
+    writeTool: "linkedin_create_entity",
+    readTool: "linkedin_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign"] },
   },
 ];
 

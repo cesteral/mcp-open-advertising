@@ -4,8 +4,20 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { runLinkedInCreateDryRun, resolveLinkedInCreateCapability } from "../utils/dry-run.js";
+import { snapshotFromLinkedInEntity } from "../utils/capture-snapshot.js";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  NormalizedEntitySnapshot,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_create_entity";
 const TOOL_TITLE = "Create LinkedIn Ads Entity";
@@ -29,6 +41,13 @@ export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the creation and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created entity) without calling the LinkedIn API. No entity is created."
+      ),
   })
   .describe("Parameters for creating a LinkedIn Ads entity");
 
@@ -37,6 +56,15 @@ export const CreateEntityOutputSchema = z
     entity: z.record(z.any()).describe("Created entity (returns id/URN at minimum)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entity was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-create canonical snapshot, normalized from the created entity (in-scope kind: campaign). Create has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to. Present on every response."
+    ),
   })
   .describe("Entity creation result");
 
@@ -49,21 +77,62 @@ export async function createEntityLogic(
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
+  const dispatchedCapability = resolveLinkedInCreateCapability(input.entityType);
 
-  const entity = await linkedInService.createEntity(
+  if (input.dry_run === true) {
+    const dryRun = await runLinkedInCreateDryRun(
+      { entityType: input.entityType, data: input.data },
+      linkedInService,
+      context
+    );
+    return {
+      entity: {},
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  const entity = (await linkedInService.createEntity(
     input.entityType as LinkedInEntityType,
     input.data,
     context
+  )) as unknown as Record<string, unknown>;
+
+  // Normalize the created entity for the canonical `after` snapshot (the create
+  // response is the created resource). Create has no `before`. Best-effort.
+  const createdUrn =
+    typeof entity?.id === "string" ? entity.id : typeof entity?.urn === "string" ? entity.urn : "";
+  const after: NormalizedEntitySnapshot | undefined = snapshotFromLinkedInEntity(
+    input.entityType,
+    createdUrn,
+    entity
   );
 
   return {
-    entity: entity as unknown as Record<string, unknown>,
+    entity,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
 export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const outcome = result.dryRun.wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = result.dryRun.validationErrors.map((e) => e.message).join("; ");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry-run: creating ${result.entityType} ${outcome}.` +
+          (errs ? `\nValidation: ${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -83,6 +152,33 @@ export const createEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "linkedin_ads",
+      contractPlatformSlug: "linkedin_ads",
+      contractToolSlug: "create_entity",
+      operation: ["create"],
+      // Governed scope is `campaign`. campaignGroup / creative / conversionRule
+      // are creatable but resolve canonicalEntityKind:null — still token-gated.
+      entityKinds: ["campaign"],
+      // Create has no top-level entity/account ID arg (the account URN lives in
+      // `data`); the new URN is assigned by the server and returned in `entity`.
+      entityIdArgs: [],
+      readPartner: {
+        toolName: "linkedin_get_entity",
+        argMap: {},
+      },
+      schemaVersion: 1,
+      contractId: "linkedin_ads.create_entity.v1",
+      // `dry_run` = symbolic validate + symbolic apply. `after` normalized from
+      // the created entity (no `before`).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

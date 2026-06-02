@@ -291,6 +291,89 @@ export const removeCampaignBudget: GAdsWriteFixture = {
   description: "delete: campaignBudget transition ENABLED → REMOVED (canonical deleted)",
 };
 
+/**
+ * create: the would-be-created entity is the `data` payload normalized (empty
+ * pre-state), `applyGAdsPatch({}, data, updateMask)`. platformEntityId is a
+ * placeholder (server assigns the real ID). One per governed kind.
+ */
+export const createCampaign: GAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    customerId,
+    entityId: "campaign-REDACTED-NEW",
+    data: { name: "New Campaign", status: "PAUSED" },
+    updateMask: "name,status",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "campaign",
+    platformEntityId: "campaign-REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: customerId,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, status PAUSED)",
+};
+
+export const createAdGroup: GAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    customerId,
+    entityId: "adgroup-REDACTED-NEW",
+    data: { name: "New Ad Group", status: "PAUSED" },
+    updateMask: "name,status",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "ad_group",
+    platformEntityId: "adgroup-REDACTED-NEW",
+    displayName: "New Ad Group",
+    accountId: customerId,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, status PAUSED)",
+};
+
+export const createCampaignBudget: GAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaignBudget",
+  args: {
+    entityType: "campaignBudget",
+    customerId,
+    entityId: "budget-REDACTED-NEW",
+    data: { name: "New Shared Budget", amountMicros: "50000000" },
+    updateMask: "name,amountMicros",
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "google_ads",
+    entityKind: "campaign_budget",
+    platformEntityId: "budget-REDACTED-NEW",
+    displayName: "New Shared Budget",
+    accountId: customerId,
+    status: { canonical: "unknown", platformRaw: "" },
+    budget: { daily: { amountMinor: 5000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaignBudget (would-be-created, $50 daily)",
+};
+
 export const allFixtures: readonly GAdsWriteFixture[] = [
   pauseCampaign,
   resumeCampaign,
@@ -300,4 +383,7 @@ export const allFixtures: readonly GAdsWriteFixture[] = [
   removeCampaign,
   removeAdGroup,
   removeCampaignBudget,
+  createCampaign,
+  createAdGroup,
+  createCampaignBudget,
 ];

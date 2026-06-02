@@ -172,9 +172,39 @@ export const deleteCampaign: LinkedInWriteFixture = {
   description: "delete: campaign transition PAUSED → REMOVED (canonical deleted)",
 };
 
+/**
+ * create: the would-be-created campaign is the `data` payload normalized (empty
+ * pre-state), `applyLinkedInPatch({}, data)`. platformEntityId is a placeholder
+ * (the server assigns the real URN).
+ */
+export const createCampaign: LinkedInWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityUrn: "urn:li:sponsoredCampaign:REDACTED-NEW",
+    data: { name: "New Campaign", status: "PAUSED", account: accountUrn },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "linkedin_ads",
+    entityKind: "campaign",
+    platformEntityId: "urn:li:sponsoredCampaign:REDACTED-NEW",
+    displayName: "New Campaign",
+    accountId: accountUrn,
+    status: { canonical: "paused", platformRaw: "PAUSED" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, status PAUSED)",
+};
+
 export const allFixtures: readonly LinkedInWriteFixture[] = [
   updateBudgetCampaign,
   pauseCampaign,
   resumeCampaign,
   deleteCampaign,
+  createCampaign,
 ];

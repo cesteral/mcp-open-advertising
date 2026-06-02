@@ -235,3 +235,57 @@ export async function runMetaDeleteDryRun(
     "meta_delete_entity"
   );
 }
+
+/**
+ * Resolve the `(operation, entityKind)` for a `meta_create_entity` call.
+ * Out-of-scope types (adCreative, customAudience) resolve to
+ * `canonicalEntityKind: null` — still token-gated under enforce, no canonical
+ * snapshot. Pure.
+ */
+export function resolveMetaCreateCapability(entityType: string | undefined): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || null,
+  };
+}
+
+export interface MetaCreateDryRunArgs {
+  entityType: string | undefined;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `meta_create_entity`. There is no pre-state (the entity
+ * does not exist yet), so the expected post-state is the would-be-created
+ * entity: the `data` payload normalized via `buildMetaSnapshot` (empty
+ * pre-state). `platformEntityId` is empty — the server assigns the real ID on
+ * execute. Validation is symbolic (status/budget business rules).
+ */
+export async function runMetaCreateDryRun(
+  args: MetaCreateDryRunArgs,
+  _metaService: MetaServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(args.data);
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (args.entityType && ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildMetaSnapshot(args.entityType, "", {}, args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "meta_create_entity"
+  );
+}

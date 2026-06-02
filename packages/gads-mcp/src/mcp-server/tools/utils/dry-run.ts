@@ -192,6 +192,78 @@ export async function runGAdsRemoveDryRun(
   );
 }
 
+/**
+ * Resolve the `(operation, entityKind)` for a `gads_create_entity` call.
+ * Out-of-scope types (ad, keyword) resolve to `canonicalEntityKind: null`. Pure.
+ */
+export function resolveGAdsCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface GAdsCreateDryRunArgs {
+  entityType: string;
+  customerId: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Dry-run for `gads_create_entity`. Validation is NATIVE — `:mutate` with
+ * `validateOnly: true` on a create operation. Expected post-state is symbolic:
+ * the `data` payload normalized via `buildGAdsSnapshot` (no pre-state; the
+ * server assigns the ID on execute, so `platformEntityId` is empty).
+ */
+export async function runGAdsCreateDryRun(
+  args: GAdsCreateDryRunArgs,
+  gadsService: GAdsDryRunServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  let validationErrors: DryRunValidationError[] = [];
+  let validationSource: DryRunResult["validationSource"] = "none";
+  if (gadsService.validateEntity) {
+    const verdict = await gadsService.validateEntity(
+      args.entityType,
+      args.customerId,
+      args.data,
+      "create",
+      undefined,
+      undefined,
+      context
+    );
+    validationSource = "native_validator";
+    if (!verdict.valid) {
+      validationErrors = (
+        verdict.errors && verdict.errors.length > 0
+          ? verdict.errors
+          : ["Google Ads rejected the creation"]
+      ).map((message) => ({ code: "GOOGLE_ADS_VALIDATION", message }));
+    }
+  }
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource,
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "gads_create_entity"
+  );
+}
+
 export interface GAdsDryRunArgs {
   entityType: string;
   customerId: string;

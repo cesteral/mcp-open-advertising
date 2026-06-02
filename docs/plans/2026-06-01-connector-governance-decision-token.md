@@ -891,9 +891,16 @@ PR 1 ships with `resolveDefinitionHash` un-wired (default `off`, so inert). But 
 
 ### Template A — `entity` write (create / delete / bulk_update_status on canonical kinds)
 
+> **Out-of-scope entity kinds — DESIGN DECISION (resolved).** A governed entity write tool commonly accepts more `entityType`s than its declared `entityKinds` (e.g. Meta `delete_entity` also deletes `adCreative`; Google Ads `remove_entity` also removes `ad`/`keyword`; DV360 `create_entity` also creates `creative`). These out-of-scope executions are **NOT rejected** — rejecting them would drop real platform capability. Instead they are **token-gated but not snapshot-governed**:
+>
+> - **Security layer (token):** every call to a `kind:"write"` tool requires a valid decision token under `enforce`, regardless of `entityType`. Out-of-scope writes are therefore never bypassed.
+> - **Snapshot/contract layer:** only the declared `entityKinds` produce a canonical `before`/`after` snapshot. An out-of-scope call resolves `dispatchedCapability.canonicalEntityKind: null` (honest "no canonical entity"; `canonicalEntityKind` is nullable for exactly this) and emits no snapshot.
+>
+> So `dispatchedCapability.canonicalEntityKind` is **non-null for in-scope (declared) kinds and `null` for out-of-scope kinds** — both on dry-run and execute. The governance admission layer validates the declared `entityKinds`; it must accept `null` `canonicalEntityKind` on a governed entity tool's responses for out-of-scope calls. This applies uniformly across the delete-family and create-family contracts already shipped.
+
 For tool file `packages/<server>/src/mcp-server/tools/definitions/<op>.tool.ts`:
 
-1. **Test first:** add a response-schema test (dry-run → `DryRunResultSchema`; execute → `before?`/`after` `NormalizedEntitySnapshotSchema` + required `dispatchedCapability` with non-null `canonicalEntityKind`).
+1. **Test first:** add a response-schema test (dry-run → `DryRunResultSchema`; execute → `before?`/`after` `NormalizedEntitySnapshotSchema` + `dispatchedCapability`). For an **in-scope** kind, assert a **non-null** `canonicalEntityKind` and a populated snapshot; for an **out-of-scope** kind, assert `canonicalEntityKind: null` and no snapshot (the write still runs and is token-gated).
 2. Add `outputSchema` fields: `dryRun?`, `before?`, `after?`, `dispatchedCapability`.
 3. Add `cesteral` annotation: `kind:"write"`, `writeClass:"entity"`, slugs, `contractId = <platform>.<op>.v1`, `operation`, `entityKinds`, `entityIdArgs`, `executableArgsExclude:["dry_run"]`, `readPartner`, `supportsDryRun`, `supportsBeforeAfterSnapshot:true`, `requiresValidation:true`, `requiresSimulation:true`.
 4. Implement native-first dry-run (or symbolic) + before/after capture (reuse the server's existing `capture*Snapshot` + `snapshotFrom*Entity` helpers).

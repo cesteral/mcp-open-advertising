@@ -116,6 +116,72 @@ describe("createEntityLogic", () => {
   });
 });
 
+describe("createEntityLogic governance contract", () => {
+  let svc: { createEntity: ReturnType<typeof vi.fn>; getEntity: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = {
+      createEntity: vi.fn().mockResolvedValue({ id: "new-1", name: "New Campaign" }),
+      getEntity: vi.fn().mockResolvedValue({
+        id: "new-1",
+        name: "New Campaign",
+        status: "PAUSED",
+        account_id: "act_123",
+      }),
+    };
+    mockResolveSessionServices.mockReturnValue({ metaService: svc });
+  });
+
+  it("dry_run returns a symbolic post-state from create data and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign" as any,
+        adAccountId: "act_123",
+        data: { name: "New Campaign", objective: "OUTCOME_TRAFFIC", status: "PAUSED" },
+        dry_run: true,
+      } as any,
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(svc.createEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute re-reads the new entity for the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign" as any,
+        adAccountId: "act_123",
+        data: { name: "New Campaign", status: "PAUSED" },
+      } as any,
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(svc.createEntity).toHaveBeenCalledOnce();
+    expect(svc.getEntity).toHaveBeenCalledWith("campaign", "new-1", undefined, expect.anything());
+    expect(result.after?.status.canonical).toBe("paused");
+    expect((result as any).before).toBeUndefined();
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("campaign");
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    const result = await createEntityLogic(
+      { entityType: "adCreative" as any, adAccountId: "act_123", data: { name: "C" } } as any,
+      createMockContext(),
+      createMockSdkContext()
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+    expect(svc.createEntity).toHaveBeenCalledOnce();
+  });
+});
+
 describe("createEntityResponseFormatter", () => {
   it("shows created entity", () => {
     const result = {

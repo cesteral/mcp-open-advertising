@@ -289,3 +289,57 @@ describe("linkedin_validate_entity tool", () => {
     });
   });
 });
+
+describe("linkedin_create_entity governance contract", () => {
+  const created = {
+    id: "urn:li:sponsoredCampaign:999",
+    name: "New Campaign",
+    status: "PAUSED",
+    account: "urn:li:sponsoredAccount:9",
+  };
+  beforeEach(() => {
+    mockLinkedInService.createEntity.mockReset().mockResolvedValue(created);
+    mockResolveSessionServices.mockReturnValue(mockSessionServices as any);
+  });
+
+  it("dry_run returns a symbolic post-state from create data and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign",
+        data: { name: "New Campaign", status: "PAUSED", account: "urn:li:sponsoredAccount:9" },
+        dry_run: true,
+      } as any,
+      mockContext as any,
+      { sessionId: "s" }
+    );
+    expect(mockLinkedInService.createEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      { entityType: "campaign", data: { name: "New Campaign", status: "PAUSED" } } as any,
+      mockContext as any,
+      { sessionId: "s" }
+    );
+    expect(mockLinkedInService.createEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("paused");
+    expect((result as any).before).toBeUndefined();
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("campaign");
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    const result = await createEntityLogic(
+      { entityType: "creative", data: { status: "PAUSED" } } as any,
+      mockContext as any,
+      { sessionId: "s" }
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
+  });
+});
