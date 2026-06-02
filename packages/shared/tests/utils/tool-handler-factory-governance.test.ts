@@ -100,9 +100,7 @@ async function mintToken(args: Record<string, unknown>, over: Record<string, unk
     exp: now + 3600,
     ...over,
   };
-  return new jose.SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
-    .sign(enc.encode(SECRET));
+  return new jose.SignJWT(payload).setProtectedHeader({ alg: "HS256" }).sign(enc.encode(SECRET));
 }
 
 function register(opts: {
@@ -280,11 +278,9 @@ describe("tool-handler-factory governance verification", () => {
     });
     // advertiserId "1" is not in the allowed advertiser scope → denied at authz.
     const token = await mintToken({ entityId: "1" });
-    const res = (await callWithToken(
-      server,
-      { entityId: "1", advertiserId: "1" },
-      token
-    )) as { isError?: boolean };
+    const res = (await callWithToken(server, { entityId: "1", advertiserId: "1" }, token)) as {
+      isError?: boolean;
+    };
     expect(res.isError).toBe(true);
     expect(jtiStore.consumeOnce).not.toHaveBeenCalled();
     expect(writeTool.logic).not.toHaveBeenCalled();

@@ -12,7 +12,9 @@ describe("resolveTokenMode", () => {
   });
 
   it("honors the global base mode", () => {
-    expect(resolveTokenMode({ contractId: C, env: { GOVERNANCE_TOKEN_MODE: "warn" } })).toBe("warn");
+    expect(resolveTokenMode({ contractId: C, env: { GOVERNANCE_TOKEN_MODE: "warn" } })).toBe(
+      "warn"
+    );
     expect(resolveTokenMode({ contractId: C, env: { GOVERNANCE_TOKEN_MODE: "enforce" } })).toBe(
       "enforce"
     );
@@ -38,7 +40,8 @@ describe("resolveTokenMode", () => {
         env: {
           GOVERNANCE_TOKEN_MODE: "off",
           GOVERNANCE_TOKEN_MODE_META: "warn",
-          GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS: "meta.update_entity.v1,google_ads.update_entity.v1",
+          GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS:
+            "meta.update_entity.v1,google_ads.update_entity.v1",
         },
       })
     ).toBe("enforce");

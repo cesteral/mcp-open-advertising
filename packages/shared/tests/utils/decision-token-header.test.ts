@@ -21,7 +21,10 @@ describe("decision token header threading", () => {
     app.post("/mcp", async (c) => {
       const reqCtx = createRequestContext("test");
       reqCtx.decisionToken = c.req.header("x-cesteral-decision-token");
-      const seen = await runWithRequestContext(reqCtx, async () => getRequestContext()?.decisionToken);
+      const seen = await runWithRequestContext(
+        reqCtx,
+        async () => getRequestContext()?.decisionToken
+      );
       return c.json({ seen: seen ?? null });
     });
 

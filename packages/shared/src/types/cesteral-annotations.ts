@@ -189,16 +189,12 @@ export type CesteralWriteToolAnnotations =
   | CesteralEffectWriteToolAnnotations;
 
 /** Type guard: governed entity write annotation. */
-export function isEntityWrite(
-  a: CesteralToolAnnotations
-): a is CesteralEntityWriteToolAnnotations {
+export function isEntityWrite(a: CesteralToolAnnotations): a is CesteralEntityWriteToolAnnotations {
   return a.kind === "write" && a.writeClass === "entity";
 }
 
 /** Type guard: governed effect write annotation. */
-export function isEffectWrite(
-  a: CesteralToolAnnotations
-): a is CesteralEffectWriteToolAnnotations {
+export function isEffectWrite(a: CesteralToolAnnotations): a is CesteralEffectWriteToolAnnotations {
   return a.kind === "write" && a.writeClass === "effect";
 }
 

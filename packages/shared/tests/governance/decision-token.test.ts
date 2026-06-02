@@ -16,7 +16,11 @@ const DEFINITION_HASH = "d".repeat(64);
 const ACTION_ARGS = { entityId: "1", status: "PAUSED" };
 const ACTION_HASH = hashActionInput(ACTION_ARGS);
 
-const expected = { contractId: CONTRACT_ID, definitionHash: DEFINITION_HASH, actionHash: ACTION_HASH };
+const expected = {
+  contractId: CONTRACT_ID,
+  definitionHash: DEFINITION_HASH,
+  actionHash: ACTION_HASH,
+};
 
 function basePayload(): Record<string, unknown> {
   return {

@@ -64,12 +64,12 @@ Deep-equal check via stable JSON unchanged. Mismatch-message format unchanged.
 
 Four hand-authored fixtures, scrubbed IDs (`cmt-REDACTED-{1..4}`), advertiser currency USD. One per axis the dry-run validates or the canonical snapshot exposes:
 
-| # | Description | Patch | Pins |
-|---|---|---|---|
-| 1 | committedSpend $1,000,000 → $1,500,000 | `{ committedSpend: 1500000 }` | `budget.lifetime.amountMinor` major→minor conversion (×100); `accountId` = `profileId` |
-| 2 | fulfillmentLevel LEVEL_0 → LEVEL_5 | `{ fulfillmentLevel: "LEVEL_5" }` | Canonical snapshot invariance — non-snapshot fields round-trip without dirtying `budget` / `schedule` |
-| 3 | spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN | `{ spendCalculationMode: "CAMPAIGN" }` | Same invariance contract; second axis |
-| 4 | schedule extend endDateTime 2026-06-30 → 2026-12-31 | `{ endDateTime: "2026-12-31T23:59:59Z" }` | `schedule.endAt` propagation; `displayName` from `commitmentName`; status defaulting to `{ canonical: "active", platformRaw: "ACTIVE" }` |
+| #   | Description                                         | Patch                                     | Pins                                                                                                                                     |
+| --- | --------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | committedSpend $1,000,000 → $1,500,000              | `{ committedSpend: 1500000 }`             | `budget.lifetime.amountMinor` major→minor conversion (×100); `accountId` = `profileId`                                                   |
+| 2   | fulfillmentLevel LEVEL_0 → LEVEL_5                  | `{ fulfillmentLevel: "LEVEL_5" }`         | Canonical snapshot invariance — non-snapshot fields round-trip without dirtying `budget` / `schedule`                                    |
+| 3   | spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN  | `{ spendCalculationMode: "CAMPAIGN" }`    | Same invariance contract; second axis                                                                                                    |
+| 4   | schedule extend endDateTime 2026-06-30 → 2026-12-31 | `{ endDateTime: "2026-12-31T23:59:59Z" }` | `schedule.endAt` propagation; `displayName` from `commitmentName`; status defaulting to `{ canonical: "active", platformRaw: "ACTIVE" }` |
 
 All pre-states are realistic `DSPCommitmentT` shapes (`commitmentId`, `commitmentName`, `committedSpend`, `currencyCode`, `startDateTime`, `endDateTime`, `fulfillmentLevel`, `spendCalculationMode`). All `expectedPostState`s are `NormalizedEntitySnapshot` with `entityKind: "commitment"`, `platform: "amazon_dsp"`, `accountId: profileId`, `status: { canonical: "active", platformRaw: "ACTIVE" }`.
 
@@ -95,13 +95,13 @@ The repo tag string is a release marker, not a per-package version. The downstre
 
 ## Risks
 
-| Risk | Mitigation |
-|---|---|
-| `applyCommitmentPatch` shape drift from `applyAmazonDspPatch` (different positional args — commitment lacks `entityType`) | Explicit JSDoc on both functions; `assertContract`'s `entityKind` branch is the only in-repo call site, so the drift is contained to one switch |
-| Downstream `cesteral-intelligence` doesn't dispatch on `entityKind` and tries to call `applyAmazonDspPatch` for commitment fixtures | Re-export `applyCommitmentPatch` from `@cesteral/amazon-dsp-mcp/testkit` so consumers can mirror the dispatch. Coordinate downstream PR after publish |
-| `cmt-REDACTED-*` fixture IDs conflict with real test data downstream | `REDACTED` infix is unmistakably synthetic; consistent with `ord-REDACTED-*` / `li-REDACTED-*` convention |
-| `buildCommitmentSnapshot` currency-fallback to `"USD"` causes a fixture to drift if upstream API ever returns no `currencyCode` | All four fixtures set `currencyCode: "USD"` explicitly in `preState`, so the fallback is not exercised — the fixtures pin the present-`currencyCode` branch only. Currency-omitted case is unit-test territory, not fixture |
-| Conformance test pair-set drifts from `AmazonDspOperation × AmazonDspEntityKindKey` Cartesian product | Pair set is hand-maintained; current state has 6 explicit entries + 1 new — small enough to keep accurate without a generator |
+| Risk                                                                                                                                | Mitigation                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applyCommitmentPatch` shape drift from `applyAmazonDspPatch` (different positional args — commitment lacks `entityType`)           | Explicit JSDoc on both functions; `assertContract`'s `entityKind` branch is the only in-repo call site, so the drift is contained to one switch                                                                             |
+| Downstream `cesteral-intelligence` doesn't dispatch on `entityKind` and tries to call `applyAmazonDspPatch` for commitment fixtures | Re-export `applyCommitmentPatch` from `@cesteral/amazon-dsp-mcp/testkit` so consumers can mirror the dispatch. Coordinate downstream PR after publish                                                                       |
+| `cmt-REDACTED-*` fixture IDs conflict with real test data downstream                                                                | `REDACTED` infix is unmistakably synthetic; consistent with `ord-REDACTED-*` / `li-REDACTED-*` convention                                                                                                                   |
+| `buildCommitmentSnapshot` currency-fallback to `"USD"` causes a fixture to drift if upstream API ever returns no `currencyCode`     | All four fixtures set `currencyCode: "USD"` explicitly in `preState`, so the fallback is not exercised — the fixtures pin the present-`currencyCode` branch only. Currency-omitted case is unit-test territory, not fixture |
+| Conformance test pair-set drifts from `AmazonDspOperation × AmazonDspEntityKindKey` Cartesian product                               | Pair set is hand-maintained; current state has 6 explicit entries + 1 new — small enough to keep accurate without a generator                                                                                               |
 
 ## Verification before tag push
 
@@ -114,6 +114,7 @@ The repo tag string is a release marker, not a per-package version. The downstre
 ## Open questions
 
 None. Decisions logged:
+
 - Fixture count: 4, one per validated/snapshot axis.
 - Args shape: widen union, don't refactor to discriminated union.
 - Wrapper symmetry: add `applyCommitmentPatch` for parity with `applyAmazonDspPatch`.
