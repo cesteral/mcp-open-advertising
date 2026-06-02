@@ -12,6 +12,8 @@ export {
   DryRunValidationErrorSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
 } from "./schemas/dry-run-result.js";
 export type {
   ToolDefinition,
@@ -42,4 +44,6 @@ export type {
   DryRunResult,
   DryRunValidationError,
   DispatchedCapability,
+  EffectResult,
+  EffectDryRunResult,
 } from "./types/dry-run-result.js";
