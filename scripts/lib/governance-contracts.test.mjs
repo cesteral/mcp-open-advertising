@@ -255,6 +255,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign", "ad_group"] },
   },
+  {
+    packageDir: "dv360-mcp",
+    platformSlug: "dv360",
+    writeTool: "dv360_create_entity",
+    readTool: "dv360_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "insertion_order", "line_item"] },
+  },
 ];
 
 const entityKindAliases = {

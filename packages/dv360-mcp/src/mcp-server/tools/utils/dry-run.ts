@@ -135,6 +135,65 @@ export function resolveDv360DeleteCapability(entityType: string): DispatchedCapa
   };
 }
 
+/**
+ * Resolve the `(create, entityKind)` for a `dv360_create_entity` call.
+ * Out-of-scope types (creative, adGroup, advertiser, …) resolve to
+ * `canonicalEntityKind: null` — still token-gated under enforce, just no
+ * canonical snapshot. Pure.
+ */
+export function resolveDv360CreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || null,
+  };
+}
+
+export interface Dv360CreateDryRunArgs {
+  entityType: string;
+  /** Parent IDs resolved from the input (no entity ID — create has none yet). */
+  ids: Record<string, string>;
+  /** The merged create payload (parent IDs already folded into the data). */
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `dv360_create_entity`. Validation is the injected Zod
+ * create-schema validator; the expected post-state is the would-be-created
+ * entity (symbolic apply of the create payload over an empty base — create has
+ * no `before`). The new entity has no ID pre-create, so `platformEntityId` is
+ * the empty-string placeholder (the parent IDs in `ids` only supply
+ * `accountId`). Pure (no I/O).
+ */
+export async function runDv360CreateDryRun(
+  args: Dv360CreateDryRunArgs,
+  _dv360Service: Dv360ServiceLike,
+  _context: RequestContext,
+  validateOperation?: (entityType: string, data: Record<string, unknown>) => DryRunValidationError[]
+): Promise<DryRunResult> {
+  const validationErrors = validateOperation ? validateOperation(args.entityType, args.data) : [];
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildDv360Snapshot(args.entityType, args.ids, {}, args.data);
+    if (snapshot) {
+      expectedPostState = { ...snapshot, platformEntityId: "" };
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "dv360_create_entity"
+  );
+}
+
 export interface Dv360DeleteDryRunArgs {
   entityType: string;
   ids: Record<string, string>;

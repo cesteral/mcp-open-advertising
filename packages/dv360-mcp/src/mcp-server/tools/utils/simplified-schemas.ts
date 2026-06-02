@@ -24,6 +24,13 @@ export function createSimplifiedCreateEntityInputSchema(): z.ZodTypeAny {
       .describe(
         "Entity payload. Use entity-schema://{entityType}, entity-fields://{entityType}, and entity-examples://{entityType} before calling."
       ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the creation against the entity schema and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created entity) without invoking the DV360 API. No entity is created."
+      ),
   });
 }
 

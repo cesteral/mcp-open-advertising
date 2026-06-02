@@ -258,6 +258,7 @@ describe("dv360_create_entity", () => {
           campaignId: "camp-1",
         },
         timestamp: "2025-01-01T00:00:00.000Z",
+        dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
       });
 
       expect(result).toHaveLength(1);
@@ -270,6 +271,7 @@ describe("dv360_create_entity", () => {
       const result = createEntityResponseFormatter({
         entity: { displayName: "X" },
         timestamp: "2025-03-15T08:30:00.000Z",
+        dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
       });
 
       expect(result[0].text).toContain("2025-03-15T08:30:00.000Z");
@@ -315,6 +317,73 @@ describe("dv360_create_entity", () => {
       });
 
       expect(parsed.success).toBe(true);
+    });
+  });
+
+  describe("governance contract", () => {
+    it("dry_run returns a symbolic post-state and does not create", async () => {
+      const result = await createEntityLogic(
+        {
+          entityType: "campaign",
+          advertiserId: "adv-1",
+          data: { displayName: "New Campaign", entityStatus: "ENTITY_STATUS_PAUSED" },
+          dry_run: true,
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(mockDv360Service.createEntity).not.toHaveBeenCalled();
+      expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+      // Create has no entity ID yet — empty-string placeholder.
+      expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+      expect(result.dispatchedCapability).toEqual({
+        operation: "create",
+        canonicalEntityKind: "campaign",
+      });
+    });
+
+    it("execute normalizes the created entity into the after snapshot (no before)", async () => {
+      mockDv360Service.createEntity.mockResolvedValue({
+        displayName: "New Campaign",
+        entityStatus: "ENTITY_STATUS_PAUSED",
+        campaignId: "camp-new-1",
+        advertiserId: "adv-1",
+      });
+
+      const result = await createEntityLogic(
+        {
+          entityType: "campaign",
+          advertiserId: "adv-1",
+          data: { displayName: "New Campaign", entityStatus: "ENTITY_STATUS_PAUSED" },
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(mockDv360Service.createEntity).toHaveBeenCalledOnce();
+      expect(result.after?.status.canonical).toBe("paused");
+      expect(result.after?.platformEntityId).toBe("camp-new-1");
+      expect((result as any).before).toBeUndefined();
+    });
+
+    it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+      mockDv360Service.createEntity.mockResolvedValue({ creativeId: "cr-1" });
+      const result = await createEntityLogic(
+        {
+          entityType: "creative",
+          advertiserId: "adv-1",
+          data: { displayName: "Banner" },
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(result.dispatchedCapability).toEqual({
+        operation: "create",
+        canonicalEntityKind: null,
+      });
+      expect(result.after).toBeUndefined();
     });
   });
 });
