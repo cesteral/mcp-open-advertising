@@ -40,9 +40,19 @@ export function loadManifestDefinitionHashes(manifestPath: string | URL): Map<st
  * decision-token verifier can bind the token's `definitionHash` claim to the
  * tool's attested hash.
  */
+const resolverCache = new Map<string, Map<string, string>>();
+
 export function createDefinitionHashResolver(
   manifestPath: string | URL
 ): (toolName: string) => string | undefined {
-  const map = loadManifestDefinitionHashes(manifestPath);
+  const key = manifestPath instanceof URL ? fileURLToPath(manifestPath) : manifestPath;
+  // Cache by resolved path so per-session server creation does not re-read the
+  // manifest file on every connection. The manifest is immutable for a running
+  // process (baked into the build artifact).
+  let map = resolverCache.get(key);
+  if (!map) {
+    map = loadManifestDefinitionHashes(key);
+    resolverCache.set(key, map);
+  }
   return (toolName: string) => map.get(toolName);
 }
