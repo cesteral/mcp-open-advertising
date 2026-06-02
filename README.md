@@ -140,19 +140,19 @@ every server in the fleet exposes the full surface of the modern MCP spec
 
 | Server         | Discovery | Prompts | Resources | CSV spill |
 | -------------- | :-------: | :-----: | :-------: | :-------: |
-| gads-mcp       |           |    ✅    |     ✅     |           |
-| meta-mcp       |     ✅     |    ✅    |     ✅     |           |
-| dv360-mcp      |     ✅     |    ✅    |     ✅     |           |
-| ttd-mcp        |     ✅     |    ✅    |     ✅     |     ✅     |
-| linkedin-mcp   |     ✅     |    ✅    |     ✅     |           |
-| tiktok-mcp     |     ✅     |    ✅    |     ✅     |     ✅     |
-| cm360-mcp      |     ✅     |    ✅    |     ✅     |           |
-| sa360-mcp      |           |    ✅    |     ✅     |           |
-| pinterest-mcp  |     ✅     |    ✅    |     ✅     |     ✅     |
-| snapchat-mcp   |     ✅     |    ✅    |     ✅     |     ✅     |
-| amazon-dsp-mcp |     ✅     |    ✅    |     ✅     |     ✅     |
-| msads-mcp      |     ✅     |    ✅    |     ✅     |     ✅     |
-| dbm-mcp        |           |    ✅    |     ✅     |           |
+| gads-mcp       |           |   ✅    |    ✅     |           |
+| meta-mcp       |    ✅     |   ✅    |    ✅     |           |
+| dv360-mcp      |    ✅     |   ✅    |    ✅     |           |
+| ttd-mcp        |    ✅     |   ✅    |    ✅     |    ✅     |
+| linkedin-mcp   |    ✅     |   ✅    |    ✅     |           |
+| tiktok-mcp     |    ✅     |   ✅    |    ✅     |    ✅     |
+| cm360-mcp      |    ✅     |   ✅    |    ✅     |           |
+| sa360-mcp      |           |   ✅    |    ✅     |           |
+| pinterest-mcp  |    ✅     |   ✅    |    ✅     |    ✅     |
+| snapchat-mcp   |    ✅     |   ✅    |    ✅     |    ✅     |
+| amazon-dsp-mcp |    ✅     |   ✅    |    ✅     |    ✅     |
+| msads-mcp      |    ✅     |   ✅    |    ✅     |    ✅     |
+| dbm-mcp        |           |   ✅    |    ✅     |           |
 
 ---
 
