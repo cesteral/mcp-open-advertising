@@ -264,6 +264,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign", "insertion_order", "line_item"] },
   },
+  {
+    packageDir: "cm360-mcp",
+    platformSlug: "cm360",
+    writeTool: "cm360_create_entity",
+    readTool: "cm360_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad"] },
+  },
 ];
 
 const entityKindAliases = {

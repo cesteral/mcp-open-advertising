@@ -15,7 +15,6 @@
       "cm360_bulk_create_entities",
       "cm360_bulk_update_entities",
       "cm360_bulk_update_status",
-      "cm360_create_entity",
       "cm360_create_report_schedule",
       "cm360_delete_entity",
       "cm360_delete_report_schedule",
