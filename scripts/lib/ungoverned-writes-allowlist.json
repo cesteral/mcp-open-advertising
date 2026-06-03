@@ -76,7 +76,6 @@
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
       "tiktok_delete_entity",
-      "tiktok_submit_report",
       "tiktok_upload_image",
       "tiktok_upload_video"
     ],
