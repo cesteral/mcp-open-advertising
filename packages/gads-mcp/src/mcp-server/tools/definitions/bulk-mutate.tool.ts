@@ -128,11 +128,21 @@ export async function bulkMutateLogic(
     context
   );
 
+  // Google Ads can return HTTP 200 with per-operation failures — especially
+  // under partialFailure:true, where the whole batch (or every op) can fail
+  // while the request itself "succeeds". Parse the response so the effect
+  // summary records real applied/failed counts instead of overstating a
+  // completed mutation.
+  const { succeeded, failed } = summarizeBulkMutateResult(result, input.operations.length);
+
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
     summary: {
       entity_kind: input.entityType,
       requested: input.operations.length,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
       partial_failure: input.partialFailure,
     },
   };
@@ -144,6 +154,78 @@ export async function bulkMutateLogic(
     effect,
     dispatchedCapability,
   };
+}
+
+/**
+ * Derive applied/failed counts from a Google Ads `:mutate` response. The
+ * response carries one `results[]` entry per operation, in order; a successful
+ * operation has a non-empty `resourceName`, a failed one is an empty object
+ * (under partialFailure:true). When `results` is absent we fall back to the
+ * `partialFailureError` operation indices, and finally — atomic-mode success
+ * path, where any failure would have thrown before we got here — assume all
+ * requested operations applied. Pure (no I/O).
+ */
+function summarizeBulkMutateResult(
+  result: unknown,
+  requested: number
+): { succeeded: number; failed: number } {
+  const r = (result ?? {}) as Record<string, unknown>;
+
+  const results = Array.isArray(r.results) ? (r.results as Array<unknown>) : null;
+  if (results) {
+    let succeeded = 0;
+    for (const item of results) {
+      const resourceName =
+        item && typeof item === "object"
+          ? (item as Record<string, unknown>).resourceName
+          : undefined;
+      if (typeof resourceName === "string" && resourceName.length > 0) succeeded++;
+    }
+    return { succeeded, failed: results.length - succeeded };
+  }
+
+  // No results array — infer failed operation indices from the partial-failure error.
+  const failedIndices = extractFailedOperationIndices(r.partialFailureError);
+  if (failedIndices !== null) {
+    const failed = Math.min(requested, failedIndices.size);
+    return { succeeded: Math.max(0, requested - failed), failed };
+  }
+
+  // Atomic-mode success path: no per-op failures could have reached this point.
+  return { succeeded: requested, failed: 0 };
+}
+
+/**
+ * Collect the distinct `operations[]` indices referenced by a Google Ads
+ * `partialFailureError` (a google.rpc.Status whose details carry GoogleAdsFailure
+ * entries). Returns null when the shape can't be interpreted. Pure (no I/O).
+ */
+function extractFailedOperationIndices(partialFailureError: unknown): Set<number> | null {
+  if (!partialFailureError || typeof partialFailureError !== "object") return null;
+  const details = (partialFailureError as Record<string, unknown>).details;
+  if (!Array.isArray(details)) return null;
+
+  const indices = new Set<number>();
+  for (const detail of details) {
+    const errors =
+      detail && typeof detail === "object" ? (detail as Record<string, unknown>).errors : undefined;
+    if (!Array.isArray(errors)) continue;
+    for (const err of errors) {
+      const fieldPathElements = (err as Record<string, any>)?.location?.fieldPathElements;
+      if (!Array.isArray(fieldPathElements)) continue;
+      for (const el of fieldPathElements) {
+        if (
+          el &&
+          typeof el === "object" &&
+          (el as Record<string, unknown>).fieldName === "operations" &&
+          typeof (el as Record<string, unknown>).index === "number"
+        ) {
+          indices.add((el as Record<string, number>).index);
+        }
+      }
+    }
+  }
+  return indices;
 }
 
 /**

@@ -36,7 +36,24 @@ describe("gads_bulk_mutate governance contract (effect class)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = { bulkMutate: vi.fn().mockResolvedValue({ results: [{ resourceName: "x" }] }) };
+    // Default: one op applied, one failed (partial) — Google Ads returns 200
+    // with an empty result entry + a partialFailureError for the failed op.
+    svc = {
+      bulkMutate: vi.fn().mockResolvedValue({
+        results: [{ resourceName: "customers/1234567890/campaigns/111" }, {}],
+        partialFailureError: {
+          code: 3,
+          message: "partial failure",
+          details: [
+            {
+              errors: [
+                { location: { fieldPathElements: [{ fieldName: "operations", index: 1 }] } },
+              ],
+            },
+          ],
+        },
+      }),
+    };
     mockResolveSessionServices.mockReturnValue({ gadsService: svc });
   });
 
@@ -66,16 +83,82 @@ describe("gads_bulk_mutate governance contract (effect class)", () => {
     expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_OPERATION");
   });
 
-  it("execute returns the batch effect identity + null-kind capability", async () => {
+  it("execute parses partial failures into real applied/failed counts", async () => {
     const result = await bulkMutateLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.bulkMutate).toHaveBeenCalledOnce();
     expect(result.effect).toEqual({
       effectKind: "bulk_mutation",
-      summary: { entity_kind: "campaign", requested: 2, partial_failure: true },
+      summary: {
+        entity_kind: "campaign",
+        requested: 2,
+        succeeded: 1,
+        failed: 1,
+        partial_success: true,
+        partial_failure: true,
+      },
     });
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     expect(() => BulkMutateOutputSchema.parse(result)).not.toThrow();
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+  });
+
+  it("execute records an all-failed batch as 0 applied (not a completed mutation)", async () => {
+    svc.bulkMutate.mockResolvedValueOnce({
+      results: [{}, {}],
+      partialFailureError: {
+        code: 3,
+        message: "all failed",
+        details: [
+          {
+            errors: [
+              { location: { fieldPathElements: [{ fieldName: "operations", index: 0 }] } },
+              { location: { fieldPathElements: [{ fieldName: "operations", index: 1 }] } },
+            ],
+          },
+        ],
+      },
+    });
+    const result = await bulkMutateLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.effect?.summary).toEqual({
+      entity_kind: "campaign",
+      requested: 2,
+      succeeded: 0,
+      failed: 2,
+      partial_success: false,
+      partial_failure: true,
+    });
+  });
+
+  it("execute records an all-applied atomic batch with no partialFailureError", async () => {
+    svc.bulkMutate.mockResolvedValueOnce({
+      results: [
+        { resourceName: "customers/1234567890/campaigns/111" },
+        { resourceName: "customers/1234567890/campaigns/222" },
+      ],
+    });
+    const result = await bulkMutateLogic({ ...baseInput, partialFailure: false } as any, ctx, sdk);
+    expect(result.effect?.summary).toEqual({
+      entity_kind: "campaign",
+      requested: 2,
+      succeeded: 2,
+      failed: 0,
+      partial_success: false,
+      partial_failure: false,
+    });
+  });
+
+  it("execute falls back to partialFailureError indices when no results array", async () => {
+    svc.bulkMutate.mockResolvedValueOnce({
+      partialFailureError: {
+        details: [
+          {
+            errors: [{ location: { fieldPathElements: [{ fieldName: "operations", index: 1 }] } }],
+          },
+        ],
+      },
+    });
+    const result = await bulkMutateLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.effect?.summary).toMatchObject({ requested: 2, succeeded: 1, failed: 1 });
   });
 
   it("formatter renders a dry-run message without a false success", () => {
