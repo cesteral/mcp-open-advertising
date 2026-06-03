@@ -3,7 +3,6 @@
   "ungoverned": {
     "amazon-dsp-mcp": [
       "amazon_dsp_bulk_create_entities",
-      "amazon_dsp_bulk_update_entities",
       "amazon_dsp_bulk_update_status",
       "amazon_dsp_create_commitment",
       "amazon_dsp_delete_entity"
