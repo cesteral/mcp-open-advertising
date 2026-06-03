@@ -3,20 +3,13 @@
   "ungoverned": {
     "amazon-dsp-mcp": [
       "amazon_dsp_bulk_create_entities",
-      "amazon_dsp_bulk_update_entities",
       "amazon_dsp_bulk_update_status",
       "amazon_dsp_create_commitment",
       "amazon_dsp_delete_entity"
     ],
-    "cm360-mcp": [
-      "cm360_bulk_create_entities",
-      "cm360_bulk_update_entities",
-      "cm360_bulk_update_status",
-      "cm360_delete_entity"
-    ],
+    "cm360-mcp": ["cm360_bulk_create_entities", "cm360_bulk_update_status", "cm360_delete_entity"],
     "dv360-mcp": [
       "dv360_bulk_create_entities",
-      "dv360_bulk_update_entities",
       "dv360_bulk_update_status",
       "dv360_create_assigned_targeting",
       "dv360_create_custom_bidding_algorithm",
@@ -25,20 +18,14 @@
       "dv360_manage_custom_bidding_script"
     ],
     "gads-mcp": ["gads_bulk_create_entities", "gads_bulk_mutate", "gads_bulk_update_status"],
-    "linkedin-mcp": [
-      "linkedin_bulk_create_entities",
-      "linkedin_bulk_update_entities",
-      "linkedin_bulk_update_status"
-    ],
+    "linkedin-mcp": ["linkedin_bulk_create_entities", "linkedin_bulk_update_status"],
     "meta-mcp": [
       "meta_bulk_create_entities",
-      "meta_bulk_update_entities",
       "meta_bulk_update_status",
       "meta_manage_budget_schedule"
     ],
     "msads-mcp": [
       "msads_bulk_create_entities",
-      "msads_bulk_update_entities",
       "msads_bulk_update_status",
       "msads_delete_entity",
       "msads_import_from_google",
@@ -47,20 +34,17 @@
     ],
     "pinterest-mcp": [
       "pinterest_bulk_create_entities",
-      "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
       "pinterest_delete_entity"
     ],
     "sa360-mcp": ["sa360_insert_conversions", "sa360_update_conversions"],
     "snapchat-mcp": [
       "snapchat_bulk_create_entities",
-      "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
       "snapchat_delete_entity"
     ],
     "tiktok-mcp": [
       "tiktok_bulk_create_entities",
-      "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
       "tiktok_delete_entity"
     ],
@@ -68,7 +52,6 @@
       "ttd_archive_entities",
       "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",
-      "ttd_bulk_update_entities",
       "ttd_bulk_update_status",
       "ttd_cancel_report_execution",
       "ttd_create_report_template",
