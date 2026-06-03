@@ -8,12 +8,7 @@
       "amazon_dsp_create_commitment",
       "amazon_dsp_delete_entity"
     ],
-    "cm360-mcp": [
-      "cm360_bulk_create_entities",
-      "cm360_bulk_update_entities",
-      "cm360_bulk_update_status",
-      "cm360_delete_entity"
-    ],
+    "cm360-mcp": ["cm360_bulk_create_entities", "cm360_bulk_update_status", "cm360_delete_entity"],
     "dv360-mcp": [
       "dv360_bulk_create_entities",
       "dv360_bulk_update_status",
