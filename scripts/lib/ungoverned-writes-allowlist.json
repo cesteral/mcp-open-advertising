@@ -46,7 +46,6 @@
     "snapchat-mcp": [
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
-      "snapchat_bulk_update_status",
       "snapchat_delete_entity"
     ],
     "tiktok-mcp": [
