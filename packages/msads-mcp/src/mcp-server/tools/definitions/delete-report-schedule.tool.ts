@@ -14,7 +14,6 @@ import type {
   RequestContext,
   McpTextContent,
   SdkContext,
-  EffectResult,
   EffectDryRunResult,
   DispatchedCapability,
   DryRunValidationError,
@@ -27,10 +26,7 @@ const TOOL_DESCRIPTION = `Delete (cancel) a Microsoft Advertising report schedul
 
 Note: The Microsoft Advertising API v13 JSON endpoints do not provide a programmatic endpoint to cancel or delete scheduled reports. Deletion must be performed via the Microsoft Advertising UI at app.ads.microsoft.com → Reports → Scheduled Reports.
 
-This tool logs the deletion request and returns instructions for manual removal.`;
-
-const EFFECT_KIND = "report_schedule_deleted";
-const ENTITY_LABEL = "report_schedule";
+This tool logs the deletion request and returns instructions for manual removal — it does NOT programmatically delete the schedule, so it emits no completed-deletion effect.`;
 
 export const DeleteReportScheduleInputSchema = z
   .object({
@@ -40,7 +36,7 @@ export const DeleteReportScheduleInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be schedule deletion) without prompting for confirmation. Nothing is deleted."
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without prompting for confirmation. (Microsoft Ads cannot delete schedules programmatically, so there is no effect to simulate.)"
       ),
   })
   .describe("Parameters for deleting a Microsoft Ads report schedule");
@@ -56,7 +52,7 @@ export const DeleteReportScheduleOutputSchema = z
       "Present only when the request was made with `dry_run: true`. Nothing was deleted."
     ),
     effect: EffectResultSchema.optional().describe(
-      "Effect-class result identity (effectKind `report_schedule_deleted` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+      "Effect-class result identity. NOT emitted by this tool: Microsoft Ads has no programmatic schedule-delete endpoint, so a confirmed call logs a request (see `note`) but effects no deletion."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to — `delete_schedule` with `canonicalEntityKind: null` (effect class). Present on every response."
@@ -79,8 +75,9 @@ export async function deleteReportScheduleLogic(
     canonicalEntityKind: null,
   };
 
-  // Symbolic dry-run: validate the request and project the would-be effect
-  // (a report-schedule deletion). No confirmation prompt, no API call.
+  // Symbolic dry-run: validate the request. There is nothing to simulate — the
+  // Microsoft Ads API cannot delete a schedule programmatically — so the
+  // contract declares requiresSimulation: false and projects no expected effect.
   if (input.dry_run === true) {
     const dryRun = buildEffectDryRun(input);
     return {
@@ -112,17 +109,15 @@ export async function deleteReportScheduleLogic(
 
   await msadsReportingService.deleteReportSchedule(input.scheduleId, context);
 
-  const effect: EffectResult = {
-    effectKind: EFFECT_KIND,
-    summary: { entity_label: ENTITY_LABEL, schedule_handle: input.scheduleId },
-  };
-
+  // No `effect`: the Microsoft Ads API has no programmatic delete endpoint, so
+  // the schedule is NOT deleted here. Emitting `report_schedule_deleted` would
+  // make structured consumers / governance record a completed deletion that did
+  // not happen. The capability is still reported; the manual-step note explains.
   return {
     confirmed: true,
     scheduleId: input.scheduleId,
-    note: `To delete schedule ${input.scheduleId}: visit app.ads.microsoft.com → Reports → Scheduled Reports and remove the report manually. The Microsoft Advertising REST API does not provide a programmatic delete endpoint.`,
+    note: `To delete schedule ${input.scheduleId}: visit app.ads.microsoft.com → Reports → Scheduled Reports and remove the report manually. The Microsoft Advertising REST API does not provide a programmatic delete endpoint — this schedule remains active until that manual step is completed.`,
     timestamp: new Date().toISOString(),
-    effect,
     dispatchedCapability,
   };
 }
@@ -130,8 +125,9 @@ export async function deleteReportScheduleLogic(
 /**
  * Symbolic effect dry-run for `delete_report_schedule`. Validates the request
  * (scheduleId non-empty — guards against whitespace-only ids Zod's `.min(1)`
- * admits) and projects the would-be effect. No native validate/preview, so both
- * axes are symbolic. Pure (no I/O).
+ * admits). Microsoft Ads cannot delete schedules programmatically, so there is
+ * no effect to simulate: the contract declares requiresSimulation: false and the
+ * dry-run carries no expected effect. Pure (no I/O).
  */
 function buildEffectDryRun(input: DeleteReportScheduleInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -143,21 +139,15 @@ function buildEffectDryRun(input: DeleteReportScheduleInput): EffectDryRunResult
     });
   }
 
-  const expectedEffect: EffectResult = {
-    effectKind: EFFECT_KIND,
-    summary: { entity_label: ENTITY_LABEL, schedule_handle: input.scheduleId },
-  };
-
   return assertGovernedEffectDryRun(
     {
       wouldSucceed: validationErrors.length === 0,
       validationErrors,
       validationSource: "symbolic",
-      expectedEffectSource: "symbolic",
-      expectedEffect,
+      expectedEffectSource: "none",
     },
     TOOL_NAME,
-    { requiresValidation: true, requiresSimulation: true }
+    { requiresValidation: true, requiresSimulation: false }
   );
 }
 
@@ -165,15 +155,15 @@ export function deleteReportScheduleResponseFormatter(
   result: DeleteReportScheduleOutput
 ): McpTextContent[] {
   if (result.dryRun) {
-    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
-      result.dryRun;
-    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const { wouldSucceed, validationErrors, validationSource } = result.dryRun;
+    const verdict = wouldSucceed ? "is well-formed" : "would FAIL validation";
     const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
     return [
       {
         type: "text" as const,
         text:
-          `Dry run: deleting report schedule ${result.scheduleId} ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was deleted.` +
+          `Dry run: delete request for report schedule ${result.scheduleId} ${verdict} (validation: ${validationSource}). ` +
+          `Microsoft Ads has no programmatic delete endpoint — completion requires the manual UI step, so nothing would be deleted.` +
           (errs ? `\n${errs}` : "") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
@@ -221,8 +211,11 @@ export const deleteReportScheduleTool = {
       contractId: "msads.delete_report_schedule.v1",
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
+      // Honest contract booleans: scheduleId is validated symbolically, but
+      // Microsoft Ads cannot delete a schedule programmatically, so there is no
+      // effect to simulate (requiresSimulation: false) and no effect emitted.
       requiresValidation: true,
-      requiresSimulation: true,
+      requiresSimulation: false,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [

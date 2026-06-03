@@ -126,7 +126,7 @@ describe("msads report-schedule governance contract (effect class)", () => {
   describe("msads_delete_report_schedule", () => {
     const deleteInput = { scheduleId: "sch-1" };
 
-    it("dry_run returns a symbolic effect preview, no confirmation or API call", async () => {
+    it("dry_run validates only — no simulated effect (MS Ads cannot delete programmatically)", async () => {
       const result = await deleteReportScheduleLogic(
         { ...deleteInput, dry_run: true } as any,
         ctx,
@@ -134,10 +134,9 @@ describe("msads report-schedule governance contract (effect class)", () => {
       );
       expect(mockElicitDelete).not.toHaveBeenCalled();
       expect(svc.deleteReportSchedule).not.toHaveBeenCalled();
-      expect(result.dryRun?.expectedEffect).toEqual({
-        effectKind: "report_schedule_deleted",
-        summary: { entity_label: "report_schedule", schedule_handle: "sch-1" },
-      });
+      expect(result.dryRun?.wouldSucceed).toBe(true);
+      expect(result.dryRun?.expectedEffect).toBeUndefined();
+      expect(result.dryRun?.expectedEffectSource).toBe("none");
       expect(result.dispatchedCapability).toEqual({
         operation: "delete_schedule",
         canonicalEntityKind: null,
@@ -146,13 +145,13 @@ describe("msads report-schedule governance contract (effect class)", () => {
       expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
     });
 
-    it("execute deletes and returns the effect identity", async () => {
+    it("execute logs the request but emits NO completed-deletion effect", async () => {
       const result = await deleteReportScheduleLogic({ ...deleteInput } as any, ctx, sdk);
       expect(svc.deleteReportSchedule).toHaveBeenCalledOnce();
-      expect(result.effect).toEqual({
-        effectKind: "report_schedule_deleted",
-        summary: { entity_label: "report_schedule", schedule_handle: "sch-1" },
-      });
+      expect(result.confirmed).toBe(true);
+      // MS Ads has no programmatic delete — must NOT claim a completed deletion.
+      expect(result.effect).toBeUndefined();
+      expect(result.note).toContain("manual");
       expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
       expect(() => DeleteReportScheduleOutputSchema.parse(result)).not.toThrow();
     });
@@ -176,15 +175,13 @@ describe("msads report-schedule governance contract (effect class)", () => {
           wouldSucceed: true,
           validationErrors: [],
           validationSource: "symbolic",
-          expectedEffectSource: "symbolic",
-          expectedEffect: {
-            effectKind: "report_schedule_deleted",
-            summary: { entity_label: "report_schedule", schedule_handle: "sch-1" },
-          },
+          expectedEffectSource: "none",
         },
       } as any);
-      expect(content[0].text).toContain("Dry run: deleting report schedule sch-1 would succeed");
-      expect(content[0].text).not.toContain("deletion requested");
+      expect(content[0].text).toContain(
+        "Dry run: delete request for report schedule sch-1 is well-formed"
+      );
+      expect(content[0].text).not.toContain("Schedule sch-1 deletion requested");
     });
   });
 });
