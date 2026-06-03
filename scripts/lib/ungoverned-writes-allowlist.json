@@ -60,7 +60,6 @@
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
       "pinterest_delete_entity",
-      "pinterest_submit_report",
       "pinterest_upload_video"
     ],
     "sa360-mcp": ["sa360_insert_conversions", "sa360_submit_report", "sa360_update_conversions"],
