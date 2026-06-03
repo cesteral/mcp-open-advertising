@@ -3,8 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_submit_report";
 const TOOL_TITLE = "Submit SA360 Async Report";
@@ -70,13 +84,32 @@ export const SubmitReportInputSchema = z
       .string()
       .optional()
       .describe("Currency for monetary metrics (default: 'agency')"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the report request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be report submission) without calling the SA360 API. No report is submitted."
+      ),
   })
   .describe("Parameters for submitting an async SA360 report");
 
 export const SubmitReportOutputSchema = z
   .object({
-    reportId: z.string().describe("Report ID for status polling"),
+    reportId: z
+      .string()
+      .optional()
+      .describe("Report ID for status polling. Absent on a dry_run (nothing was submitted)."),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No report was submitted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_requested` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `submit_report` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Submitted report confirmation");
 
@@ -88,6 +121,24 @@ export async function submitReportLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<SubmitReportOutput> {
+  // Effect-class write: no canonical entity snapshot. The capability is
+  // `submit_report` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "submit_report",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report submission). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildSubmitReportEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { reportingService } = resolveSessionServices(sdkContext);
 
   const result = await reportingService.submitReport(
@@ -106,13 +157,70 @@ export async function submitReportLogic(
     context
   );
 
+  const effect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: input.reportType, report_handle: result.id },
+  };
+
   return {
     reportId: result.id,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `submit_report`. Validates the request (date-range
+ * ordering — a cross-field check Zod's regex can't express) and projects the
+ * would-be effect (a report submission). SA360's legacy v2 API has no native
+ * report validate/preview, so both axes are symbolic. Pure (no I/O).
+ */
+function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.startDate > input.endDate) {
+    validationErrors.push({
+      code: "INVALID_DATE_RANGE",
+      message: `startDate (${input.startDate}) must be on or before endDate (${input.endDate})`,
+      field: "startDate",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: input.reportType },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function submitReportResponseFormatter(result: SubmitReportOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const rt = result.dryRun.expectedEffect?.summary.report_type ?? "report";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: submitting a ${String(rt)} report ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No report was submitted.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -132,6 +240,26 @@ export const submitReportTool = {
     idempotentHint: false,
     openWorldHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "sa360",
+      contractPlatformSlug: "sa360",
+      contractToolSlug: "submit_report",
+      operation: ["submit_report"],
+      // Effect-class: an async report submission with no canonical entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "sa360.submit_report.v1",
+      // `dry_run` = symbolic validate + symbolic effect projection. SA360's legacy
+      // v2 API has no native report validate/preview, so both axes are symbolic.
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
