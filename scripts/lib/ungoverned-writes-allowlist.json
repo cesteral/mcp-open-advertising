@@ -33,7 +33,6 @@
     "meta-mcp": [
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
-      "meta_bulk_update_status",
       "meta_manage_budget_schedule"
     ],
     "msads-mcp": [
