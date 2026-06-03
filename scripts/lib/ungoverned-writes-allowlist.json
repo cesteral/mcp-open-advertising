@@ -2,7 +2,6 @@
   "_comment": "Write tools (annotations.readOnlyHint === false) that do NOT yet carry a cesteral governance contract. This is the coverage RATCHET: the write-coverage test fails if any non-allowlisted write tool is ungoverned (no new ungoverned writes) AND if any allowlisted tool is no longer an ungoverned write (stale entry). As tools are migrated to the entity/effect contract (PRs 3-N), remove them from this list. Goal: empty.",
   "ungoverned": {
     "amazon-dsp-mcp": [
-      "amazon_dsp_adjust_bids",
       "amazon_dsp_bulk_create_entities",
       "amazon_dsp_bulk_update_entities",
       "amazon_dsp_bulk_update_status",
@@ -20,7 +19,6 @@
       "cm360_submit_report"
     ],
     "dv360-mcp": [
-      "dv360_adjust_line_item_bids",
       "dv360_bulk_create_entities",
       "dv360_bulk_update_entities",
       "dv360_bulk_update_status",
@@ -32,14 +30,8 @@
       "dv360_upload_image",
       "dv360_upload_video"
     ],
-    "gads-mcp": [
-      "gads_adjust_bids",
-      "gads_bulk_create_entities",
-      "gads_bulk_mutate",
-      "gads_bulk_update_status"
-    ],
+    "gads-mcp": ["gads_bulk_create_entities", "gads_bulk_mutate", "gads_bulk_update_status"],
     "linkedin-mcp": [
-      "linkedin_adjust_bids",
       "linkedin_bulk_create_entities",
       "linkedin_bulk_update_entities",
       "linkedin_bulk_update_status",
@@ -47,7 +39,6 @@
       "linkedin_upload_video"
     ],
     "meta-mcp": [
-      "meta_adjust_bids",
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
@@ -57,7 +48,6 @@
       "meta_upload_video"
     ],
     "msads-mcp": [
-      "msads_adjust_bids",
       "msads_bulk_create_entities",
       "msads_bulk_update_entities",
       "msads_bulk_update_status",
@@ -70,7 +60,6 @@
       "msads_submit_report"
     ],
     "pinterest-mcp": [
-      "pinterest_adjust_bids",
       "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
@@ -80,7 +69,6 @@
     ],
     "sa360-mcp": ["sa360_insert_conversions", "sa360_submit_report", "sa360_update_conversions"],
     "snapchat-mcp": [
-      "snapchat_adjust_bids",
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
@@ -90,7 +78,6 @@
       "snapchat_upload_video"
     ],
     "tiktok-mcp": [
-      "tiktok_adjust_bids",
       "tiktok_bulk_create_entities",
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
@@ -100,7 +87,6 @@
       "tiktok_upload_video"
     ],
     "ttd-mcp": [
-      "ttd_adjust_bids",
       "ttd_archive_entities",
       "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",

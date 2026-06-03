@@ -4,10 +4,25 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
-import { buildNextAction, elicitBidChangeConfirmation } from "@cesteral/shared";
+import {
+  buildNextAction,
+  elicitBidChangeConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";
 const TOOL_TITLE = "Adjust Line Item Bids";
@@ -60,6 +75,13 @@ export const AdjustLineItemBidsInputSchema = z
       .min(1)
       .max(50)
       .describe("List of bid adjustments to apply (max 50)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bid adjustments and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bid-adjustment batch) without calling the DV360 API or prompting for confirmation. No bids are changed."
+      ),
   })
   .describe("Parameters for batch bid adjustment");
 
@@ -100,6 +122,15 @@ export const AdjustLineItemBidsOutputSchema = z
     totalSuccessful: z.number().describe("Total successful adjustments"),
     totalFailed: z.number().describe("Total failed adjustments"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No bids were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bids_adjusted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `adjust_bids` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Batch bid adjustment result");
 
@@ -114,6 +145,28 @@ export async function adjustLineItemBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustLineItemBidsOutput> {
+  // Effect-class write: no canonical entity snapshot. Capability is
+  // `adjust_bids` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "adjust_bids",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    return {
+      confirmed: true,
+      successful: [],
+      failed: [],
+      totalRequested: input.adjustments.length,
+      totalSuccessful: 0,
+      totalFailed: 0,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "line item",
@@ -131,6 +184,7 @@ export async function adjustLineItemBidsLogic(
       totalSuccessful: 0,
       totalFailed: 0,
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -257,6 +311,16 @@ export async function adjustLineItemBidsLogic(
     }
   }
 
+  const effect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: {
+      entity_label: "line_item",
+      requested: input.adjustments.length,
+      succeeded: successful.length,
+      failed: failed.length,
+    },
+  };
+
   return {
     confirmed: true,
     successful,
@@ -265,7 +329,47 @@ export async function adjustLineItemBidsLogic(
     totalSuccessful: successful.length,
     totalFailed: failed.length,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `adjust_bids`. Validates the batch (each
+ * `newBidMicros` is a positive integer) and projects the would-be effect — a bid
+ * adjustment over N line items. DV360 has no native bid validate/preview wired
+ * here, so both axes are symbolic. Pure (no I/O).
+ */
+function buildAdjustBidsEffectDryRun(
+  adjustments: AdjustLineItemBidsInput["adjustments"]
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  adjustments.forEach((a, i) => {
+    if (!Number.isInteger(a.newBidMicros) || a.newBidMicros <= 0) {
+      validationErrors.push({
+        code: "INVALID_BID_MICROS",
+        message: `newBidMicros must be a positive integer (micros) — got ${String(a.newBidMicros)}`,
+        field: `adjustments.${i}.newBidMicros`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: { entity_label: "line_item", requested: adjustments.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    "dv360_adjust_line_item_bids",
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 /**
@@ -274,6 +378,22 @@ export async function adjustLineItemBidsLogic(
 export function adjustLineItemBidsResponseFormatter(
   result: AdjustLineItemBidsOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? result.totalRequested;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: adjusting bids on ${n} line item(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bids were changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -347,6 +467,23 @@ export const adjustLineItemBidsTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "adjust_bids",
+      operation: ["adjust_bids"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "dv360.adjust_bids.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: adjustLineItemBidsLogic,
   responseFormatter: adjustLineItemBidsResponseFormatter,

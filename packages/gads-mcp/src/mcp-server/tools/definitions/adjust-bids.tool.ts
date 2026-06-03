@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { elicitBidChangeConfirmation } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitBidChangeConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "gads_adjust_bids";
 const TOOL_TITLE = "Google Ads Bid Adjustment";
@@ -59,6 +73,13 @@ export const AdjustBidsInputSchema = z
       .string()
       .optional()
       .describe("Optional reason for the bid adjustment (for audit trail)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bid adjustments and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bid-adjustment batch) without calling the Google Ads API or prompting for confirmation. No bids are changed."
+      ),
   })
   .describe("Parameters for batch Google Ads bid adjustment");
 
@@ -82,6 +103,15 @@ export const AdjustBidsOutputSchema = z
       })
     ),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No bids were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bids_adjusted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `adjust_bids` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Bid adjustment results");
 
@@ -93,6 +123,27 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  // Effect-class write: no canonical entity snapshot. Capability is
+  // `adjust_bids` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "adjust_bids",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    return {
+      confirmed: true,
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "ad group",
@@ -109,6 +160,7 @@ export async function adjustBidsLogic(
       totalFailed: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -117,6 +169,16 @@ export async function adjustBidsLogic(
   const { results } = await gadsService.adjustBids(input.customerId, input.adjustments, context);
 
   const succeeded = results.filter((r) => r.success).length;
+
+  const effect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: {
+      entity_label: "ad_group",
+      requested: input.adjustments.length,
+      succeeded,
+      failed: input.adjustments.length - succeeded,
+    },
+  };
 
   return {
     confirmed: true,
@@ -134,7 +196,67 @@ export async function adjustBidsLogic(
       error: r.error,
     })),
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `adjust_bids`. Validates the batch (each present
+ * CPC/CPM micros is a positive number) and projects the would-be effect — a bid
+ * adjustment over N ad groups. Google Ads has no native bid validate/preview
+ * wired here, so both axes are symbolic. Pure (no I/O).
+ */
+function buildAdjustBidsEffectDryRun(
+  adjustments: AdjustBidsInput["adjustments"]
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  // Google Ads CPC/CPM bids are int64 **micros strings** on the wire — a
+  // positive integer decimal string. The execute path forwards the string
+  // verbatim to the `:mutate` API, so the dry-run must reject anything that is
+  // not a valid positive int64 micros value (e.g. "1.5", "1e6", "-1", "0") to
+  // avoid approving a mutation the API will reject.
+  const isPositiveIntMicros = (s: string): boolean => {
+    const t = s.trim();
+    if (!/^\d+$/.test(t) || !/[1-9]/.test(t)) return false; // digits only, > 0
+    try {
+      // Guard the int64 upper bound (9223372036854775807).
+      return BigInt(t) <= 9223372036854775807n;
+    } catch {
+      return false;
+    }
+  };
+  adjustments.forEach((a, i) => {
+    for (const [field, micros] of [
+      ["cpcBidMicros", a.cpcBidMicros],
+      ["cpmBidMicros", a.cpmBidMicros],
+    ] as const) {
+      if (micros !== undefined && !isPositiveIntMicros(micros)) {
+        validationErrors.push({
+          code: "INVALID_BID_MICROS",
+          message: `${field} must be a positive int64 micros string (digits only, e.g. "1500000") — got ${String(micros)}`,
+          field: `adjustments.${i}.${field}`,
+        });
+      }
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: { entity_label: "ad_group", requested: adjustments.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    "gads_adjust_bids",
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 function formatMicrosAsDollars(micros?: string): string {
@@ -145,6 +267,22 @@ function formatMicrosAsDollars(micros?: string): string {
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? result.totalRequested;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: adjusting bids on ${n} ad group(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bids were changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -196,6 +334,23 @@ export const adjustBidsTool = {
     destructiveHint: true,
     idempotentHint: true,
     openWorldHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "google_ads",
+      contractPlatformSlug: "google_ads",
+      contractToolSlug: "adjust_bids",
+      operation: ["adjust_bids"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "google_ads.adjust_bids.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
