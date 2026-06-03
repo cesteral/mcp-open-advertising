@@ -53,8 +53,7 @@
       "msads_delete_report_schedule",
       "msads_import_from_google",
       "msads_manage_ad_extensions",
-      "msads_manage_criterions",
-      "msads_submit_report"
+      "msads_manage_criterions"
     ],
     "pinterest-mcp": [
       "pinterest_bulk_create_entities",
