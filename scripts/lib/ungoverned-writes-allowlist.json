@@ -40,9 +40,7 @@
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
-      "meta_manage_budget_schedule",
-      "meta_upload_image",
-      "meta_upload_video"
+      "meta_manage_budget_schedule"
     ],
     "msads-mcp": [
       "msads_bulk_create_entities",
