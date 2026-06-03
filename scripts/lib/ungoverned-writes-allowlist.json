@@ -40,9 +40,7 @@
       "msads_bulk_create_entities",
       "msads_bulk_update_entities",
       "msads_bulk_update_status",
-      "msads_create_report_schedule",
       "msads_delete_entity",
-      "msads_delete_report_schedule",
       "msads_import_from_google",
       "msads_manage_ad_extensions",
       "msads_manage_criterions"
