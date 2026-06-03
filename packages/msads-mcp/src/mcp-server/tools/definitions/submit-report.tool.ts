@@ -146,14 +146,33 @@ export async function submitReportLogic(
 }
 
 /**
- * Symbolic effect dry-run for `submit_report`. Validates the request (date-range
- * ordering — a cross-field check Zod can't express) and projects the would-be
- * effect (a report submission). Microsoft Ads has no native report
- * validate/preview, so both axes are symbolic. Pure (no I/O).
+ * Symbolic effect dry-run for `submit_report`. Validates the request and projects
+ * the would-be effect (a report submission). Microsoft Ads' `startDate`/`endDate`
+ * are free strings (no Zod regex), so this mirrors the execute-path
+ * `parseDate` format check (`YYYY-MM-DD`) plus the cross-field ordering check —
+ * otherwise a lexicographically-ordered but malformed pair (e.g. "foo"/"zzz")
+ * would dry-run as `wouldSucceed: true` while execute rejects it. Microsoft Ads
+ * has no native report validate/preview, so both axes are symbolic. Pure (no I/O).
  */
 function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
-  if (input.startDate && input.endDate && input.startDate > input.endDate) {
+  // Custom dates only reach the upstream when datePreset is absent; a preset
+  // resolves to valid YYYY-MM-DD server-side. Validate each provided date's
+  // format exactly as the execute path's parseDate does.
+  const checkFormat = (value: string | undefined, field: string): boolean => {
+    if (value !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      validationErrors.push({
+        code: "INVALID_DATE_FORMAT",
+        message: `${field} must be YYYY-MM-DD — got "${value}"`,
+        field,
+      });
+      return false;
+    }
+    return true;
+  };
+  const startOk = checkFormat(input.startDate, "startDate");
+  const endOk = checkFormat(input.endDate, "endDate");
+  if (startOk && endOk && input.startDate && input.endDate && input.startDate > input.endDate) {
     validationErrors.push({
       code: "INVALID_DATE_RANGE",
       message: `startDate (${input.startDate}) must be on or before endDate (${input.endDate})`,

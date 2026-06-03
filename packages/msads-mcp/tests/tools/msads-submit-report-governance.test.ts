@@ -69,6 +69,25 @@ describe("msads_submit_report governance contract (effect class)", () => {
     expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_DATE_RANGE");
   });
 
+  it("dry_run flags malformed-but-ordered dates the execute path would reject", async () => {
+    const result = await submitReportLogic(
+      {
+        ...baseInput,
+        datePreset: undefined,
+        startDate: "foo",
+        endDate: "zzz",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.map((e: any) => e.code)).toEqual([
+      "INVALID_DATE_FORMAT",
+      "INVALID_DATE_FORMAT",
+    ]);
+  });
+
   it("execute returns the effect identity + null-kind capability", async () => {
     const result = await submitReportLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.submitReport).toHaveBeenCalledOnce();
