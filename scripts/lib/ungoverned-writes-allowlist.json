@@ -53,7 +53,6 @@
       "ttd_archive_entities",
       "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",
-      "ttd_bulk_update_entities",
       "ttd_bulk_update_status",
       "ttd_cancel_report_execution",
       "ttd_create_report_template",
