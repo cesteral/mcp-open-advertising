@@ -41,13 +41,11 @@ describe("pinterest_upload_video governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client = {
-      post: vi
-        .fn()
-        .mockResolvedValue({
-          media_id: "media-1",
-          upload_url: "https://s3",
-          upload_parameters: {},
-        }),
+      post: vi.fn().mockResolvedValue({
+        media_id: "media-1",
+        upload_url: "https://s3",
+        upload_parameters: {},
+      }),
       uploadToS3: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue({ media_processing_record: { status: "succeeded" } }),
     };

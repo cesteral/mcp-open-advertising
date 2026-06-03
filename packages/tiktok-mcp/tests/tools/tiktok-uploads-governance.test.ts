@@ -12,21 +12,17 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
   return {
     ...actual,
-    downloadFileToBuffer: vi
-      .fn()
-      .mockResolvedValue({
-        buffer: Buffer.from("x"),
-        contentType: "image/jpeg",
-        filename: "f.jpg",
-      }),
-    pollUntilComplete: vi
-      .fn()
-      .mockResolvedValue({
-        video_id: "vid-1",
-        video_name: "n",
-        duration: 10,
-        video_status: "bind_success",
-      }),
+    downloadFileToBuffer: vi.fn().mockResolvedValue({
+      buffer: Buffer.from("x"),
+      contentType: "image/jpeg",
+      filename: "f.jpg",
+    }),
+    pollUntilComplete: vi.fn().mockResolvedValue({
+      video_id: "vid-1",
+      video_name: "n",
+      duration: 10,
+      video_status: "bind_success",
+    }),
   };
 });
 
