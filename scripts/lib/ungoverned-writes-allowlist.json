@@ -24,25 +24,19 @@
       "dv360_create_custom_bidding_algorithm",
       "dv360_delete_assigned_targeting",
       "dv360_manage_custom_bidding_rules",
-      "dv360_manage_custom_bidding_script",
-      "dv360_upload_image",
-      "dv360_upload_video"
+      "dv360_manage_custom_bidding_script"
     ],
     "gads-mcp": ["gads_bulk_create_entities", "gads_bulk_mutate", "gads_bulk_update_status"],
     "linkedin-mcp": [
       "linkedin_bulk_create_entities",
       "linkedin_bulk_update_entities",
-      "linkedin_bulk_update_status",
-      "linkedin_upload_image",
-      "linkedin_upload_video"
+      "linkedin_bulk_update_status"
     ],
     "meta-mcp": [
       "meta_bulk_create_entities",
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
-      "meta_manage_budget_schedule",
-      "meta_upload_image",
-      "meta_upload_video"
+      "meta_manage_budget_schedule"
     ],
     "msads-mcp": [
       "msads_bulk_create_entities",
@@ -59,25 +53,20 @@
       "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
-      "pinterest_delete_entity",
-      "pinterest_upload_video"
+      "pinterest_delete_entity"
     ],
     "sa360-mcp": ["sa360_insert_conversions", "sa360_update_conversions"],
     "snapchat-mcp": [
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
-      "snapchat_delete_entity",
-      "snapchat_upload_image",
-      "snapchat_upload_video"
+      "snapchat_delete_entity"
     ],
     "tiktok-mcp": [
       "tiktok_bulk_create_entities",
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
-      "tiktok_delete_entity",
-      "tiktok_upload_image",
-      "tiktok_upload_video"
+      "tiktok_delete_entity"
     ],
     "ttd-mcp": [
       "ttd_archive_entities",
