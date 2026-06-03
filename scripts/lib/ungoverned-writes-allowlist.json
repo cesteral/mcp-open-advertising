@@ -24,9 +24,7 @@
       "dv360_create_custom_bidding_algorithm",
       "dv360_delete_assigned_targeting",
       "dv360_manage_custom_bidding_rules",
-      "dv360_manage_custom_bidding_script",
-      "dv360_upload_image",
-      "dv360_upload_video"
+      "dv360_manage_custom_bidding_script"
     ],
     "gads-mcp": ["gads_bulk_create_entities", "gads_bulk_mutate", "gads_bulk_update_status"],
     "linkedin-mcp": [
