@@ -247,7 +247,7 @@ export const uploadVideoTool = {
       writeClass: "effect",
       executableArgsExclude: ["dry_run"],
       platform: "linkedin_ads",
-      contractPlatformSlug: "linkedin",
+      contractPlatformSlug: "linkedin_ads",
       contractToolSlug: "upload_video",
       operation: ["upload"],
       // Effect-class: a media upload that creates an asset with no canonical entity snapshot.
