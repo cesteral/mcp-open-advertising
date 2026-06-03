@@ -3,7 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_create_report_schedule";
 const TOOL_TITLE = "Create TTD Report Schedule";
@@ -28,6 +43,9 @@ For a one-off non-blocking report use \`ttd_submit_report\`.
 Use \`ttd_list_report_schedules\` to view and \`ttd_delete_report_schedule\` to remove them.
 
 For custom date ranges pass \`ReportStartDate\` / \`ReportEndDate\` in \`additionalConfig\`.`;
+
+const EFFECT_KIND = "report_schedule_saved";
+const ENTITY_LABEL = "report_schedule";
 
 export const CreateReportScheduleInputSchema = z
   .object({
@@ -91,15 +109,34 @@ export const CreateReportScheduleInputSchema = z
         "Additional TTD report config fields passed verbatim to the API. " +
           "Useful for: ReportStartDate / ReportEndDate (Custom range), delivery email settings, etc."
       ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be schedule creation) without calling the TTD API. No schedule is created."
+      ),
   })
   .describe("Parameters for creating a TTD report schedule");
 
 export const CreateReportScheduleOutputSchema = z
   .object({
-    reportScheduleId: z.string().describe("The created report schedule ID"),
-    reportName: z.string(),
-    scheduleType: z.string(),
+    reportScheduleId: z
+      .string()
+      .optional()
+      .describe("The created report schedule ID. Absent on a dry_run (nothing was created)."),
+    reportName: z.string().optional(),
+    scheduleType: z.string().optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No schedule was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_schedule_saved` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `create_schedule` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Created report schedule");
 
@@ -111,6 +148,24 @@ export async function createReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateReportScheduleOutput> {
+  // Effect-class write: a report schedule is not a canonical ad entity, so there
+  // is no entity snapshot. The capability is `create_schedule` with a null kind.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "create_schedule",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report-schedule creation). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
   const startDate = input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
@@ -134,17 +189,81 @@ export async function createReportScheduleLogic(
 
   const result = await ttdReportingService.createReportSchedule(config, context);
 
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_label: ENTITY_LABEL, schedule_handle: result.reportScheduleId },
+  };
+
   return {
     reportScheduleId: result.reportScheduleId,
     reportName: input.reportName,
     scheduleType: input.scheduleType,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `create_report_schedule`. Validates the request
+ * (report name non-empty; reportTemplateId a positive integer — Zod's
+ * `z.number()` admits floats, zero, and negatives) and projects the would-be
+ * effect. TTD has no native validate/preview, so both axes are symbolic. Pure
+ * (no I/O).
+ */
+function buildEffectDryRun(input: CreateReportScheduleInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.reportName.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_REPORT_NAME",
+      message: "reportName must be a non-empty schedule name",
+      field: "reportName",
+    });
+  }
+  if (!Number.isInteger(input.reportTemplateId) || input.reportTemplateId <= 0) {
+    validationErrors.push({
+      code: "INVALID_TEMPLATE_ID",
+      message: `reportTemplateId must be a positive integer — got ${String(input.reportTemplateId)}`,
+      field: "reportTemplateId",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_label: ENTITY_LABEL },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function createReportScheduleResponseFormatter(
   result: CreateReportScheduleOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: creating a report schedule ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No schedule was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -171,6 +290,24 @@ export const createReportScheduleTool = {
     openWorldHint: false,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "create_report_schedule",
+      operation: ["create_schedule"],
+      // Effect-class: report schedules have no canonical ad-entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.create_report_schedule.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
