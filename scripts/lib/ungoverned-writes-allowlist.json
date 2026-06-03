@@ -17,7 +17,6 @@
     "dv360-mcp": [
       "dv360_bulk_create_entities",
       "dv360_bulk_update_entities",
-      "dv360_bulk_update_status",
       "dv360_create_assigned_targeting",
       "dv360_create_custom_bidding_algorithm",
       "dv360_delete_assigned_targeting",
