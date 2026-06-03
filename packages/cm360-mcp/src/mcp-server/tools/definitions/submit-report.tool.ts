@@ -3,8 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import {
   buildTypedReportConfig,
   CM360DatePresetSchema,
@@ -48,15 +62,37 @@ export const SubmitReportInputSchema = z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the report request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be report submission) without calling the CM360 API. No report is created."
+      ),
   })
   .superRefine(validateTypedCriteriaUsage)
   .describe("Parameters for submitting a CM360 report");
 
 export const SubmitReportOutputSchema = z
   .object({
-    reportId: z.string().describe("Report ID for status polling"),
-    fileId: z.string().describe("File ID for status polling"),
+    reportId: z
+      .string()
+      .optional()
+      .describe("Report ID for status polling. Absent on a dry_run (nothing was submitted)."),
+    fileId: z
+      .string()
+      .optional()
+      .describe("File ID for status polling. Absent on a dry_run (nothing was submitted)."),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No report was submitted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_requested` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `submit_report` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Report submission result");
 
@@ -68,6 +104,24 @@ export async function submitReportLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<SubmitReportOutput> {
+  // Effect-class write: no canonical entity snapshot. The capability is
+  // `submit_report` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "submit_report",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report submission). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildSubmitReportEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
   const reportConfig = buildTypedReportConfig(input) as CM360ReportConfig;
@@ -78,14 +132,71 @@ export async function submitReportLogic(
     context
   )) as Record<string, string>;
 
+  const effect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: input.type, report_handle: result.reportId },
+  };
+
   return {
     reportId: result.reportId,
     fileId: result.fileId,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `submit_report`. Validates the request (report
+ * name non-empty — Zod's `z.string()` admits the empty string) and projects
+ * the would-be effect (a report submission). CM360 has no native report
+ * validate/preview, so both axes are symbolic. Pure (no I/O).
+ */
+function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.name.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_REPORT_NAME",
+      message: "name must be a non-empty report name",
+      field: "name",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: input.type },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function submitReportResponseFormatter(result: SubmitReportOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const rt = result.dryRun.expectedEffect?.summary.report_type ?? "report";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: submitting a ${String(rt)} report ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No report was submitted.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -105,6 +216,26 @@ export const submitReportTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "cm360",
+      contractPlatformSlug: "cm360",
+      contractToolSlug: "submit_report",
+      operation: ["submit_report"],
+      // Effect-class: an async report submission with no canonical entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "cm360.submit_report.v1",
+      // `dry_run` = symbolic validate + symbolic effect projection. CM360 has no
+      // native report validate/preview, so both axes are symbolic (honest true).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
