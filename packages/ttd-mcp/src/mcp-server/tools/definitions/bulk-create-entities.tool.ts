@@ -5,9 +5,23 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  BulkOperationResultSchema,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create TTD Entities";
@@ -16,6 +30,8 @@ const TOOL_DESCRIPTION = `Create multiple The Trade Desk entities of the same ty
 **Supported entity types for bulk create:** ${getBulkEntityTypeEnum().join(", ")}
 
 Provide an array of entity data objects. Each item is created independently — partial failures are possible and reported per-item.`;
+
+const EFFECT_KIND = "entities_created";
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
@@ -32,6 +48,13 @@ export const BulkCreateEntitiesInputSchema = z
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk create) without calling the TTD API. No entities are created."
+      ),
   })
   .superRefine((input, ctx) => {
     input.items.forEach((item, index) => {
@@ -54,6 +77,15 @@ export const BulkCreateEntitiesOutputSchema = z
     failureCount: z.number(),
     results: z.array(BulkOperationResultSchema),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entities were created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `entities_created` + scalar batch audit summary). Present on a confirmed execute. A bulk write is governed as a single batch effect — it carries no per-entity canonical snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class; the governed result is the batch effect, not one entity). Present on every response."
+    ),
   })
   .describe("Bulk entity creation results");
 
@@ -65,6 +97,29 @@ export async function bulkCreateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkCreateOutput> {
+  // Effect-class write: a bulk batch of N mutations is governed as a single
+  // batch effect, not one canonical entity. Snapshot-level bulk governance is
+  // deferred to a future `bulkEntity` contract (see project memory).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildBulkEffectDryRun(input);
+    return {
+      entityType: input.entityType,
+      totalRequested: 0,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
   const items = input.items.map((item) =>
     mergeParentIdsIntoData(item, input as Record<string, unknown>)
@@ -77,22 +132,89 @@ export async function bulkCreateEntitiesLogic(
   );
 
   const succeeded = results.filter((r) => r.success).length;
+  const failureCount = items.length - succeeded;
+
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: items.length,
+      succeeded,
+      failed: failureCount,
+      partial_success: succeeded > 0 && failureCount > 0,
+    },
+  };
 
   return {
     entityType: input.entityType,
     totalRequested: items.length,
     successCount: succeeded,
-    failureCount: items.length - succeeded,
+    failureCount,
     results: results.map((r) => ({
       success: r.success,
       entity: r.entity as Record<string, any> | undefined,
       error: r.error,
     })),
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
+ * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
+ * admits `{}`) and projects the would-be effect (an N-item create of one
+ * entity kind). TTD has no native bulk validate, so both axes are symbolic.
+ * Pure (no I/O).
+ */
+function buildBulkEffectDryRun(input: BulkCreateInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  input.items.forEach((item, i) => {
+    if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
+      validationErrors.push({
+        code: "EMPTY_ITEM",
+        message: `items[${i}] must be a non-empty entity object`,
+        field: `items.${i}`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_kind: input.entityType, requested: input.items.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function bulkCreateEntitiesResponseFormatter(result: BulkCreateOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? 0;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: bulk-creating ${String(n)} ${result.entityType}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -112,6 +234,25 @@ export const bulkCreateEntitiesTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "bulk_create_entities",
+      operation: ["bulk_job"],
+      // Effect-class: a bulk batch is governed as one batch effect (no canonical
+      // per-entity snapshot). Snapshot-level bulk governance is a future bulkEntity contract.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.bulk_create_entities.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

@@ -51,7 +51,6 @@
     ],
     "ttd-mcp": [
       "ttd_archive_entities",
-      "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",
       "ttd_bulk_update_entities",
       "ttd_bulk_update_status",
