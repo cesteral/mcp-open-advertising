@@ -3,7 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_update_report_schedule";
@@ -24,10 +39,20 @@ Use this to activate a disabled schedule or disable an active one without deleti
 - Set \`status: "ACTIVE"\` to resume a previously disabled schedule
 - To permanently remove a schedule, use \`ttd_delete_report_schedule\` instead`;
 
+const EFFECT_KIND = "report_schedule_saved";
+const ENTITY_LABEL = "report_schedule";
+
 export const UpdateReportScheduleInputSchema = z
   .object({
     scheduleId: z.string().min(1).describe("ID of the report schedule to enable or disable"),
     status: z.enum(["ACTIVE", "DISABLED"]).describe("New status for the schedule"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be schedule update) without calling the TTD API. Nothing is changed."
+      ),
   })
   .describe("Parameters for updating a TTD report schedule status");
 
@@ -41,6 +66,15 @@ export const UpdateReportScheduleOutputSchema = z
       .describe("Mutation errors from TTD"),
     rawResponse: z.record(z.unknown()).optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_schedule_saved` + scalar audit summary). Present on a successful execute (no mutation errors). Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `update_schedule` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Result of report schedule status update");
 
@@ -67,6 +101,25 @@ export async function updateReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateReportScheduleOutput> {
+  // Effect-class write: a report schedule is not a canonical ad entity, so there
+  // is no entity snapshot. The capability is `update_schedule` with a null kind.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "update_schedule",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report-schedule update). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildEffectDryRun(input);
+    return {
+      scheduleId: input.scheduleId,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const variables = {
@@ -90,18 +143,80 @@ export async function updateReportScheduleLogic(
   const scheduleData = (mutationResult.data as Record<string, unknown> | undefined) ?? {};
   const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
+  // Only emit the effect identity when the mutation reported no user errors —
+  // a returned errors[] means the schedule was not updated.
+  const effect: EffectResult | undefined = errors?.length
+    ? undefined
+    : {
+        effectKind: EFFECT_KIND,
+        summary: { entity_label: ENTITY_LABEL, schedule_handle: input.scheduleId },
+      };
+
   return {
     scheduleId: input.scheduleId,
     status: scheduleData.status as string | undefined,
     errors: errors?.length ? errors : undefined,
     rawResponse: raw as Record<string, unknown>,
     timestamp: new Date().toISOString(),
+    ...(effect ? { effect } : {}),
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `update_report_schedule`. Validates the request
+ * (scheduleId non-empty — guards against whitespace-only ids Zod's `.min(1)`
+ * admits; status is a closed enum Zod already enforces) and projects the
+ * would-be effect. TTD has no native validate/preview, so both axes are
+ * symbolic. Pure (no I/O).
+ */
+function buildEffectDryRun(input: UpdateReportScheduleInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.scheduleId.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_SCHEDULE_ID",
+      message: "scheduleId must be a non-empty report-schedule id",
+      field: "scheduleId",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_label: ENTITY_LABEL, schedule_handle: input.scheduleId },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function updateReportScheduleResponseFormatter(
   result: UpdateReportScheduleOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: updating report schedule ${result.scheduleId} ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
   if (result.errors?.length) {
     return [
       {
@@ -145,6 +260,24 @@ export const updateReportScheduleTool = {
     destructiveHint: false,
     idempotentHint: true,
     openWorldHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "update_report_schedule",
+      operation: ["update_schedule"],
+      // Effect-class: report schedules have no canonical ad-entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.update_report_schedule.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
