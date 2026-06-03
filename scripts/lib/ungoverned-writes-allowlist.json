@@ -66,9 +66,7 @@
       "tiktok_bulk_create_entities",
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
-      "tiktok_delete_entity",
-      "tiktok_upload_image",
-      "tiktok_upload_video"
+      "tiktok_delete_entity"
     ],
     "ttd-mcp": [
       "ttd_archive_entities",
