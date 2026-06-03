@@ -41,7 +41,6 @@
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
       "meta_manage_budget_schedule",
-      "meta_submit_report",
       "meta_upload_image",
       "meta_upload_video"
     ],
