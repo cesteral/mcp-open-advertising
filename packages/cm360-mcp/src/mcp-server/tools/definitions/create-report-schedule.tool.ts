@@ -3,7 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import {
   buildTypedReportConfig,
   CM360ReportTypeSchema,
@@ -34,6 +49,9 @@ CM360 schedules are embedded in the report resource itself. The returned reportI
 }
 \`\`\``;
 
+const EFFECT_KIND = "report_schedule_saved";
+const ENTITY_LABEL = "report_schedule";
+
 export const CreateReportScheduleInputSchema = z
   .object({
     profileId: z.string().min(1).describe("CM360 User Profile ID"),
@@ -59,6 +77,13 @@ export const CreateReportScheduleInputSchema = z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be schedule creation) without calling the CM360 API. No schedule is created."
+      ),
   })
   .superRefine((input, ctx) => {
     validateTypedCriteriaUsage(input as Parameters<typeof validateTypedCriteriaUsage>[0], ctx);
@@ -68,10 +93,22 @@ export const CreateReportScheduleInputSchema = z
 
 export const CreateReportScheduleOutputSchema = z
   .object({
-    reportId: z.string().describe("Report ID (use as schedule handle)"),
-    reportName: z.string(),
-    schedule: z.record(z.any()).describe("Schedule as returned by CM360"),
+    reportId: z
+      .string()
+      .optional()
+      .describe("Report ID (use as schedule handle). Absent on a dry_run (nothing was created)."),
+    reportName: z.string().optional(),
+    schedule: z.record(z.any()).optional().describe("Schedule as returned by CM360"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No schedule was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_schedule_saved` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `create_schedule` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Created report schedule");
 
@@ -83,6 +120,24 @@ export async function createReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateReportScheduleOutput> {
+  // Effect-class write: a report schedule is not a canonical ad entity, so there
+  // is no entity snapshot. The capability is `create_schedule` with a null kind.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "create_schedule",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report-schedule creation). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
   const reportConfig = {
@@ -97,17 +152,73 @@ export async function createReportScheduleLogic(
     context
   );
 
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_label: ENTITY_LABEL, schedule_handle: result.reportId },
+  };
+
   return {
     reportId: result.reportId,
     reportName: result.reportName,
     schedule: result.schedule,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `create_report_schedule`. Validates the request
+ * (report name non-empty — guards against whitespace-only names Zod's `.min(1)`
+ * admits) and projects the would-be effect (a report-schedule creation). CM360
+ * has no native validate/preview, so both axes are symbolic. Pure (no I/O).
+ */
+function buildEffectDryRun(input: CreateReportScheduleInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.name.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_REPORT_NAME",
+      message: "name must be a non-empty report name",
+      field: "name",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_label: ENTITY_LABEL },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function createReportScheduleResponseFormatter(
   result: CreateReportScheduleOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: creating a report schedule ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No schedule was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -127,6 +238,24 @@ export const createReportScheduleTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "cm360",
+      contractPlatformSlug: "cm360",
+      contractToolSlug: "create_report_schedule",
+      operation: ["create_schedule"],
+      // Effect-class: report schedules have no canonical ad-entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "cm360.create_report_schedule.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
