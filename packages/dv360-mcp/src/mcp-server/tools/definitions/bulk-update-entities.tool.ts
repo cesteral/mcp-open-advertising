@@ -10,9 +10,21 @@ import {
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
 } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update DV360 Entities";
@@ -22,6 +34,8 @@ const TOOL_DESCRIPTION =
   "Loops through items individually (DV360 API has no native batch endpoint). " +
   "Returns partial success results — failed items do not block remaining updates. " +
   "Fetch entity-fields://{entityType} and entity-examples://{entityType} before calling.";
+
+const EFFECT_KIND = "entities_updated";
 
 /**
  * Input schema for bulk update entities tool
@@ -54,6 +68,13 @@ export const BulkUpdateEntitiesInputSchema = z
         "Array of update items (max 50). Each item specifies entityId, data payload, and updateMask."
       ),
     reason: z.string().optional().describe("Reason for bulk update (audit trail)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk update) without prompting for confirmation or calling the DV360 API. No entities are updated."
+      ),
   })
   .describe("Parameters for bulk updating DV360 entities");
 
@@ -77,6 +98,15 @@ export const BulkUpdateEntitiesOutputSchema = z
       )
       .describe("Per-item results"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entities were updated."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `entities_updated` + scalar batch audit summary). Present on a confirmed execute. A bulk write is governed as a single batch effect — it carries no per-entity canonical snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class; the governed result is the batch effect, not one entity). Present on every response."
+    ),
   })
   .describe("Bulk update entities result");
 
@@ -91,6 +121,31 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  // Effect-class write: a bulk batch of N mutations is governed as a single
+  // batch effect, not one canonical entity. Snapshot-level bulk governance is
+  // deferred to a future `bulkEntity` contract (see project memory).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the batch and project the would-be effect. No
+  // confirmation prompt, no API call.
+  if (input.dry_run === true) {
+    const dryRun = buildBulkEffectDryRun(input);
+    return {
+      confirmed: true,
+      entityType: input.entityType,
+      totalRequested: 0,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
@@ -110,6 +165,7 @@ export async function bulkUpdateEntitiesLogic(
       failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -168,6 +224,17 @@ export async function bulkUpdateEntitiesLogic(
     }
   }
 
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: input.items.length,
+      succeeded: successCount,
+      failed: failureCount,
+      partial_success: successCount > 0 && failureCount > 0,
+    },
+  };
+
   return {
     confirmed: true,
     entityType: input.entityType,
@@ -176,7 +243,60 @@ export async function bulkUpdateEntitiesLogic(
     failureCount,
     results,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
+ * item must target a non-empty entityId, carry a non-empty data payload, and a
+ * non-empty updateMask) and projects the would-be effect (an N-item update of
+ * one entity kind). DV360 has no native bulk validate, so both axes are symbolic.
+ * Pure (no I/O).
+ */
+function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  input.items.forEach((item, i) => {
+    if (!item.entityId || item.entityId.trim().length === 0) {
+      validationErrors.push({
+        code: "INVALID_ENTITY_ID",
+        message: `items[${i}].entityId must be a non-empty entity id`,
+        field: `items.${i}.entityId`,
+      });
+    }
+    if (!item.data || typeof item.data !== "object" || Object.keys(item.data).length === 0) {
+      validationErrors.push({
+        code: "EMPTY_UPDATE",
+        message: `items[${i}].data must contain at least one field to update`,
+        field: `items.${i}.data`,
+      });
+    }
+    if (!item.updateMask || item.updateMask.trim().length === 0) {
+      validationErrors.push({
+        code: "EMPTY_UPDATE_MASK",
+        message: `items[${i}].updateMask must list at least one field path`,
+        field: `items.${i}.updateMask`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_kind: input.entityType, requested: input.items.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 /**
@@ -185,6 +305,22 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? 0;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: bulk-updating ${String(n)} ${result.entityType}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were updated.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -286,6 +422,25 @@ export const bulkUpdateEntitiesTool = {
     destructiveHint: true,
     idempotentHint: true,
     openWorldHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "bulk_update_entities",
+      operation: ["bulk_job"],
+      // Effect-class: a bulk batch is governed as one batch effect (no canonical
+      // per-entity snapshot). Snapshot-level bulk governance is a future bulkEntity contract.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "dv360.bulk_update_entities.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: bulkUpdateEntitiesLogic,
   responseFormatter: bulkUpdateEntitiesResponseFormatter,
