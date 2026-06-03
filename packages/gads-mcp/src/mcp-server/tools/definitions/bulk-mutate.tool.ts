@@ -5,11 +5,26 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "gads_bulk_mutate";
 const TOOL_TITLE = "Bulk Mutate Google Ads Entities";
+const EFFECT_KIND = "bulk_mutation";
 const TOOL_DESCRIPTION = `Execute multiple create/update/remove operations in a single API call.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
@@ -40,6 +55,13 @@ export const BulkMutateInputSchema = z
       .optional()
       .default(false)
       .describe("Allow partial success (default: false = atomic)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk mutation) without calling the Google Ads API. No entities are mutated."
+      ),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(
@@ -55,6 +77,15 @@ export const BulkMutateOutputSchema = z
     mutateResult: z.record(z.any()).describe("Full mutate response"),
     operationCount: z.number(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entities were mutated."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bulk_mutation` + scalar batch audit summary). Present on a confirmed execute. A bulk mutation is governed as a single batch effect — it carries no per-entity canonical snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class; the governed result is the batch effect, not one entity). Present on every response."
+    ),
   })
   .describe("Bulk mutate result");
 
@@ -66,6 +97,27 @@ export async function bulkMutateLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkMutateOutput> {
+  // Effect-class write: a bulk batch of N mutate operations is governed as a
+  // single batch effect, not one canonical entity. Snapshot-level bulk
+  // governance is deferred to a future `bulkEntity` contract (see project memory).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the batch and project the would-be effect. No
+  // API call.
+  if (input.dry_run === true) {
+    const dryRun = buildBulkEffectDryRun(input);
+    return {
+      mutateResult: {},
+      operationCount: 0,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { gadsService } = resolveSessionServices(sdkContext);
 
   const result = await gadsService.bulkMutate(
@@ -76,14 +128,92 @@ export async function bulkMutateLogic(
     context
   );
 
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: input.operations.length,
+      partial_failure: input.partialFailure,
+    },
+  };
+
   return {
     mutateResult: result as Record<string, any>,
     operationCount: input.operations.length,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `bulk_mutate`. Validates the batch (each operation
+ * must be a non-empty object carrying exactly one of create/update/remove) and
+ * projects the would-be effect (an N-operation bulk mutation of one entity kind).
+ * Google Ads exposes no native validate for this raw-operations path, so both
+ * axes are symbolic. Pure (no I/O).
+ */
+function buildBulkEffectDryRun(input: BulkMutateInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  input.operations.forEach((op, i) => {
+    if (!op || typeof op !== "object" || Object.keys(op).length === 0) {
+      validationErrors.push({
+        code: "EMPTY_OPERATION",
+        message: `operations[${i}] must be a non-empty mutate operation`,
+        field: `operations.${i}`,
+      });
+      return;
+    }
+    const verbs = ["create", "update", "remove"].filter((v) => v in op);
+    if (verbs.length !== 1) {
+      validationErrors.push({
+        code: "INVALID_OPERATION",
+        message: `operations[${i}] must contain exactly one of create/update/remove (found: ${verbs.length === 0 ? "none" : verbs.join(", ")})`,
+        field: `operations.${i}`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: input.operations.length,
+      partial_failure: input.partialFailure,
+    },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function bulkMutateResponseFormatter(result: BulkMutateOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? 0;
+    const kind = result.dryRun.expectedEffect?.summary.entity_kind ?? "entity";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: bulk mutation of ${String(n)} ${String(kind)} operation(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were mutated.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -103,6 +233,25 @@ export const bulkMutateTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "google_ads",
+      contractPlatformSlug: "google_ads",
+      contractToolSlug: "bulk_mutate",
+      operation: ["bulk_job"],
+      // Effect-class: a bulk batch is governed as one batch effect (no canonical
+      // per-entity snapshot). Snapshot-level bulk governance is a future bulkEntity contract.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "google_ads.bulk_mutate.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
