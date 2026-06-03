@@ -68,7 +68,6 @@
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
       "snapchat_delete_entity",
-      "snapchat_submit_report",
       "snapchat_upload_image",
       "snapchat_upload_video"
     ],
