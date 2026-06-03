@@ -11,7 +11,6 @@
     "cm360-mcp": [
       "cm360_bulk_create_entities",
       "cm360_bulk_update_entities",
-      "cm360_bulk_update_status",
       "cm360_delete_entity"
     ],
     "dv360-mcp": [
