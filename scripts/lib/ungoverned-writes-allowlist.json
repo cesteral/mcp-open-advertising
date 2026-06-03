@@ -60,9 +60,7 @@
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
-      "snapchat_delete_entity",
-      "snapchat_upload_image",
-      "snapchat_upload_video"
+      "snapchat_delete_entity"
     ],
     "tiktok-mcp": [
       "tiktok_bulk_create_entities",
