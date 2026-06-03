@@ -34,7 +34,6 @@
       "msads_manage_criterions"
     ],
     "pinterest-mcp": [
-      "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
       "pinterest_delete_entity"
