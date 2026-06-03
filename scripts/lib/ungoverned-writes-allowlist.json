@@ -99,7 +99,6 @@
       "ttd_manage_bid_list",
       "ttd_manage_seed",
       "ttd_rerun_report_schedule",
-      "ttd_submit_report",
       "ttd_update_report_schedule",
       "ttd_update_report_template"
     ]
