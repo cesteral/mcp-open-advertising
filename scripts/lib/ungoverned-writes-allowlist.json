@@ -32,9 +32,7 @@
     "linkedin-mcp": [
       "linkedin_bulk_create_entities",
       "linkedin_bulk_update_entities",
-      "linkedin_bulk_update_status",
-      "linkedin_upload_image",
-      "linkedin_upload_video"
+      "linkedin_bulk_update_status"
     ],
     "meta-mcp": [
       "meta_bulk_create_entities",
