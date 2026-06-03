@@ -26,26 +26,20 @@
       "msads_manage_criterions"
     ],
     "pinterest-mcp": ["pinterest_bulk_create_entities", "pinterest_delete_entity"],
-    "sa360-mcp": ["sa360_insert_conversions", "sa360_update_conversions"],
+    "sa360-mcp": [],
     "snapchat-mcp": ["snapchat_bulk_create_entities", "snapchat_delete_entity"],
     "tiktok-mcp": ["tiktok_bulk_create_entities", "tiktok_delete_entity"],
     "ttd-mcp": [
       "ttd_archive_entities",
       "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",
-      "ttd_cancel_report_execution",
-      "ttd_create_report_template",
-      "ttd_create_template_schedule",
       "ttd_delete_entity",
-      "ttd_execute_entity_report",
       "ttd_graphql_cancel_bulk_job",
       "ttd_graphql_mutation_bulk",
       "ttd_graphql_query",
       "ttd_graphql_query_bulk",
       "ttd_manage_bid_list",
-      "ttd_manage_seed",
-      "ttd_rerun_report_schedule",
-      "ttd_update_report_template"
+      "ttd_manage_seed"
     ]
   }
 }

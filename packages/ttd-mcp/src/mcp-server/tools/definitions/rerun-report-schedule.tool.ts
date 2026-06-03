@@ -3,7 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_rerun_report_schedule";
@@ -23,12 +38,21 @@ Use this when a download link has expired or the report errored — it creates a
 2. Call this tool with the schedule ID
 3. Use \`ttd_get_report_executions\` with the schedule ID to check execution status and retrieve the download link when complete`;
 
+const EFFECT_KIND = "report_requested";
+
 export const RerunReportScheduleInputSchema = z
   .object({
     scheduleId: z
       .string()
       .min(1)
       .describe("ID of the existing report schedule to rerun immediately"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be report rerun) without calling the TTD API. No execution is queued."
+      ),
   })
   .describe("Parameters for immediately rerunning a TTD report schedule");
 
@@ -45,6 +69,15 @@ export const RerunReportScheduleOutputSchema = z
       .describe("Mutation errors from TTD"),
     rawResponse: z.record(z.unknown()).optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No execution was queued."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_requested` + scalar audit summary). Present only when the mutation actually queued a new execution. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `submit_report` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Result of report schedule rerun");
 
@@ -71,6 +104,25 @@ export async function rerunReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<RerunReportScheduleOutput> {
+  // Effect-class write: queuing a new execution has no canonical ad-entity
+  // snapshot. The capability is `submit_report` with a null entity kind.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "submit_report",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect. No
+  // API call.
+  if (input.dry_run === true) {
+    const dryRun = buildEffectDryRun(input);
+    return {
+      scheduleId: input.scheduleId,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const variables = {
@@ -93,19 +145,87 @@ export async function rerunReportScheduleLogic(
   const mutationResult =
     (gqlData.myReportsReportScheduleCreate as Record<string, unknown> | undefined) ?? {};
   const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
+  const newExecutionData = mutationResult.data as Record<string, unknown> | undefined;
+
+  // Effect emitted only when the mutation actually queued a new execution (data
+  // scalar present, no errors). The summary uses stable scalar identities only.
+  const executionQueued =
+    newExecutionData !== undefined && newExecutionData !== null && !errors?.length;
+  const executionId = newExecutionData?.id as string | undefined;
+  const effect: EffectResult | undefined = executionQueued
+    ? {
+        effectKind: EFFECT_KIND,
+        summary: {
+          schedule_id: input.scheduleId,
+          ...(executionId !== undefined && { report_handle: executionId }),
+        },
+      }
+    : undefined;
 
   return {
     scheduleId: input.scheduleId,
-    newExecutionData: mutationResult.data as Record<string, unknown> | undefined,
+    newExecutionData,
     errors: errors?.length ? errors : undefined,
     rawResponse: raw as Record<string, unknown>,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `rerun_report_schedule`. TTD GraphQL has no native
+ * validate/preview, so both axes are symbolic. Validates the schedule id is
+ * non-empty and projects the scalar would-be effect (a fresh report run). Pure
+ * (no I/O).
+ */
+function buildEffectDryRun(input: RerunReportScheduleInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.scheduleId.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_SCHEDULE_ID",
+      message: "scheduleId must be a non-empty report-schedule id",
+      field: "scheduleId",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { schedule_id: input.scheduleId },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function rerunReportScheduleResponseFormatter(
   result: RerunReportScheduleOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: rerunning report schedule ${result.scheduleId} ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No execution was queued.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
   if (result.errors?.length) {
     return [
       {
@@ -149,6 +269,24 @@ export const rerunReportScheduleTool = {
     destructiveHint: false,
     idempotentHint: false,
     openWorldHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "rerun_report_schedule",
+      operation: ["submit_report"],
+      // Effect-class: queuing a report run has no canonical ad-entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.rerun_report_schedule.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
