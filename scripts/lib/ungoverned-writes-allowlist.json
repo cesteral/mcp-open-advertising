@@ -27,7 +27,6 @@
     ],
     "msads-mcp": [
       "msads_bulk_create_entities",
-      "msads_bulk_update_entities",
       "msads_bulk_update_status",
       "msads_delete_entity",
       "msads_import_from_google",
