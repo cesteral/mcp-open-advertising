@@ -52,7 +52,10 @@ describe("toManifestEntry", () => {
   });
 
   it("throws on a malformed contractId", () => {
-    const bad = { ...writeTool, annotations: { cesteral: { contractId: "nope", schemaVersion: 1 } } };
+    const bad = {
+      ...writeTool,
+      annotations: { cesteral: { contractId: "nope", schemaVersion: 1 } },
+    };
     expect(() => toManifestEntry(bad)).toThrow(/contractId/);
   });
 
@@ -65,7 +68,10 @@ describe("toManifestEntry", () => {
   });
 
   it("throws when schemaVersion is not a number", () => {
-    const missing = { ...writeTool, annotations: { cesteral: { contractId: "meta.update_entity.v1" } } };
+    const missing = {
+      ...writeTool,
+      annotations: { cesteral: { contractId: "meta.update_entity.v1" } },
+    };
     expect(() => toManifestEntry(missing)).toThrow(/schemaVersion/);
     const stringy = {
       ...writeTool,
@@ -77,6 +83,55 @@ describe("toManifestEntry", () => {
   it("throws when contractId is absent", () => {
     const bad = { ...writeTool, annotations: { cesteral: { schemaVersion: 1 } } };
     expect(() => toManifestEntry(bad)).toThrow(/contractId/);
+  });
+
+  it("throws when contractPlatformSlug disagrees with contractId", () => {
+    // The LinkedIn-uploads bug class: slug "linkedin" but contractId "linkedin_ads.…".
+    const bad = {
+      ...writeTool,
+      annotations: {
+        cesteral: {
+          kind: "write",
+          contractPlatformSlug: "linkedin",
+          contractToolSlug: "upload_image",
+          contractId: "linkedin_ads.upload_image.v1",
+          schemaVersion: 1,
+        },
+      },
+    };
+    expect(() => toManifestEntry(bad)).toThrow(/contractPlatformSlug/);
+  });
+
+  it("throws when contractToolSlug disagrees with contractId", () => {
+    const bad = {
+      ...writeTool,
+      annotations: {
+        cesteral: {
+          kind: "write",
+          contractPlatformSlug: "meta",
+          contractToolSlug: "upload_image",
+          contractId: "meta.upload_video.v1",
+          schemaVersion: 1,
+        },
+      },
+    };
+    expect(() => toManifestEntry(bad)).toThrow(/contractToolSlug/);
+  });
+
+  it("accepts a tool whose slug fields agree with contractId", () => {
+    const ok = {
+      ...writeTool,
+      annotations: {
+        cesteral: {
+          kind: "write",
+          contractPlatformSlug: "linkedin_ads",
+          contractToolSlug: "upload_image",
+          contractId: "linkedin_ads.upload_image.v1",
+          schemaVersion: 1,
+        },
+      },
+    };
+    expect(() => toManifestEntry(ok)).not.toThrow();
   });
 
   it("derives a manifest entry from a read-kind governed tool", () => {
@@ -136,6 +191,8 @@ describe("validateManifest", () => {
   });
 
   it("rejects a packageName that is not an @cesteral/*-mcp package", () => {
-    expect(() => validateManifest({ ...valid, packageName: "@cesteral/shared" })).toThrow(/packageName/);
+    expect(() => validateManifest({ ...valid, packageName: "@cesteral/shared" })).toThrow(
+      /packageName/
+    );
   });
 });
