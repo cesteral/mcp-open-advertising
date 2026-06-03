@@ -70,6 +70,28 @@ export function toManifestEntry(tool) {
     );
   }
 
+  // Cross-check the annotation's own slug fields against the contractId
+  // segments. Downstream governance reads these fields and requires
+  // contractId === `<contractPlatformSlug>.<contractToolSlug>.v<schemaVersion>`;
+  // a mismatch (e.g. slug "linkedin" with contractId "linkedin_ads.…") is
+  // admissible-looking here but rejected at admission. Fail the release instead.
+  if (
+    cesteral.contractPlatformSlug !== undefined &&
+    cesteral.contractPlatformSlug !== platformSlug
+  ) {
+    throw new Error(
+      `${tool.name}: cesteral.contractPlatformSlug ${JSON.stringify(cesteral.contractPlatformSlug)} ` +
+        `disagrees with the platform segment of contractId (${JSON.stringify(platformSlug)}). ` +
+        `contractId must equal \`<contractPlatformSlug>.<contractToolSlug>.v<schemaVersion>\`.`
+    );
+  }
+  if (cesteral.contractToolSlug !== undefined && cesteral.contractToolSlug !== toolSlug) {
+    throw new Error(
+      `${tool.name}: cesteral.contractToolSlug ${JSON.stringify(cesteral.contractToolSlug)} ` +
+        `disagrees with the tool segment of contractId (${JSON.stringify(toolSlug)}).`
+    );
+  }
+
   return {
     toolName: tool.name,
     contractPlatformSlug: platformSlug,
