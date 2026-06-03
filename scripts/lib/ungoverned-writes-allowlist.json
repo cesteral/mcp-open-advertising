@@ -6,8 +6,7 @@
       "amazon_dsp_bulk_update_entities",
       "amazon_dsp_bulk_update_status",
       "amazon_dsp_create_commitment",
-      "amazon_dsp_delete_entity",
-      "amazon_dsp_submit_report"
+      "amazon_dsp_delete_entity"
     ],
     "cm360-mcp": [
       "cm360_bulk_create_entities",
@@ -15,8 +14,7 @@
       "cm360_bulk_update_status",
       "cm360_create_report_schedule",
       "cm360_delete_entity",
-      "cm360_delete_report_schedule",
-      "cm360_submit_report"
+      "cm360_delete_report_schedule"
     ],
     "dv360-mcp": [
       "dv360_bulk_create_entities",
@@ -43,7 +41,6 @@
       "meta_bulk_update_entities",
       "meta_bulk_update_status",
       "meta_manage_budget_schedule",
-      "meta_submit_report",
       "meta_upload_image",
       "meta_upload_video"
     ],
@@ -56,24 +53,21 @@
       "msads_delete_report_schedule",
       "msads_import_from_google",
       "msads_manage_ad_extensions",
-      "msads_manage_criterions",
-      "msads_submit_report"
+      "msads_manage_criterions"
     ],
     "pinterest-mcp": [
       "pinterest_bulk_create_entities",
       "pinterest_bulk_update_entities",
       "pinterest_bulk_update_status",
       "pinterest_delete_entity",
-      "pinterest_submit_report",
       "pinterest_upload_video"
     ],
-    "sa360-mcp": ["sa360_insert_conversions", "sa360_submit_report", "sa360_update_conversions"],
+    "sa360-mcp": ["sa360_insert_conversions", "sa360_update_conversions"],
     "snapchat-mcp": [
       "snapchat_bulk_create_entities",
       "snapchat_bulk_update_entities",
       "snapchat_bulk_update_status",
       "snapchat_delete_entity",
-      "snapchat_submit_report",
       "snapchat_upload_image",
       "snapchat_upload_video"
     ],
@@ -82,7 +76,6 @@
       "tiktok_bulk_update_entities",
       "tiktok_bulk_update_status",
       "tiktok_delete_entity",
-      "tiktok_submit_report",
       "tiktok_upload_image",
       "tiktok_upload_video"
     ],
@@ -106,7 +99,6 @@
       "ttd_manage_bid_list",
       "ttd_manage_seed",
       "ttd_rerun_report_schedule",
-      "ttd_submit_report",
       "ttd_update_report_schedule",
       "ttd_update_report_template"
     ]

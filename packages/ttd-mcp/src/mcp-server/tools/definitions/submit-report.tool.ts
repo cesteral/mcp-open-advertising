@@ -3,8 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_submit_report";
 const TOOL_TITLE = "Submit TTD Report";
@@ -18,6 +32,8 @@ Returns a \`reportScheduleId\` immediately. Use \`ttd_check_report_status\` to p
 3. \`ttd_download_report\` with the \`downloadUrl\` → get a bounded summary or paged row slice
 
 Use \`ttd_get_report\` instead for a blocking convenience shortcut.`;
+
+const REPORT_TYPE = "templated";
 
 export const SubmitReportInputSchema = z
   .object({
@@ -72,13 +88,34 @@ export const SubmitReportInputSchema = z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields (merged last)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the report request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be report submission) without calling the TTD API. No report schedule is created."
+      ),
   })
   .describe("Parameters for submitting a TTD report");
 
 export const SubmitReportOutputSchema = z
   .object({
-    reportScheduleId: z.string().describe("Report schedule ID for status polling"),
+    reportScheduleId: z
+      .string()
+      .optional()
+      .describe(
+        "Report schedule ID for status polling. Absent on a dry_run (nothing was submitted)."
+      ),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No report was submitted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_requested` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `submit_report` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Report submission result");
 
@@ -90,6 +127,24 @@ export async function submitReportLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<SubmitReportOutput> {
+  // Effect-class write: no canonical entity snapshot. The capability is
+  // `submit_report` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "submit_report",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the request and project the would-be effect
+  // (a report submission). No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildSubmitReportEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
   const startDate = input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
@@ -113,13 +168,70 @@ export async function submitReportLogic(
 
   const result = await ttdReportingService.createReportSchedule(reportConfig, context);
 
+  const effect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: REPORT_TYPE, report_handle: result.reportScheduleId },
+  };
+
   return {
     reportScheduleId: result.reportScheduleId,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `submit_report`. Validates the request (report
+ * template ID must be a positive integer — Zod's `z.number()` admits floats,
+ * zero, and negatives) and projects the would-be effect (a report submission).
+ * TTD has no native report validate/preview, so both axes are symbolic. Pure (no I/O).
+ */
+function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (!Number.isInteger(input.reportTemplateId) || input.reportTemplateId <= 0) {
+    validationErrors.push({
+      code: "INVALID_TEMPLATE_ID",
+      message: `reportTemplateId must be a positive integer — got ${String(input.reportTemplateId)}`,
+      field: "reportTemplateId",
+    });
+  }
+
+  const expectedEffect: EffectResult = {
+    effectKind: "report_requested",
+    summary: { report_type: REPORT_TYPE },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function submitReportResponseFormatter(result: SubmitReportOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const rt = result.dryRun.expectedEffect?.summary.report_type ?? "report";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: submitting a ${String(rt)} report ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No report was submitted.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -139,6 +251,26 @@ export const submitReportTool = {
     openWorldHint: false,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "submit_report",
+      operation: ["submit_report"],
+      // Effect-class: an async report submission with no canonical entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.submit_report.v1",
+      // `dry_run` = symbolic validate + symbolic effect projection. TTD has no
+      // native report validate/preview, so both axes are symbolic (honest true).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
