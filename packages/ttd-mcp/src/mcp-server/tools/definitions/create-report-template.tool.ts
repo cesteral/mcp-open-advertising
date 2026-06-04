@@ -3,7 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_create_report_template";
@@ -19,6 +34,8 @@ A report template defines the structure of a My Reports report — which report 
 4. Use the returned template ID to schedule reports (\`ttd_create_template_schedule\`)
 
 Use \`ttd_list_report_templates\` to see existing templates.`;
+
+const EFFECT_KIND = "report_template_created";
 
 const ReportTemplateColumnSchema = z.object({
   columnId: z.string().describe("Column or metric ID (from reportType query)"),
@@ -49,6 +66,13 @@ export const CreateReportTemplateInputSchema = z
       .min(1)
       .max(29)
       .describe("One or more tabs (up to 29) defining the report structure"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the template definition and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be template creation) without calling the TTD API. No template is created."
+      ),
   })
   .describe("Parameters for creating a TTD report template");
 
@@ -66,6 +90,15 @@ export const CreateReportTemplateOutputSchema = z
       .describe("Mutation errors from TTD"),
     rawResponse: z.record(z.unknown()).optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No template was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `report_template_created` + scalar audit summary). Present only on a confirmed create the mutation actually executed. Effect writes carry no canonical entity snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Result of report template creation");
 
@@ -96,6 +129,24 @@ export async function createReportTemplateLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateReportTemplateOutput> {
+  // Effect-class write: a report template is not a canonical ad entity, so there
+  // is no entity snapshot. The capability is `manage` with a null entity kind.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the template definition and project the would-be
+  // effect. No API call.
+  if (input.dry_run === true) {
+    const dryRun = buildEffectDryRun(input);
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const variables = {
@@ -124,7 +175,9 @@ export async function createReportTemplateLogic(
   let templateId: string | undefined;
   let templateName: string | undefined;
 
-  if (mutationResult.data && !errors?.length) {
+  const mutationExecuted = Boolean(mutationResult.data) && !errors?.length;
+
+  if (mutationExecuted) {
     try {
       const listRaw = (await ttdService.graphqlQuery(
         GET_NEWEST_TEMPLATE_QUERY,
@@ -144,6 +197,18 @@ export async function createReportTemplateLogic(
     }
   }
 
+  // Effect emitted only when the mutation actually executed (data scalar present,
+  // no mutation errors). The summary uses stable scalar identities only.
+  const effect: EffectResult | undefined = mutationExecuted
+    ? {
+        effectKind: EFFECT_KIND,
+        summary: {
+          template_name: templateName ?? input.name,
+          ...(templateId !== undefined && { template_id: templateId }),
+        },
+      }
+    : undefined;
+
   return {
     templateData: mutationResult.data,
     templateId,
@@ -151,12 +216,74 @@ export async function createReportTemplateLogic(
     errors: errors?.length ? errors : undefined,
     rawResponse: raw as Record<string, unknown>,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `create_report_template`. TTD GraphQL has no native
+ * template validate/preview, so both axes are symbolic. Validates the template
+ * name is non-empty and every result set carries a report type id, then projects
+ * the scalar would-be effect. Pure (no I/O).
+ */
+function buildEffectDryRun(input: CreateReportTemplateInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (input.name.trim().length === 0) {
+    validationErrors.push({
+      code: "INVALID_TEMPLATE_NAME",
+      message: "name must be a non-empty template name",
+      field: "name",
+    });
+  }
+  input.resultSets.forEach((rs, i) => {
+    if (rs.reportTypeId.trim().length === 0) {
+      validationErrors.push({
+        code: "INVALID_REPORT_TYPE_ID",
+        message: `resultSets[${i}].reportTypeId must reference a report type`,
+        field: `resultSets[${i}].reportTypeId`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { template_name: input.name },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function createReportTemplateResponseFormatter(
   result: CreateReportTemplateOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const name = result.dryRun.expectedEffect?.summary.template_name ?? "template";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: creating report template "${String(name)}" ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No template was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
   if (result.errors?.length) {
     return [
       {
@@ -209,6 +336,24 @@ export const createReportTemplateTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "create_report_template",
+      operation: ["manage"],
+      // Effect-class: a report template has no canonical ad-entity snapshot.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.create_report_template.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

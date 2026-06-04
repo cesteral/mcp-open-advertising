@@ -12,6 +12,7 @@ import { z } from "zod";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { buildNextAction } from "@cesteral/shared";
+import { validateConversionFields } from "../utils/conversion-governance.js";
 
 const TOOL_NAME = "sa360_validate_conversion";
 const TOOL_TITLE = "Validate SA360 Conversion Payload";
@@ -27,10 +28,6 @@ Checks required fields, data formats, and common configuration mistakes for both
 - Floodlight activity identification (segmentationName or floodlightActivityId)
 - conversionId presence for update mode
 - state enum values`;
-
-const VALID_STATES = ["ACTIVE", "REMOVED"];
-const VALID_SEGMENTATION_TYPES = ["FLOODLIGHT"];
-const VALID_CONVERSION_TYPES = ["ACTION", "TRANSACTION"];
 
 const ConversionPayloadSchema = z.object({
   clickId: z.string().optional(),
@@ -79,103 +76,11 @@ export async function validateConversionLogic(
   _sdkContext?: SdkContext
 ): Promise<ValidateConversionOutput> {
   const { mode, conversion } = input;
-  const errors: string[] = [];
-  const warnings: string[] = [];
 
-  // Click ID: at least one of clickId or gclid required
-  if (!conversion.clickId && !conversion.gclid) {
-    errors.push(
-      "At least one of 'clickId' or 'gclid' is required to attribute the conversion to a click."
-    );
-  }
-
-  // conversionTimestamp: required and must be valid epoch milliseconds
-  if (!conversion.conversionTimestamp) {
-    errors.push(
-      "'conversionTimestamp' is required (epoch milliseconds as a string, e.g., '1700000000000')."
-    );
-  } else if (!/^\d+$/.test(conversion.conversionTimestamp)) {
-    errors.push(
-      `'conversionTimestamp' must be a numeric string (epoch milliseconds). Got: "${conversion.conversionTimestamp}"`
-    );
-  } else {
-    const ts = Number(conversion.conversionTimestamp);
-    // Sanity check: should be after 2000-01-01 and not absurdly far in the future
-    if (ts < 946684800000) {
-      warnings.push(
-        "'conversionTimestamp' appears to be before year 2000 — verify this is epoch milliseconds, not seconds."
-      );
-    }
-  }
-
-  // revenueMicros: must be numeric if present
-  if (conversion.revenueMicros !== undefined) {
-    if (!/^-?\d+$/.test(conversion.revenueMicros)) {
-      errors.push(
-        `'revenueMicros' must be a numeric string (1,000,000 = 1 currency unit). Got: "${conversion.revenueMicros}"`
-      );
-    }
-  }
-
-  // quantityMillis: must be numeric if present
-  if (conversion.quantityMillis !== undefined) {
-    if (!/^-?\d+$/.test(conversion.quantityMillis)) {
-      errors.push(
-        `'quantityMillis' must be a numeric string (1000 = 1). Got: "${conversion.quantityMillis}"`
-      );
-    }
-  }
-
-  // segmentationType: required
-  if (!conversion.segmentationType) {
-    errors.push("'segmentationType' is required (e.g., 'FLOODLIGHT').");
-  } else if (!VALID_SEGMENTATION_TYPES.includes(conversion.segmentationType)) {
-    warnings.push(
-      `'segmentationType' value "${conversion.segmentationType}" is not a recognized type. Known types: ${VALID_SEGMENTATION_TYPES.join(", ")}`
-    );
-  }
-
-  // Floodlight identification: need segmentationName or floodlightActivityId
-  if (!conversion.segmentationName && !conversion.floodlightActivityId) {
-    errors.push(
-      "Either 'segmentationName' or 'floodlightActivityId' is required to identify the Floodlight activity."
-    );
-  }
-
-  // state: must be valid enum if present
-  if (conversion.state !== undefined && !VALID_STATES.includes(conversion.state)) {
-    errors.push(`'state' must be one of: ${VALID_STATES.join(", ")}. Got: "${conversion.state}"`);
-  }
-
-  // type: warn if unrecognized
-  if (conversion.type !== undefined && !VALID_CONVERSION_TYPES.includes(conversion.type)) {
-    warnings.push(
-      `'type' value "${conversion.type}" is not a recognized conversion type. Known types: ${VALID_CONVERSION_TYPES.join(", ")}`
-    );
-  }
-
-  // Update mode: conversionId required
-  if (mode === "update") {
-    if (!conversion.conversionId) {
-      errors.push(
-        "'conversionId' is required for update mode (returned from the original insert response)."
-      );
-    }
-  }
-
-  // Insert mode: conversionId should not be present
-  if (mode === "insert" && conversion.conversionId) {
-    warnings.push(
-      "'conversionId' is set but mode is 'insert'. conversionId is typically only used for updates."
-    );
-  }
-
-  // currencyCode format warning
-  if (conversion.currencyCode && !/^[A-Z]{3}$/.test(conversion.currencyCode)) {
-    warnings.push(
-      `'currencyCode' should be an ISO 4217 code (e.g., USD, EUR). Got: "${conversion.currencyCode}"`
-    );
-  }
+  // Canonical client-side validation shared with the governed insert/update
+  // dry-runs (see conversion-governance.ts) so both surfaces agree exactly.
+  const { errors: fieldErrors, warnings } = validateConversionFields(mode, conversion);
+  const errors = fieldErrors.map((e) => e.message);
 
   let nextAction: string | undefined;
   if (errors.length > 0) {
