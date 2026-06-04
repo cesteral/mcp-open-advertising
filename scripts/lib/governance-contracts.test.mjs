@@ -202,6 +202,15 @@ const extraGovernedSurfaces = [
     pairs: { delete: ["campaign"] },
   },
   {
+    packageDir: "ttd-mcp",
+    platformSlug: "ttd",
+    writeTool: "ttd_delete_entity",
+    readTool: "ttd_get_entity",
+    contractToolSlug: "delete_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { delete: ["campaign", "ad_group"] },
+  },
+  {
     packageDir: "linkedin-mcp",
     platformSlug: "linkedin_ads",
     writeTool: "linkedin_create_entity",

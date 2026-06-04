@@ -282,6 +282,74 @@ export const createAdGroup: TtdWriteFixture = {
   description: "create: adGroup (would-be-created, no round-3-scoped budget)",
 };
 
+/** delete: campaign archived (Available → Archived; budget/schedule preserved). */
+export const deleteCampaign: TtdWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    advertiserId,
+    entityId: "camp-REDACTED-del-1",
+    // The archive end-state TTD applies; the tool overlays this on the read entity.
+    data: { Availability: "Archived" },
+  },
+  preState: {
+    CampaignName: "Retired Campaign",
+    AdvertiserId: advertiserId,
+    Availability: "Available",
+    Budget: { Amount: 50000, CurrencyCode: "USD" },
+    DailyBudget: { Amount: 500, CurrencyCode: "USD" },
+    StartDateInclusiveUTC: "2026-01-01T00:00:00Z",
+    EndDateExclusiveUTC: "2026-06-30T00:00:00Z",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "ttd",
+    entityKind: "campaign",
+    platformEntityId: "camp-REDACTED-del-1",
+    displayName: "Retired Campaign",
+    accountId: advertiserId,
+    status: { canonical: "archived", platformRaw: "Archived" },
+    budget: {
+      daily: { amountMinor: 50_000, currency: "USD" },
+      lifetime: { amountMinor: 5_000_000, currency: "USD" },
+    },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-06-30T00:00:00Z" },
+  },
+  description: "delete: campaign transition Available → Archived (archive end-state)",
+};
+
+/** delete: ad group archived (Available → Archived; no round-3-scoped budget). */
+export const deleteAdGroup: TtdWriteFixture = {
+  contractToolSlug: "delete_entity",
+  operation: "delete",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    advertiserId,
+    entityId: "ag-REDACTED-del-1",
+    data: { Availability: "Archived" },
+  },
+  preState: {
+    AdGroupName: "Retired Ad Group",
+    AdvertiserId: advertiserId,
+    Availability: "Available",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "ttd",
+    entityKind: "ad_group",
+    platformEntityId: "ag-REDACTED-del-1",
+    displayName: "Retired Ad Group",
+    accountId: advertiserId,
+    status: { canonical: "archived", platformRaw: "Archived" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "delete: adGroup transition Available → Archived (archive end-state)",
+};
+
 export const allFixtures: readonly TtdWriteFixture[] = [
   updateBudgetCampaign,
   pauseCampaign,
@@ -290,4 +358,6 @@ export const allFixtures: readonly TtdWriteFixture[] = [
   resumeAdGroup,
   createCampaign,
   createAdGroup,
+  deleteCampaign,
+  deleteAdGroup,
 ];
