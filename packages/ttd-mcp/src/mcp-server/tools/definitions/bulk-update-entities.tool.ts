@@ -9,9 +9,21 @@ import {
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
 } from "@cesteral/shared";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update TTD Entities";
@@ -22,6 +34,8 @@ const TOOL_DESCRIPTION = `Update multiple The Trade Desk entities of the same ty
 Provide an array of update items, each with an entityId and data payload. Uses TTD PUT semantics (full entity replacement). Partial failures are reported per-item.
 
 **Important:** TTD uses PUT for updates — include ALL fields you want to keep, not just changed ones. Consider GETting each entity first to merge changes.`;
+
+const EFFECT_KIND = "entities_updated";
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
@@ -43,6 +57,13 @@ export const BulkUpdateEntitiesInputSchema = z
       .min(1)
       .max(50)
       .describe("Array of update items (max 50)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk update) without prompting for confirmation or calling the TTD API. No entities are updated."
+      ),
   })
   .superRefine((input, ctx) => {
     input.items.forEach((item, index) => {
@@ -67,6 +88,15 @@ export const BulkUpdateEntitiesOutputSchema = z
     failureCount: z.number(),
     results: z.array(BulkOperationResultSchema),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entities were updated."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `entities_updated` + scalar batch audit summary). Present on a confirmed execute. A bulk write is governed as a single batch effect — it carries no per-entity canonical snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class; the governed result is the batch effect, not one entity). Present on every response."
+    ),
   })
   .describe("Bulk entity update results");
 
@@ -78,6 +108,31 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateOutput> {
+  // Effect-class write: a bulk batch of N mutations is governed as a single
+  // batch effect, not one canonical entity. Snapshot-level bulk governance is
+  // deferred to a future `bulkEntity` contract (see project memory).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  // Symbolic dry-run: validate the batch and project the would-be effect. No
+  // confirmation prompt, no API call.
+  if (input.dry_run === true) {
+    const dryRun = buildBulkEffectDryRun(input);
+    return {
+      confirmed: true,
+      entityType: input.entityType,
+      totalRequested: 0,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
@@ -97,6 +152,7 @@ export async function bulkUpdateEntitiesLogic(
       failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -113,23 +169,96 @@ export async function bulkUpdateEntitiesLogic(
   );
 
   const succeeded = results.filter((r) => r.success).length;
+  const failureCount = items.length - succeeded;
+
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: items.length,
+      succeeded,
+      failed: failureCount,
+      partial_success: succeeded > 0 && failureCount > 0,
+    },
+  };
 
   return {
     confirmed: true,
     entityType: input.entityType,
     totalRequested: items.length,
     successCount: succeeded,
-    failureCount: items.length - succeeded,
+    failureCount,
     results: results.map((r) => ({
       success: r.success,
       entity: r.entity as Record<string, any> | undefined,
       error: r.error,
     })),
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
+ * item must target a non-empty entityId and carry a non-empty data payload) and
+ * projects the would-be effect (an N-item update of one entity kind). TTD has no
+ * native bulk validate, so both axes are symbolic. Pure (no I/O).
+ */
+function buildBulkEffectDryRun(input: BulkUpdateInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  input.items.forEach((item, i) => {
+    if (!item.entityId || item.entityId.trim().length === 0) {
+      validationErrors.push({
+        code: "INVALID_ENTITY_ID",
+        message: `items[${i}].entityId must be a non-empty entity ID`,
+        field: `items.${i}.entityId`,
+      });
+    }
+    if (!item.data || typeof item.data !== "object" || Object.keys(item.data).length === 0) {
+      validationErrors.push({
+        code: "EMPTY_UPDATE",
+        message: `items[${i}].data must contain at least one field to update`,
+        field: `items.${i}.data`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_kind: input.entityType, requested: input.items.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? 0;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: bulk-updating ${String(n)} ${result.entityType}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were updated.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -157,6 +286,25 @@ export const bulkUpdateEntitiesTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "bulk_update_entities",
+      operation: ["bulk_job"],
+      // Effect-class: a bulk batch is governed as one batch effect (no canonical
+      // per-entity snapshot). Snapshot-level bulk governance is a future bulkEntity contract.
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.bulk_update_entities.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
