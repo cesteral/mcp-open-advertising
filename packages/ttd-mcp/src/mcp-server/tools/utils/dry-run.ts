@@ -210,3 +210,66 @@ export async function runTtdUpdateDryRun(
     "ttd_update_entity"
   );
 }
+
+/**
+ * Resolve the `(delete, entityKind)` capability for `ttd_delete_entity`. TTD's
+ * "delete" is an archive (Availability → Archived). Out-of-scope kinds
+ * (advertiser / creative / conversionTracker) resolve to
+ * `canonicalEntityKind: null` — still token-gated, no canonical snapshot. Pure.
+ */
+export function resolveTtdDeleteCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface TtdDeleteDryRunArgs {
+  entityType: string;
+  entityId: string;
+}
+
+/**
+ * Symbolic delete dry-run for `ttd_delete_entity`. TTD has no validate-only
+ * delete; the expected post-state is the current entity with canonical status
+ * `archived` (TTD retires entities via Availability="Archived"), produced by
+ * reading the entity and overlaying that status. Out-of-scope kinds are
+ * token-gated but carry no canonical snapshot, so the in-scope simulation guard
+ * is skipped for them (mirrors create/update §Template A handling). Pure I/O via
+ * the read partner only.
+ */
+export async function runTtdDeleteDryRun(
+  input: TtdDeleteDryRunArgs,
+  service: TtdServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (ENTITY_KIND_MAP[input.entityType] && service.getEntity) {
+    const current = (await service.getEntity(input.entityType, input.entityId, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildTtdSnapshot(input.entityType, input.entityId, current, {
+        Availability: "Archived",
+      });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  const inScope = Boolean(ENTITY_KIND_MAP[input.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "ttd_delete_entity") : result;
+}
