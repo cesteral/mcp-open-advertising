@@ -4,14 +4,31 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
-import { elicitBulkDeleteConfirmation } from "@cesteral/shared";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import {
+  elicitBulkDeleteConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "msads_delete_entity";
 const TOOL_TITLE = "Delete Microsoft Ads Entity";
 const TOOL_DESCRIPTION = `Delete one or more Microsoft Advertising entities by their IDs.
 
 This is a destructive operation — entities will be permanently deleted.`;
+
+const EFFECT_KIND = "entities_deleted";
 
 export const DeleteEntityInputSchema = z
   .object({
@@ -21,6 +38,13 @@ export const DeleteEntityInputSchema = z
       .record(z.unknown())
       .optional()
       .describe("Additional parameters (e.g., AccountId)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk delete) without prompting for confirmation or calling the Microsoft Ads API. No entities are deleted."
+      ),
   })
   .describe("Parameters for deleting Microsoft Ads entities");
 
@@ -32,6 +56,15 @@ export const DeleteEntityOutputSchema = z
     entityType: z.string(),
     deletedCount: z.number(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No entities were deleted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Entity deletion result");
 
@@ -43,6 +76,26 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  // Effect-class write: a bulk delete batch is governed as one batch effect, not
+  // one canonical entity. Snapshot-level bulk governance is a future contract.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const dryRun = buildBulkEffectDryRun(input);
+    return {
+      confirmed: true,
+      result: {},
+      entityType: input.entityType,
+      deletedCount: 0,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitBulkDeleteConfirmation({
     count: input.entityIds.length,
     entityLabel: input.entityType,
@@ -57,6 +110,7 @@ export async function deleteEntityLogic(
       entityType: input.entityType,
       deletedCount: 0,
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -69,16 +123,83 @@ export async function deleteEntityLogic(
     context
   )) as Record<string, unknown>;
 
+  // The Microsoft Ads delete call is whole-batch: it resolves only when the
+  // batch was accepted, so the effect is emitted with the full requested count.
+  const effect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: {
+      entity_kind: input.entityType,
+      requested: input.entityIds.length,
+      succeeded: input.entityIds.length,
+      failed: 0,
+      partial_success: false,
+    },
+  };
+
   return {
     confirmed: true,
     result,
     entityType: input.entityType,
     deletedCount: input.entityIds.length,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `delete_entity`. Validates every id is non-empty
+ * and projects the would-be effect (an N-item delete of one entity kind).
+ * Microsoft Ads has no native bulk validate, so both axes are symbolic. Pure.
+ */
+function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  input.entityIds.forEach((entityId, i) => {
+    if (!entityId || entityId.trim().length === 0) {
+      validationErrors.push({
+        code: "INVALID_ENTITY_ID",
+        message: `entityIds[${i}] must be a non-empty entity ID`,
+        field: `entityIds.${i}`,
+      });
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: EFFECT_KIND,
+    summary: { entity_kind: input.entityType, requested: input.entityIds.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? 0;
+    const kind = result.dryRun.expectedEffect?.summary.entity_kind ?? "entity";
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: bulk-deleting ${String(n)} ${String(kind)}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were deleted.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -106,6 +227,25 @@ export const deleteEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "msads",
+      contractPlatformSlug: "msads",
+      contractToolSlug: "delete_entity",
+      operation: ["bulk_job"],
+      // Effect-class: a bulk delete batch is governed as one batch effect (no
+      // canonical per-entity snapshot).
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "msads.delete_entity.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
