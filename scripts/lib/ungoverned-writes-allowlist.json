@@ -14,15 +14,14 @@
     "linkedin-mcp": [],
     "meta-mcp": ["meta_manage_budget_schedule"],
     "msads-mcp": [
-      "msads_delete_entity",
       "msads_import_from_google",
       "msads_manage_ad_extensions",
       "msads_manage_criterions"
     ],
-    "pinterest-mcp": ["pinterest_delete_entity"],
+    "pinterest-mcp": [],
     "sa360-mcp": [],
-    "snapchat-mcp": ["snapchat_delete_entity"],
-    "tiktok-mcp": ["tiktok_delete_entity"],
+    "snapchat-mcp": [],
+    "tiktok-mcp": [],
     "ttd-mcp": [
       "ttd_archive_entities",
       "ttd_bulk_manage_bid_lists",
