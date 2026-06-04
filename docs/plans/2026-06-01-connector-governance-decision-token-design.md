@@ -10,7 +10,9 @@
 
 Governance §10 item 5 is out-of-repo for the connector: expand connector contracts/snapshots so **every production write** has a stable contract, preview (dry-run) semantics, execute snapshots, and a reconciliation path — and have the connector **verify the `X-Cesteral-Decision-Token`** that Intelligence now mints on write calls.
 
-Today only the 13 `*_update_entity` tools (+ amazon-dsp `update_commitment`) carry `cesteral` annotations. ~109 other write tools (create/delete/bulk/duplicate/adjust-bids/upload/report-schedule CRUD/conversion-upload/graphql-bulk) are ungoverned. Nothing reads `X-Cesteral-Decision-Token`.
+Original baseline (2026-06-01): only the 13 `*_update_entity` tools (+ amazon-dsp `update_commitment`) carried `cesteral` annotations; ~109 other write tools were ungoverned.
+
+As of 2026-06-04 the contract surface has expanded substantially — `update_entity`, `create_entity`, `duplicate_entity`, `delete_entity` (fleet-wide), the `bulk_create`/`bulk_update_entities`/`bulk_update_status` families, `adjust_bids`, media uploads, `submit_report`, report-schedule/template CRUD, and SA360 conversion uploads are all governed. **~18 write tools remain ungoverned** (see `scripts/lib/ungoverned-writes-allowlist.json` — the long tail of platform-specific tools: dv360 custom-bidding/assigned-targeting, ttd graphql passthroughs + bid-list/seed/archive, msads import/extensions/criterions, amazon-dsp `create_commitment`, meta `manage_budget_schedule`). Token verification (`X-Cesteral-Decision-Token`) is still un-wired (default `off`).
 
 **Scope:** all 122 production write tools across 13 servers (Scope C), plus the net-new token-verification subsystem. Multi-PR, **warn-only first**; enforce per-contract only when coverage is complete.
 

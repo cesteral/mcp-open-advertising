@@ -75,8 +75,27 @@ describe("msads_delete_entity governance contract (effect class)", () => {
       },
     });
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
+    expect(result.failedCount).toBe(0);
     expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+  });
+
+  it("parses Microsoft Ads PartialErrors into honest succeeded/failed counts", async () => {
+    // HTTP 200 with a per-item failure: item at Index 1 was rejected.
+    svc.deleteEntity.mockResolvedValueOnce({
+      PartialErrors: [{ Index: 1, Code: 1100, Message: "EntityNotExist" }],
+    });
+    const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.deletedCount).toBe(1);
+    expect(result.failedCount).toBe(1);
+    expect(result.effect?.summary).toEqual({
+      entity_kind: "campaign",
+      requested: 2,
+      succeeded: 1,
+      failed: 1,
+      partial_success: true,
+    });
+    expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
   });
 
   it("declined confirmation reports the capability, no effect", async () => {

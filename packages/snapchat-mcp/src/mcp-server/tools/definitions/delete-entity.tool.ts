@@ -56,15 +56,26 @@ export const DeleteEntityOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    deleted: z.boolean(),
+    deleted: z.boolean().describe("True only when every requested id was deleted."),
     entityType: z.string(),
     entityIds: z.array(z.string()),
+    succeededCount: z.number().describe("Number of ids Snapchat confirmed deleted"),
+    failedCount: z.number().describe("Number of ids whose delete request failed"),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-id delete outcome (Snapchat deletes entities one request each)"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were deleted."
     ),
     effect: EffectResultSchema.optional().describe(
-      "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
+      "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary with requested/succeeded/failed counts). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
@@ -94,6 +105,9 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
+      succeededCount: 0,
+      failedCount: 0,
+      results: [],
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -113,6 +127,9 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
+      succeededCount: 0,
+      failedCount: 0,
+      results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -120,31 +137,44 @@ export async function deleteEntityLogic(
 
   const { snapchatService } = resolveSessionServices(sdkContext);
 
-  // Delete each entity individually (Snapchat uses DELETE on entity-specific paths)
-  await Promise.all(
+  // Snapchat deletes entities one request each (entity-specific DELETE paths).
+  // Use allSettled so a failure after an earlier success is recorded honestly —
+  // destructive work already happened and must be reflected, not thrown away.
+  const settled = await Promise.allSettled(
     input.entityIds.map((entityId) =>
       snapchatService.deleteEntity(input.entityType as SnapchatEntityType, entityId, context)
     )
   );
+  const results = settled.map((outcome, i) => ({
+    entityId: input.entityIds[i],
+    success: outcome.status === "fulfilled",
+    ...(outcome.status === "rejected"
+      ? { error: outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason) }
+      : {}),
+  }));
+  const succeededCount = results.filter((r) => r.success).length;
+  const failedCount = results.length - succeededCount;
 
-  // The Snapchat delete is whole-batch (Promise.all rejects on any failure): it
-  // resolves only when every id was accepted, so the effect carries the full count.
+  // Batch effect carries the real per-id outcome counts.
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
     summary: {
       entity_kind: input.entityType,
       requested: input.entityIds.length,
-      succeeded: input.entityIds.length,
-      failed: 0,
-      partial_success: false,
+      succeeded: succeededCount,
+      failed: failedCount,
+      partial_success: succeededCount > 0 && failedCount > 0,
     },
   };
 
   return {
     confirmed: true,
-    deleted: true,
+    deleted: failedCount === 0,
     entityType: input.entityType,
     entityIds: input.entityIds,
+    succeededCount,
+    failedCount,
+    results,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -212,12 +242,15 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
       },
     ];
   }
-  return [
-    {
-      type: "text" as const,
-      text: `${result.entityType} entities deleted: ${result.entityIds.join(", ")}\n\nTimestamp: ${result.timestamp}`,
-    },
+  const lines: string[] = [
+    `${result.entityType} deletions: ${result.succeededCount}/${result.entityIds.length} succeeded, ${result.failedCount} failed`,
+    "",
   ];
+  for (const r of result.results) {
+    lines.push(r.success ? `  ${r.entityId}: deleted` : `  ${r.entityId}: FAILED - ${r.error}`);
+  }
+  lines.push("", `Timestamp: ${result.timestamp}`);
+  return [{ type: "text" as const, text: lines.join("\n") }];
 }
 
 export const deleteEntityTool = {
