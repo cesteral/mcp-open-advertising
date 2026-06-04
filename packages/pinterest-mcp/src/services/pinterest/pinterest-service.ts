@@ -200,14 +200,16 @@ export class PinterestService {
     filters: { adAccountId: string },
     entityIds: string[],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
-    // Single-entity delete endpoints (e.g. /v5/pins/{entityId}) — delete each individually
+    // Single-entity delete endpoints (e.g. /v5/pins/{entityId}) — delete each
+    // individually. Use allSettled so a failure after an earlier success is
+    // reported per-id rather than discarding the destructive work already done.
     if (config.deletePath.includes("{entityId}")) {
-      const results = await Promise.all(
+      const settled = await Promise.allSettled(
         entityIds.map((id) => {
           const path = interpolatePath(config.deletePath, {
             adAccountId: filters.adAccountId,
@@ -216,12 +218,26 @@ export class PinterestService {
           return this.httpClient.delete(path, {}, context);
         })
       );
-      return results.length === 1 ? results[0] : results;
+      return {
+        results: settled.map((outcome, i) => ({
+          entityId: entityIds[i],
+          success: outcome.status === "fulfilled",
+          ...(outcome.status === "rejected"
+            ? {
+                error:
+                  outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+              }
+            : {}),
+        })),
+      };
     }
 
-    // Bulk delete via query params (e.g. ?campaign_ids=id1,id2)
+    // Bulk delete via query params (e.g. ?campaign_ids=id1,id2) — a single atomic
+    // request. A throw here propagates (whole-batch failure, nothing deleted);
+    // success means every id was accepted.
     const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId });
-    return this.httpClient.delete(path, { [config.deleteIdsParam]: entityIds.join(",") }, context);
+    await this.httpClient.delete(path, { [config.deleteIdsParam]: entityIds.join(",") }, context);
+    return { results: entityIds.map((entityId) => ({ entityId, success: true })) };
   }
 
   async updateEntityStatus(

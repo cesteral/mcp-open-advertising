@@ -54,13 +54,16 @@ export const DeleteEntityOutputSchema = z
     declineReason: z.string().optional(),
     result: z.record(z.any()),
     entityType: z.string(),
-    deletedCount: z.number(),
+    deletedCount: z
+      .number()
+      .describe("Number of ids Microsoft Ads accepted (requested − PartialErrors)"),
+    failedCount: z.number().describe("Number of ids Microsoft Ads rejected via PartialErrors"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were deleted."
     ),
     effect: EffectResultSchema.optional().describe(
-      "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
+      "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary with requested/succeeded/failed counts derived from the Microsoft Ads PartialErrors). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
@@ -90,6 +93,7 @@ export async function deleteEntityLogic(
       result: {},
       entityType: input.entityType,
       deletedCount: 0,
+      failedCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -109,6 +113,7 @@ export async function deleteEntityLogic(
       result: {},
       entityType: input.entityType,
       deletedCount: 0,
+      failedCount: 0,
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -123,16 +128,21 @@ export async function deleteEntityLogic(
     context
   )) as Record<string, unknown>;
 
-  // The Microsoft Ads delete call is whole-batch: it resolves only when the
-  // batch was accepted, so the effect is emitted with the full requested count.
+  // Microsoft Ads delete is a single batch call that returns HTTP 200 even when
+  // some ids fail — the per-item failures arrive as `PartialErrors[].Index`. Count
+  // them so the effect reports the real outcome rather than blanket success.
+  const requested = input.entityIds.length;
+  const failedCount = countMsAdsPartialFailures(result, requested);
+  const succeeded = requested - failedCount;
+
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
     summary: {
       entity_kind: input.entityType,
-      requested: input.entityIds.length,
-      succeeded: input.entityIds.length,
-      failed: 0,
-      partial_success: false,
+      requested,
+      succeeded,
+      failed: failedCount,
+      partial_success: succeeded > 0 && failedCount > 0,
     },
   };
 
@@ -140,11 +150,32 @@ export async function deleteEntityLogic(
     confirmed: true,
     result,
     entityType: input.entityType,
-    deletedCount: input.entityIds.length,
+    deletedCount: succeeded,
+    failedCount,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
   };
+}
+
+/**
+ * Count distinct request items the Microsoft Ads delete rejected. The JSON
+ * Campaign Management API returns HTTP 200 with a top-level `PartialErrors`
+ * array; each entry's `Index` points at the failed request item. Defensive: only
+ * indices within the requested range are counted.
+ */
+function countMsAdsPartialFailures(result: unknown, requested: number): number {
+  if (!result || typeof result !== "object") return 0;
+  const partialErrors = (result as Record<string, unknown>).PartialErrors;
+  if (!Array.isArray(partialErrors)) return 0;
+  const failedIndices = new Set<number>();
+  for (const entry of partialErrors) {
+    const index = (entry as Record<string, unknown>)?.Index;
+    if (typeof index === "number" && Number.isInteger(index) && index >= 0 && index < requested) {
+      failedIndices.add(index);
+    }
+  }
+  return failedIndices.size;
 }
 
 /**
@@ -208,10 +239,13 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
       },
     ];
   }
+  const total = result.deletedCount + result.failedCount;
+  const failedNote =
+    result.failedCount > 0 ? ` (${result.failedCount} rejected via PartialErrors)` : "";
   return [
     {
       type: "text" as const,
-      text: `Deleted ${result.deletedCount} ${result.entityType} entities\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Deleted ${result.deletedCount}/${total} ${result.entityType} entities${failedNote}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

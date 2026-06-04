@@ -84,6 +84,28 @@ describe("snapchat_delete_entity governance contract (effect class)", () => {
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
   });
 
+  it("execute reports honest partial-failure counts when one id fails", async () => {
+    // First id deletes, second rejects — destructive work happened and must be
+    // reflected, not discarded by a thrown Promise.all.
+    svc.deleteEntity
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("delete failed"));
+    const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
+    expect(svc.deleteEntity).toHaveBeenCalledTimes(2);
+    expect(result.deleted).toBe(false);
+    expect(result.succeededCount).toBe(1);
+    expect(result.failedCount).toBe(1);
+    expect(result.results.find((r) => !r.success)?.error).toBe("delete failed");
+    expect(result.effect?.summary).toEqual({
+      entity_kind: "campaign",
+      requested: 2,
+      succeeded: 1,
+      failed: 1,
+      partial_success: true,
+    });
+    expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
+  });
+
   it("declined confirmation reports the capability, no effect", async () => {
     mockElicit.mockResolvedValue(false);
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);

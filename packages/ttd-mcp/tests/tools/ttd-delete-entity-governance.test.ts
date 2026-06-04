@@ -80,6 +80,23 @@ describe("ttd_delete_entity governance contract (entity class)", () => {
     expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
   });
 
+  it("execute (out-of-scope creative) still deletes, with a null kind and no snapshot", async () => {
+    const result = await deleteEntityLogic(
+      { entityType: "creative", entityId: "cre-1", advertiserId: "adv-1" } as any,
+      ctx,
+      sdk
+    );
+    // Out-of-scope writes still execute and are still token-gated.
+    expect(ttdService.deleteEntity).toHaveBeenCalledOnce();
+    expect(result.success).toBe(true);
+    // No canonical snapshot is read or produced for an out-of-scope kind.
+    expect(ttdService.getEntity).not.toHaveBeenCalled();
+    expect(result.before).toBeUndefined();
+    expect(result.after).toBeUndefined();
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
+  });
+
   it("execute captures before/after snapshots around the archive", async () => {
     const result = await deleteEntityLogic(
       { entityType: "campaign", entityId: "camp-1", advertiserId: "adv-1" } as any,

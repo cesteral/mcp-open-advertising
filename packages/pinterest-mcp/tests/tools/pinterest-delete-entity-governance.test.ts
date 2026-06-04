@@ -33,7 +33,14 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = { deleteEntity: vi.fn().mockResolvedValue(undefined) };
+    svc = {
+      deleteEntity: vi.fn().mockResolvedValue({
+        results: [
+          { entityId: "1800111", success: true },
+          { entityId: "1800222", success: true },
+        ],
+      }),
+    };
     mockResolveSessionServices.mockReturnValue({ pinterestService: svc });
     mockElicit.mockResolvedValue(true);
   });
@@ -69,6 +76,8 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.deleteEntity).toHaveBeenCalledOnce();
     expect(result.deleted).toBe(true);
+    expect(result.succeededCount).toBe(2);
+    expect(result.failedCount).toBe(0);
     expect(result.effect).toEqual({
       effectKind: "entities_deleted",
       summary: {
@@ -82,6 +91,27 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+  });
+
+  it("execute reports honest partial-failure counts (one id rejected)", async () => {
+    svc.deleteEntity.mockResolvedValueOnce({
+      results: [
+        { entityId: "1800111", success: true },
+        { entityId: "1800222", success: false, error: "404 not found" },
+      ],
+    });
+    const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.deleted).toBe(false);
+    expect(result.succeededCount).toBe(1);
+    expect(result.failedCount).toBe(1);
+    expect(result.effect?.summary).toEqual({
+      entity_kind: "campaign",
+      requested: 2,
+      succeeded: 1,
+      failed: 1,
+      partial_success: true,
+    });
+    expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
   });
 
   it("declined confirmation reports the capability, no effect", async () => {
