@@ -1,7 +1,7 @@
 {
   "_comment": "Write tools (annotations.readOnlyHint === false) that do NOT yet carry a cesteral governance contract. This is the coverage RATCHET: the write-coverage test fails if any non-allowlisted write tool is ungoverned (no new ungoverned writes) AND if any allowlisted tool is no longer an ungoverned write (stale entry). As tools are migrated to the entity/effect contract (PRs 3-N), remove them from this list. Goal: empty.",
   "ungoverned": {
-    "amazon-dsp-mcp": ["amazon_dsp_create_commitment", "amazon_dsp_delete_entity"],
+    "amazon-dsp-mcp": ["amazon_dsp_create_commitment"],
     "cm360-mcp": ["cm360_delete_entity"],
     "dv360-mcp": [
       "dv360_create_assigned_targeting",
