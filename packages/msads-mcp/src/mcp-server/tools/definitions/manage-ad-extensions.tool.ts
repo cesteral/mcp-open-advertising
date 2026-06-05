@@ -3,8 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "msads_manage_ad_extensions";
 const TOOL_TITLE = "Manage Microsoft Ads Ad Extensions";
@@ -21,14 +35,30 @@ export const ManageAdExtensionsInputSchema = z
       .enum(["setAssociations", "deleteAssociations", "getAssociations"])
       .describe("Operation to perform"),
     data: z.record(z.unknown()).describe("Operation data (varies by operation)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without calling the Microsoft Ads API. No associations are changed."
+      ),
   })
   .describe("Parameters for managing ad extensions");
 
 export const ManageAdExtensionsOutputSchema = z
   .object({
-    result: z.record(z.any()),
+    result: z.record(z.any()).optional(),
     operation: z.string(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No associations were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `ad_extensions_managed` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Ad extension management result");
 
@@ -46,6 +76,34 @@ export async function manageAdExtensionsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageAdExtensionsOutput> {
+  // Effect-class write: ad-extension associations are not a canonical entity.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      operation: input.operation,
+      timestamp: new Date().toISOString(),
+      dryRun: assertGovernedEffectDryRun(
+        {
+          wouldSucceed: true,
+          validationErrors: [],
+          validationSource: "symbolic",
+          expectedEffectSource: "symbolic",
+          expectedEffect: {
+            effectKind: "ad_extensions_managed",
+            summary: { operation: input.operation },
+          },
+        },
+        TOOL_NAME,
+        { requiresValidation: true, requiresSimulation: true }
+      ),
+      dispatchedCapability,
+    };
+  }
+
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const op = OPERATION_PATHS[input.operation];
@@ -63,16 +121,33 @@ export async function manageAdExtensionsLogic(
     op.method
   )) as Record<string, unknown>;
 
+  // Effect summary carries audit identity only — never the raw association data.
+  const effect: EffectResult = {
+    effectKind: "ad_extensions_managed",
+    summary: { operation: input.operation },
+  };
+
   return {
     result,
     operation: input.operation,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
 export function manageAdExtensionsResponseFormatter(
   result: ManageAdExtensionsOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: ad extension ${result.operation} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No associations were changed.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -92,6 +167,23 @@ export const manageAdExtensionsTool = {
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "msads",
+      contractPlatformSlug: "msads",
+      contractToolSlug: "manage_ad_extensions",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "msads.manage_ad_extensions.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

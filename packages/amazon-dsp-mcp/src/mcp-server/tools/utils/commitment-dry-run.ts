@@ -213,6 +213,48 @@ export function resolveCommitmentDispatchedCapability(): DispatchedCapability {
   };
 }
 
+/**
+ * Resolve the `(operation, entityKind)` an `amazon_dsp_create_commitment` call
+ * dispatches to — always `create` of a `commitment`.
+ */
+export function resolveCommitmentCreateDispatchedCapability(): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: "commitment",
+  };
+}
+
+/**
+ * Symbolic create dry-run for `amazon_dsp_create_commitment`. A create has no
+ * pre-state, so validation is the same symbolic rule set as update and the
+ * expected post-state is the would-be-created commitment projected directly
+ * from the input (no read partner needed — the entity does not exist yet, so the
+ * placeholder id makes the symbolic nature explicit). Pure (no I/O).
+ */
+export function runCommitmentCreateDryRun(input: {
+  profileId: string;
+  data: Record<string, unknown>;
+}): DryRunResult {
+  const validationErrors = symbolicValidate(input.data as Partial<DSPCommitmentUpdateT>);
+  const expectedPostState = buildCommitmentSnapshot(
+    "(pending-create)",
+    input.profileId,
+    input.data as Partial<DSPCommitmentT>,
+    {}
+  );
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource: "server_symbolic_apply",
+      expectedPostState,
+    },
+    "amazon_dsp_create_commitment"
+  );
+}
+
 export interface CommitmentUpdateDryRunArgs {
   commitmentId: string;
   profileId: string;

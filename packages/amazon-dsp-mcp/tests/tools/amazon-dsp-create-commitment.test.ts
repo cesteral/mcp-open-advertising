@@ -59,15 +59,20 @@ const createdCommitment = {
 };
 
 describe("amazon_dsp_create_commitment", () => {
-  it("is a destructive write tool with NO cesteral block (matches create-entity precedent)", () => {
+  it("is a destructive entity-class governed create write", () => {
     expect(createCommitmentTool.name).toBe("amazon_dsp_create_commitment");
     expect(createCommitmentTool.annotations.readOnlyHint).toBe(false);
     expect(createCommitmentTool.annotations.destructiveHint).toBe(true);
     expect(createCommitmentTool.annotations.openWorldHint).toBe(false);
-    expect((createCommitmentTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
+    const cesteral = (createCommitmentTool.annotations as { cesteral?: any }).cesteral;
+    expect(cesteral?.kind).toBe("write");
+    expect(cesteral?.writeClass).toBe("entity");
+    expect(cesteral?.operation).toEqual(["create"]);
+    expect(cesteral?.entityKinds).toEqual(["commitment"]);
+    expect(cesteral?.contractId).toBe("amazon_dsp.create_commitment.v1");
   });
 
-  it("forwards input.data to amazonDspV1Service.createCommitment and returns the created commitment", async () => {
+  it("forwards input.data to amazonDspV1Service.createCommitment and returns the created commitment + after snapshot", async () => {
     mockCreateCommitment.mockResolvedValueOnce(createdCommitment);
 
     const result = await createCommitmentLogic(validInput, baseContext, baseSdkContext);
@@ -75,6 +80,26 @@ describe("amazon_dsp_create_commitment", () => {
     expect(mockCreateCommitment).toHaveBeenCalledWith(validInput.data, baseContext);
     expect(result.commitment).toEqual(createdCommitment);
     expect(result.timestamp).toBeDefined();
+    // Entity-class governed create: null-kind never applies — capability is a
+    // commitment create, and an `after` snapshot is captured (no `before`).
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "commitment",
+    });
+    expect(result.after?.entityKind).toBe("commitment");
+  });
+
+  it("dry_run validates symbolically and creates nothing", async () => {
+    const result = await createCommitmentLogic(
+      { ...validInput, dry_run: true } as any,
+      baseContext,
+      baseSdkContext
+    );
+    expect(mockCreateCommitment).not.toHaveBeenCalled();
+    expect(result.commitment).toBeUndefined();
+    expect(result.dryRun?.validationSource).toBe("symbolic");
+    expect(result.dryRun?.expectedStateSource).toBe("server_symbolic_apply");
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("commitment");
   });
 
   it("propagates service McpError(InvalidParams) on per-item Amazon rejection", async () => {

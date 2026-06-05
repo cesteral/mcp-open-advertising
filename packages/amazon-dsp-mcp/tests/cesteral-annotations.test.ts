@@ -93,10 +93,19 @@ describe("amazon-dsp-mcp cesteral.* annotations (v1 commitments)", () => {
     expect((tool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
-  it("amazon_dsp_create_commitment is destructive with no cesteral annotation (matches create-entity precedent)", () => {
-    expect(createCommitmentTool.annotations.readOnlyHint).toBe(false);
-    expect(createCommitmentTool.annotations.destructiveHint).toBe(true);
-    expect((createCommitmentTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
+  it("annotates amazon_dsp_create_commitment as an entity-class create governed write", () => {
+    const cesteral = (createCommitmentTool.annotations as { cesteral?: any }).cesteral;
+    expect(cesteral).toBeDefined();
+    if (!cesteral || cesteral.kind !== "write") throw new Error("expected a write contract");
+    expect(cesteral.writeClass).toBe("entity");
+    expect(cesteral.operation).toEqual(["create"]);
+    expect(cesteral.entityKinds).toEqual(["commitment"]);
+    expect(cesteral.contractId).toBe("amazon_dsp.create_commitment.v1");
+    // A create has no commitment id to pass; the read partner resolves the
+    // profile scope only (the `after` is read by the returned id).
+    expect(cesteral.readPartner.toolName).toBe("amazon_dsp_get_commitment");
+    expect(cesteral.readPartner.argMap).toEqual({ profileId: "profileId" });
+    expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
   });
 
   it("annotates amazon_dsp_get_commitment as a singular read partner (kind=read, entityKinds=[commitment])", () => {
