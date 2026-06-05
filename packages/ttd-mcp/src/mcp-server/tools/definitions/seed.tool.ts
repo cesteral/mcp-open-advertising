@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_manage_seed";
@@ -103,6 +117,13 @@ export const ManageSeedInputSchema = z
       .record(z.any())
       .optional()
       .describe("Seed payload for create/update (name, description, etc.)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the operation and returns an EffectDryRunResult under `dryRun` (expected effect = the seed operation) without calling the TTD API. No seed is changed."
+      ),
   })
   .superRefine((val, ctx) => {
     if (
@@ -153,6 +174,15 @@ export const ManageSeedOutputSchema = z.object({
   seedId: z.string().optional().describe("ID of the seed affected"),
   result: z.record(z.any()).optional().describe("Data returned by the API"),
   timestamp: z.string().datetime(),
+  dryRun: EffectDryRunResultSchema.optional().describe(
+    "Present only when the request was made with `dry_run: true`. No seed was changed."
+  ),
+  effect: EffectResultSchema.optional().describe(
+    "Effect-class result identity (effectKind `seed_managed` + scalar audit summary incl. the sub-operation). Present on a confirmed execute."
+  ),
+  dispatchedCapability: DispatchedCapabilitySchema.describe(
+    "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class; a seed is not a canonical entity). Present on every response."
+  ),
 });
 
 type ManageSeedInput = z.infer<typeof ManageSeedInputSchema>;
@@ -171,9 +201,29 @@ export async function manageSeedLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageSeedOutput> {
+  const timestamp = new Date().toISOString();
+
+  // Effect-class write: a seed is not a canonical entity, so there is no
+  // before/after snapshot — the operation is governed as a single effect.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      operation: input.operation,
+      seedId: input.seedId,
+      timestamp,
+      dryRun: buildSeedEffectDryRun(input.operation),
+      dispatchedCapability,
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const timestamp = new Date().toISOString();
+  let seedId: string | undefined;
+  let resultData: Record<string, any> | undefined;
 
   switch (input.operation) {
     case "create": {
@@ -189,12 +239,9 @@ export async function manageSeedLogic(
       throwIfUserErrors(payload?.userErrors ?? [], "Seed creation failed");
 
       const seedData = payload?.data as Record<string, any>;
-      return {
-        operation: "create",
-        seedId: seedData?.id as string | undefined,
-        result: seedData,
-        timestamp,
-      };
+      seedId = seedData?.id as string | undefined;
+      resultData = seedData;
+      break;
     }
 
     case "update": {
@@ -210,12 +257,9 @@ export async function manageSeedLogic(
       throwIfUserErrors(payload?.userErrors ?? [], "Seed update failed");
 
       const seedData = payload?.data as Record<string, any>;
-      return {
-        operation: "update",
-        seedId: (seedData?.id ?? input.seedId) as string | undefined,
-        result: seedData,
-        timestamp,
-      };
+      seedId = (seedData?.id ?? input.seedId) as string | undefined;
+      resultData = seedData;
+      break;
     }
 
     case "get": {
@@ -228,12 +272,9 @@ export async function manageSeedLogic(
       throwIfGraphqlErrors(result, "Failed to get seed");
 
       const seedData = result.data?.seed as Record<string, any>;
-      return {
-        operation: "get",
-        seedId: (seedData?.id ?? input.seedId) as string | undefined,
-        result: seedData,
-        timestamp,
-      };
+      seedId = (seedData?.id ?? input.seedId) as string | undefined;
+      resultData = seedData;
+      break;
     }
 
     case "set_default_advertiser": {
@@ -248,13 +289,9 @@ export async function manageSeedLogic(
       const payload = result.data?.advertiserSetDefaultSeed;
       throwIfUserErrors(payload?.userErrors ?? [], "Set default seed failed");
 
-      const advertiserData = payload?.data as Record<string, any>;
-      return {
-        operation: "set_default_advertiser",
-        seedId: input.seedId,
-        result: advertiserData,
-        timestamp,
-      };
+      seedId = input.seedId;
+      resultData = payload?.data as Record<string, any>;
+      break;
     }
 
     case "attach_to_campaign": {
@@ -269,18 +306,65 @@ export async function manageSeedLogic(
       const payload = result.data?.campaignUpdateSeed;
       throwIfUserErrors(payload?.userErrors ?? [], "Campaign seed attachment failed");
 
-      const campaignData = payload?.data as Record<string, any>;
-      return {
-        operation: "attach_to_campaign",
-        seedId: input.seedId,
-        result: campaignData,
-        timestamp,
-      };
+      seedId = input.seedId;
+      resultData = payload?.data as Record<string, any>;
+      break;
     }
   }
+
+  // Effect summary carries audit identity only (sub-operation + seed id) —
+  // never the raw `data` payload.
+  const effect: EffectResult = {
+    effectKind: "seed_managed",
+    summary: { operation: input.operation, ...(seedId ? { seed_id: seedId } : {}) },
+  };
+
+  return {
+    operation: input.operation,
+    seedId,
+    result: resultData,
+    timestamp,
+    effect,
+    dispatchedCapability,
+  };
+}
+
+/**
+ * Symbolic effect dry-run for `ttd_manage_seed`. Per-operation required fields
+ * (seedId / advertiserId / campaignId / data) are enforced by the input
+ * schema's superRefine, so a well-formed call always passes; the projected
+ * effect is the seed operation. Pure (no I/O); never includes the raw `data`.
+ */
+function buildSeedEffectDryRun(operation: ManageSeedInput["operation"]): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "seed_managed",
+    summary: { operation },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function manageSeedResponseFormatter(result: ManageSeedOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: seed ${result.operation} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No seed was changed.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
   const lines: string[] = [];
 
   switch (result.operation) {
@@ -336,6 +420,23 @@ export const manageSeedTool = {
     destructiveHint: false,
     idempotentHint: false,
     openWorldHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "manage_seed",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["seedId"],
+      schemaVersion: 1,
+      contractId: "ttd.manage_seed.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

@@ -3,8 +3,21 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_manage_bid_lists";
 const TOOL_TITLE = "TTD Bulk Manage Bid Lists";
@@ -41,6 +54,13 @@ export const BidListBulkInputSchema = z
       .string()
       .optional()
       .describe('GraphQL selection set on returned BidList. Default: "id name"'),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the batch request and returns an EffectDryRunResult under `dryRun` (expected effect = a batch bid-list job over N items) without calling the TTD API. No bid lists are changed."
+      ),
   })
   .refine(
     (val) =>
@@ -70,6 +90,15 @@ export const BidListBulkOutputSchema = z
     failed: z.number(),
     results: z.array(z.record(z.any())),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No bid lists were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bid_lists_managed` + scalar batch audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Bulk bid list operation result");
 
@@ -81,34 +110,99 @@ export async function bidListBulkLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BidListBulkOutput> {
-  const { ttdService } = resolveSessionServices(sdkContext);
-  const selection = input.selection ?? "id name";
+  // Effect-class write: a batch bid-list job carries no per-item canonical
+  // snapshot — the governed result is the batch effect.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
   const ts = new Date().toISOString();
+  const requested =
+    input.operation === "batch_get" ? (input.bidListIds?.length ?? 0) : (input.items?.length ?? 0);
 
-  if (input.operation === "batch_get") {
-    const results = await ttdService.batchGetBidLists(input.bidListIds!, context, selection);
+  if (input.dry_run === true) {
     return {
-      operation: "batch_get",
-      totalItems: results.length,
-      succeeded: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
-      results: results as unknown as Record<string, unknown>[],
+      operation: input.operation,
+      totalItems: requested,
+      succeeded: 0,
+      failed: 0,
+      results: [],
       timestamp: ts,
+      dryRun: buildBidListBulkEffectDryRun(input.operation, requested),
+      dispatchedCapability,
     };
   }
 
-  const results = await ttdService.batchUpdateBidLists(input.items!, context, selection);
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const selection = input.selection ?? "id name";
+
+  const results =
+    input.operation === "batch_get"
+      ? await ttdService.batchGetBidLists(input.bidListIds!, context, selection)
+      : await ttdService.batchUpdateBidLists(input.items!, context, selection);
+
+  const succeeded = results.filter((r) => r.success).length;
+  const effect: EffectResult = {
+    effectKind: "bid_lists_managed",
+    summary: {
+      operation: input.operation,
+      requested: results.length,
+      succeeded,
+      failed: results.length - succeeded,
+    },
+  };
+
   return {
-    operation: "batch_update",
+    operation: input.operation,
     totalItems: results.length,
-    succeeded: results.filter((r) => r.success).length,
-    failed: results.filter((r) => !r.success).length,
+    succeeded,
+    failed: results.length - succeeded,
     results: results as unknown as Record<string, unknown>[],
     timestamp: ts,
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `ttd_bulk_manage_bid_lists`. The per-operation
+ * required arrays (bidListIds / items, each 1..50) are enforced by the input
+ * schema, so a well-formed call always passes; the projected effect is a batch
+ * job over the supplied items. Pure (no I/O); never includes the raw item
+ * payloads.
+ */
+function buildBidListBulkEffectDryRun(
+  operation: BidListBulkInput["operation"],
+  requested: number
+): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "bid_lists_managed",
+    summary: { operation, requested },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function bidListBulkResponseFormatter(result: BidListBulkOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: ${result.operation} over ${result.totalItems} item(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bid lists were changed.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const label = result.operation === "batch_get" ? "Batch get" : "Batch update";
   return [
     {
@@ -134,6 +228,23 @@ export const bulkManageBidListsTool = {
     openWorldHint: false,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "bulk_manage_bid_lists",
+      operation: ["bulk_job"],
+      entityKinds: [],
+      entityIdArgs: ["bidListIds"],
+      schemaVersion: 1,
+      contractId: "ttd.bulk_manage_bid_lists.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

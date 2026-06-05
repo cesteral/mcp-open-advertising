@@ -22,15 +22,6 @@
     "sa360-mcp": [],
     "snapchat-mcp": [],
     "tiktok-mcp": [],
-    "ttd-mcp": [
-      "ttd_archive_entities",
-      "ttd_bulk_manage_bid_lists",
-      "ttd_graphql_cancel_bulk_job",
-      "ttd_graphql_mutation_bulk",
-      "ttd_graphql_query",
-      "ttd_graphql_query_bulk",
-      "ttd_manage_bid_list",
-      "ttd_manage_seed"
-    ]
+    "ttd-mcp": []
   }
 }
