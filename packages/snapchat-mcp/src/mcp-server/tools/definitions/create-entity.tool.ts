@@ -176,7 +176,7 @@ export const createEntityTool = {
       entityIdArgs: ["adAccountId"],
       readPartner: {
         toolName: "snapchat_get_entity",
-        argMap: { adAccountId: "adAccountId" },
+        argMap: { entityType: "entityType", adAccountId: "adAccountId" },
       },
       schemaVersion: 1,
       contractId: "snapchat.create_entity.v1",

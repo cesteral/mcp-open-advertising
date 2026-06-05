@@ -195,7 +195,7 @@ export const updateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "ttd_get_entity",
-        argMap: { entityId: "entityId" },
+        argMap: { entityType: "entityType", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "ttd.update_entity.v1",

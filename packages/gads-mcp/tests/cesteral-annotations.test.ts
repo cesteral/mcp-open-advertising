@@ -31,6 +31,7 @@ describe("gads-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral.entityIdArgs).toEqual(["customerId", "entityId"]);
     expect(cesteral.readPartner.toolName).toBe("gads_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       customerId: "customerId",
       entityId: "entityId",
     });

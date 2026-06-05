@@ -159,7 +159,7 @@ export const createEntityTool = {
       entityIdArgs: ["profileId"],
       readPartner: {
         toolName: "cm360_get_entity",
-        argMap: { profileId: "profileId" },
+        argMap: { entityType: "entityType", profileId: "profileId" },
       },
       schemaVersion: 1,
       contractId: "cm360.create_entity.v1",

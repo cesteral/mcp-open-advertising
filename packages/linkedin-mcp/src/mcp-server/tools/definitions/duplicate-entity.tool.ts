@@ -178,7 +178,7 @@ export const duplicateEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityUrn: "entityUrn" },
+        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.duplicate_entity.v1",

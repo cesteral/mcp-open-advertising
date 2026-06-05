@@ -27,7 +27,10 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral.entityKinds).toEqual(["campaign", "ad_set", "ad"]);
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
     expect(cesteral.readPartner.toolName).toBe("meta_get_entity");
-    expect(cesteral.readPartner.argMap).toEqual({ entityId: "entityId" });
+    expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
+      entityId: "entityId",
+    });
     // PR-C wires dry_run; PR-D wires before/after via the read partner.
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);

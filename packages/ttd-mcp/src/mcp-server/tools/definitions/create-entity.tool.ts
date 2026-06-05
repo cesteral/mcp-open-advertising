@@ -194,7 +194,7 @@ export const createEntityTool = {
       entityIdArgs: [],
       readPartner: {
         toolName: "ttd_get_entity",
-        argMap: {},
+        argMap: { entityType: "entityType" },
       },
       schemaVersion: 1,
       contractId: "ttd.create_entity.v1",

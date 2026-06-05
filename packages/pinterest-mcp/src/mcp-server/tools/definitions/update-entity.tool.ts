@@ -201,7 +201,7 @@ export const updateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "pinterest_get_entity",
-        argMap: { adAccountId: "adAccountId", entityId: "entityId" },
+        argMap: { entityType: "entityType", adAccountId: "adAccountId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "pinterest.update_entity.v1",

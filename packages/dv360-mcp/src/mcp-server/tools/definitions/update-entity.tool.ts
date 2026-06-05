@@ -315,7 +315,11 @@ export const updateEntityTool = {
       entityIdArgs: ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"],
       readPartner: {
         toolName: "dv360_get_entity",
+        // `dv360_get_entity` requires the `entityType` discriminator (its only
+        // unconditionally-required arg) to know which resource to read — map it
+        // so the read is self-describing, not convention-derived (Risk #6).
         argMap: {
+          entityType: "entityType",
           advertiserId: "advertiserId",
           campaignId: "campaignId",
           insertionOrderId: "insertionOrderId",

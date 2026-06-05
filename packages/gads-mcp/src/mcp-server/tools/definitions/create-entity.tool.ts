@@ -165,7 +165,7 @@ export const createEntityTool = {
       entityIdArgs: ["customerId"],
       readPartner: {
         toolName: "gads_get_entity",
-        argMap: { customerId: "customerId" },
+        argMap: { entityType: "entityType", customerId: "customerId" },
       },
       schemaVersion: 1,
       contractId: "google_ads.create_entity.v1",

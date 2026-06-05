@@ -30,6 +30,7 @@ describe("pinterest-mcp cesteral.* annotations (round 4)", () => {
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
     expect(cesteral.readPartner.toolName).toBe("pinterest_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       adAccountId: "adAccountId",
       entityId: "entityId",
     });

@@ -218,7 +218,7 @@ export const deleteEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "meta_get_entity",
-        argMap: { entityId: "entityId" },
+        argMap: { entityType: "entityType", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "meta.delete_entity.v1",

@@ -192,7 +192,7 @@ export const updateEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityUrn: "entityUrn" },
+        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.update_entity.v1",

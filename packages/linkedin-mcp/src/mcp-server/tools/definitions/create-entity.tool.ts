@@ -168,7 +168,7 @@ export const createEntityTool = {
       entityIdArgs: [],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: {},
+        argMap: { entityType: "entityType" },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.create_entity.v1",

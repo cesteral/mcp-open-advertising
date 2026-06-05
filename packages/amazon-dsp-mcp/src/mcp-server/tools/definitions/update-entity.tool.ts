@@ -194,7 +194,7 @@ export const updateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "amazon_dsp_get_entity",
-        argMap: { profileId: "profileId", entityId: "entityId" },
+        argMap: { entityType: "entityType", profileId: "profileId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "amazon_dsp.update_entity.v1",

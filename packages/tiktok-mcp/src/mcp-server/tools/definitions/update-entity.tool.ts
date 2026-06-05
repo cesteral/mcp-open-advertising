@@ -182,7 +182,7 @@ export const updateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "tiktok_get_entity",
-        argMap: { advertiserId: "advertiserId", entityId: "entityId" },
+        argMap: { entityType: "entityType", advertiserId: "advertiserId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "tiktok.update_entity.v1",

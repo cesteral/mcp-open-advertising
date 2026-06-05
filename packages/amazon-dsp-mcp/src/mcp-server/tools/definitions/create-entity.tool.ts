@@ -168,7 +168,7 @@ export const createEntityTool = {
       entityIdArgs: [],
       readPartner: {
         toolName: "amazon_dsp_get_entity",
-        argMap: { profileId: "profileId" },
+        argMap: { entityType: "entityType", profileId: "profileId" },
       },
       schemaVersion: 1,
       contractId: "amazon_dsp.create_entity.v1",

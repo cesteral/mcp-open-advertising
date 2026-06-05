@@ -177,7 +177,7 @@ export const duplicateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "pinterest_get_entity",
-        argMap: { adAccountId: "adAccountId", entityId: "entityId" },
+        argMap: { entityType: "entityType", adAccountId: "adAccountId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "pinterest.duplicate_entity.v1",
