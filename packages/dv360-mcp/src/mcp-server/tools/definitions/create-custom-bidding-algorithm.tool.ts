@@ -3,8 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_create_custom_bidding_algorithm";
@@ -67,6 +81,13 @@ export const CreateCustomBiddingAlgorithmInputSchema = z
       .string()
       .optional()
       .describe("For RULE_BASED: optional rules content to upload immediately after creation"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without eliciting missing fields or calling the DV360 API. Missing required fields (displayName, ownerType, ownerId) surface as validation errors. Nothing is created."
+      ),
   })
   .describe("Parameters for creating a custom bidding algorithm");
 
@@ -85,7 +106,8 @@ export const CreateCustomBiddingAlgorithmOutputSchema = z
         partnerId: z.string().optional(),
         sharedAdvertiserIds: z.array(z.string()).optional(),
       })
-      .describe("Created algorithm details"),
+      .optional()
+      .describe("Created algorithm details (absent on a dry-run)"),
     scriptUpload: z
       .object({
         success: z.boolean(),
@@ -105,6 +127,15 @@ export const CreateCustomBiddingAlgorithmOutputSchema = z
       .optional()
       .describe("Rules upload result if initialRules was provided"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `custom_bidding_algorithm_created` + scalar audit summary). Present on a real create."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class; a custom bidding algorithm is not a canonical entity). Present on every response."
+    ),
   })
   .describe("Create custom bidding algorithm result");
 
@@ -119,6 +150,21 @@ export async function createCustomBiddingAlgorithmLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateCustomBiddingAlgorithmOutput> {
+  // Effect-class write: a custom bidding algorithm is not a canonical entity, so
+  // there is no before/after snapshot — the create is governed as an effect.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun: buildAlgorithmEffectDryRun(input),
+      dispatchedCapability,
+    };
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Elicit display name if not provided
@@ -183,6 +229,16 @@ export async function createCustomBiddingAlgorithmLogic(
 
   const algorithmId = createdAlgorithm.customBiddingAlgorithmId;
 
+  // Effect summary carries audit identity only — never the script/rules source.
+  const effect: EffectResult = {
+    effectKind: "custom_bidding_algorithm_created",
+    summary: {
+      algorithm_id: algorithmId,
+      algorithm_type: input.algorithmType,
+      owner_type: ownerType,
+    },
+  };
+
   const result: CreateCustomBiddingAlgorithmOutput = {
     algorithm: {
       customBiddingAlgorithmId: algorithmId,
@@ -194,6 +250,8 @@ export async function createCustomBiddingAlgorithmLogic(
       sharedAdvertiserIds: createdAlgorithm.sharedAdvertiserIds,
     },
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 
   // Scope sub-resource calls to the algorithm's owner — DV360 requires this
@@ -268,11 +326,72 @@ export async function createCustomBiddingAlgorithmLogic(
 }
 
 /**
+ * Symbolic effect dry-run for `dv360_create_custom_bidding_algorithm`. A
+ * preview cannot elicit interactively, so the fields normally prompted for
+ * (displayName, ownerType, ownerId) surface as validation errors when absent —
+ * an honest "here's what's still required" signal. The projected effect is the
+ * creation of the algorithm. Pure (no I/O); never includes the script/rules.
+ */
+function buildAlgorithmEffectDryRun(input: CreateCustomBiddingAlgorithmInput): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  if (!input.displayName)
+    validationErrors.push({
+      code: "MISSING_FIELD",
+      message: "displayName is required (would be prompted on a real call)",
+      field: "displayName",
+    });
+  if (!input.ownerType)
+    validationErrors.push({
+      code: "MISSING_FIELD",
+      message: "ownerType is required (would be prompted on a real call)",
+      field: "ownerType",
+    });
+  if (!input.ownerId)
+    validationErrors.push({
+      code: "MISSING_FIELD",
+      message: "ownerId is required (would be prompted on a real call)",
+      field: "ownerId",
+    });
+
+  const summary: EffectResult["summary"] = { algorithm_type: input.algorithmType };
+  if (input.ownerType) summary.owner_type = input.ownerType;
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect: { effectKind: "custom_bidding_algorithm_created", summary },
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
+/**
  * Format response for MCP client
  */
 export function createCustomBiddingAlgorithmResponseFormatter(
   result: CreateCustomBiddingAlgorithmOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: creating a ${result.dryRun.expectedEffect?.summary.algorithm_type} custom bidding algorithm ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was created.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+  if (!result.algorithm) {
+    return [{ type: "text" as const, text: `Timestamp: ${result.timestamp}` }];
+  }
   let message = `Custom bidding algorithm created successfully!\n\n`;
   message += `**Algorithm Details:**\n`;
   message += `- ID: ${result.algorithm.customBiddingAlgorithmId}\n`;
@@ -359,6 +478,23 @@ export const createCustomBiddingAlgorithmTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "create_custom_bidding_algorithm",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["ownerId"],
+      schemaVersion: 1,
+      contractId: "dv360.create_custom_bidding_algorithm.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: createCustomBiddingAlgorithmLogic,
   responseFormatter: createCustomBiddingAlgorithmResponseFormatter,

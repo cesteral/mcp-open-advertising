@@ -3,9 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_manage_custom_bidding_rules";
@@ -64,6 +77,13 @@ export const ManageCustomBiddingRulesInputSchema = z
       .string()
       .optional()
       .describe("Partner scope (required if the algorithm is partner-owned). See advertiserId."),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without eliciting missing fields or calling the DV360 API. Action-specific required fields surface as validation errors. Nothing is changed."
+      ),
   })
   .describe("Parameters for managing custom bidding rules");
 
@@ -102,6 +122,15 @@ export const ManageCustomBiddingRulesOutputSchema = z
       .describe("List of rules (for list action)"),
     nextPageToken: z.string().optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `custom_bidding_rules_managed` + scalar audit summary incl. the action). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Manage custom bidding rules result");
 
@@ -116,6 +145,22 @@ export async function manageCustomBiddingRulesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageCustomBiddingRulesOutput> {
+  // Effect-class write: custom bidding rules are not a canonical entity.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      action: input.action,
+      customBiddingAlgorithmId: input.customBiddingAlgorithmId ?? "",
+      timestamp: new Date().toISOString(),
+      dryRun: buildRulesEffectDryRun(input),
+      dispatchedCapability,
+    };
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Elicit algorithm ID if not provided
@@ -142,6 +187,11 @@ export async function manageCustomBiddingRulesLogic(
     action: input.action,
     customBiddingAlgorithmId: algorithmId,
     timestamp: new Date().toISOString(),
+    effect: {
+      effectKind: "custom_bidding_rules_managed",
+      summary: { action: input.action, algorithm_id: algorithmId },
+    },
+    dispatchedCapability,
   };
 
   switch (input.action) {
@@ -262,11 +312,74 @@ export async function manageCustomBiddingRulesLogic(
 }
 
 /**
+ * Symbolic effect dry-run for `dv360_manage_custom_bidding_rules`. A preview
+ * cannot elicit interactively, so action-specific required fields (algorithm id
+ * always; rulesContent for upload; rules id for get; owner scope) surface as
+ * validation errors when absent. Pure (no I/O); never includes rulesContent.
+ */
+function buildRulesEffectDryRun(input: ManageCustomBiddingRulesInput): EffectDryRunResult {
+  const errors = [] as { code: string; message: string; field?: string }[];
+  if (!input.customBiddingAlgorithmId)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "customBiddingAlgorithmId is required (would be prompted on a real call)",
+      field: "customBiddingAlgorithmId",
+    });
+  if (!input.advertiserId && !input.partnerId)
+    errors.push({
+      code: "MISSING_SCOPE",
+      message: "advertiserId or partnerId is required to scope the algorithm owner",
+      field: "advertiserId",
+    });
+  if (input.action === "upload" && !input.rulesContent)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "rulesContent is required for the upload action",
+      field: "rulesContent",
+    });
+  if (input.action === "get" && !input.customBiddingAlgorithmRulesId)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "customBiddingAlgorithmRulesId is required for the get action",
+      field: "customBiddingAlgorithmRulesId",
+    });
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: errors.length === 0,
+      validationErrors: errors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect: {
+        effectKind: "custom_bidding_rules_managed",
+        summary: { action: input.action },
+      },
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
+/**
  * Format response for MCP client
  */
 export function manageCustomBiddingRulesResponseFormatter(
   result: ManageCustomBiddingRulesOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: custom bidding rules ${result.action} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   let message = `**Action:** ${result.action}\n`;
   message += `**Algorithm ID:** ${result.customBiddingAlgorithmId}\n\n`;
 
@@ -348,6 +461,23 @@ export const manageCustomBiddingRulesTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "manage_custom_bidding_rules",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["customBiddingAlgorithmId", "advertiserId", "partnerId"],
+      schemaVersion: 1,
+      contractId: "dv360.manage_custom_bidding_rules.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: manageCustomBiddingRulesLogic,
   responseFormatter: manageCustomBiddingRulesResponseFormatter,

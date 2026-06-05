@@ -3,13 +3,7 @@
   "ungoverned": {
     "amazon-dsp-mcp": ["amazon_dsp_create_commitment"],
     "cm360-mcp": [],
-    "dv360-mcp": [
-      "dv360_create_assigned_targeting",
-      "dv360_create_custom_bidding_algorithm",
-      "dv360_delete_assigned_targeting",
-      "dv360_manage_custom_bidding_rules",
-      "dv360_manage_custom_bidding_script"
-    ],
+    "dv360-mcp": [],
     "gads-mcp": [],
     "linkedin-mcp": [],
     "meta-mcp": ["meta_manage_budget_schedule"],

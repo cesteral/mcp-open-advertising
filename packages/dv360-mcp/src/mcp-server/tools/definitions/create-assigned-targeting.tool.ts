@@ -15,8 +15,21 @@ import {
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_create_assigned_targeting";
 const TOOL_TITLE = "Create DV360 Assigned Targeting Option";
@@ -69,6 +82,13 @@ export const CreateAssignedTargetingInputSchema = z
       .describe(
         "Targeting option data payload. Structure depends on targetingType. Fetch targeting-schema://{type} for schema details."
       ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the targeting option would be created) without calling the DV360 API. Nothing is created."
+      ),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
   .describe("Parameters for creating an assigned targeting option");
@@ -83,6 +103,15 @@ export const CreateAssignedTargetingOutputSchema = z
     parentType: z.string().describe("Parent entity type"),
     targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `assigned_targeting_created` + scalar audit summary). Present on a real create."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class; an assigned targeting option is not a canonical entity). Present on every response."
+    ),
   })
   .describe("Created assigned targeting option result");
 
@@ -97,6 +126,25 @@ export async function createAssignedTargetingLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateAssignedTargetingOutput> {
+  // Effect-class write: an assigned targeting option is not a canonical entity,
+  // so there is no before/after snapshot — the create is governed as an effect.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      createdTargetingOption: {},
+      assignedTargetingOptionId: "",
+      parentType: input.parentType,
+      targetingType: input.targetingType,
+      timestamp: new Date().toISOString(),
+      dryRun: buildAssignedTargetingEffectDryRun(input),
+      dispatchedCapability,
+    };
+  }
+
   const { targetingService } = resolveSessionServices(sdkContext);
 
   // Build IDs object using config-driven helper
@@ -111,15 +159,56 @@ export async function createAssignedTargetingLogic(
   );
 
   const resultObj = result as Record<string, any>;
+  const assignedTargetingOptionId =
+    resultObj.assignedTargetingOptionId || resultObj.name?.split("/").pop() || "unknown";
+
+  // Effect summary carries audit identity only (ids + type) — never the raw
+  // targeting `data` payload.
+  const effect: EffectResult = {
+    effectKind: "assigned_targeting_created",
+    summary: {
+      parent_type: input.parentType,
+      targeting_type: input.targetingType,
+      assigned_targeting_option_id: assignedTargetingOptionId,
+    },
+  };
 
   return {
     createdTargetingOption: resultObj,
-    assignedTargetingOptionId:
-      resultObj.assignedTargetingOptionId || resultObj.name?.split("/").pop() || "unknown",
+    assignedTargetingOptionId,
     parentType: input.parentType,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
+}
+
+/**
+ * Symbolic effect dry-run for `dv360_create_assigned_targeting`. The targeting
+ * type and the parent-id shape are enforced by the input schema's enum + refine,
+ * so a well-formed call always passes; the projected effect is the creation of
+ * the targeting option. Pure (no I/O); never includes the raw `data` payload.
+ */
+function buildAssignedTargetingEffectDryRun(
+  input: CreateAssignedTargetingInput
+): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "assigned_targeting_created",
+    summary: { parent_type: input.parentType, targeting_type: input.targetingType },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 /**
@@ -128,6 +217,15 @@ export async function createAssignedTargetingLogic(
 export function createAssignedTargetingResponseFormatter(
   result: CreateAssignedTargetingOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: creating ${result.targetingType} targeting on ${result.parentType} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was created.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
   const schemaName = getTargetingDetailSchemaName(result.targetingType as TargetingType);
@@ -194,6 +292,23 @@ export const createAssignedTargetingTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "create_assigned_targeting",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "dv360.create_assigned_targeting.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: createAssignedTargetingLogic,
   responseFormatter: createAssignedTargetingResponseFormatter,

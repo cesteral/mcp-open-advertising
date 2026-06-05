@@ -3,9 +3,22 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_manage_custom_bidding_script";
@@ -57,6 +70,13 @@ export const ManageCustomBiddingScriptInputSchema = z
       .string()
       .optional()
       .describe("Partner scope (required if the algorithm is partner-owned). See advertiserId."),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without eliciting missing fields or calling the DV360 API. Action-specific required fields surface as validation errors. Nothing is changed."
+      ),
   })
   .describe("Parameters for managing custom bidding scripts");
 
@@ -99,6 +119,15 @@ export const ManageCustomBiddingScriptOutputSchema = z
       .describe("List of scripts (for list action)"),
     nextPageToken: z.string().optional(),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `custom_bidding_script_managed` + scalar audit summary incl. the action). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Manage custom bidding script result");
 
@@ -113,6 +142,22 @@ export async function manageCustomBiddingScriptLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageCustomBiddingScriptOutput> {
+  // Effect-class write: custom bidding scripts are not a canonical entity.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      action: input.action,
+      customBiddingAlgorithmId: input.customBiddingAlgorithmId ?? "",
+      timestamp: new Date().toISOString(),
+      dryRun: buildScriptEffectDryRun(input),
+      dispatchedCapability,
+    };
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Elicit algorithm ID if not provided
@@ -139,6 +184,11 @@ export async function manageCustomBiddingScriptLogic(
     action: input.action,
     customBiddingAlgorithmId: algorithmId,
     timestamp: new Date().toISOString(),
+    effect: {
+      effectKind: "custom_bidding_script_managed",
+      summary: { action: input.action, algorithm_id: algorithmId },
+    },
+    dispatchedCapability,
   };
 
   switch (input.action) {
@@ -264,11 +314,74 @@ export async function manageCustomBiddingScriptLogic(
 }
 
 /**
+ * Symbolic effect dry-run for `dv360_manage_custom_bidding_script`. A preview
+ * cannot elicit interactively, so action-specific required fields (algorithm id
+ * always; scriptContent for upload; script id for get; owner scope) surface as
+ * validation errors when absent. Pure (no I/O); never includes scriptContent.
+ */
+function buildScriptEffectDryRun(input: ManageCustomBiddingScriptInput): EffectDryRunResult {
+  const errors = [] as { code: string; message: string; field?: string }[];
+  if (!input.customBiddingAlgorithmId)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "customBiddingAlgorithmId is required (would be prompted on a real call)",
+      field: "customBiddingAlgorithmId",
+    });
+  if (!input.advertiserId && !input.partnerId)
+    errors.push({
+      code: "MISSING_SCOPE",
+      message: "advertiserId or partnerId is required to scope the algorithm owner",
+      field: "advertiserId",
+    });
+  if (input.action === "upload" && !input.scriptContent)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "scriptContent is required for the upload action",
+      field: "scriptContent",
+    });
+  if (input.action === "get" && !input.customBiddingScriptId)
+    errors.push({
+      code: "MISSING_FIELD",
+      message: "customBiddingScriptId is required for the get action",
+      field: "customBiddingScriptId",
+    });
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: errors.length === 0,
+      validationErrors: errors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect: {
+        effectKind: "custom_bidding_script_managed",
+        summary: { action: input.action },
+      },
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
+/**
  * Format response for MCP client
  */
 export function manageCustomBiddingScriptResponseFormatter(
   result: ManageCustomBiddingScriptOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: custom bidding script ${result.action} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   let message = `**Action:** ${result.action}\n`;
   message += `**Algorithm ID:** ${result.customBiddingAlgorithmId}\n\n`;
 
@@ -355,6 +468,23 @@ export const manageCustomBiddingScriptTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "manage_custom_bidding_script",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["customBiddingAlgorithmId", "advertiserId", "partnerId"],
+      schemaVersion: 1,
+      contractId: "dv360.manage_custom_bidding_script.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: manageCustomBiddingScriptLogic,
   responseFormatter: manageCustomBiddingScriptResponseFormatter,
