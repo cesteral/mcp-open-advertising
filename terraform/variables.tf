@@ -234,6 +234,16 @@ variable "log_level" {
   default     = "info"
 }
 
+variable "governance_token_mode" {
+  description = "Fleet-wide decision-token enforcement mode (GOVERNANCE_TOKEN_MODE) for the Cesteral-operated deployment: off | warn | enforce. Defaults to 'warn' so the hosted fleet verifies and logs governance decision tokens without blocking writes; the in-code default remains 'off' so self-hosted / unconfigured servers stay neutral. Stage to 'enforce' per-contract via the GOVERNANCE_TOKEN_MODE_*_CONTRACTS env lists once end-to-end token parity is confirmed."
+  type        = string
+  default     = "warn"
+  validation {
+    condition     = contains(["", "off", "warn", "enforce"], var.governance_token_mode)
+    error_message = "governance_token_mode must be one of: off, warn, enforce (or empty to leave unset)."
+  }
+}
+
 variable "dbm_secret_env_vars" {
   description = "Map of env vars to secrets for dbm-mcp"
   type = map(object({

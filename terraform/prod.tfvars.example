@@ -46,7 +46,8 @@ cpu_always_allocated  = true # Faster response times
 allow_unauthenticated = false
 
 # MCP Server configuration
-log_level              = "info" # Production logging level
+log_level              = "info"  # Production logging level
+governance_token_mode  = "warn"  # off | warn | enforce — verify+log decision tokens without blocking; stage to enforce per-contract once parity is confirmed
 enable_gcs_persistence = false
 gcs_bucket_name        = "YOUR_GCP_PROJECT_PROD-mcp-persistence" # Enable when ready
 
