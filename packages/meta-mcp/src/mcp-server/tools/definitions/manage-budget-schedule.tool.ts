@@ -3,9 +3,20 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { elicitBudgetChangeConfirmation } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitBudgetChangeConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "meta_manage_budget_schedule";
 const TOOL_TITLE = "Meta Ads Budget Schedule Management";
@@ -34,6 +45,13 @@ export const ManageBudgetScheduleInputSchema = z
       .describe(
         "Budget schedule data (required for create: budget_value, budget_value_type, time_start, time_end)"
       ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` without prompting for confirmation or calling the Meta API. No budget schedule is created."
+      ),
   })
   .superRefine((val, ctx) => {
     if (val.operation === "create" && !val.data) {
@@ -54,6 +72,15 @@ export const ManageBudgetScheduleOutputSchema = z
     campaignId: z.string(),
     result: z.record(z.any()).describe("API response data"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No budget schedule was created."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `budget_schedule_managed` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class; a budget schedule is not a canonical entity). Present on every response."
+    ),
   })
   .describe("Budget schedule operation result");
 
@@ -65,6 +92,37 @@ export async function manageBudgetScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageBudgetScheduleOutput> {
+  // Effect-class write: a budget schedule is not a canonical entity.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      confirmed: true,
+      operation: input.operation,
+      campaignId: input.campaignId,
+      result: {},
+      timestamp: new Date().toISOString(),
+      dryRun: assertGovernedEffectDryRun(
+        {
+          wouldSucceed: true,
+          validationErrors: [],
+          validationSource: "symbolic",
+          expectedEffectSource: "symbolic",
+          expectedEffect: {
+            effectKind: "budget_schedule_managed",
+            summary: { operation: input.operation, campaign_id: input.campaignId },
+          },
+        },
+        TOOL_NAME,
+        { requiresValidation: true, requiresSimulation: true }
+      ),
+      dispatchedCapability,
+    };
+  }
+
   if (input.operation === "create") {
     const data = input.data ?? {};
     const budget = data.budget_value ?? "(unspecified)";
@@ -85,6 +143,7 @@ export async function manageBudgetScheduleLogic(
         campaignId: input.campaignId,
         result: {},
         timestamp: new Date().toISOString(),
+        dispatchedCapability,
       };
     }
   }
@@ -105,12 +164,27 @@ export async function manageBudgetScheduleLogic(
     campaignId: input.campaignId,
     result: result as Record<string, unknown>,
     timestamp: new Date().toISOString(),
+    // Effect summary carries audit identity only — never the raw budget data.
+    effect: {
+      effectKind: "budget_schedule_managed",
+      summary: { operation: input.operation, campaign_id: input.campaignId },
+    },
+    dispatchedCapability,
   };
 }
 
 export function manageBudgetScheduleResponseFormatter(
   result: ManageBudgetScheduleOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: budget schedule ${result.operation} on campaign ${result.campaignId} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No budget schedule was created.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -143,6 +217,23 @@ export const manageBudgetScheduleTool = {
     openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "manage_budget_schedule",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["campaignId"],
+      schemaVersion: 1,
+      contractId: "meta.manage_budget_schedule.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

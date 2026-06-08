@@ -2,7 +2,17 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   DSPCommitmentSchema,
@@ -10,6 +20,11 @@ import {
   type DSPCommitmentCreateT,
   type DSPCommitmentT,
 } from "../../../services/amazon-dsp/v1-schemas.js";
+import {
+  buildCommitmentSnapshot,
+  resolveCommitmentCreateDispatchedCapability,
+  runCommitmentCreateDryRun,
+} from "../utils/commitment-dry-run.js";
 
 const TOOL_NAME = "amazon_dsp_create_commitment";
 const TOOL_TITLE = "Create an Amazon DSP commitment";
@@ -20,9 +35,11 @@ Single-commitment write. Internally wraps the input into a 1-element
 multi-status response. Per-item rejections surface as
 McpError(InvalidParams) with the original Amazon ErrorCode + fieldLocation.
 
-This tool is intentionally NOT governed (no \`cesteral\` block) — the
-existing repo precedent treats single creates as ungoverned, since the
-"before" state for a fresh entity is null.`;
+Governed write (entity class): the create payload is symbolically validated,
+and the response carries an \`after\` canonical snapshot (a create has no
+\`before\`) plus \`dispatchedCapability\`. When \`dry_run: true\` the call returns
+a \`dryRun\` payload (symbolic validation + symbolic post-state) without creating
+anything.`;
 
 export const CreateCommitmentInputSchema = z
   .object({
@@ -30,13 +47,31 @@ export const CreateCommitmentInputSchema = z
     data: DSPCommitmentCreateSchema.describe(
       "Commitment definition (required fields per the DSP spec)"
     ),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the proposed create and returns a DryRunResult under `dryRun` without invoking the Amazon DSP API. No commitment is created."
+      ),
   })
   .describe("Parameters for creating an Amazon DSP commitment");
 
 export const CreateCommitmentOutputSchema = z
   .object({
-    commitment: DSPCommitmentSchema.describe("The created commitment as returned by Amazon"),
+    commitment: DSPCommitmentSchema.optional().describe(
+      "The created commitment as returned by Amazon (real writes only)"
+    ),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No commitment was created."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-create canonical snapshot, normalised from the commitment the create endpoint returns. A create has no `before`."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The (operation, entityKind) this call resolved to — `create` of a `commitment`. Present on every response."
+    ),
   })
   .describe("Create commitment result");
 
@@ -48,17 +83,57 @@ export async function createCommitmentLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateCommitmentOutput> {
+  const dispatchedCapability = resolveCommitmentCreateDispatchedCapability();
+
+  if (input.dry_run === true) {
+    return {
+      timestamp: new Date().toISOString(),
+      dryRun: runCommitmentCreateDryRun({
+        profileId: input.profileId,
+        data: input.data as Record<string, unknown>,
+      }),
+      dispatchedCapability,
+    };
+  }
+
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const commitment = (await amazonDspV1Service.createCommitment(
     input.data as DSPCommitmentCreateT,
     context
   )) as DSPCommitmentT;
-  return { commitment, timestamp: new Date().toISOString() };
+
+  // Normalise the created commitment into the canonical `after` snapshot
+  // (a create has no `before`). The id comes from Amazon's response.
+  const createdId =
+    typeof (commitment as Record<string, unknown>).commitmentId === "string"
+      ? ((commitment as Record<string, unknown>).commitmentId as string)
+      : "(unknown)";
+  const after = buildCommitmentSnapshot(createdId, input.profileId, commitment, {});
+
+  return {
+    commitment,
+    timestamp: new Date().toISOString(),
+    after,
+    dispatchedCapability,
+  };
 }
 
 export function createCommitmentResponseFormatter(
   result: CreateCommitmentOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errorLines = validationErrors.length
+      ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
+      : "";
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: commitment create ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No commitment was created.${errorLines}\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -73,12 +148,39 @@ export const createCommitmentTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: CreateCommitmentInputSchema,
   outputSchema: CreateCommitmentOutputSchema,
-  // No `cesteral` block: ungoverned write, matching create-entity.tool.ts.
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "entity",
+      executableArgsExclude: ["dry_run"],
+      platform: "amazon_dsp",
+      contractPlatformSlug: "amazon_dsp",
+      contractToolSlug: "create_commitment",
+      operation: ["create"],
+      entityKinds: ["commitment"],
+      entityIdArgs: [],
+      readPartner: {
+        // A create has no commitment id to pass; the `after` snapshot is read
+        // by the id Amazon returns. The read partner therefore only resolves
+        // the profile scope from the manifest — same shape as create_entity.
+        toolName: "amazon_dsp_get_commitment",
+        argMap: { profileId: "profileId" },
+      },
+      schemaVersion: 1,
+      contractId: "amazon_dsp.create_commitment.v1",
+      // Amazon's v1 create endpoint exposes no native preview; dry-run is
+      // symbolic (validation + symbolic post-state projected from the input).
+      // `after` is normalised from the created commitment; a create has no
+      // `before`.
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
