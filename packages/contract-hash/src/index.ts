@@ -100,10 +100,15 @@ function assertJsonCompatible(value: unknown): unknown {
  * across repos. Only top-level keys are removed; nested values are preserved
  * verbatim and key-sorted at hash time.
  *
- * NOTE: governance currently strips `__*` only (not `executableArgsExclude`),
- * so actionHash parity holds today only for execute calls whose wire args carry
- * no excluded control field. Full parity requires governance to adopt this
- * function. See the connector design doc §12.
+ * actionHash parity is symmetric across both repos:
+ *   - governance mints the token's `actionHash` by running this same projection
+ *     with the admitted contract's `executableArgsExclude`
+ *     (`lib/features/mcp/tools/external-governance.ts`, `buildDecisionTokenHeaders`), and
+ *   - the connector recomputes it the same way at verify time
+ *     (`@cesteral/shared` `tool-handler-factory.ts`, passing
+ *     `cesteralAnnotation.executableArgsExclude`).
+ * Both sides therefore strip the control fields before hashing, so a write call
+ * carrying e.g. `dry_run` binds to the same `actionHash` on mint and verify.
  */
 export function canonicalizeExecutableArgs(opts: { rawArgs: unknown; exclude: string[] }): unknown {
   const { rawArgs, exclude } = opts;
