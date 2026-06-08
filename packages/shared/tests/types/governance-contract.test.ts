@@ -12,7 +12,7 @@ import type {
   DryRunResult,
   ToolDefinition,
 } from "../../src/index.js";
-import { isEntityWrite, isEffectWrite } from "../../src/index.js";
+import { isEntityWrite, isEffectWrite, CESTERAL_WRITE_OPERATIONS } from "../../src/index.js";
 import { NormalizedEntitySnapshotSchema } from "../../src/schemas/dry-run-result.js";
 
 describe("CesteralToolAnnotations", () => {
@@ -168,6 +168,37 @@ describe("CesteralToolAnnotations", () => {
       | "bulk_job"
       | "manage"
     >();
+  });
+
+  it("pins the canonical runtime write-operation set (cross-repo drift guard)", () => {
+    // This exact set is MIRRORED by the downstream governance repo's Zod
+    // `writeOperationSchema` (cesteral-governance-layer
+    // lib/features/governance/contract-schema/index.ts). If you add/remove an
+    // operation here, mirror it there in the same change — otherwise the
+    // governance side silently rejects annotations carrying the new value,
+    // dropping all governance metadata for those tools. The governance repo
+    // has the symmetric pin asserting the same literal list.
+    expect([...CESTERAL_WRITE_OPERATIONS]).toEqual([
+      "update_budget",
+      "pause",
+      "resume",
+      "update_status",
+      "update_schedule",
+      "create",
+      "update",
+      "delete",
+      "duplicate",
+      "archive",
+      "bulk_update_status",
+      "adjust_bids",
+      "upload",
+      "create_schedule",
+      "delete_schedule",
+      "submit_report",
+      "upload_conversions",
+      "bulk_job",
+      "manage",
+    ]);
   });
 
   it("read annotations carry no operation field", () => {

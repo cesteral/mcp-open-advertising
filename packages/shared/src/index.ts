@@ -30,7 +30,7 @@ export type {
   CesteralReadToolAnnotations,
   CesteralWriteOperation,
 } from "./types/cesteral-annotations.js";
-export { isEntityWrite, isEffectWrite } from "./types/cesteral-annotations.js";
+export { isEntityWrite, isEffectWrite, CESTERAL_WRITE_OPERATIONS } from "./types/cesteral-annotations.js";
 export type {
   NormalizedEntitySnapshot,
   CanonicalEntityKind,

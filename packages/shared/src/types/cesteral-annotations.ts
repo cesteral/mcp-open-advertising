@@ -72,28 +72,31 @@ interface CesteralToolAnnotationsBase {
  * Entity-class ops describe canonical mutations; effect-class ops describe
  * writes with no canonical entity snapshot (uploads, report schedules, etc.).
  */
-export type CesteralWriteOperation =
+export const CESTERAL_WRITE_OPERATIONS = [
   // entity-class
-  | "update_budget"
-  | "pause"
-  | "resume"
-  | "update_status"
-  | "update_schedule"
-  | "create"
-  | "update"
-  | "delete"
-  | "duplicate"
-  | "archive"
-  | "bulk_update_status"
-  | "adjust_bids"
+  "update_budget",
+  "pause",
+  "resume",
+  "update_status",
+  "update_schedule",
+  "create",
+  "update",
+  "delete",
+  "duplicate",
+  "archive",
+  "bulk_update_status",
+  "adjust_bids",
   // effect-class
-  | "upload"
-  | "create_schedule"
-  | "delete_schedule"
-  | "submit_report"
-  | "upload_conversions"
-  | "bulk_job"
-  | "manage";
+  "upload",
+  "create_schedule",
+  "delete_schedule",
+  "submit_report",
+  "upload_conversions",
+  "bulk_job",
+  "manage",
+] as const;
+
+export type CesteralWriteOperation = (typeof CESTERAL_WRITE_OPERATIONS)[number];
 
 /** Fields shared by every governed write tool, regardless of `writeClass`. */
 interface CesteralWriteToolAnnotationsBase extends CesteralToolAnnotationsBase {
