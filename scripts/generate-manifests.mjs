@@ -8,8 +8,9 @@
 // tools get no manifest file — governance treats absence as benign
 // (`missing_manifest`).
 //
-// Output shape is pinned to governance's CesteralManifestSchema:
-// cesteral-intelligence/lib/features/governance/attestation/manifest-schema.ts
+// Output shape is the canonical `cesteralManifestSchema` from
+// @cesteral/contract-schema — the same schema the governance layer verifies
+// released manifests with, so the two sides cannot drift.
 //
 // Requires `pnpm run build` first.
 

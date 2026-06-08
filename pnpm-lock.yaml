@@ -11,6 +11,9 @@ importers:
       '@cesteral/contract-hash':
         specifier: workspace:*
         version: link:packages/contract-hash
+      '@cesteral/contract-schema':
+        specifier: workspace:*
+        version: link:packages/contract-schema
       '@modelcontextprotocol/conformance':
         specifier: ^0.1.15
         version: 0.1.15
@@ -120,6 +123,22 @@ importers:
         version: 1.6.1(@types/node@20.19.24)
 
   packages/contract-hash:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.6
+        version: 20.19.24
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.24)
+
+  packages/contract-schema:
+    dependencies:
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20.17.6
@@ -387,6 +406,9 @@ importers:
       '@cesteral/contract-hash':
         specifier: workspace:*
         version: link:../contract-hash
+      '@cesteral/contract-schema':
+        specifier: workspace:*
+        version: link:../contract-schema
       '@google-cloud/opentelemetry-cloud-monitoring-exporter':
         specifier: ^0.20.0
         version: 0.20.0(@opentelemetry/api@1.9.0)(@opentelemetry/resources@2.2.0)(@opentelemetry/sdk-metrics@2.2.0)

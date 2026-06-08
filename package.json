@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@cesteral/contract-hash": "workspace:*",
+    "@cesteral/contract-schema": "workspace:*",
     "@modelcontextprotocol/conformance": "^0.1.15",
     "@modelcontextprotocol/sdk": "1.27.1",
     "@types/node": "^20.17.6",
