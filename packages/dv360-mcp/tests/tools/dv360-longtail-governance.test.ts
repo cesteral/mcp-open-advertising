@@ -216,7 +216,12 @@ describe("DV360 long-tail governance contracts (effect class)", () => {
       advertiserId: "1",
     });
     const exec = await createCustomBiddingAlgorithmLogic(
-      { displayName: "Algo", algorithmType: "SCRIPT_BASED", ownerType: "advertiser", ownerId: "1" } as any,
+      {
+        displayName: "Algo",
+        algorithmType: "SCRIPT_BASED",
+        ownerType: "advertiser",
+        ownerId: "1",
+      } as any,
       ctx,
       sdk
     );
