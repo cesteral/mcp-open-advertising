@@ -235,6 +235,21 @@ resource "google_cloud_run_v2_service" "mcp_server" {
           value = var.interaction_log_mode
         }
       }
+
+      # Governance decision-token enforcement mode (optional).
+      # off | warn | enforce — resolved per-contract by resolveTokenMode()
+      # in packages/shared/src/governance/config.ts. Empty leaves it unset so
+      # the server uses its 'off' code default. The shared signing secret
+      # (GOVERNANCE_DECISION_TOKEN_SECRET[_PREVIOUS]) is supplied separately via
+      # secret_env_vars, sourced from the governance layer — see
+      # docs/governance/decision-token-rollout-and-rotation.md.
+      dynamic "env" {
+        for_each = length(var.governance_token_mode) > 0 ? [1] : []
+        content {
+          name  = "GOVERNANCE_TOKEN_MODE"
+          value = var.governance_token_mode
+        }
+      }
     }
   }
 

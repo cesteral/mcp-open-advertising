@@ -47,6 +47,7 @@ allow_unauthenticated = false # Still require auth in dev
 
 # MCP Server configuration
 log_level              = "debug" # More verbose logging in dev
+governance_token_mode  = "warn"  # off | warn | enforce — verify+log decision tokens without blocking
 enable_gcs_persistence = false
 gcs_bucket_name        = "YOUR_GCP_PROJECT_DEV-mcp-persistence" # Enable when ready
 

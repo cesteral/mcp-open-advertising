@@ -220,6 +220,7 @@ module "dbm_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.dbm_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.dbm_secret_names
@@ -246,6 +247,7 @@ module "dv360_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.dv360_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.dv360_secret_names
@@ -272,6 +274,7 @@ module "ttd_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.ttd_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.ttd_secret_names
@@ -298,6 +301,7 @@ module "gads_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.gads_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.gads_secret_names
@@ -324,6 +328,7 @@ module "meta_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.meta_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.meta_secret_names
@@ -350,6 +355,7 @@ module "linkedin_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.linkedin_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.linkedin_secret_names
@@ -376,6 +382,7 @@ module "tiktok_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.tiktok_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.tiktok_secret_names
@@ -402,6 +409,7 @@ module "cm360_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.cm360_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.cm360_secret_names
@@ -428,6 +436,7 @@ module "sa360_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.sa360_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.sa360_secret_names
@@ -454,6 +463,7 @@ module "pinterest_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.pinterest_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.pinterest_secret_names
@@ -480,6 +490,7 @@ module "snapchat_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.snapchat_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.snapchat_secret_names
@@ -506,6 +517,7 @@ module "amazon_dsp_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.amazon_dsp_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.amazon_dsp_secret_names
@@ -532,6 +544,7 @@ module "msads_mcp" {
   vpc_connector_name     = module.networking.vpc_connector_id
   mcp_auth_mode          = local.msads_auth_mode
   log_level              = var.log_level
+  governance_token_mode  = var.governance_token_mode
   enable_gcs_persistence = var.enable_gcs_persistence
   gcs_bucket_name        = var.gcs_bucket_name
   secret_names           = local.msads_secret_names
