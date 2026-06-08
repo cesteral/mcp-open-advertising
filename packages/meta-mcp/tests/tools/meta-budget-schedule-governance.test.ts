@@ -33,7 +33,10 @@ const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
 describe("meta_manage_budget_schedule governance contract (effect class)", () => {
-  let metaService: { createBudgetSchedule: ReturnType<typeof vi.fn>; listBudgetSchedules: ReturnType<typeof vi.fn> };
+  let metaService: {
+    createBudgetSchedule: ReturnType<typeof vi.fn>;
+    listBudgetSchedules: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
