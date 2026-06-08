@@ -167,7 +167,7 @@ export const duplicateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "tiktok_get_entity",
-        argMap: { advertiserId: "advertiserId", entityId: "entityId" },
+        argMap: { entityType: "entityType", advertiserId: "advertiserId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "tiktok.duplicate_entity.v1",

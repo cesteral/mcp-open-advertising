@@ -205,7 +205,7 @@ export const duplicateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "meta_get_entity",
-        argMap: { entityId: "entityId" },
+        argMap: { entityType: "entityType", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "meta.duplicate_entity.v1",

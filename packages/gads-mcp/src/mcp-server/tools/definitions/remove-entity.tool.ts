@@ -219,7 +219,7 @@ export const removeEntityTool = {
       entityIdArgs: ["customerId", "entityId"],
       readPartner: {
         toolName: "gads_get_entity",
-        argMap: { customerId: "customerId", entityId: "entityId" },
+        argMap: { entityType: "entityType", customerId: "customerId", entityId: "entityId" },
       },
       schemaVersion: 1,
       contractId: "google_ads.remove_entity.v1",

@@ -30,6 +30,7 @@ describe("linkedin-mcp cesteral.* annotations (round 3)", () => {
     expect(cesteral.entityIdArgs).toEqual(["entityUrn"]);
     expect(cesteral.readPartner.toolName).toBe("linkedin_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       entityUrn: "entityUrn",
     });
     // R3-U3: symbolic-apply dry-run + before/after capture.

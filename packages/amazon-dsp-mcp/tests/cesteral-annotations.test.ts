@@ -37,6 +37,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
     expect(cesteral.readPartner.toolName).toBe("amazon_dsp_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       profileId: "profileId",
       entityId: "entityId",
     });

@@ -164,7 +164,7 @@ export const createEntityTool = {
       entityIdArgs: ["adAccountId"],
       readPartner: {
         toolName: "pinterest_get_entity",
-        argMap: { adAccountId: "adAccountId" },
+        argMap: { entityType: "entityType", adAccountId: "adAccountId" },
       },
       schemaVersion: 1,
       contractId: "pinterest.create_entity.v1",

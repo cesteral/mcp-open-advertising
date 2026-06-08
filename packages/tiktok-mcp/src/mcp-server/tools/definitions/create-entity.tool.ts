@@ -170,7 +170,7 @@ export const createEntityTool = {
       entityIdArgs: ["advertiserId"],
       readPartner: {
         toolName: "tiktok_get_entity",
-        argMap: { advertiserId: "advertiserId" },
+        argMap: { entityType: "entityType", advertiserId: "advertiserId" },
       },
       schemaVersion: 1,
       contractId: "tiktok.create_entity.v1",

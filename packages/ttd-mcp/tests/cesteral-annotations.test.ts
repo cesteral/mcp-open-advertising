@@ -30,6 +30,7 @@ describe("ttd-mcp cesteral.* annotations (round 3)", () => {
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
     expect(cesteral.readPartner.toolName).toBe("ttd_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       entityId: "entityId",
     });
     // R3-U2: symbolic-apply dry-run + before/after capture.

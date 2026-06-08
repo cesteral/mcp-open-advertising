@@ -201,7 +201,7 @@ export const deleteEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityUrn: "entityUrn" },
+        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.delete_entity.v1",

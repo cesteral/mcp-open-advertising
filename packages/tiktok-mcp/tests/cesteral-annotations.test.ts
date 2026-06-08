@@ -30,6 +30,7 @@ describe("tiktok-mcp cesteral.* annotations (round 3)", () => {
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
     expect(cesteral.readPartner.toolName).toBe("tiktok_get_entity");
     expect(cesteral.readPartner.argMap).toEqual({
+      entityType: "entityType",
       advertiserId: "advertiserId",
       entityId: "entityId",
     });
