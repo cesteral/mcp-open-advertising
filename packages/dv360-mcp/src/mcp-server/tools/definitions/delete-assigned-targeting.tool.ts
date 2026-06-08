@@ -14,9 +14,21 @@ import {
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
-import { elicitDeleteConfirmation } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitDeleteConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  EffectResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_delete_assigned_targeting";
 const TOOL_TITLE = "Delete DV360 Assigned Targeting Option";
@@ -43,6 +55,13 @@ export const DeleteAssignedTargetingInputSchema = z
       .enum(ALL_TARGETING_TYPES as unknown as [string, ...string[]])
       .describe("Targeting type"),
     assignedTargetingOptionId: z.string().describe("The assigned targeting option ID to delete"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the targeting option would be deleted) without prompting for confirmation or calling the DV360 API. Nothing is deleted."
+      ),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
   .describe("Parameters for deleting an assigned targeting option");
@@ -59,6 +78,15 @@ export const DeleteAssignedTargetingOutputSchema = z
     parentType: z.string().describe("Parent entity type"),
     targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was deleted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `assigned_targeting_deleted` + scalar audit summary). Present on a confirmed delete."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Delete result");
 
@@ -73,6 +101,43 @@ export async function deleteAssignedTargetingLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteAssignedTargetingOutput> {
+  // Effect-class write: no canonical entity snapshot for a targeting option.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const expectedEffect: EffectResult = {
+      effectKind: "assigned_targeting_deleted",
+      summary: {
+        parent_type: input.parentType,
+        targeting_type: input.targetingType,
+        deleted_targeting_option_id: input.assignedTargetingOptionId,
+      },
+    };
+    return {
+      confirmed: true,
+      success: false,
+      deletedTargetingOptionId: input.assignedTargetingOptionId,
+      parentType: input.parentType,
+      targetingType: input.targetingType,
+      timestamp: new Date().toISOString(),
+      dryRun: assertGovernedEffectDryRun(
+        {
+          wouldSucceed: true,
+          validationErrors: [],
+          validationSource: "symbolic",
+          expectedEffectSource: "symbolic",
+          expectedEffect,
+        },
+        TOOL_NAME,
+        { requiresValidation: true, requiresSimulation: true }
+      ),
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitDeleteConfirmation({
     entityLabel: `${input.targetingType} targeting on ${input.parentType}`,
     entityId: input.assignedTargetingOptionId,
@@ -87,6 +152,7 @@ export async function deleteAssignedTargetingLogic(
       parentType: input.parentType,
       targetingType: input.targetingType,
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -103,6 +169,15 @@ export async function deleteAssignedTargetingLogic(
     context
   );
 
+  const effect: EffectResult = {
+    effectKind: "assigned_targeting_deleted",
+    summary: {
+      parent_type: input.parentType,
+      targeting_type: input.targetingType,
+      deleted_targeting_option_id: input.assignedTargetingOptionId,
+    },
+  };
+
   return {
     confirmed: true,
     success: true,
@@ -110,6 +185,8 @@ export async function deleteAssignedTargetingLogic(
     parentType: input.parentType,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
@@ -119,6 +196,15 @@ export async function deleteAssignedTargetingLogic(
 export function deleteAssignedTargetingResponseFormatter(
   result: DeleteAssignedTargetingOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: deleting ${result.targetingType} targeting option ${result.deletedTargetingOptionId} ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was deleted.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -190,6 +276,23 @@ export const deleteAssignedTargetingTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: true, // Deleting the same ID twice is idempotent (second call fails gracefully)
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "delete_assigned_targeting",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: ["advertiserId", "assignedTargetingOptionId"],
+      schemaVersion: 1,
+      contractId: "dv360.delete_assigned_targeting.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: deleteAssignedTargetingLogic,
   responseFormatter: deleteAssignedTargetingResponseFormatter,
