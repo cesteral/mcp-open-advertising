@@ -246,7 +246,11 @@ describe("TTD long-tail governance contracts (effect class)", () => {
   });
 
   it("manage_bid_list: dry_run previews the sub-op; execute emits bid_list_managed without raw data", async () => {
-    const dry = await bidListLogic({ operation: "create", data: { name: "x" }, dry_run: true } as any, ctx, sdk);
+    const dry = await bidListLogic(
+      { operation: "create", data: { name: "x" }, dry_run: true } as any,
+      ctx,
+      sdk
+    );
     expect(svc.createBidList).not.toHaveBeenCalled();
     expect(dry.dryRun?.expectedEffect?.summary).toEqual({ operation: "create" });
 
@@ -273,7 +277,10 @@ describe("TTD long-tail governance contracts (effect class)", () => {
       sdk
     );
     expect(svc.batchUpdateBidLists).not.toHaveBeenCalled();
-    expect(dry.dryRun?.expectedEffect?.summary).toEqual({ operation: "batch_update", requested: 2 });
+    expect(dry.dryRun?.expectedEffect?.summary).toEqual({
+      operation: "batch_update",
+      requested: 2,
+    });
     expect(dry.dispatchedCapability).toEqual({ operation: "bulk_job", canonicalEntityKind: null });
 
     svc.batchUpdateBidLists.mockResolvedValue([{ success: true }, { success: false }]);
