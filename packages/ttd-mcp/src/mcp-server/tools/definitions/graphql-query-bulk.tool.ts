@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_graphql_query_bulk";
 const TOOL_TITLE = "TTD GraphQL Query Bulk";
@@ -51,13 +65,32 @@ export const GraphqlQueryBulkInputSchema = z
       .string()
       .optional()
       .describe("Optional TTD-GQL-Beta header value to enable beta GraphQL features"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bulk job request and returns an EffectDryRunResult under `dryRun` (expected effect = a bulk query job over N variable sets) without submitting the job. No job is created."
+      ),
   })
   .describe("Parameters for submitting a bulk GraphQL query job");
 
 export const GraphqlQueryBulkOutputSchema = z
   .object({
-    jobId: z.string().describe("Bulk job ID for polling status"),
-    status: z.string().describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+    jobId: z.string().optional().describe("Bulk job ID for polling status"),
+    status: z
+      .string()
+      .optional()
+      .describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No job was submitted."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bulk_job_submitted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk query job submission result");
@@ -109,6 +142,20 @@ export async function graphqlQueryBulkLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GraphqlQueryBulkOutput> {
+  // Effect-class write: a bulk job submission has no canonical entity snapshot.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      dryRun: buildQueryBulkEffectDryRun(input),
+      dispatchedCapability,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const variables = {
@@ -124,16 +171,66 @@ export async function graphqlQueryBulkLogic(
 
   const job = extractBulkJobOrThrow(result, "createQueryBulk");
 
+  // Effect summary carries audit identity only (job id/status + count) — never
+  // the raw query string or variable sets.
+  const effect: EffectResult = {
+    effectKind: "bulk_job_submitted",
+    summary: {
+      job_kind: "query",
+      job_id: job.id,
+      status: job.status,
+      variable_sets: input.variables.length,
+    },
+  };
+
   return {
     jobId: job.id,
     status: job.status,
+    effect,
+    dispatchedCapability,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * Symbolic effect dry-run for `graphql_query_bulk`. TTD has no native bulk-job
+ * preview, so validation is symbolic: the query must be non-empty and at least
+ * one variable set is required (both already enforced by the input schema, so a
+ * well-formed call always passes). The projected effect is a bulk query job
+ * over the supplied variable sets. Pure (no I/O); never includes the raw query.
+ */
+function buildQueryBulkEffectDryRun(input: GraphqlQueryBulkInput): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "bulk_job_submitted",
+    summary: { job_kind: "query", variable_sets: input.variables.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function graphqlQueryBulkResponseFormatter(
   result: GraphqlQueryBulkOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    const n = result.dryRun.expectedEffect?.summary.variable_sets ?? 0;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: bulk query job over ${n} variable set(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No job was submitted.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -153,6 +250,23 @@ export const graphqlQueryBulkTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "graphql_query_bulk",
+      operation: ["bulk_job"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.graphql_query_bulk.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

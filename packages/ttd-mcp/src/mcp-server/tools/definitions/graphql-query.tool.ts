@@ -4,9 +4,21 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { spillJson, formatBoundedText, type SpillResult } from "@cesteral/shared";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  spillJson,
+  formatBoundedText,
+  EffectResultSchema,
+  DispatchedCapabilitySchema,
+  type SpillResult,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_graphql_query";
 const TOOL_TITLE = "TTD GraphQL Query";
@@ -60,6 +72,12 @@ export const GraphqlQueryOutputSchema = z
     spill: SpillSchema.optional().describe(
       "Spill metadata when the response was too large to inline. Set when REPORT_SPILL_BUCKET is configured and the body exceeds the byte threshold."
     ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `graphql_executed` + scalar audit summary: the query fingerprint hash and whether the response carried GraphQL errors). The raw query/variables are never copied into the summary — only the hash. Present on every successful call."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `manage` with `canonicalEntityKind: null` (effect class; an arbitrary GraphQL passthrough has no canonical entity). Present on every response."
+    ),
     timestamp: z.string().datetime(),
   })
   .describe("GraphQL query result");
@@ -99,9 +117,27 @@ export async function graphqlQueryLogic(
     sessionId: sdkContext?.sessionId,
   });
 
+  // Effect-class write: an arbitrary GraphQL passthrough (query OR mutation) has
+  // no canonical entity snapshot. The token binds the exact query+variables via
+  // actionHash; the effect summary carries only the fingerprint hash and an
+  // error flag — never the raw query/variables (redaction by construction).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "manage",
+    canonicalEntityKind: null,
+  };
+  const effect: EffectResult = {
+    effectKind: "graphql_executed",
+    summary: {
+      fingerprint: fingerprintQuery(input),
+      has_errors: Array.isArray(errors) && errors.length > 0,
+    },
+  };
+
   const out: GraphqlOutput & { _spillResult?: SpillResult; _fullText?: string } = {
     data,
     errors,
+    effect,
+    dispatchedCapability,
     timestamp: new Date().toISOString(),
   };
   if ("spilled" in spillResult && spillResult.spilled) {
@@ -154,6 +190,28 @@ export const graphqlQueryTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      // Arbitrary GraphQL passthrough — the connector cannot statically know
+      // whether a given call is a read or a write, nor which entities it
+      // touches, so there is nothing meaningful to symbolically validate or
+      // simulate. Honestly no dry-run. The token still binds the exact
+      // query+variables via actionHash.
+      executableArgsExclude: [],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "graphql_query",
+      operation: ["manage"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.graphql_query.v1",
+      supportsDryRun: false,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: false,
+      requiresSimulation: false,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

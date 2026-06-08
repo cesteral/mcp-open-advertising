@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_graphql_mutation_bulk";
 const TOOL_TITLE = "TTD GraphQL Mutation Bulk";
@@ -55,6 +69,13 @@ export const GraphqlMutationBulkInputSchema = z
       .min(1)
       .max(1000)
       .describe("Array of input objects — one per entity (max 1000)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bulk mutation request and returns an EffectDryRunResult under `dryRun` (expected effect = a bulk mutation job over N inputs) without submitting the job. No job is created and no entities are mutated."
+      ),
   })
   .superRefine((data, ctx) => {
     if (data.mutation.length > MAX_MUTATION_CHARS) {
@@ -72,8 +93,20 @@ export const GraphqlMutationBulkInputSchema = z
 
 export const GraphqlMutationBulkOutputSchema = z
   .object({
-    jobId: z.string().describe("Bulk job ID for polling status"),
-    status: z.string().describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+    jobId: z.string().optional().describe("Bulk job ID for polling status"),
+    status: z
+      .string()
+      .optional()
+      .describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No job was submitted and no entities were mutated."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bulk_job_submitted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `bulk_job` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk mutation job submission result");
@@ -125,6 +158,20 @@ export async function graphqlMutationBulkLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GraphqlMutationBulkOutput> {
+  // Effect-class write: a bulk job submission has no canonical entity snapshot.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "bulk_job",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      dryRun: buildMutationBulkEffectDryRun(input),
+      dispatchedCapability,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const variables = {
@@ -142,16 +189,66 @@ export async function graphqlMutationBulkLogic(
 
   const job = extractMutationBulkJobOrThrow(result);
 
+  // Effect summary carries audit identity only (job id/status + count) — never
+  // the raw mutation string or input payloads.
+  const effect: EffectResult = {
+    effectKind: "bulk_job_submitted",
+    summary: {
+      job_kind: "mutation",
+      job_id: job.id,
+      status: job.status,
+      inputs: input.inputs.length,
+    },
+  };
+
   return {
     jobId: job.id,
     status: job.status,
+    effect,
+    dispatchedCapability,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * Symbolic effect dry-run for `graphql_mutation_bulk`. TTD has no native
+ * bulk-job preview; validation is symbolic (input-schema invariants — ≤1000
+ * inputs, mutation ≤15k tokens — are already enforced, so a well-formed call
+ * always passes). The projected effect is a bulk mutation job over the supplied
+ * inputs. Pure (no I/O); never includes the raw mutation or input payloads.
+ */
+function buildMutationBulkEffectDryRun(input: GraphqlMutationBulkInput): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "bulk_job_submitted",
+    summary: { job_kind: "mutation", inputs: input.inputs.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
 }
 
 export function graphqlMutationBulkResponseFormatter(
   result: GraphqlMutationBulkOutput
 ): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    const n = result.dryRun.expectedEffect?.summary.inputs ?? 0;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: bulk mutation job over ${n} input(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No job was submitted and no entities were mutated.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -171,6 +268,23 @@ export const graphqlMutationBulkTool = {
     openWorldHint: true,
     idempotentHint: false,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "graphql_mutation_bulk",
+      operation: ["bulk_job"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.graphql_mutation_bulk.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {

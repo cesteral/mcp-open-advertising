@@ -4,9 +4,22 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getArchiveSupportedEntityTypes, type TtdEntityType } from "../utils/entity-mapping.js";
-import { elicitArchiveConfirmation } from "@cesteral/shared";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitArchiveConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_archive_entities";
 const TOOL_TITLE = "Archive TTD Entities";
@@ -29,6 +42,13 @@ export const ArchiveEntitiesInputSchema = z
       .min(1)
       .max(100)
       .describe("Array of entity IDs to archive (max 100)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the archive request and returns an EffectDryRunResult under `dryRun` (expected effect = N entities archived) without calling the TTD API or prompting for confirmation. Nothing is archived."
+      ),
   })
   .describe("Parameters for archiving TTD entities");
 
@@ -48,6 +68,15 @@ export const ArchiveEntitiesOutputSchema = z
       })
     ),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. Nothing was archived."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `entities_archived` + scalar batch audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `archive` with `canonicalEntityKind: null` (effect class; a batch archive carries no per-entity canonical snapshot). Present on every response."
+    ),
   })
   .describe("Archive entities result");
 
@@ -59,6 +88,27 @@ export async function archiveEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ArchiveOutput> {
+  // Effect-class write: a batch archive carries no per-entity canonical
+  // snapshot (archiving is irreversible — there is no reversible after-state).
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "archive",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    return {
+      confirmed: true,
+      entityType: input.entityType,
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun: buildArchiveEffectDryRun(input),
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitArchiveConfirmation({
     count: input.entityIds.length,
     entityLabel: input.entityType,
@@ -74,6 +124,7 @@ export async function archiveEntitiesLogic(
       failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -87,6 +138,16 @@ export async function archiveEntitiesLogic(
 
   const succeeded = results.filter((r) => r.success).length;
 
+  const effect: EffectResult = {
+    effectKind: "entities_archived",
+    summary: {
+      entity_type: input.entityType,
+      requested: input.entityIds.length,
+      succeeded,
+      failed: input.entityIds.length - succeeded,
+    },
+  };
+
   return {
     confirmed: true,
     entityType: input.entityType,
@@ -95,10 +156,46 @@ export async function archiveEntitiesLogic(
     failureCount: input.entityIds.length - succeeded,
     results,
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `archive_entities`. The supported entity types
+ * and the 1..100 id-count bounds are enforced by the input schema, so a
+ * well-formed call always passes; the projected effect is the archival of the
+ * supplied ids. Pure (no I/O) — no entities are touched.
+ */
+function buildArchiveEffectDryRun(input: ArchiveInput): EffectDryRunResult {
+  const expectedEffect: EffectResult = {
+    effectKind: "entities_archived",
+    summary: { entity_type: input.entityType, requested: input.entityIds.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: true,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    TOOL_NAME,
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function archiveEntitiesResponseFormatter(result: ArchiveOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: archiving ${result.totalRequested} ${result.entityType}(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was archived.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -126,6 +223,23 @@ export const archiveEntitiesTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: true,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "archive_entities",
+      operation: ["archive"],
+      entityKinds: [],
+      entityIdArgs: ["entityIds"],
+      schemaVersion: 1,
+      contractId: "ttd.archive_entities.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
