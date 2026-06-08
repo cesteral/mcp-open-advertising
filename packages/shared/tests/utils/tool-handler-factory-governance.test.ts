@@ -85,6 +85,35 @@ const writeTool = {
   logic: vi.fn(),
 };
 
+const effectWriteTool = {
+  name: "ttd_submit_report",
+  description: "Submit a TTD report (effect-class write — no canonical snapshot)",
+  inputSchema: z.object({
+    reportId: z.string(),
+    dry_run: z.boolean().optional(),
+  }),
+  annotations: {
+    readOnlyHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "submit_report",
+      operation: ["submit_report"],
+      entityKinds: [],
+      entityIdArgs: [],
+      executableArgsExclude: ["dry_run"],
+      schemaVersion: 1,
+      contractId: "ttd.submit_report.v1",
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: false,
+      requiresSimulation: false,
+    },
+  },
+  logic: vi.fn(),
+};
+
 async function mintToken(args: Record<string, unknown>, over: Record<string, unknown> = {}) {
   const executable = canonicalizeExecutableArgs({ rawArgs: args, exclude: ["dry_run"] });
   const now = Math.floor(Date.now() / 1000);
@@ -262,6 +291,40 @@ describe("tool-handler-factory governance verification", () => {
       ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
     );
     expect(hit).toBe(false);
+  });
+
+  it("enforce mode: effect-class write is NOT token-governed — runs without a token + logs skip", async () => {
+    // Regression guard for the effect-write enforcement gap: the control plane
+    // never mints a decision token for effect-class writes, so enforcing them
+    // here would reject every effect mutation with MISSING_TOKEN. They must
+    // bypass verification (run as if `off`) and surface an audit skip line.
+    effectWriteTool.logic.mockReset();
+    effectWriteTool.logic.mockImplementation(async () => ({ ok: true }));
+    registerToolsFromDefinitions({
+      server,
+      tools: [effectWriteTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      governanceEnv: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      resolveDefinitionHash: () => DEF_HASH,
+    });
+    // No decision token on the context — an entity write would be blocked here.
+    const res = (await runWithRequestContext(createRequestContext("test"), () =>
+      server.callTool("ttd_submit_report", { reportId: "r1" })
+    )) as { isError?: boolean };
+    expect(res.isError).toBeUndefined();
+    expect(effectWriteTool.logic).toHaveBeenCalledOnce();
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const skipped = warn.calls.some(
+      ([obj]) => (obj as { reasonCode?: string })?.reasonCode === "EFFECT_WRITE_NOT_TOKEN_GOVERNED"
+    );
+    expect(skipped).toBe(true);
   });
 
   it("authz denial happens before jti consume (valid token not burned)", async () => {
