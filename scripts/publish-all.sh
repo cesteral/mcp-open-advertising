@@ -114,7 +114,17 @@ inspect_package() {
     return
   fi
 
-  if ! node "$REPO_ROOT/scripts/inspect-tarball.mjs" "$tarball"; then
+  # Governed packages emit dist/cesteral-manifest.json during the
+  # generate:manifests step above. When one exists on disk, require it to
+  # actually ship in the tarball — a dropped manifest fails open downstream
+  # (governance silently leaves the tools at 'observed' trust), so guard it
+  # here the same way we guard LICENSE.md.
+  local expect_manifest=""
+  if [ -f "$pkg_dir/dist/cesteral-manifest.json" ]; then
+    expect_manifest="--expect-manifest"
+  fi
+
+  if ! node "$REPO_ROOT/scripts/inspect-tarball.mjs" "$tarball" $expect_manifest; then
     PACK_OK=false
   fi
 }
