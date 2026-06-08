@@ -13,15 +13,15 @@ to the connector call as the `X-Cesteral-Decision-Token` header. The **MCP serve
 (`mcp-open-advertising`, open source) verifies it before executing the write,
 binding the call to the exact governance decision.
 
-| Claim | Meaning |
-| --- | --- |
-| `sub` | Tenant (orgId or userId) |
-| `contractId` | `<slug>.<tool>.v<n>` of the admitted write |
-| `definitionHash` | SHA-256 of the tool definition (`@cesteral/contract-hash`) |
-| `actionHash` | SHA-256 of the executable write args (`@cesteral/contract-hash`) |
-| `approvalId` | Optional — set when the write passed an approval gate |
-| `iat` / `exp` | Issued-at / expiry (default TTL 120s) |
-| `jti` | Unique id; consumed exactly once (replay protection) |
+| Claim            | Meaning                                                          |
+| ---------------- | ---------------------------------------------------------------- |
+| `sub`            | Tenant (orgId or userId)                                         |
+| `contractId`     | `<slug>.<tool>.v<n>` of the admitted write                       |
+| `definitionHash` | SHA-256 of the tool definition (`@cesteral/contract-hash`)       |
+| `actionHash`     | SHA-256 of the executable write args (`@cesteral/contract-hash`) |
+| `approvalId`     | Optional — set when the write passed an approval gate            |
+| `iat` / `exp`    | Issued-at / expiry (default TTL 120s)                            |
+| `jti`            | Unique id; consumed exactly once (replay protection)             |
 
 Issuer `cesteral-intelligence`, audience `mcp-open-advertising`.
 
@@ -29,12 +29,12 @@ Issuer `cesteral-intelligence`, audience `mcp-open-advertising`.
 
 The two halves live in different repos **on purpose**:
 
-| Concern | Lives in | Why |
-| --- | --- | --- |
-| **Mint** + hold/rotate the signing secret + per-org `AttestedWritePolicy` | `cesteral-intelligence` (paid) | Minting is a governance decision; the secret and per-tenant policy are product state. |
-| **Verify** (`GOVERNANCE_TOKEN_MODE`) | `mcp-open-advertising` servers | Verification physically runs in the server process, so the mode is necessarily a server-side env. |
+| Concern                                                                   | Lives in                       | Why                                                                                               |
+| ------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| **Mint** + hold/rotate the signing secret + per-org `AttestedWritePolicy` | `cesteral-intelligence` (paid) | Minting is a governance decision; the secret and per-tenant policy are product state.             |
+| **Verify** (`GOVERNANCE_TOKEN_MODE`)                                      | `mcp-open-advertising` servers | Verification physically runs in the server process, so the mode is necessarily a server-side env. |
 
-Key rule: **the server *code* default is `off`** (`resolveTokenMode` Tier-3
+Key rule: **the server _code_ default is `off`** (`resolveTokenMode` Tier-3
 fallback, pinned by `config.test.ts`). An open-source / self-hosted server that
 isn't part of a Cesteral deployment stays neutral — no token checks, no
 `MISSING_TOKEN` noise. "Warn by default" is a property of the **Cesteral-operated
@@ -148,7 +148,7 @@ contract:
   `@cesteral/contract-hash` (`hashActionInput` over `canonicalizeExecutableArgs`).
   Same package, same `__`-prefix + `executableArgsExclude` stripping ⇒ identical.
 - **`definitionHash`** — both sides use `@cesteral/contract-hash`
-  `computeDefinitionHash`; the server resolves the *expected* hash from the
+  `computeDefinitionHash`; the server resolves the _expected_ hash from the
   installed release manifest, whose shape is `@cesteral/contract-schema`'s
   `cesteralManifestSchema`. Bare lowercase hex, no prefix, on both sides.
 - **`contractId`** — `@cesteral/contract-schema` `deriveContractId` is the single

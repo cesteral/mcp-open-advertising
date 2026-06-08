@@ -28,9 +28,7 @@ import {
 describe("authoring types are assignable to the validation schema", () => {
   it("CesteralToolAnnotations ⊆ inferred CesteralAnnotation", () => {
     expectTypeOf<CesteralToolAnnotations>().toMatchTypeOf<CesteralAnnotation>();
-    expectTypeOf<CesteralAnnotation>().toEqualTypeOf<
-      z.infer<typeof cesteralAnnotationSchema>
-    >();
+    expectTypeOf<CesteralAnnotation>().toEqualTypeOf<z.infer<typeof cesteralAnnotationSchema>>();
   });
 
   it("CesteralWriteOperation equals the Zod enum", () => {

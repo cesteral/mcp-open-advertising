@@ -8,11 +8,7 @@
  * import path so connector tool definitions keep importing the same names.
  */
 
-export {
-  isEntityWrite,
-  isEffectWrite,
-  CESTERAL_WRITE_OPERATIONS,
-} from "@cesteral/contract-schema";
+export { isEntityWrite, isEffectWrite, CESTERAL_WRITE_OPERATIONS } from "@cesteral/contract-schema";
 
 export type {
   CesteralToolAnnotations,
