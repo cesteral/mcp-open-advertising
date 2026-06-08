@@ -586,10 +586,36 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
             )?.cesteral;
             if (cesteralAnnotation?.kind === "write") {
-              const mode = resolveTokenMode({
+              const configuredMode = resolveTokenMode({
                 contractId: cesteralAnnotation.contractId,
                 env: governanceEnv,
               });
+              // Decision-token enforcement is only defined for ENTITY-class
+              // writes. The governance control plane mints a token solely for
+              // admitted entity writes; effect-class writes have no canonical
+              // snapshot, are never admitted, and so never receive a token.
+              // Verifying them here would reject every effect-class mutation
+              // with MISSING_TOKEN the instant a mode other than `off` is set —
+              // even though the control plane cannot authorize them. Force `off`
+              // for effect writes until an effect-class mint path exists, and
+              // surface an audit line when a non-`off` mode was configured so an
+              // operator knows these are bypassed by design.
+              const isEffectWrite = cesteralAnnotation.writeClass === "effect";
+              if (isEffectWrite && configuredMode !== "off") {
+                logger.warn(
+                  {
+                    component: "governance-audit",
+                    event: "decision_token_verification",
+                    status: "skipped",
+                    reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
+                    mode: configuredMode,
+                    contractId: cesteralAnnotation.contractId,
+                    toolName: tool.name,
+                  },
+                  "decision token: effect-class write is not token-governed (control plane mints no token); skipping verification"
+                );
+              }
+              const mode = isEffectWrite ? "off" : configuredMode;
               if (mode !== "off") {
                 const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
                 // Under enforce, an unresolved definition hash means the binding
