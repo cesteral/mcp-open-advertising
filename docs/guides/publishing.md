@@ -101,7 +101,7 @@ For CI, set `NPM_TOKEN` in the build environment with the same kind of token; th
 
 ### One-shot publish (all servers + shared)
 
-The repo ships a single script that publishes `@cesteral/shared` first (servers depend on it) and then each server in dependency order. It also handles MCP Registry as a follow-up step.
+The repo ships a single script that publishes in dependency order: the leaf contract libraries `@cesteral/contract-hash` and `@cesteral/contract-schema` first (because `@cesteral/shared` declares runtime deps on both, and the packed shared tarball references their resolved versions), then `@cesteral/shared` (servers depend on it), then each server. A real publish failure of either contract library aborts before shared is published. It also handles MCP Registry as a follow-up step.
 
 ```bash
 ./scripts/publish-all.sh                  # npm + MCP Registry

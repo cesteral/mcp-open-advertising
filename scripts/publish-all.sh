@@ -121,6 +121,7 @@ inspect_package() {
 
 inspect_package "packages/shared"
 inspect_package "packages/contract-hash"
+inspect_package "packages/contract-schema"
 for server in "${SERVERS[@]}"; do
   inspect_package "packages/$server"
 done
@@ -199,12 +200,35 @@ publish_to_npm() {
   return 0  # don't abort the loop; failures are reported after the loop
 }
 
-# --- Publish @cesteral/shared first ---
+# --- Publish the leaf contract libraries first ---
 # `pnpm pack` rewrites workspace:* deps to the actual resolved version of the
 # workspace package, so the tarball `npm publish` uploads carries real version
 # ranges rather than the literal "workspace:*" string that would break
 # consumers.
 #
+# @cesteral/shared declares runtime deps on BOTH @cesteral/contract-hash and
+# @cesteral/contract-schema (each `workspace:*`). After the pack rewrite, the
+# published shared tarball references `@cesteral/contract-hash@X` and
+# `@cesteral/contract-schema@X` — versions that MUST already exist on npm, or
+# `npm install @cesteral/shared` (and therefore every server that depends on
+# shared) breaks. So both leaf libraries are published BEFORE shared, and a
+# real failure of either aborts before shared is published. Both are also
+# standalone libraries consumed directly by the cesteral-intelligence
+# governance layer (contract-hash for the canonical definition hash,
+# contract-schema for the canonical annotation/manifest surface).
+log "Publishing @cesteral/contract-hash to npm..."
+publish_to_npm "packages/contract-hash" "@cesteral/contract-hash"
+
+log "Publishing @cesteral/contract-schema to npm..."
+publish_to_npm "packages/contract-schema" "@cesteral/contract-schema"
+
+if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
+  echo "" >&2
+  echo "A contract library publish failed; refusing to publish @cesteral/shared (and the servers that depend on it) against a missing dependency version." >&2
+  err "Fix the contract-library publish failure(s) above and re-run."
+fi
+
+# --- Publish @cesteral/shared ---
 # Abort immediately if shared fails: server tarballs have @cesteral/shared
 # rewritten to the resolved version, so publishing them when shared did not
 # land would leave the registry in a broken state (servers referencing a
@@ -217,14 +241,6 @@ if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
   echo "@cesteral/shared publish failed; refusing to publish servers that depend on it." >&2
   err "Fix the shared publish failure above and re-run."
 fi
-
-# --- Publish @cesteral/contract-hash ---
-# A standalone, zero-dependency library consumed by cesteral-intelligence
-# governance. No server package depends on it, so a failure here is recorded
-# (NPM_PUBLISH_FAILURES) and reported after the server loop rather than
-# aborting the server publishes.
-log "Publishing @cesteral/contract-hash to npm..."
-publish_to_npm "packages/contract-hash" "@cesteral/contract-hash"
 
 # --- Publish each server to npm ---
 for server in "${SERVERS[@]}"; do
