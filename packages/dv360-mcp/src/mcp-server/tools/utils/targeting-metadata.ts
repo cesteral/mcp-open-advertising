@@ -97,18 +97,9 @@ export const TARGETING_PARENT_TYPES = {
     requiredIds: ["advertiserId"] as const,
     entityIdField: "advertiserId",
   },
-  campaign: {
-    apiPathTemplate:
-      "/advertisers/{advertiserId}/campaigns/{campaignId}/targetingTypes/{targetingType}/assignedTargetingOptions",
-    requiredIds: ["advertiserId", "campaignId"] as const,
-    entityIdField: "campaignId",
-  },
-  insertionOrder: {
-    apiPathTemplate:
-      "/advertisers/{advertiserId}/insertionOrders/{insertionOrderId}/targetingTypes/{targetingType}/assignedTargetingOptions",
-    requiredIds: ["advertiserId", "insertionOrderId"] as const,
-    entityIdField: "insertionOrderId",
-  },
+  // campaign and insertionOrder were removed from the DV360 v4 API
+  // (Discovery doc revision 20260608 dropped their targeting sub-resources
+  // and schemas entirely) — targeting is now partner/advertiser/lineItem/adGroup only.
   lineItem: {
     apiPathTemplate:
       "/advertisers/{advertiserId}/lineItems/{lineItemId}/targetingTypes/{targetingType}/assignedTargetingOptions",

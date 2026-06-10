@@ -22,7 +22,7 @@ const TOOL_TITLE = "Get DV360 Assigned Targeting Option";
 
 const TOOL_DESCRIPTION = `Get a single assigned targeting option by ID.
 
-Use this to retrieve details of a specific targeting configuration on an Insertion Order, Line Item, or Ad Group.`;
+Use this to retrieve details of a specific targeting configuration on an Advertiser, Line Item, or Ad Group.`;
 
 /**
  * Input schema for get assigned targeting tool
@@ -126,13 +126,12 @@ export const getAssignedTargetingTool = {
       },
     },
     {
-      label: "Get a channel targeting option on an insertion order",
+      label: "Get a channel targeting option on an advertiser",
       input: {
-        parentType: "insertionOrder",
+        parentType: "advertiser",
         advertiserId: "1234567",
-        insertionOrderId: "4445551",
         targetingType: "TARGETING_TYPE_CHANNEL",
-        assignedTargetingOptionId: "insertionOrders-4445551-channel-789012",
+        assignedTargetingOptionId: "advertisers-1234567-channel-789012",
       },
     },
   ],

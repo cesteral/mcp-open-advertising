@@ -7,7 +7,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
  * Targeting Management Workflow Prompt
  *
  * Guides AI agents through discovering, creating, auditing, and managing
- * DV360 targeting options across Insertion Orders, Line Items, and Ad Groups.
+ * DV360 targeting options across Advertisers, Line Items, and Ad Groups.
  */
 export const targetingManagementPrompt: Prompt = {
   name: "targeting_management_workflow",
@@ -21,7 +21,7 @@ export const targetingManagementPrompt: Prompt = {
     },
     {
       name: "parentType",
-      description: "Parent entity type: insertionOrder, lineItem, or adGroup (default: lineItem)",
+      description: "Parent entity type: advertiser, lineItem, or adGroup (default: lineItem)",
       required: false,
     },
     {
@@ -61,7 +61,7 @@ This returns all **49 targeting types** grouped by category:
 - **Viewability**: viewability (Active View thresholds)
 - **Day & Time**: day and time scheduling
 
-Each targeting type includes which parent entity types support it (insertionOrder, lineItem, adGroup).
+Each targeting type includes which parent entity types support it (advertiser, lineItem, adGroup).
 
 ---
 
@@ -129,15 +129,14 @@ After fetching the schema from Step 2, create targeting:
 }
 \`\`\`
 
-### Example: Channel Exclusion
+### Example: Channel Exclusion (advertiser-wide brand safety)
 
 \`\`\`json
 {
   "tool": "dv360_create_assigned_targeting",
   "params": {
-    "parentType": "insertionOrder",
+    "parentType": "advertiser",
     "advertiserId": "${advertiserId}",
-    "insertionOrderId": "{ioId}",
     "targetingType": "TARGETING_TYPE_CHANNEL",
     "data": {
       "channelDetails": {
@@ -182,8 +181,8 @@ Use the validation tool to audit targeting across multiple entities:
   "tool": "dv360_validate_targeting_config",
   "params": {
     "advertiserId": "${advertiserId}",
-    "insertionOrderIds": ["{ioId1}", "{ioId2}"],
     "lineItemIds": ["{liId1}", "{liId2}"],
+    "adGroupIds": ["{agId1}", "{agId2}"],
     "targetingTypesToCheck": [
       "TARGETING_TYPE_CHANNEL",
       "TARGETING_TYPE_GEO_REGION",
@@ -245,7 +244,7 @@ To remove a targeting option, you need the \`assignedTargetingOptionId\` from St
 
 ## Gotchas
 
-- **Targeting inheritance**: IOs pass targeting down to Line Items. Check IO-level targeting before adding at Line Item level to avoid conflicts.
+- **Targeting inheritance**: advertiser-level targeting applies to all line items underneath. Check advertiser-level targeting before adding at Line Item level to avoid conflicts. (Campaign- and IO-level assigned targeting were removed from the v4 API.)
 - **Negative targeting**: Set \`negative: true\` in the detail object to exclude (not include) a targeting option.
 - **targetingOptionId vs channelId**: Geo regions and languages use \`targetingOptionId\` (a DV360-assigned ID). Channels use \`channelId\`. Check the schema for each type.
 - **Parent support varies**: Not all targeting types work on all parent types. The \`targeting-types://\` resource shows \`supportedParents\` for each type.
