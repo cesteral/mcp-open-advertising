@@ -17,8 +17,10 @@ export const slugSchema = z
   .max(MAX_SLUG_LENGTH, `slug must be at most ${MAX_SLUG_LENGTH} characters`)
   .regex(SLUG_PATTERN, "slug must match /^[a-z0-9_]{1,40}$/");
 
-export type ContractPlatformSlug = z.infer<typeof slugSchema>;
-export type ContractToolSlug = z.infer<typeof slugSchema>;
+// Plain `string` (not `z.infer`) to keep the emitted `.d.ts` zod-agnostic; the
+// brand is enforced at runtime by `slugSchema`, not in the type.
+export type ContractPlatformSlug = string;
+export type ContractToolSlug = string;
 
 export const schemaVersionSchema = z
   .number()

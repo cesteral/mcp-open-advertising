@@ -45,4 +45,9 @@ export const CESTERAL_WRITE_OPERATIONS = [
 
 export type CesteralWriteOperation = (typeof CESTERAL_WRITE_OPERATIONS)[number];
 
-export const writeOperationSchema = z.enum(CESTERAL_WRITE_OPERATIONS);
+// Typed as `z.ZodType<CesteralWriteOperation>` (not the inferred `ZodEnum`) so
+// the emitted `.d.ts` carries no zod-version-specific structure — consumers on
+// any zod major (the zod-3 fleet, the zod-4 governance layer) resolve a clean
+// type through their own peer zod.
+export const writeOperationSchema: z.ZodType<CesteralWriteOperation> =
+  z.enum(CESTERAL_WRITE_OPERATIONS);

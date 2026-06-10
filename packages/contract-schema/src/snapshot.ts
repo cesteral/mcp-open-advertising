@@ -17,7 +17,7 @@
 
 import { z } from "zod";
 
-import { canonicalEntityKindSchema } from "./entity-kind.js";
+import { canonicalEntityKindSchema, type CanonicalEntityKind } from "./entity-kind.js";
 
 export interface MoneyAmount {
   amountMinor: number;
@@ -61,7 +61,7 @@ export interface NormalizedEntitySnapshot {
   /** Pinned at 1 so consumers can detect drift in the canonical state shape. */
   schemaVersion: 1;
   platform: string;
-  entityKind: z.infer<typeof canonicalEntityKindSchema>;
+  entityKind: CanonicalEntityKind;
   platformEntityId: string;
   displayName: string | null;
   accountId: string | null;
@@ -102,7 +102,11 @@ const scheduleSnapshotSchema = z.object({
   endAt: z.string().nullable(),
 });
 
-export const normalizedEntitySnapshotSchema = z.object({
+// Annotated `z.ZodType<NormalizedEntitySnapshot>` so the emitted `.d.ts` exposes
+// the plain interface, not a zod-version-specific `ZodObject` — consumers on any
+// zod major resolve clean types (and `schema.safeParse().error.issues`) through
+// their own peer zod.
+export const normalizedEntitySnapshotSchema: z.ZodType<NormalizedEntitySnapshot> = z.object({
   schemaVersion: z.literal(1),
   platform: z.string(),
   entityKind: canonicalEntityKindSchema,
