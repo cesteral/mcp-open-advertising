@@ -19,6 +19,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 
 ### Changed
 
+- **Publish pipeline** — `scripts/publish-all.sh` now publishes each package with a single `pnpm publish --provenance` (native support since the pnpm 10 migration), replacing the two-step `pnpm pack` + `npm publish <tarball>` workaround required by pnpm 8.15. The pack-and-inspect preflight gate is unchanged.
 - **meta-mcp** — Upgraded to Meta Marketing API **v25.0** (from v22.0); expanded from 20 to 25 tools with insights breakdowns, delivery estimate, budget schedules. `meta_check_report_status` now surfaces v25.0 async-report failure fields (`error_code`, `error_message`, `error_subcode`, `error_user_title`, `error_user_msg`). `meta_duplicate_entity` notes Meta's 2026-05-19 sunset of `/copies` for Advantage+ Shopping/App campaigns.
 - **amazon-dsp-mcp** — Schemas rebaselined against Amazon Reporting v3 OpenAPI spec.
 - **amazon-dsp-mcp** — Reporting endpoints corrected to the DSP-specific async reporting API: `POST /accounts/{accountId}/dsp/reports` with `Accept: application/vnd.dspcreatereports.v3+json` (previously hit the unified Sponsored Ads reporting path). Reporting tools now take `accountId` (DSP entity ID) instead of the unused `profileId` input.

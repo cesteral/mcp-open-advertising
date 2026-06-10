@@ -7,7 +7,7 @@
     "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "remotes": [
     {
       "type": "streamable-http",
@@ -24,7 +24,7 @@
     {
       "registryType": "npm",
       "identifier": "@cesteral/amazon-dsp-mcp",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "transport": {
         "type": "stdio"
       }

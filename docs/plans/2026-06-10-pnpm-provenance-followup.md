@@ -1,6 +1,8 @@
 # Follow-up: simplify provenance publishing now that pnpm supports it
 
-**Status:** proposed (follow-up to the pnpm 8.15.0 → 10.34.1 migration)
+**Status:** implemented (2026-06-10) — `scripts/publish-all.sh` now publishes each
+package with a single `pnpm publish --access public --no-git-checks [--provenance]`;
+the pack-and-inspect preflight gate is retained as an independent validation step.
 **Date:** 2026-06-10
 
 ## Context
