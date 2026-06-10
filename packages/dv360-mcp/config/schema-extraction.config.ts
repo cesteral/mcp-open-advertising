@@ -231,9 +231,9 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
     // Phase 2: Targeting Configuration Support
     // ========================================
 
-    // Core targeting schemas
+    // Core targeting schemas (insertion-order-level targeting was removed
+    // from the v4 API in Discovery doc revision 20260608)
     "AssignedTargetingOption",
-    "ListInsertionOrderAssignedTargetingOptionsResponse",
     "ListLineItemAssignedTargetingOptionsResponse",
     "ListAdGroupAssignedTargetingOptionsResponse",
 

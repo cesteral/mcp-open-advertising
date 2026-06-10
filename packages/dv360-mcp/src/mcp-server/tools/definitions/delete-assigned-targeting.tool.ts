@@ -251,13 +251,12 @@ export const deleteAssignedTargetingTool = {
       },
     },
     {
-      label: "Delete channel exclusion from an insertion order",
+      label: "Delete channel exclusion from an advertiser",
       input: {
-        parentType: "insertionOrder",
+        parentType: "advertiser",
         advertiserId: "1234567",
-        insertionOrderId: "4445551",
         targetingType: "TARGETING_TYPE_CHANNEL",
-        assignedTargetingOptionId: "insertionOrders-4445551-channel-789012",
+        assignedTargetingOptionId: "advertisers-1234567-channel-789012",
       },
     },
     {

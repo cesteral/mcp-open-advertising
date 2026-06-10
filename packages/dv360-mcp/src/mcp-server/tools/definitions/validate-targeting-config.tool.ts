@@ -20,8 +20,8 @@ const TOOL_TITLE = "Validate DV360 Targeting Configuration";
 const TOOL_DESCRIPTION = `Validate targeting configuration across multiple DV360 entities.
 
 This workflow tool fetches and validates targeting settings for:
-- Channel exclusions at IO level
-- Geographic targeting at IO/Line Item level
+- Channel exclusions at Advertiser level
+- Geographic targeting at Line Item level
 - Placement settings at Ad Group level
 - Keyword exclusions at Ad Group level
 
@@ -224,10 +224,9 @@ export const validateTargetingConfigTool = {
       },
     },
     {
-      label: "Audit full targeting config across IO and line items",
+      label: "Audit full targeting config across multiple line items",
       input: {
         advertiserId: "1234567",
-        insertionOrderIds: ["4445551"],
         lineItemIds: ["5678901", "5678902", "5678903"],
       },
     },
