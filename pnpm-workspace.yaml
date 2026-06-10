@@ -1,2 +1,9 @@
 packages:
   - 'packages/*'
+
+# Centralized versions for dependencies shared across the server fleet.
+# Reference with "catalog:" in each package.json; bump here once.
+catalog:
+  '@modelcontextprotocol/sdk': 1.27.1
+  zod: 3.25.76
+  pino: ^10.1.0

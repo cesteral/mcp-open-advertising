@@ -46,10 +46,10 @@
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.27.1",
+    "@modelcontextprotocol/sdk": "catalog:",
     "googleapis": "^166.0.0",
-    "pino": "^10.1.0",
-    "zod": "3.25.76"
+    "pino": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

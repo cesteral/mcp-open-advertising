@@ -2,7 +2,7 @@
 # Build with: docker build --build-arg SERVER_NAME=dbm-mcp -t dbm-mcp .
 
 FROM node:20-alpine AS base
-RUN npm install -g pnpm@8.15.0
+RUN npm install -g pnpm@10.34.1
 WORKDIR /app
 
 # Install all dependencies (including devDeps for build)
