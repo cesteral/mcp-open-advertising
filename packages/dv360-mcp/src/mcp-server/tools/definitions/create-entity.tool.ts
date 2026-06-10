@@ -141,6 +141,19 @@ function createInputSchema(): z.ZodTypeAny {
           path: ["data"],
         });
       }
+
+      // DV360 API v4 requires optimizationObjective when creating insertion
+      // orders. The generated schema can't express create-only requiredness
+      // (the field is optional on the resource), so enforce it here.
+      if (input.entityType === "insertionOrder" && mergedData.optimizationObjective == null) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "DV360 API v4 requires `optimizationObjective` when creating insertion orders. " +
+            "Set one of: CONVERSION, CLICK, BRAND_AWARENESS, CUSTOM, NO_OBJECTIVE.",
+          path: ["data", "optimizationObjective"],
+        });
+      }
     })
     .describe("Parameters for creating a DV360 entity");
 }
@@ -341,6 +354,16 @@ export const createEntityTool = {
         data: {
           displayName: "IO - Display Prospecting",
           entityStatus: "ENTITY_STATUS_DRAFT",
+          optimizationObjective: "CONVERSION",
+          kpi: {
+            kpiType: "KPI_TYPE_CPA",
+            kpiAmountMicros: "20000000",
+          },
+          frequencyCap: {
+            maxImpressions: 5,
+            timeUnit: "TIME_UNIT_DAYS",
+            timeUnitCount: 1,
+          },
           pacing: {
             pacingPeriod: "PACING_PERIOD_FLIGHT",
             pacingType: "PACING_TYPE_EVEN",

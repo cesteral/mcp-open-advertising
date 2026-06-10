@@ -233,6 +233,50 @@ describe("dv360_create_entity", () => {
       ).rejects.toThrow("No session found");
     });
 
+    it("rejects insertion order creates without optimizationObjective (API v4 requirement)", async () => {
+      await expect(
+        createEntityLogic(
+          {
+            entityType: "insertionOrder",
+            advertiserId: "adv-1",
+            campaignId: "camp-1",
+            data: { displayName: "IO", entityStatus: "ENTITY_STATUS_DRAFT" },
+          } as any,
+          createMockContext(),
+          createMockSdkContext()
+        )
+      ).rejects.toThrow(/optimizationObjective/);
+
+      expect(mockDv360Service.createEntity).not.toHaveBeenCalled();
+    });
+
+    it("accepts insertion order creates with optimizationObjective", async () => {
+      mockDv360Service.createEntity.mockResolvedValueOnce({
+        displayName: "IO",
+        entityStatus: "ENTITY_STATUS_DRAFT",
+        insertionOrderId: "io-new-1",
+        advertiserId: "adv-1",
+      });
+
+      const result = await createEntityLogic(
+        {
+          entityType: "insertionOrder",
+          advertiserId: "adv-1",
+          campaignId: "camp-1",
+          data: {
+            displayName: "IO",
+            entityStatus: "ENTITY_STATUS_DRAFT",
+            optimizationObjective: "NO_OBJECTIVE",
+          },
+        } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(mockDv360Service.createEntity).toHaveBeenCalledOnce();
+      expect(result.entity.insertionOrderId).toBe("io-new-1");
+    });
+
     it("propagates service errors", async () => {
       mockDv360Service.createEntity.mockRejectedValueOnce(new Error("API quota exceeded"));
 
