@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript, pnpm workspace + Turborepo, vitest, `@modelcontextprotocol/sdk` (in-memory transport), GitHub Actions, npm provenance (`pnpm pack` + `npm publish --provenance` — pnpm 8.15 has no provenance support).
 
+> **Provenance note (updated 2026-06-10):** the `pnpm pack` + `npm publish <tarball>` two-step described throughout this plan was a pnpm 8.15 workaround. After the pnpm 10 migration, `publish-all.sh` publishes with a single `pnpm publish --provenance` per package — see `docs/plans/2026-06-10-pnpm-provenance-followup.md`. The manifest/attestation design here is unaffected.
+
 **Design doc:** `docs/plans/2026-05-20-signed-manifest-upstream-design.md`
 
 ---

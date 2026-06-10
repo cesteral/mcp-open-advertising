@@ -142,12 +142,15 @@ fi
 log "  OK — all tarballs have resolved deps and LICENSE.md."
 
 # --- npm publish helper ---
-# Packs each package with `pnpm pack` (which rewrites workspace:* deps into
-# the tarball) and publishes the resulting artifact with `npm publish
-# <tarball>` so we can pass --provenance — the previously pinned pnpm 8.15
-# had no provenance support, npm 10.x does. The repo now pins pnpm 10, which
-# supports `pnpm publish --provenance` natively; collapsing this split is
-# tracked in docs/plans/2026-06-10-pnpm-provenance-followup.md.
+# Publishes each package straight from its directory with `pnpm publish`,
+# which packs on the fly (rewriting workspace:* deps into the uploaded
+# tarball, same as `pnpm pack`) and forwards --provenance to the underlying
+# `npm publish` so CI can attach the build attestation. The previously
+# pinned pnpm 8.15 had no provenance support, which forced a two-step
+# `pnpm pack` + `npm publish <tarball>` workaround; pnpm 10 (now pinned)
+# supports the flag natively (see docs/plans/2026-06-10-pnpm-provenance-followup.md).
+# --no-git-checks: release.yml publishes from a tag checkout (detached
+# HEAD), which would otherwise fail pnpm's publish-branch check.
 #
 # Wraps the publish so we can distinguish a tolerable "version already
 # published" 403 from every other failure mode (auth, OTP, network, cache
@@ -157,7 +160,8 @@ log "  OK — all tarballs have resolved deps and LICENSE.md."
 # positively-identified "already published" error gets recorded as a hard
 # failure and aborts the run after the loop completes.
 #
-# npm publish returns this body on republish:
+# pnpm delegates the upload to `npm publish`, so the republish error body is
+# still npm's:
 #   "You cannot publish over the previously published versions: X.Y.Z."
 # Older npm versions returned the code EPUBLISHCONFLICT for the same case.
 # Matching either string is the safe positive-identification.
@@ -171,29 +175,13 @@ publish_to_npm() {
   if [ "$PROVENANCE" = true ]; then prov_flag="--provenance"; fi
 
   if [ "$DRY_RUN" = true ]; then
-    echo "  (dry-run) pnpm pack $pkg_dir && npm publish <tarball> --access public $prov_flag"
-    return 0
-  fi
-
-  # The previously pinned pnpm 8.15 had no provenance support; npm does
-  # (pnpm 10, now pinned, also does — see the follow-up plan above).
-  # `pnpm pack` rewrites
-  # workspace:* deps into the tarball (the literal range would otherwise
-  # ship and break consumers); `npm publish <tarball>` publishes that exact
-  # artifact and, with --provenance, attaches the build attestation.
-  local tarball
-  set +e
-  tarball="$(cd "$pkg_dir" && pnpm pack --pack-destination "$PACK_TMP" 2>/dev/null | tail -n1)"
-  set -e
-  if [ ! -f "$tarball" ]; then
-    echo "  FAIL $pkg_label: pnpm pack produced no tarball" >&2
-    NPM_PUBLISH_FAILURES+=("$pkg_label")
+    echo "  (dry-run) cd $pkg_dir && pnpm publish --access public --no-git-checks $prov_flag"
     return 0
   fi
 
   local out exit_code
   set +e
-  out=$(npm publish "$tarball" --access public $prov_flag 2>&1)
+  out=$(cd "$pkg_dir" && pnpm publish --access public --no-git-checks $prov_flag 2>&1)
   exit_code=$?
   set -e
 
@@ -209,16 +197,15 @@ publish_to_npm() {
     return 0
   fi
 
-  echo "  FAIL $pkg_label: npm publish exited $exit_code (not an 'already published' error)" >&2
+  echo "  FAIL $pkg_label: pnpm publish exited $exit_code (not an 'already published' error)" >&2
   NPM_PUBLISH_FAILURES+=("$pkg_label")
   return 0  # don't abort the loop; failures are reported after the loop
 }
 
 # --- Publish the leaf contract libraries first ---
-# `pnpm pack` rewrites workspace:* deps to the actual resolved version of the
-# workspace package, so the tarball `npm publish` uploads carries real version
-# ranges rather than the literal "workspace:*" string that would break
-# consumers.
+# `pnpm publish` rewrites workspace:* deps to the actual resolved version of
+# the workspace package, so the uploaded tarball carries real version ranges
+# rather than the literal "workspace:*" string that would break consumers.
 #
 # @cesteral/shared declares runtime deps on BOTH @cesteral/contract-hash and
 # @cesteral/contract-schema (each `workspace:*`). After the pack rewrite, the
