@@ -251,6 +251,17 @@ const INSERTION_ORDER_EXAMPLES: EntityExample[] = [
     notes:
       "Common KPI types: CPA, CPC, CPM, CTR. This guides optimization but doesn't enforce constraints.",
   },
+  {
+    operation: "Update optimization objective",
+    description: "Change the insertion order's optimization objective",
+    category: "general",
+    data: {
+      optimizationObjective: "CONVERSION",
+    },
+    updateMask: "optimizationObjective",
+    notes:
+      "Values: CONVERSION, CLICK, BRAND_AWARENESS, CUSTOM, NO_OBJECTIVE. Required at creation since DV360 API v4 — use NO_OBJECTIVE to opt out of objective-based optimization.",
+  },
 ];
 
 /**

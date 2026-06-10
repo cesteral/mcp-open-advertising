@@ -138,7 +138,7 @@ export const TARGETING_TYPE_DESCRIPTIONS: Record<TargetingType, string> = {
   TARGETING_TYPE_PARENTAL_STATUS: "Target users by parental status",
   TARGETING_TYPE_HOUSEHOLD_INCOME: "Target users by household income bracket",
   TARGETING_TYPE_AUDIENCE_GROUP:
-    "Target custom audience groups (first-party, third-party, combined)",
+    "Target custom audience groups (first-party and partner, Google audiences, combined)",
   TARGETING_TYPE_REGIONAL_LOCATION_LIST: "Target geographic regions from a location list",
   TARGETING_TYPE_PROXIMITY_LOCATION_LIST: "Target users near specific locations (proximity)",
   TARGETING_TYPE_GEO_REGION: "Target specific geographic regions (country, state, city, DMA)",

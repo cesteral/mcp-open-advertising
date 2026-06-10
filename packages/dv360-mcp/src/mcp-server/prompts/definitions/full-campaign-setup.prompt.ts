@@ -155,13 +155,16 @@ Parameters:
 - \`campaignId\` (string): **From Step 2 response**
 - \`entityStatus\` (enum): **MUST be \`ENTITY_STATUS_DRAFT\`**
   - ⚠️ **GOTCHA**: IOs MUST be created in DRAFT status (opposite of campaigns!)
-
-### Optional but Recommended
-- \`kpi\` (object): Performance goal
-  - For viewability: \`kpiType: "KPI_TYPE_VIEWABILITY"\`, \`kpiAmountMicros: 70000000\` (70%)
+- \`optimizationObjective\` (enum): \`CONVERSION\`, \`CLICK\`, \`BRAND_AWARENESS\`, \`CUSTOM\`, or \`NO_OBJECTIVE\`
+  - ⚠️ **GOTCHA**: Required since API v4. Use \`NO_OBJECTIVE\` if you don't want objective-based optimization.
+- \`kpi\` (object): Key performance indicator
+  - For viewability: \`kpiType: "KPI_TYPE_VIEWABILITY"\`, \`kpiPercentageMicros: "70000000"\` (70%)
+  - For CPA: \`kpiType: "KPI_TYPE_CPA"\`, \`kpiAmountMicros: "20000000"\` ($20)
+- \`pacing\` (object): e.g., \`pacingPeriod: "PACING_PERIOD_FLIGHT"\`, \`pacingType: "PACING_TYPE_EVEN"\`
+- \`frequencyCap\` (object): Same shape as the campaign-level cap
 - \`budget\` (object): IO-level budget
   - \`budgetUnit\` (enum): e.g., \`BUDGET_UNIT_CURRENCY\`
-  - \`maxAmount\` (integer): Budget in micros (1 USD = 1,000,000 micros)
+  - \`budgetSegments\` (array): Each segment needs \`budgetAmountMicros\` (string) and \`dateRange\`
 
 ### Tool Call
 \`\`\`
@@ -174,9 +177,31 @@ Parameters:
     "displayName": "Your IO Name",
     "campaignId": "CAMPAIGN_ID_FROM_STEP_2",
     "entityStatus": "ENTITY_STATUS_DRAFT",
+    "optimizationObjective": "NO_OBJECTIVE",
     "kpi": {
       "kpiType": "KPI_TYPE_VIEWABILITY",
-      "kpiAmountMicros": 70000000
+      "kpiPercentageMicros": "70000000"
+    },
+    "pacing": {
+      "pacingPeriod": "PACING_PERIOD_FLIGHT",
+      "pacingType": "PACING_TYPE_EVEN"
+    },
+    "frequencyCap": {
+      "maxImpressions": 5,
+      "timeUnit": "TIME_UNIT_DAYS",
+      "timeUnitCount": 1
+    },
+    "budget": {
+      "budgetUnit": "BUDGET_UNIT_CURRENCY",
+      "budgetSegments": [
+        {
+          "budgetAmountMicros": "50000000000",
+          "dateRange": {
+            "startDate": { "year": 2025, "month": 1, "day": 15 },
+            "endDate": { "year": 2025, "month": 3, "day": 31 }
+          }
+        }
+      ]
     }
   }
 }
@@ -192,7 +217,8 @@ Parameters:
 |-------|-------|----------|
 | "Must be DRAFT status" | Used PAUSED or ACTIVE | IOs must be created as DRAFT |
 | "Invalid campaignId" | Wrong campaignId or missing | Use campaignId from Step 2 response |
-| "KPI missing kpiAmountMicros" | Used KPI_TYPE_VIEWABILITY without amount | Include kpiAmountMicros (e.g., 70000000 for 70%) |
+| "Missing optimizationObjective" | Field omitted (required since API v4) | Set CONVERSION, CLICK, BRAND_AWARENESS, CUSTOM, or NO_OBJECTIVE |
+| "KPI missing amount" | Used KPI_TYPE_VIEWABILITY without a goal value | Include kpiPercentageMicros (e.g., "70000000" for 70%) |
 
 ---
 
