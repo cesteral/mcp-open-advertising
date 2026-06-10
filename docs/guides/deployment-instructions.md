@@ -7,7 +7,7 @@ This guide covers the full deployment flow for Cesteral MCP Servers on GCP Cloud
 - **gcloud CLI** — authenticated with access to the target GCP project
 - **Terraform** >= 1.5.0
 - **Docker** — for building container images
-- **Node.js** >= 20 and **pnpm** >= 8.15
+- **Node.js** >= 20 and **pnpm** >= 10
 - **GCP project** with billing enabled (one per environment: dev, prod)
 
 ## Deployment Modes

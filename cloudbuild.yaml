@@ -17,7 +17,7 @@ steps:
     args:
       - '-c'
       - |
-        npm install -g pnpm@8.15.0
+        npm install -g pnpm@10.34.1
         pnpm install --frozen-lockfile
         pnpm run check:registry
         pnpm run check:registry-tools

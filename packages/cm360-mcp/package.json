@@ -54,9 +54,9 @@
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.27.1",
-    "pino": "^10.1.0",
-    "zod": "3.25.76"
+    "@modelcontextprotocol/sdk": "catalog:",
+    "pino": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

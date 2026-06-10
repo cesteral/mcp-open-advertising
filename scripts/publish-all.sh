@@ -144,8 +144,10 @@ log "  OK — all tarballs have resolved deps and LICENSE.md."
 # --- npm publish helper ---
 # Packs each package with `pnpm pack` (which rewrites workspace:* deps into
 # the tarball) and publishes the resulting artifact with `npm publish
-# <tarball>` so we can pass --provenance — the pinned pnpm 8.15 has no
-# provenance support, npm 10.x does.
+# <tarball>` so we can pass --provenance — the previously pinned pnpm 8.15
+# had no provenance support, npm 10.x does. The repo now pins pnpm 10, which
+# supports `pnpm publish --provenance` natively; collapsing this split is
+# tracked in docs/plans/2026-06-10-pnpm-provenance-followup.md.
 #
 # Wraps the publish so we can distinguish a tolerable "version already
 # published" 403 from every other failure mode (auth, OTP, network, cache
@@ -173,7 +175,9 @@ publish_to_npm() {
     return 0
   fi
 
-  # pnpm 8.15 has no provenance support; npm does. `pnpm pack` rewrites
+  # The previously pinned pnpm 8.15 had no provenance support; npm does
+  # (pnpm 10, now pinned, also does — see the follow-up plan above).
+  # `pnpm pack` rewrites
   # workspace:* deps into the tarball (the literal range would otherwise
   # ship and break consumers); `npm publish <tarball>` publishes that exact
   # artifact and, with --provenance, attaches the build attestation.
