@@ -1,6 +1,6 @@
 {
   "name": "@cesteral/shared",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Shared infrastructure utilities and authentication for Cesteral MCP servers",
   "license": "Apache-2.0",
   "repository": {
