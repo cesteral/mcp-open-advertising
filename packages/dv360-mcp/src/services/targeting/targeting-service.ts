@@ -277,7 +277,7 @@ export class TargetingService {
    * Returns a validation report with any issues found
    *
    * @param advertiserId - DV360 Advertiser ID
-   * @param entityIds - Map of parentType to array of entity IDs (e.g., { insertionOrder: ['123'], lineItem: ['456'] })
+   * @param entityIds - Map of parentType to array of entity IDs (e.g., { lineItem: ['123'], adGroup: ['456'] })
    * @param targetingTypesToCheck - Array of targeting types to validate
    * @param context - Request context for tracing
    */
@@ -349,14 +349,15 @@ export class TargetingService {
 
           if (
             targetingType === "TARGETING_TYPE_CHANNEL" &&
-            parentType === "insertionOrder" &&
+            parentType === "advertiser" &&
             result.assignedTargetingOptions.length === 0
           ) {
             issues.push({
               entityType: parentType,
               entityId,
               targetingType,
-              issue: "No channel exclusions at IO level - consider adding brand safety exclusions",
+              issue:
+                "No channel exclusions at advertiser level - consider adding brand safety exclusions",
               severity: "info",
             });
           }

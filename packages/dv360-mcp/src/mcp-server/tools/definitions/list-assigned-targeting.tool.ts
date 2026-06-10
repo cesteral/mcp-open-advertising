@@ -25,10 +25,10 @@ import type { SdkContext } from "@cesteral/shared";
 const TOOL_NAME = "dv360_list_assigned_targeting";
 const TOOL_TITLE = "List DV360 Assigned Targeting Options";
 
-const TOOL_DESCRIPTION = `List assigned targeting options for a DV360 entity (Insertion Order, Line Item, or Ad Group).
+const TOOL_DESCRIPTION = `List assigned targeting options for a DV360 entity (Advertiser, Line Item, or Ad Group).
 
 **Parent Types:**
-- insertionOrder: Targeting at IO level (brand safety, geo)
+- advertiser: Advertiser-wide targeting (brand safety, channel exclusions)
 - lineItem: Targeting at line item level (audience, inventory)
 - adGroup: Targeting at ad group level (keywords, placements)
 
@@ -166,11 +166,10 @@ export const listAssignedTargetingTool = {
       },
     },
     {
-      label: "List channel targeting on an insertion order",
+      label: "List channel targeting on an advertiser",
       input: {
-        parentType: "insertionOrder",
+        parentType: "advertiser",
         advertiserId: "1234567",
-        insertionOrderId: "4445551",
         targetingType: "TARGETING_TYPE_CHANNEL",
       },
     },

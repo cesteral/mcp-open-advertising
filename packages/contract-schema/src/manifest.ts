@@ -19,7 +19,26 @@ import { z } from "zod";
  * `@cesteral/contract-hash`'s `computeDefinitionHash()` output — keeping the
  * surfaces bit-identical avoids any normalization layer between the repos.
  */
-export const cesteralManifestSchema = z.object({
+export interface CesteralManifestTool {
+  toolName: string;
+  contractPlatformSlug: string;
+  contractToolSlug: string;
+  schemaVersion: string;
+  definitionHash: string;
+}
+
+export interface CesteralManifest {
+  manifestVersion: 1;
+  packageName: string;
+  packageVersion: string;
+  generatedAt: string;
+  tools: CesteralManifestTool[];
+}
+
+// Plain interfaces above are the authoring contract; the schema is annotated
+// `z.ZodType<CesteralManifest>` (the assignment self-checks the mirror) so the
+// emitted `.d.ts` carries no zod-version-specific structure.
+export const cesteralManifestSchema: z.ZodType<CesteralManifest> = z.object({
   manifestVersion: z.literal(1),
   packageName: z.string().regex(/^@cesteral\/[a-z0-9-]+-mcp$/),
   packageVersion: z.string(),
@@ -36,6 +55,3 @@ export const cesteralManifestSchema = z.object({
     )
     .min(1),
 });
-
-export type CesteralManifest = z.infer<typeof cesteralManifestSchema>;
-export type CesteralManifestTool = CesteralManifest["tools"][number];

@@ -34,7 +34,7 @@ import type {
 const TOOL_NAME = "dv360_create_assigned_targeting";
 const TOOL_TITLE = "Create DV360 Assigned Targeting Option";
 
-const TOOL_DESCRIPTION = `Create a new assigned targeting option on a DV360 entity (Insertion Order, Line Item, or Ad Group).
+const TOOL_DESCRIPTION = `Create a new assigned targeting option on a DV360 entity (Advertiser, Line Item, or Ad Group).
 
 **Important:** Fetch the targeting schema first using the MCP resource \`targeting-schema://{targetingType}\` to understand required fields.
 
@@ -275,11 +275,10 @@ export const createAssignedTargetingTool = {
       },
     },
     {
-      label: "Assign channel targeting to an insertion order",
+      label: "Assign channel targeting at the advertiser level",
       input: {
-        parentType: "insertionOrder",
+        parentType: "advertiser",
         advertiserId: "1234567",
-        insertionOrderId: "5555555",
         targetingType: "TARGETING_TYPE_CHANNEL",
         data: {
           channelDetails: { channelId: "888999", negative: false },
