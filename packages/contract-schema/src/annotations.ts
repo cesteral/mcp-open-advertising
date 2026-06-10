@@ -366,9 +366,7 @@ export const cesteralAnnotationSchema: z.ZodType<CesteralAnnotation> = applyCont
 
 export function parseCesteralAnnotation(
   value: unknown
-):
-  | { success: true; data: CesteralAnnotation }
-  | { success: false; error: z.ZodError } {
+): { success: true; data: CesteralAnnotation } | { success: false; error: z.ZodError } {
   const r = cesteralAnnotationSchema.safeParse(value);
   if (!r.success) return { success: false, error: r.error };
   return { success: true, data: r.data };
