@@ -135,10 +135,6 @@ importers:
         version: 1.6.1(@types/node@20.19.24)
 
   packages/contract-schema:
-    dependencies:
-      zod:
-        specifier: 3.25.76
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20.17.6
@@ -149,6 +145,9 @@ importers:
       vitest:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.24)
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
 
   packages/dbm-mcp:
     dependencies:

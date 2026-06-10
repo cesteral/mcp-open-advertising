@@ -23,7 +23,7 @@ export interface DryRunValidationError {
   field?: string;
 }
 
-export const dryRunValidationErrorSchema = z.object({
+export const dryRunValidationErrorSchema: z.ZodType<DryRunValidationError> = z.object({
   code: z.string(),
   message: z.string(),
   field: z.string().optional(),
@@ -53,7 +53,7 @@ export interface DryRunResult {
   expectedPostState?: NormalizedEntitySnapshot;
 }
 
-export const dryRunResultSchema = z.object({
+export const dryRunResultSchema: z.ZodType<DryRunResult> = z.object({
   wouldSucceed: z.boolean(),
   validationErrors: z.array(dryRunValidationErrorSchema),
   validationSource: z.enum(["native_validator", "symbolic", "none"]),
@@ -85,7 +85,7 @@ export interface DispatchedCapability {
   canonicalEntityKind: string | null;
 }
 
-export const dispatchedCapabilitySchema = z.object({
+export const dispatchedCapabilitySchema: z.ZodType<DispatchedCapability> = z.object({
   operation: z.string().min(1),
   // Nullable: effect-class writes (uploads, schedules, conversion uploads)
   // have no canonical entity kind.
@@ -109,7 +109,7 @@ export interface EffectResult {
   summary: Record<string, string | number | boolean | null>;
 }
 
-export const effectResultSchema = z.object({
+export const effectResultSchema: z.ZodType<EffectResult> = z.object({
   effectKind: z.string().min(1),
   summary: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
 });
@@ -131,7 +131,7 @@ export interface EffectDryRunResult {
   expectedEffect?: EffectResult;
 }
 
-export const effectDryRunResultSchema = z.object({
+export const effectDryRunResultSchema: z.ZodType<EffectDryRunResult> = z.object({
   wouldSucceed: z.boolean(),
   validationErrors: z.array(dryRunValidationErrorSchema),
   validationSource: z.enum(["symbolic", "none"]),

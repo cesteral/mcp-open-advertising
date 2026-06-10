@@ -235,7 +235,9 @@ function applyContractIdConsistency<T extends z.ZodTypeAny>(schema: T) {
     const expected = `${v.contractPlatformSlug}.${v.contractToolSlug}.v${v.schemaVersion}`;
     if (v.contractId !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        // String literal (not `z.ZodIssueCode.custom`) so the schema constructs
+        // identically under both zod 3 and zod 4 — zod 4 removed the enum.
+        code: "custom",
         path: ["contractId"],
         message: `contractId must equal deriveContractId(contractPlatformSlug, contractToolSlug, schemaVersion). Expected '${expected}', got '${v.contractId}'.`,
       });
@@ -301,26 +303,73 @@ const readAnnotationShape = z.object({
   entityIdArgs: requiredEntityIdArgs,
 });
 
-export const cesteralWriteAnnotationSchema = applyContractIdConsistency(writeAnnotationShape);
-export const cesteralReadAnnotationSchema = applyContractIdConsistency(readAnnotationShape);
+// ---------------------------------------------------------------------------
+// Validation (loose) types — the parsed shape of an untrusted annotation.
+// Hand-written PLAIN types (not `z.infer`) so the emitted `.d.ts` carries no
+// zod-version-specific structure; each `z.ZodType<…>` schema annotation below
+// self-checks the mirror against its concrete schema at build time. These are
+// looser than the authoring types above (no strict `requiresValidation: true`
+// literals — governance applies those as separate admission checks). The zod-3
+// fleet and the zod-4 governance layer both resolve clean types (and
+// `schema.safeParse().error.issues`) through their own peer zod.
+// ---------------------------------------------------------------------------
 
+interface CesteralParsedAnnotationBase {
+  platform: string;
+  contractPlatformSlug: string;
+  contractToolSlug: string;
+  schemaVersion: number;
+  contractId: string;
+}
+
+interface CesteralParsedWriteAnnotationBase extends CesteralParsedAnnotationBase {
+  kind: "write";
+  operation: CesteralWriteOperation[];
+  executableArgsExclude?: string[];
+  supportsDryRun?: boolean;
+  supportsBeforeAfterSnapshot?: boolean;
+}
+
+export interface CesteralEntityWriteAnnotation extends CesteralParsedWriteAnnotationBase {
+  writeClass: "entity";
+  entityKinds: CanonicalEntityKind[];
+  entityIdArgs: string[];
+  readPartner: { toolName: string; argMap: Record<string, string> };
+}
+
+export interface CesteralEffectWriteAnnotation extends CesteralParsedWriteAnnotationBase {
+  writeClass: "effect";
+  entityKinds: CanonicalEntityKind[];
+  entityIdArgs: string[];
+}
+
+export type CesteralWriteAnnotation = CesteralEntityWriteAnnotation | CesteralEffectWriteAnnotation;
+
+export interface CesteralReadAnnotation extends CesteralParsedAnnotationBase {
+  kind: "read";
+  entityKinds: CanonicalEntityKind[];
+  entityIdArgs: string[];
+}
+
+export type CesteralAnnotation = CesteralWriteAnnotation | CesteralReadAnnotation;
+
+export const cesteralWriteAnnotationSchema: z.ZodType<CesteralWriteAnnotation> =
+  applyContractIdConsistency(writeAnnotationShape);
+export const cesteralReadAnnotationSchema: z.ZodType<CesteralReadAnnotation> =
+  applyContractIdConsistency(readAnnotationShape);
 // Top-level cannot be a single `discriminatedUnion("kind", …)` because the
 // write arm is itself a `discriminatedUnion("writeClass", …)`; a plain union
 // of the two arms gives the same parse result with slightly broader errors.
-export const cesteralAnnotationSchema = applyContractIdConsistency(
+export const cesteralAnnotationSchema: z.ZodType<CesteralAnnotation> = applyContractIdConsistency(
   z.union([writeAnnotationShape, readAnnotationShape])
 );
 
 export function parseCesteralAnnotation(
   value: unknown
 ):
-  | { success: true; data: z.infer<typeof cesteralAnnotationSchema> }
+  | { success: true; data: CesteralAnnotation }
   | { success: false; error: z.ZodError } {
   const r = cesteralAnnotationSchema.safeParse(value);
   if (!r.success) return { success: false, error: r.error };
   return { success: true, data: r.data };
 }
-
-export type CesteralWriteAnnotation = z.infer<typeof cesteralWriteAnnotationSchema>;
-export type CesteralReadAnnotation = z.infer<typeof cesteralReadAnnotationSchema>;
-export type CesteralAnnotation = z.infer<typeof cesteralAnnotationSchema>;

@@ -13,7 +13,22 @@ import { z } from "zod";
  * inferred TS type. Enum member ORDER is irrelevant to validation and to the
  * inferred union — do not rely on it.
  */
-export const canonicalEntityKindSchema = z.enum([
+export type CanonicalEntityKind =
+  | "campaign"
+  | "ad_set"
+  | "insertion_order"
+  | "line_item"
+  | "ad_group"
+  | "ad"
+  | "campaign_budget"
+  | "order"
+  | "commitment";
+
+// Annotated `z.ZodType<CanonicalEntityKind>` so the emitted `.d.ts` exposes the
+// plain union, not a zod-version-specific `ZodEnum` — consumers on any zod major
+// (the zod-3 fleet, the zod-4 governance layer) resolve a clean type through
+// their own peer zod.
+export const canonicalEntityKindSchema: z.ZodType<CanonicalEntityKind> = z.enum([
   "campaign",
   "ad_set",
   "insertion_order",
@@ -24,5 +39,3 @@ export const canonicalEntityKindSchema = z.enum([
   "order",
   "commitment",
 ]);
-
-export type CanonicalEntityKind = z.infer<typeof canonicalEntityKindSchema>;
