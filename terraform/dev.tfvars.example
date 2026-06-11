@@ -49,6 +49,12 @@ allow_unauthenticated = false # Cloud Run IAM required; the governance app prese
 # roles/run.invoker on every service. Cross-project member is valid (SA lives in
 # the cesteral-governance project). Source the SA email from the governance
 # identity stack: `terraform output governance_invoker_email`.
+#
+# ORDERING: apply the governance identity stack (cesteral-intelligence/terraform)
+# BEFORE this one — the IAM grant below fails at apply time if the SA doesn't
+# exist yet. Until then, deploy with allow_unauthenticated = true and an empty
+# authorized_invokers list. deploy.sh's health gate handles either mode (it
+# falls back to the deployer's identity token on 401/403).
 authorized_invokers = ["serviceAccount:governance-invoker@cesteral-governance.iam.gserviceaccount.com"]
 
 # MCP Server configuration
