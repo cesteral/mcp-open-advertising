@@ -54,6 +54,8 @@ Creates observability infrastructure:
 
 ### First-time setup
 
+> The complete one-time walkthrough (bootstrap script, registry import, decision-token secret, invoker access) lives in [docs/guides/first-deploy-checklist.md](../docs/guides/first-deploy-checklist.md). The short version:
+
 ```bash
 # 0. Copy example files and fill in your values
 cp backend-dev.conf.example backend-dev.conf

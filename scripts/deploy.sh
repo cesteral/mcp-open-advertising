@@ -91,40 +91,36 @@ cd terraform
 print_step "Initializing Terraform..."
 terraform init -backend-config="backend-${ENVIRONMENT}.conf" -reconfigure
 
+# Image tag: fresh builds deploy the SHA-tagged images pushed above;
+# --skip-build pins to whatever :latest currently is in the registry.
+IMAGE_TAG_REF="$GIT_SHA"
+if [ "$SKIP_BUILD" = true ]; then
+  IMAGE_TAG_REF="latest"
+fi
+
 TF_ARGS=(
-  -var="dbm_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:${GIT_SHA}"
-  -var="dv360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:${GIT_SHA}"
-  -var="ttd_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:${GIT_SHA}"
-  -var="gads_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/gads-mcp:${GIT_SHA}"
-  -var="meta_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/meta-mcp:${GIT_SHA}"
-  -var="linkedin_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/linkedin-mcp:${GIT_SHA}"
-  -var="tiktok_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/tiktok-mcp:${GIT_SHA}"
-  -var="cm360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/cm360-mcp:${GIT_SHA}"
-  -var="sa360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/sa360-mcp:${GIT_SHA}"
-  -var="pinterest_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/pinterest-mcp:${GIT_SHA}"
-  -var="snapchat_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/snapchat-mcp:${GIT_SHA}"
-  -var="amazon_dsp_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/amazon-dsp-mcp:${GIT_SHA}"
-  -var="msads_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/msads-mcp:${GIT_SHA}"
+  # Pin the repo name to the one this script (and init-gcp-project.sh)
+  # actually pushes to, so a stray tfvars value can't point Cloud Run at
+  # images that were never built.
+  -var="artifact_registry_repo_name=${REPO_NAME}"
   -var-file="${ENVIRONMENT}.tfvars"
 )
+for SERVER in "${SERVERS[@]}"; do
+  TF_ARGS+=(-var="${SERVER//-/_}_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVER}:${IMAGE_TAG_REF}")
+done
 
-if [ "$SKIP_BUILD" = true ]; then
-  TF_ARGS=(
-    -var="dbm_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:latest"
-    -var="dv360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:latest"
-    -var="ttd_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:latest"
-    -var="gads_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/gads-mcp:latest"
-    -var="meta_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/meta-mcp:latest"
-    -var="linkedin_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/linkedin-mcp:latest"
-    -var="tiktok_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/tiktok-mcp:latest"
-    -var="cm360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/cm360-mcp:latest"
-    -var="sa360_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/sa360-mcp:latest"
-    -var="pinterest_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/pinterest-mcp:latest"
-    -var="snapchat_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/snapchat-mcp:latest"
-    -var="amazon_dsp_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/amazon-dsp-mcp:latest"
-    -var="msads_mcp_image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/msads-mcp:latest"
-    -var-file="${ENVIRONMENT}.tfvars"
-  )
+# First-apply guard: init-gcp-project.sh creates the Artifact Registry repo
+# via gcloud (it must exist before this script can push images), but the repo
+# is also declared as a terraform resource. On a fresh state the apply would
+# fail with 409 already-exists — import the pre-existing repo once, after
+# which terraform owns it (cleanup policies, labels).
+if ! terraform state list 2>/dev/null | grep -q '^google_artifact_registry_repository\.container_repo$'; then
+  if gcloud artifacts repositories describe "$REPO_NAME" --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+    print_step "Importing pre-existing Artifact Registry repo into Terraform state..."
+    terraform import "${TF_ARGS[@]}" \
+      google_artifact_registry_repository.container_repo \
+      "projects/${PROJECT_ID}/locations/${REGION}/repositories/${REPO_NAME}"
+  fi
 fi
 
 print_step "Running Terraform plan..."
