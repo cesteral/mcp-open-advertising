@@ -2,6 +2,8 @@
 
 This guide covers the full deployment flow for Cesteral MCP Servers on GCP Cloud Run, including both **Intelligence mode** (hosted by Cesteral) and **standalone self-hosted mode**.
 
+> **Deploying to a fresh GCP project?** Walk [first-deploy-checklist.md](./first-deploy-checklist.md) once — it covers the one-time bootstrap (state bucket, registry import, invoker access, decision-token secret) that routine redeploys assume.
+
 ## Prerequisites
 
 - **gcloud CLI** — authenticated with access to the target GCP project
