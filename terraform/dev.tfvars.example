@@ -48,6 +48,14 @@ allow_unauthenticated = false # Still require auth in dev
 # MCP Server configuration
 log_level              = "debug" # More verbose logging in dev
 governance_token_mode  = "warn"  # off | warn | enforce — verify+log decision tokens without blocking
+# Shared decision-token signing secret (verify side). The secret container is
+# provisioned out-of-band (shared with the governance layer's mint side) and
+# must already hold a version before apply — the name here must match it.
+governance_token_secret_name = "governance-decision-token-secret"
+# Set only while a key rotation is in flight (referenced secret must have a version):
+# governance_token_secret_previous_name = "governance-decision-token-secret-previous"
+# Stage proven contracts into enforce while the fleet mode stays warn, e.g.:
+# governance_token_enforce_contracts = ["meta.update_budget.v1", "google_ads.pause_entity.v1"]
 enable_gcs_persistence = false
 gcs_bucket_name        = "YOUR_GCP_PROJECT_DEV-mcp-persistence" # Enable when ready
 

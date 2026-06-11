@@ -48,6 +48,15 @@ allow_unauthenticated = false
 # MCP Server configuration
 log_level              = "info"  # Production logging level
 governance_token_mode  = "warn"  # off | warn | enforce — verify+log decision tokens without blocking; stage to enforce per-contract once parity is confirmed
+# Shared decision-token signing secret (verify side). UNCOMMENT ONLY AFTER the
+# prod secret container holds a version — Cloud Run revision deploys fail when
+# the referenced secret is empty. Dev-first rollout: wire dev, observe warn-mode
+# verdicts, then set the prod value and uncomment here.
+# governance_token_secret_name = "governance-decision-token-secret"
+# Set only while a key rotation is in flight (referenced secret must have a version):
+# governance_token_secret_previous_name = "governance-decision-token-secret-previous"
+# Stage proven contracts into enforce while the fleet mode stays warn, e.g.:
+# governance_token_enforce_contracts = ["meta.update_budget.v1", "google_ads.pause_entity.v1"]
 enable_gcs_persistence = false
 gcs_bucket_name        = "YOUR_GCP_PROJECT_PROD-mcp-persistence" # Enable when ready
 

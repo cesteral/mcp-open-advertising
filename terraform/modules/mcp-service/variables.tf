@@ -170,3 +170,21 @@ variable "governance_token_mode" {
     error_message = "governance_token_mode must be one of: off, warn, enforce (or empty to leave unset)."
   }
 }
+
+variable "governance_token_secret_name" {
+  description = "Name of an EXISTING Secret Manager secret holding the shared governance decision-token signing secret (GOVERNANCE_DECISION_TOKEN_SECRET). The secret is shared fleet-wide and with the governance layer's mint side, so it is provisioned out-of-band and NOT created by this module (unlike secret_names entries). When set, the env var is wired from it and the runtime SA is granted secretAccessor. Empty disables the wiring. See docs/governance/decision-token-rollout-and-rotation.md."
+  type        = string
+  default     = ""
+}
+
+variable "governance_token_secret_previous_name" {
+  description = "Name of an EXISTING Secret Manager secret holding the previous decision-token signing secret (GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS), accepted during zero-downtime rotation. Set only while a rotation is in flight — the referenced secret must have at least one version or revision deploys fail. Empty (the steady state) leaves the env unset."
+  type        = string
+  default     = ""
+}
+
+variable "governance_token_enforce_contracts" {
+  description = "contractIds forced into enforce mode via GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS — highest precedence over the per-server/global mode, used to stage enforcement per-contract before flipping governance_token_mode to 'enforce'. Empty leaves the env unset."
+  type        = list(string)
+  default     = []
+}

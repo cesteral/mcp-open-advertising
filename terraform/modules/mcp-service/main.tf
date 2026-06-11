@@ -36,6 +36,39 @@ resource "google_secret_manager_secret_iam_member" "runtime_secret_accessor" {
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+# Access to the shared governance decision-token secret(s). Unlike
+# secret_names entries these are NOT created here: one secret is shared by
+# every service in the fleet (and by the governance layer's mint side), so no
+# single service module can own it. The data source fails the plan early if
+# the operator has not provisioned the secret container.
+data "google_secret_manager_secret" "governance_token_secret" {
+  count     = var.governance_token_secret_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = var.governance_token_secret_name
+}
+
+data "google_secret_manager_secret" "governance_token_secret_previous" {
+  count     = var.governance_token_secret_previous_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = var.governance_token_secret_previous_name
+}
+
+resource "google_secret_manager_secret_iam_member" "governance_token_secret_accessor" {
+  count     = var.governance_token_secret_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = data.google_secret_manager_secret.governance_token_secret[0].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "governance_token_secret_previous_accessor" {
+  count     = var.governance_token_secret_previous_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = data.google_secret_manager_secret.governance_token_secret_previous[0].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 # Grant runtime service account logging permissions
 resource "google_project_iam_member" "runtime_log_writer" {
   project = var.project_id
@@ -240,14 +273,53 @@ resource "google_cloud_run_v2_service" "mcp_server" {
       # off | warn | enforce — resolved per-contract by resolveTokenMode()
       # in packages/shared/src/governance/config.ts. Empty leaves it unset so
       # the server uses its 'off' code default. The shared signing secret
-      # (GOVERNANCE_DECISION_TOKEN_SECRET[_PREVIOUS]) is supplied separately via
-      # secret_env_vars, sourced from the governance layer — see
+      # (GOVERNANCE_DECISION_TOKEN_SECRET[_PREVIOUS]) is wired below via the
+      # governance_token_secret_name variables — see
       # docs/governance/decision-token-rollout-and-rotation.md.
       dynamic "env" {
         for_each = length(var.governance_token_mode) > 0 ? [1] : []
         content {
           name  = "GOVERNANCE_TOKEN_MODE"
           value = var.governance_token_mode
+        }
+      }
+
+      # Per-contract enforce staging — highest precedence in resolveTokenMode(),
+      # so proven contracts can be enforced while the fleet mode stays 'warn'.
+      dynamic "env" {
+        for_each = length(var.governance_token_enforce_contracts) > 0 ? [1] : []
+        content {
+          name  = "GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS"
+          value = join(",", var.governance_token_enforce_contracts)
+        }
+      }
+
+      # Shared decision-token signing secret (verify side). Sourced from the
+      # operator-provisioned shared secret, not a module-created one.
+      dynamic "env" {
+        for_each = var.governance_token_secret_name != "" ? [1] : []
+        content {
+          name = "GOVERNANCE_DECISION_TOKEN_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = data.google_secret_manager_secret.governance_token_secret[0].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      # Previous signing secret, set only during rotation.
+      dynamic "env" {
+        for_each = var.governance_token_secret_previous_name != "" ? [1] : []
+        content {
+          name = "GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS"
+          value_source {
+            secret_key_ref {
+              secret  = data.google_secret_manager_secret.governance_token_secret_previous[0].secret_id
+              version = "latest"
+            }
+          }
         }
       }
     }
@@ -260,7 +332,11 @@ resource "google_cloud_run_v2_service" "mcp_server" {
 
   depends_on = [
     google_secret_manager_secret.secrets,
-    google_service_account.runtime
+    google_service_account.runtime,
+    # Revision creation validates secret access, so the accessor grants on the
+    # shared decision-token secret(s) must exist before the service deploys.
+    google_secret_manager_secret_iam_member.governance_token_secret_accessor,
+    google_secret_manager_secret_iam_member.governance_token_secret_previous_accessor
   ]
 }
 

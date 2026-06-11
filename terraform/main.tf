@@ -22,6 +22,38 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
+# Service APIs the stack depends on. Mirrors scripts/init-gcp-project.sh's
+# runtime subset so a fresh project can be applied without running the init
+# script's enable loop first (the init script remains the bootstrap for the
+# state bucket, deployer SA, and build-time APIs). serviceusage.googleapis.com
+# and cloudresourcemanager.googleapis.com themselves cannot be self-enabled
+# here — they must already be on for terraform to talk to the project at all.
+locals {
+  required_apis = [
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "compute.googleapis.com",
+    "vpcaccess.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "cloudtrace.googleapis.com",
+    "storage-api.googleapis.com",
+    "iam.googleapis.com",
+  ]
+}
+
+resource "google_project_service" "required" {
+  for_each = var.enable_required_apis ? toset(local.required_apis) : toset([])
+
+  project = var.project_id
+  service = each.value
+
+  # Never disable a shared API on stack destroy — other infrastructure in the
+  # project may rely on it.
+  disable_on_destroy = false
+}
+
 resource "google_artifact_registry_repository" "container_repo" {
   project       = var.project_id
   location      = var.region
@@ -205,352 +237,391 @@ locals {
 module "dbm_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "dbm-mcp"
-  container_image        = var.dbm_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.dbm_resources.min_instances
-  max_instances          = local.dbm_resources.max_instances
-  cpu_limit              = local.dbm_resources.cpu_limit
-  memory_limit           = local.dbm_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.dbm_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.dbm_secret_names
-  secret_env_vars        = var.dbm_secret_env_vars
+  service_name                          = "dbm-mcp"
+  container_image                       = var.dbm_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.dbm_resources.min_instances
+  max_instances                         = local.dbm_resources.max_instances
+  cpu_limit                             = local.dbm_resources.cpu_limit
+  memory_limit                          = local.dbm_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.dbm_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.dbm_secret_names
+  secret_env_vars                       = var.dbm_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "dv360_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "dv360-mcp"
-  container_image        = var.dv360_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.dv360_resources.min_instances
-  max_instances          = local.dv360_resources.max_instances
-  cpu_limit              = local.dv360_resources.cpu_limit
-  memory_limit           = local.dv360_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.dv360_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.dv360_secret_names
-  secret_env_vars        = var.dv360_secret_env_vars
+  service_name                          = "dv360-mcp"
+  container_image                       = var.dv360_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.dv360_resources.min_instances
+  max_instances                         = local.dv360_resources.max_instances
+  cpu_limit                             = local.dv360_resources.cpu_limit
+  memory_limit                          = local.dv360_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.dv360_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.dv360_secret_names
+  secret_env_vars                       = var.dv360_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "ttd_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "ttd-mcp"
-  container_image        = var.ttd_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.ttd_resources.min_instances
-  max_instances          = local.ttd_resources.max_instances
-  cpu_limit              = local.ttd_resources.cpu_limit
-  memory_limit           = local.ttd_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.ttd_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.ttd_secret_names
-  secret_env_vars        = var.ttd_secret_env_vars
+  service_name                          = "ttd-mcp"
+  container_image                       = var.ttd_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.ttd_resources.min_instances
+  max_instances                         = local.ttd_resources.max_instances
+  cpu_limit                             = local.ttd_resources.cpu_limit
+  memory_limit                          = local.ttd_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.ttd_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.ttd_secret_names
+  secret_env_vars                       = var.ttd_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "gads_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "gads-mcp"
-  container_image        = var.gads_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.gads_resources.min_instances
-  max_instances          = local.gads_resources.max_instances
-  cpu_limit              = local.gads_resources.cpu_limit
-  memory_limit           = local.gads_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.gads_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.gads_secret_names
-  secret_env_vars        = var.gads_secret_env_vars
+  service_name                          = "gads-mcp"
+  container_image                       = var.gads_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.gads_resources.min_instances
+  max_instances                         = local.gads_resources.max_instances
+  cpu_limit                             = local.gads_resources.cpu_limit
+  memory_limit                          = local.gads_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.gads_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.gads_secret_names
+  secret_env_vars                       = var.gads_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "meta_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "meta-mcp"
-  container_image        = var.meta_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.meta_resources.min_instances
-  max_instances          = local.meta_resources.max_instances
-  cpu_limit              = local.meta_resources.cpu_limit
-  memory_limit           = local.meta_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.meta_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.meta_secret_names
-  secret_env_vars        = var.meta_secret_env_vars
+  service_name                          = "meta-mcp"
+  container_image                       = var.meta_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.meta_resources.min_instances
+  max_instances                         = local.meta_resources.max_instances
+  cpu_limit                             = local.meta_resources.cpu_limit
+  memory_limit                          = local.meta_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.meta_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.meta_secret_names
+  secret_env_vars                       = var.meta_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "linkedin_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "linkedin-mcp"
-  container_image        = var.linkedin_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.linkedin_resources.min_instances
-  max_instances          = local.linkedin_resources.max_instances
-  cpu_limit              = local.linkedin_resources.cpu_limit
-  memory_limit           = local.linkedin_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.linkedin_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.linkedin_secret_names
-  secret_env_vars        = var.linkedin_secret_env_vars
+  service_name                          = "linkedin-mcp"
+  container_image                       = var.linkedin_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.linkedin_resources.min_instances
+  max_instances                         = local.linkedin_resources.max_instances
+  cpu_limit                             = local.linkedin_resources.cpu_limit
+  memory_limit                          = local.linkedin_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.linkedin_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.linkedin_secret_names
+  secret_env_vars                       = var.linkedin_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "tiktok_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "tiktok-mcp"
-  container_image        = var.tiktok_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.tiktok_resources.min_instances
-  max_instances          = local.tiktok_resources.max_instances
-  cpu_limit              = local.tiktok_resources.cpu_limit
-  memory_limit           = local.tiktok_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.tiktok_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.tiktok_secret_names
-  secret_env_vars        = var.tiktok_secret_env_vars
+  service_name                          = "tiktok-mcp"
+  container_image                       = var.tiktok_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.tiktok_resources.min_instances
+  max_instances                         = local.tiktok_resources.max_instances
+  cpu_limit                             = local.tiktok_resources.cpu_limit
+  memory_limit                          = local.tiktok_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.tiktok_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.tiktok_secret_names
+  secret_env_vars                       = var.tiktok_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "cm360_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "cm360-mcp"
-  container_image        = var.cm360_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.cm360_resources.min_instances
-  max_instances          = local.cm360_resources.max_instances
-  cpu_limit              = local.cm360_resources.cpu_limit
-  memory_limit           = local.cm360_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.cm360_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.cm360_secret_names
-  secret_env_vars        = var.cm360_secret_env_vars
+  service_name                          = "cm360-mcp"
+  container_image                       = var.cm360_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.cm360_resources.min_instances
+  max_instances                         = local.cm360_resources.max_instances
+  cpu_limit                             = local.cm360_resources.cpu_limit
+  memory_limit                          = local.cm360_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.cm360_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.cm360_secret_names
+  secret_env_vars                       = var.cm360_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "sa360_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "sa360-mcp"
-  container_image        = var.sa360_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.sa360_resources.min_instances
-  max_instances          = local.sa360_resources.max_instances
-  cpu_limit              = local.sa360_resources.cpu_limit
-  memory_limit           = local.sa360_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.sa360_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.sa360_secret_names
-  secret_env_vars        = var.sa360_secret_env_vars
+  service_name                          = "sa360-mcp"
+  container_image                       = var.sa360_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.sa360_resources.min_instances
+  max_instances                         = local.sa360_resources.max_instances
+  cpu_limit                             = local.sa360_resources.cpu_limit
+  memory_limit                          = local.sa360_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.sa360_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.sa360_secret_names
+  secret_env_vars                       = var.sa360_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "pinterest_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "pinterest-mcp"
-  container_image        = var.pinterest_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.pinterest_resources.min_instances
-  max_instances          = local.pinterest_resources.max_instances
-  cpu_limit              = local.pinterest_resources.cpu_limit
-  memory_limit           = local.pinterest_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.pinterest_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.pinterest_secret_names
-  secret_env_vars        = var.pinterest_secret_env_vars
+  service_name                          = "pinterest-mcp"
+  container_image                       = var.pinterest_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.pinterest_resources.min_instances
+  max_instances                         = local.pinterest_resources.max_instances
+  cpu_limit                             = local.pinterest_resources.cpu_limit
+  memory_limit                          = local.pinterest_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.pinterest_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.pinterest_secret_names
+  secret_env_vars                       = var.pinterest_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "snapchat_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "snapchat-mcp"
-  container_image        = var.snapchat_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.snapchat_resources.min_instances
-  max_instances          = local.snapchat_resources.max_instances
-  cpu_limit              = local.snapchat_resources.cpu_limit
-  memory_limit           = local.snapchat_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.snapchat_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.snapchat_secret_names
-  secret_env_vars        = var.snapchat_secret_env_vars
+  service_name                          = "snapchat-mcp"
+  container_image                       = var.snapchat_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.snapchat_resources.min_instances
+  max_instances                         = local.snapchat_resources.max_instances
+  cpu_limit                             = local.snapchat_resources.cpu_limit
+  memory_limit                          = local.snapchat_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.snapchat_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.snapchat_secret_names
+  secret_env_vars                       = var.snapchat_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "amazon_dsp_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "amazon-dsp-mcp"
-  container_image        = var.amazon_dsp_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.amazon_dsp_resources.min_instances
-  max_instances          = local.amazon_dsp_resources.max_instances
-  cpu_limit              = local.amazon_dsp_resources.cpu_limit
-  memory_limit           = local.amazon_dsp_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.amazon_dsp_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.amazon_dsp_secret_names
-  secret_env_vars        = var.amazon_dsp_secret_env_vars
+  service_name                          = "amazon-dsp-mcp"
+  container_image                       = var.amazon_dsp_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.amazon_dsp_resources.min_instances
+  max_instances                         = local.amazon_dsp_resources.max_instances
+  cpu_limit                             = local.amazon_dsp_resources.cpu_limit
+  memory_limit                          = local.amazon_dsp_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.amazon_dsp_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.amazon_dsp_secret_names
+  secret_env_vars                       = var.amazon_dsp_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "msads_mcp" {
   source = "./modules/mcp-service"
 
-  service_name           = "msads-mcp"
-  container_image        = var.msads_mcp_image
-  project_id             = var.project_id
-  region                 = var.region
-  environment            = var.environment
-  min_instances          = local.msads_resources.min_instances
-  max_instances          = local.msads_resources.max_instances
-  cpu_limit              = local.msads_resources.cpu_limit
-  memory_limit           = local.msads_resources.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_auth_mode          = local.msads_auth_mode
-  log_level              = var.log_level
-  governance_token_mode  = var.governance_token_mode
-  enable_gcs_persistence = var.enable_gcs_persistence
-  gcs_bucket_name        = var.gcs_bucket_name
-  secret_names           = local.msads_secret_names
-  secret_env_vars        = var.msads_secret_env_vars
+  service_name                          = "msads-mcp"
+  container_image                       = var.msads_mcp_image
+  project_id                            = var.project_id
+  region                                = var.region
+  environment                           = var.environment
+  min_instances                         = local.msads_resources.min_instances
+  max_instances                         = local.msads_resources.max_instances
+  cpu_limit                             = local.msads_resources.cpu_limit
+  memory_limit                          = local.msads_resources.memory_limit
+  cpu_always_allocated                  = var.cpu_always_allocated
+  allow_unauthenticated                 = var.allow_unauthenticated
+  authorized_invokers                   = var.authorized_invokers
+  vpc_connector_name                    = module.networking.vpc_connector_id
+  mcp_auth_mode                         = local.msads_auth_mode
+  log_level                             = var.log_level
+  governance_token_mode                 = var.governance_token_mode
+  governance_token_secret_name          = var.governance_token_secret_name
+  governance_token_secret_previous_name = var.governance_token_secret_previous_name
+  governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  enable_gcs_persistence                = var.enable_gcs_persistence
+  gcs_bucket_name                       = var.gcs_bucket_name
+  secret_names                          = local.msads_secret_names
+  secret_env_vars                       = var.msads_secret_env_vars
 
-  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
 
 module "monitoring" {

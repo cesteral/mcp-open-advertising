@@ -105,6 +105,8 @@ TF_ROLES=(
   "roles/artifactregistry.admin"
   "roles/logging.admin"
   "roles/monitoring.admin"
+  # terraform manages google_project_service resources (enable_required_apis)
+  "roles/serviceusage.serviceUsageAdmin"
 )
 
 for role in "${TF_ROLES[@]}"; do
