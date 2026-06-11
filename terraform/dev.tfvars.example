@@ -43,7 +43,13 @@ max_instances         = 3 # Lower max for dev
 cpu_limit             = "1"
 memory_limit          = "512Mi"
 cpu_always_allocated  = false
-allow_unauthenticated = false # Still require auth in dev
+allow_unauthenticated = false # Cloud Run IAM required; the governance app presents a Google ID token
+# The governance app (cesteral-intelligence) calls the fleet with a Cloud Run ID
+# token minted via Vercel WIF for the governance-invoker SA. Grant that SA
+# roles/run.invoker on every service. Cross-project member is valid (SA lives in
+# the cesteral-governance project). Source the SA email from the governance
+# identity stack: `terraform output governance_invoker_email`.
+authorized_invokers = ["serviceAccount:governance-invoker@cesteral-governance.iam.gserviceaccount.com"]
 
 # MCP Server configuration
 log_level              = "debug" # More verbose logging in dev
