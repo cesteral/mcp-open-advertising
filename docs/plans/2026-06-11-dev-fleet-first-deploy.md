@@ -291,7 +291,7 @@ git commit -m "docs(deploy): record dev fleet service URLs + first-deploy outcom
 - [ ] Task 1: `backend-dev.conf` + `dev.tfvars` exist, gitignored, parse cleanly.
 - [ ] Task 2: `GOVERNANCE_DECISION_TOKEN_SECRET` has ≥1 enabled version; tooling/auth OK.
 - [ ] Task 3: `init-gcp-project.sh dev` done; `cesteral` AR repo + state bucket + `terraform-deployer` SA exist.
-- [ ] Task 4: `deploy.sh dev --plan-only` clean (creates only, no empty-secret ref, no invoker bindings).
+- [ ] Task 4: `deploy.sh dev --plan-only` clean (creates only; sole `secret_key_ref` is `GOVERNANCE_DECISION_TOKEN_SECRET`; an `allUsers` `run.invoker` binding per service is expected, no restricted `authorized_invokers`).
 - [ ] Task 5: `deploy.sh dev` applied; 13 images pushed; health gate passed.
 - [ ] Task 6: 13 `/health` → 200; warn-mode `decision_token_verification` lines, no steady `*_MISMATCH`; URLs recorded.
 
