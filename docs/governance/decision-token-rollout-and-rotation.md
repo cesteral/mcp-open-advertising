@@ -88,8 +88,9 @@ per-contract list  >  per-server (GOVERNANCE_TOKEN_MODE_<SLUG>)  >  global (GOVE
    `definitionHashVerified: true` for tools whose release manifest is installed.
    Investigate any `*_MISMATCH` (see Parity below).
 4. **Stage enforce per-contract.** Add proven contracts to
-   `GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS`, widen over time, then flip the
-   per-server or global mode to `enforce`.
+   `GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS` (terraform:
+   `governance_token_enforce_contracts = [...]`), widen over time, then flip
+   the per-server or global mode to `enforce`.
 
 ## Secret provisioning
 
@@ -102,15 +103,24 @@ Manager entry.
     to do anything; empty ⇒ `SECRET_UNCONFIGURED`, fail-closed under enforce).
   - `GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS` — optional, accepted during
     rotation.
-- Wire them via the existing per-service `secret_env_vars` map (no module change
-  needed), sourcing from Secret Manager. Example (`*.tfvars`):
+- Wire them via the **dedicated fleet-wide terraform variables** (threaded to
+  every `mcp-service` module), not the per-service `secret_env_vars` maps — a
+  secret named in `secret_env_vars` is _created and owned_ by that service's
+  module, and the decision-token secret is one shared container that 13
+  services (plus the governance layer's mint side) reference. Example
+  (`*.tfvars`):
 
   ```hcl
-  meta_secret_env_vars = {
-    GOVERNANCE_DECISION_TOKEN_SECRET = { secret_name = "governance-decision-token-secret", version = "latest" }
-    # ... existing Meta platform secrets ...
-  }
+  governance_token_secret_name = "governance-decision-token-secret"
+  # only while a rotation is in flight (the secret must hold a version):
+  # governance_token_secret_previous_name = "governance-decision-token-secret-previous"
   ```
+
+  Each service module wires the env var(s) from the existing secret and grants
+  its runtime SA `roles/secretmanager.secretAccessor` on it. The container is
+  provisioned out-of-band (gcloud / console); terraform fails the plan if it
+  does not exist, and Cloud Run revision deploys fail if it holds no version —
+  so set the secret _value_ before wiring an environment.
 
 - The governance layer reads the **same** value as `GOVERNANCE_DECISION_TOKEN_SECRET`
   (its mint side). Both must point at the same Secret Manager value.
@@ -124,7 +134,9 @@ secret (`current` or `previous`, no fallback); without a `kid`, it tries
 
 1. **Stage the new secret as current, old as previous.**
    - Servers: set `GOVERNANCE_DECISION_TOKEN_SECRET = <new>` and
-     `GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS = <old>`. Deploy.
+     `GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS = <old>` (terraform: put the
+     old value in the `governance_token_secret_previous_name` container and
+     set the variable). Deploy.
    - Both old and new tokens now verify.
 2. **Cut governance over to minting with the new secret.** If the mint side
    stamps `kid: "current"`, tokens are pinned to the new secret explicitly;

@@ -235,13 +235,37 @@ variable "log_level" {
 }
 
 variable "governance_token_mode" {
-  description = "Fleet-wide decision-token enforcement mode (GOVERNANCE_TOKEN_MODE) for the Cesteral-operated deployment: off | warn | enforce. Defaults to 'warn' so the hosted fleet verifies and logs governance decision tokens without blocking writes; the in-code default remains 'off' so self-hosted / unconfigured servers stay neutral. Stage to 'enforce' per-contract via the GOVERNANCE_TOKEN_MODE_*_CONTRACTS env lists once end-to-end token parity is confirmed."
+  description = "Fleet-wide decision-token enforcement mode (GOVERNANCE_TOKEN_MODE) for the Cesteral-operated deployment: off | warn | enforce. Defaults to 'warn' so the hosted fleet verifies and logs governance decision tokens without blocking writes; the in-code default remains 'off' so self-hosted / unconfigured servers stay neutral. Stage to 'enforce' per-contract via governance_token_enforce_contracts once end-to-end token parity is confirmed."
   type        = string
   default     = "warn"
   validation {
     condition     = contains(["", "off", "warn", "enforce"], var.governance_token_mode)
     error_message = "governance_token_mode must be one of: off, warn, enforce (or empty to leave unset)."
   }
+}
+
+variable "governance_token_secret_name" {
+  description = "Name of the EXISTING Secret Manager secret holding the shared decision-token signing secret (GOVERNANCE_DECISION_TOKEN_SECRET). Shared by every service in the fleet and by the governance layer's mint side, so it is provisioned out-of-band (gcloud / console), never created by terraform. Threaded to every mcp-service module: each wires the env var and grants its runtime SA secretAccessor. Empty disables the wiring (warn-mode verdicts then read SECRET_UNCONFIGURED). See docs/governance/decision-token-rollout-and-rotation.md."
+  type        = string
+  default     = ""
+}
+
+variable "governance_token_secret_previous_name" {
+  description = "Name of the EXISTING Secret Manager secret holding the previous decision-token signing secret (GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS). Set ONLY while a zero-downtime rotation is in flight — the referenced secret must have at least one version or Cloud Run revision deploys fail. Empty (the steady state) leaves the env unset."
+  type        = string
+  default     = ""
+}
+
+variable "governance_token_enforce_contracts" {
+  description = "contractIds staged into enforce mode via GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS (highest precedence in resolveTokenMode), letting proven contracts enforce while the fleet mode stays 'warn'. Add contracts only after their decision_token_verification audit lines show steady ok:true with definitionHashVerified:true — see the rollout runbook."
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_required_apis" {
+  description = "Manage the GCP service APIs the stack needs (run, secretmanager, vpcaccess, ...) as terraform resources with disable_on_destroy=false. Requires the deploying principal to hold roles/serviceusage.serviceUsageAdmin (granted to terraform-deployer by scripts/init-gcp-project.sh). Set false when APIs are managed out-of-band."
+  type        = bool
+  default     = true
 }
 
 variable "dbm_secret_env_vars" {
