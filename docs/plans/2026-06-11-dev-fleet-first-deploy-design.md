@@ -64,6 +64,29 @@ auth-aware (mint an identity token via the deployer/an invoker SA), or the
 post-apply gate will roll every service back. Captured so Phase D doesn't trip
 on it.
 
+## Key decision: empty the per-server platform secret maps (health-only deploy)
+
+Every `*_secret_env_vars` default (`terraform/variables.tf:271+`) wires
+`MCP_AUTH_SECRET_KEY` + platform creds (e.g. `cesteral-meta-access-token`) as a
+Cloud Run `secret_key_ref` with `version = "latest"`. The container list TF
+creates (`secret_names`) is derived from those maps. On a fresh project the
+containers are created **empty**, and a `secret_key_ref` to a version-less secret
+**fails revision creation** — before the health gate runs. (Caught in review;
+the first draft only preflighted the governance secret.)
+
+**Decision:** set all 13 `*_secret_env_vars = {}` in `dev.tfvars`. No containers,
+no refs, revisions boot clean. Safe because all 13 servers default to
+header/bearer/token auth modes (`terraform/main.tf:206-220` — none use `jwt`), so
+`MCP_AUTH_SECRET_KEY` is unused at boot and platform tokens arrive per request.
+The shared governance decision-token secret is wired by a separate path
+(`governance_token_secret_name`) and already exists, so warn mode still works.
+
+Populate real per-platform secrets (and drop the `{}` overrides) later, when a
+platform is actually exercised — at which point each referenced `secret_name`
+must hold a version first. Rejected alternative: pre-create + populate every
+unique secret now (we lack creds for all 13 platforms, and the smoke deploy only
+needs `/health` + warn-mode logging).
+
 ## Approach
 
 Work in the isolated `deploy/dev-first-rollout` worktree. Only the `deploy.sh`
@@ -81,12 +104,13 @@ health-check fix (if undertaken) is a committed change; `dev.tfvars` and
      - `monitoring_notification_email = "daniel@cesteral.com"`
      - `allow_unauthenticated = true`
      - `artifact_registry_repo_name = "cesteral"` (or omit — `deploy.sh` pins it)
+     - **all 13 `*_secret_env_vars = {}`** — see "Platform secrets" below.
 2. **Bootstrap:** `./scripts/init-gcp-project.sh dev` — state bucket, Artifact
    Registry repo (`cesteral`), `terraform-deployer` SA + roles, enable APIs.
    Idempotent.
-3. **Plan / pre-flight:** `./scripts/deploy.sh dev --plan-only`; confirm every
-   `secret_key_ref` secret referenced by the plan has a live version in the dev
-   project (notably `GOVERNANCE_DECISION_TOKEN_SECRET`).
+3. **Plan / pre-flight:** `./scripts/deploy.sh dev --plan-only`; with the `{}`
+   overrides the only `secret_key_ref` is the shared
+   `GOVERNANCE_DECISION_TOKEN_SECRET` — confirm it has a live version.
 4. **Deploy:** `./scripts/deploy.sh dev` — build + push 13 images, `terraform
    apply`, then the post-apply `/health` gate (passes because
    `allow_unauthenticated = true`).

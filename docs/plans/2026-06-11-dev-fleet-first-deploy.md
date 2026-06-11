@@ -68,7 +68,50 @@ as in the example):
 Leave `governance_token_mode = "warn"`, `log_level = "debug"`, scaling, and
 networking blocks as the example has them.
 
+**Step 2b: Empty the per-server platform secret maps (health-only first deploy).**
+This is the critical addition. Every `*_secret_env_vars` default (`variables.tf:271+`)
+wires `MCP_AUTH_SECRET_KEY` + platform creds (e.g. `cesteral-meta-access-token`)
+as `secret_key_ref` with `version = "latest"`. On a fresh project those secret
+containers are created **empty**, and a `secret_key_ref` to a version-less secret
+**fails Cloud Run revision creation** before health checks ever run. The container
+list (`secret_names`) is derived from these maps (`main.tf:160-172`), so emptying
+them creates no containers and no refs. All 13 servers default to header/bearer/
+token auth (`main.tf:206-220` — none use `jwt`), so `MCP_AUTH_SECRET_KEY` is
+unused at boot and platform tokens arrive per-request; revisions boot clean and
+`/health` returns 200. Append to `dev.tfvars`:
+
+```hcl
+# Health-only first deploy: no platform creds baked in. Servers run in their
+# header/bearer/token auth modes (per-request auth); the governance decision-token
+# secret is wired separately via governance_token_secret_name. Populate real
+# per-platform secrets later (and drop these {} overrides) when a platform is
+# actually exercised — at which point every referenced secret_name must hold a
+# version first.
+dbm_secret_env_vars        = {}
+dv360_secret_env_vars      = {}
+ttd_secret_env_vars        = {}
+gads_secret_env_vars       = {}
+meta_secret_env_vars       = {}
+linkedin_secret_env_vars   = {}
+tiktok_secret_env_vars     = {}
+cm360_secret_env_vars      = {}
+sa360_secret_env_vars      = {}
+pinterest_secret_env_vars  = {}
+snapchat_secret_env_vars   = {}
+amazon_dsp_secret_env_vars = {}
+msads_secret_env_vars      = {}
+```
+
+> Alternative (not chosen for the first deploy): keep the default maps and
+> pre-create + populate **every** unique `secret_name` across all 13 services
+> before deploy. Rejected because we don't have real creds for all 13 platforms
+> yet and the smoke deploy only needs `/health` + warn-mode logging.
+
 **Step 3: Verify the files are gitignored (not staged)**
+
+> The worktree's `terraform/.gitignore` was fixed (commit `15e7a0f0`) to drop the
+> `!dev.tfvars` / `!prod.tfvars` negations that previously **un**-ignored these
+> files — so the check below now genuinely passes.
 
 Run: `cd terraform && git status --porcelain backend-dev.conf dev.tfvars`
 Expected: **no output** (both ignored).
@@ -92,6 +135,14 @@ gcloud secrets versions list GOVERNANCE_DECISION_TOKEN_SECRET \
 ```
 Expected: at least one enabled version. **If empty, STOP** — the secret must be
 populated out-of-band (shared with the governance mint side) before deploy.
+
+> With the Task 1 Step 2b `{}` overrides, this governance secret is the **only**
+> `secret_key_ref` in the plan — the per-server platform secret maps are emptied,
+> so there are no other empty-secret revision-failure risks. If you instead keep
+> the default maps (the Step 2b "Alternative"), add a preflight that asserts an
+> enabled version exists for **every** unique `secret_name` the plan references
+> (e.g. iterate `terraform console`'s `*_secret_names` locals, or the
+> `gcloud secrets versions list` check above per name) before Task 5.
 
 **Step 2: Confirm tooling + auth**
 
@@ -159,10 +210,13 @@ and `terraform import` of the pre-existing `cesteral` Artifact Registry repo
 Confirm:
 - It plans to **create** (not destroy) the 13 `mcp-service` modules, networking,
   and monitoring.
-- No `secret_key_ref` points at a secret without a version (the
-  `GOVERNANCE_DECISION_TOKEN_SECRET` check in Task 2 covers the shared one).
-- `allow_unauthenticated = true` is reflected (no `authorized_invokers` /
-  `run.invoker` bindings on the services).
+- With the Step 2b `{}` overrides, the only `secret_key_ref` is the shared
+  `GOVERNANCE_DECISION_TOKEN_SECRET` (covered by the Task 2 version check), and no
+  per-server `google_secret_manager_secret.secrets` containers are planned.
+- `allow_unauthenticated = true` is reflected: the plan creates an **`allUsers`
+  `roles/run.invoker`** binding per service (`google_cloud_run_v2_service_iam_member.noauth`,
+  expected) and **no** restricted `authorized_invokers` bindings
+  (`...iam_member.invokers` is empty).
 
 **If the plan shows destroys or an empty-secret reference, STOP** and reconcile
 before Task 5. No commit (read-only).
