@@ -195,9 +195,13 @@ resource "google_cloud_run_v2_service" "mcp_server" {
         failure_threshold     = 3
       }
 
-      # Environment variables - MCP server configuration
+      # Environment variables - MCP server configuration.
+      # Name MUST be MCP_TRANSPORT_MODE — that's what detectTransportMode() reads
+      # (server-bootstrap.ts). With the wrong name the var is inert and the
+      # container, having no TTY on Cloud Run, falls back to stdio → nothing
+      # listens on the port → health checks fail.
       env {
-        name  = "MCP_TRANSPORT_TYPE"
+        name  = "MCP_TRANSPORT_MODE"
         value = "http"
       }
 
