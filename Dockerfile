@@ -25,14 +25,17 @@ COPY packages/msads-mcp/package.json ./packages/msads-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages, then deploy production-only bundle for the target server.
-# `pnpm deploy` copies workspace deps as real files (not symlinks) — correct for Docker.
+# `pnpm deploy` bundles workspace deps into a self-contained dir — correct for Docker.
+# pnpm 10 requires inject-workspace-packages for `deploy`; we pass it as a per-command
+# config (not repo-wide .npmrc) so the deps-stage `--frozen-lockfile` install and
+# local/CI installs are unaffected — only this deploy injects.
 FROM base AS builder
 ARG SERVER_NAME
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 RUN pnpm run build
-RUN pnpm --filter "@cesteral/${SERVER_NAME}" deploy --prod /app/deploy
+RUN pnpm --filter "@cesteral/${SERVER_NAME}" --config.inject-workspace-packages=true deploy --prod /app/deploy
 
 # Production image for specific server
 FROM base AS runner

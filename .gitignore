@@ -55,9 +55,6 @@ service-account-key.json
 .terraform/
 .terraform.lock.hcl
 
-# Docker
-.dockerignore
-
 # Worktrees
 .worktrees/
 
