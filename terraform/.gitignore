@@ -11,11 +11,10 @@
 crash.log
 crash.*.log
 
-# Exclude all .tfvars files that might contain sensitive data
-# But keep the example/template files
+# Exclude all .tfvars files that might contain sensitive data.
+# The *.tfvars.example template files don't match this pattern, so they
+# stay tracked; the real dev.tfvars/prod.tfvars are local-only.
 *.tfvars
-!dev.tfvars
-!prod.tfvars
 
 # Ignore override files
 override.tf

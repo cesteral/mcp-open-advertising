@@ -147,6 +147,10 @@ print_step "Applying Terraform configuration..."
 terraform apply tfplan
 
 print_step "Running post-deploy health checks..."
+# When allow_unauthenticated=false, Cloud Run IAM rejects bare requests with
+# 401/403 before the app answers, so the probe presents the deployer's
+# identity token (project owners/run.admins hold run.routes.invoke).
+IDENTITY_TOKEN=$(gcloud auth print-identity-token 2>/dev/null || echo "")
 FAILED_SERVICES=""
 for SERVER in "${SERVERS[@]}"; do
   OUTPUT_NAME="${SERVER//-/_}_service_url"
@@ -157,10 +161,18 @@ for SERVER in "${SERVERS[@]}"; do
   fi
   HEALTHY=false
   for i in $(seq 1 24); do
-    if curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL/health" | grep -q "200"; then
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL/health")
+    if [ "$HTTP_CODE" = "200" ]; then
       print_info "Health check passed for $SERVER"
       HEALTHY=true
       break
+    fi
+    if { [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; } && [ -n "$IDENTITY_TOKEN" ]; then
+      if curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $IDENTITY_TOKEN" "$SERVER_URL/health" | grep -q "200"; then
+        print_info "Health check passed for $SERVER (authenticated — service requires Cloud Run IAM)"
+        HEALTHY=true
+        break
+      fi
     fi
     sleep 5
   done
