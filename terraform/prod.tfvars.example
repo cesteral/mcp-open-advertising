@@ -74,3 +74,7 @@ service_resource_overrides = {
     max_instances = 10
   }
 }
+
+# Fleet load balancer (optional) — see dev.tfvars.example for details.
+# enable_fleet_lb = true
+# fleet_domain    = "mcp.example.com"

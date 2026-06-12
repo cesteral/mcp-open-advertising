@@ -703,3 +703,26 @@ variable "monitoring_notification_email" {
   type        = string
   default     = ""
 }
+
+variable "enable_fleet_lb" {
+  description = "Provision the global HTTPS load balancer serving every MCP server under fleet_domain with path-based routing. Adds the LB origin to each service's accepted ID-token audiences."
+  type        = bool
+  default     = false
+}
+
+variable "fleet_domain" {
+  description = "Domain the fleet load balancer serves (e.g. mcp.cesteral.com). Required when enable_fleet_lb is true; DNS for it must point at the LB IP output before the managed certificate can provision."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.fleet_domain == "" || can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$", var.fleet_domain))
+    error_message = "fleet_domain must be a bare FQDN (no scheme, no path, no trailing dot)."
+  }
+}
+
+variable "fleet_redirect_host" {
+  description = "Host the fleet load balancer redirects unmatched paths to (the public website)."
+  type        = string
+  default     = "cesteral.com"
+}

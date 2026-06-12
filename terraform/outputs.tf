@@ -84,3 +84,13 @@ output "deployment_info" {
     msads_mcp_url      = module.msads_mcp.cloud_run_service_url
   }
 }
+
+output "fleet_lb_ip" {
+  description = "Global IP of the fleet load balancer — create a DNS-only A record for fleet_domain pointing here"
+  value       = var.enable_fleet_lb ? module.fleet_lb[0].ip_address : null
+}
+
+output "fleet_lb_service_urls" {
+  description = "Per-service base URLs behind the fleet load balancer"
+  value       = var.enable_fleet_lb ? module.fleet_lb[0].service_urls : null
+}

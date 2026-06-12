@@ -76,3 +76,12 @@ artifact_registry_repo_name = "YOUR_REGISTRY"
 
 # Monitoring
 monitoring_notification_email = "your-email@example.com"
+
+# Fleet load balancer (optional) — serves every MCP server under one custom
+# domain with path-based routing: https://<fleet_domain>/<platform>/mcp.
+# After first apply, create a DNS-only A record for fleet_domain pointing at
+# the fleet_lb_ip output; the Google-managed certificate provisions once DNS
+# resolves to the LB (15-60 min). Unmatched paths redirect to
+# fleet_redirect_host (default cesteral.com).
+# enable_fleet_lb = true
+# fleet_domain    = "mcp.example.com"
