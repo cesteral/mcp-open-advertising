@@ -137,6 +137,11 @@ resource "google_cloud_run_v2_service" "mcp_server" {
 
   labels = local.common_labels
 
+  # Extra audiences accepted on incoming ID tokens (besides the run.app URL),
+  # so invokers behind the fleet load balancer can mint one token for the
+  # custom domain instead of one per service.
+  custom_audiences = length(var.custom_audiences) > 0 ? var.custom_audiences : null
+
   template {
     service_account = google_service_account.runtime.email
 

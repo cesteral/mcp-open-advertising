@@ -188,3 +188,9 @@ variable "governance_token_enforce_contracts" {
   type        = list(string)
   default     = []
 }
+
+variable "custom_audiences" {
+  description = "Additional audiences accepted on incoming ID tokens (e.g. the fleet load-balancer origin). The run.app URL is always accepted regardless."
+  type        = list(string)
+  default     = []
+}

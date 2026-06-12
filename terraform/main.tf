@@ -260,6 +260,7 @@ module "dbm_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.dbm_secret_names
   secret_env_vars                       = var.dbm_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -290,6 +291,7 @@ module "dv360_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.dv360_secret_names
   secret_env_vars                       = var.dv360_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -320,6 +322,7 @@ module "ttd_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.ttd_secret_names
   secret_env_vars                       = var.ttd_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -350,6 +353,7 @@ module "gads_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.gads_secret_names
   secret_env_vars                       = var.gads_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -380,6 +384,7 @@ module "meta_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.meta_secret_names
   secret_env_vars                       = var.meta_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -410,6 +415,7 @@ module "linkedin_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.linkedin_secret_names
   secret_env_vars                       = var.linkedin_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -440,6 +446,7 @@ module "tiktok_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.tiktok_secret_names
   secret_env_vars                       = var.tiktok_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -470,6 +477,7 @@ module "cm360_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.cm360_secret_names
   secret_env_vars                       = var.cm360_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -500,6 +508,7 @@ module "sa360_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.sa360_secret_names
   secret_env_vars                       = var.sa360_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -530,6 +539,7 @@ module "pinterest_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.pinterest_secret_names
   secret_env_vars                       = var.pinterest_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -560,6 +570,7 @@ module "snapchat_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.snapchat_secret_names
   secret_env_vars                       = var.snapchat_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -590,6 +601,7 @@ module "amazon_dsp_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.amazon_dsp_secret_names
   secret_env_vars                       = var.amazon_dsp_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -620,6 +632,7 @@ module "msads_mcp" {
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = local.msads_secret_names
   secret_env_vars                       = var.msads_secret_env_vars
+  custom_audiences                      = local.fleet_custom_audiences
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence, google_project_service.required]
 }
@@ -652,4 +665,67 @@ module "monitoring" {
   error_rate_threshold     = var.monitoring_error_rate_threshold
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
   uptime_check_period      = var.monitoring_uptime_check_period
+}
+
+# ── Fleet load balancer (custom domain) ──────────────────────────────────────
+# Serves every MCP server under one host: https://<fleet_domain>/<platform>/mcp.
+# The per-service path prefix is the service name minus the "-mcp" suffix,
+# matching the platform slugs the cesteral-intelligence connection templates
+# already use. Tokens minted for https://<fleet_domain> are accepted by every
+# service via custom_audiences (local.fleet_custom_audiences, wired into every
+# mcp-service module call).
+
+locals {
+  fleet_service_names = [
+    "dbm-mcp",
+    "dv360-mcp",
+    "ttd-mcp",
+    "gads-mcp",
+    "meta-mcp",
+    "linkedin-mcp",
+    "tiktok-mcp",
+    "cm360-mcp",
+    "sa360-mcp",
+    "pinterest-mcp",
+    "snapchat-mcp",
+    "amazon-dsp-mcp",
+    "msads-mcp",
+  ]
+
+  fleet_services = {
+    for name in local.fleet_service_names : name => {
+      path_prefix = trimsuffix(name, "-mcp")
+    }
+  }
+
+  fleet_custom_audiences = var.enable_fleet_lb ? ["https://${var.fleet_domain}"] : []
+}
+
+module "fleet_lb" {
+  source = "./modules/fleet-lb"
+  count  = var.enable_fleet_lb ? 1 : 0
+
+  project_id    = var.project_id
+  region        = var.region
+  environment   = var.environment
+  domain        = var.fleet_domain
+  services      = local.fleet_services
+  redirect_host = var.fleet_redirect_host
+
+  depends_on = [
+    module.dbm_mcp,
+    module.dv360_mcp,
+    module.ttd_mcp,
+    module.gads_mcp,
+    module.meta_mcp,
+    module.linkedin_mcp,
+    module.tiktok_mcp,
+    module.cm360_mcp,
+    module.sa360_mcp,
+    module.pinterest_mcp,
+    module.snapchat_mcp,
+    module.amazon_dsp_mcp,
+    module.msads_mcp,
+    google_project_service.required,
+  ]
 }
