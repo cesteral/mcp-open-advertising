@@ -8,12 +8,14 @@ healthy.
   (Cloud Run startup probe = HTTP GET `/health` → 200).
 - **Images:** built via **Cloud Build** (native amd64) at SHA `92262b3d`,
   pushed to `europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/*`.
-- **Auth posture:** `allow_unauthenticated=false`, `authorized_invokers=[]` —
-  **fully locked, nothing can invoke yet**. Verified: no invoker members; an
-  unauthenticated `GET /health` returns **403**. Add
-  `governance-invoker@cesteral-governance` to `authorized_invokers` once the
-  governance identity stack (Phase A) is applied — additive, no redeploy
-  semantics change.
+- **Auth posture:** `allow_unauthenticated=false`. Governance Phase A landed the
+  same day, so `authorized_invokers =
+  ["serviceAccount:governance-invoker@cesteral-governance.iam.gserviceaccount.com"]`
+  was applied — an additive `run.invoker` grant on all 13 services, **no revision
+  churn** (images pinned to the deployed SHA). Verified: governance-invoker bound
+  on **13/13**; unauthenticated `GET /health` still returns **403**. The
+  governance app (Vercel → WIF → impersonate governance-invoker) is the sole
+  caller; nothing else can invoke the fleet.
 
 ## Service URLs
 
