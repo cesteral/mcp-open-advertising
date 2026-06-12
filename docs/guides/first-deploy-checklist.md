@@ -20,12 +20,16 @@ One-time bootstrap for deploying the MCP fleet to a **fresh GCP project**
 Idempotent — safe to rerun. Creates the **terraform state bucket**, the
 **Artifact Registry repo** (`cesteral`), and the `terraform-deployer` SA with
 its roles (including `roles/serviceusage.serviceUsageAdmin`, which terraform's
-managed `google_project_service` resources need), and enables the project
+managed `google_project_service` resources need); grants the **Compute Engine
+default SA** `roles/cloudbuild.builds.builder` (regional Cloud Build runs as that
+SA, not the legacy `…@cloudbuild` one — without the grant the first
+`gcloud builds submit` 403s reading its own source); and enables the project
 APIs. The registry must exist before `deploy.sh` can push images, so don't
 skip this even though terraform also manages APIs now.
 
 > Re-running on a project bootstrapped before June 2026 is how you pick up the
-> `serviceusage.serviceUsageAdmin` grant added for `enable_required_apis`.
+> `serviceusage.serviceUsageAdmin` grant added for `enable_required_apis`, and
+> (June 2026) the `cloudbuild.builds.builder` grant on the Compute Engine SA.
 
 ## 2. Create the local config files (gitignored)
 

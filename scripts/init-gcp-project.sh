@@ -117,4 +117,20 @@ for role in "${TF_ROLES[@]}"; do
     --quiet
 done
 
+# Cloud Build (regional builds) runs as the Compute Engine default service
+# account, NOT the legacy ${PROJECT_NUMBER}@cloudbuild SA. Grant it the builder
+# role so `gcloud builds submit` (and cloudbuild.yaml) can read the source from
+# the *_cloudbuild staging bucket, write build logs, and push images to Artifact
+# Registry. Without this the first build fails with:
+#   "<num>-compute@developer... does not have storage.objects.get access to the
+#    Google Cloud Storage object ... _cloudbuild/source/...tgz"
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+CLOUDBUILD_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+print_info "Granting Cloud Build builder role to ${CLOUDBUILD_SA}"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${CLOUDBUILD_SA}" \
+  --role="roles/cloudbuild.builds.builder" \
+  --condition=None \
+  --quiet
+
 print_info "Initialization complete for $PROJECT_ID"
