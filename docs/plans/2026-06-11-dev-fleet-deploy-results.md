@@ -10,7 +10,7 @@ healthy.
   pushed to `europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/*`.
 - **Auth posture:** `allow_unauthenticated=false`. Governance Phase A landed the
   same day, so `authorized_invokers =
-  ["serviceAccount:governance-invoker@cesteral-governance.iam.gserviceaccount.com"]`
+["serviceAccount:governance-invoker@cesteral-governance.iam.gserviceaccount.com"]`
   was applied — an additive `run.invoker` grant on all 13 services, **no revision
   churn** (images pinned to the deployed SHA). Verified: governance-invoker bound
   on **13/13**; unauthenticated `GET /health` still returns **403**. The
@@ -19,21 +19,21 @@ healthy.
 
 ## Service URLs
 
-| Service | URL |
-| --- | --- |
+| Service        | URL                                            |
+| -------------- | ---------------------------------------------- |
 | amazon-dsp-mcp | https://amazon-dsp-mcp-6evyj7hdna-nw.a.run.app |
-| cm360-mcp | https://cm360-mcp-6evyj7hdna-nw.a.run.app |
-| dbm-mcp | https://dbm-mcp-6evyj7hdna-nw.a.run.app |
-| dv360-mcp | https://dv360-mcp-6evyj7hdna-nw.a.run.app |
-| gads-mcp | https://gads-mcp-6evyj7hdna-nw.a.run.app |
-| linkedin-mcp | https://linkedin-mcp-6evyj7hdna-nw.a.run.app |
-| meta-mcp | https://meta-mcp-6evyj7hdna-nw.a.run.app |
-| msads-mcp | https://msads-mcp-6evyj7hdna-nw.a.run.app |
-| pinterest-mcp | https://pinterest-mcp-6evyj7hdna-nw.a.run.app |
-| sa360-mcp | https://sa360-mcp-6evyj7hdna-nw.a.run.app |
-| snapchat-mcp | https://snapchat-mcp-6evyj7hdna-nw.a.run.app |
-| tiktok-mcp | https://tiktok-mcp-6evyj7hdna-nw.a.run.app |
-| ttd-mcp | https://ttd-mcp-6evyj7hdna-nw.a.run.app |
+| cm360-mcp      | https://cm360-mcp-6evyj7hdna-nw.a.run.app      |
+| dbm-mcp        | https://dbm-mcp-6evyj7hdna-nw.a.run.app        |
+| dv360-mcp      | https://dv360-mcp-6evyj7hdna-nw.a.run.app      |
+| gads-mcp       | https://gads-mcp-6evyj7hdna-nw.a.run.app       |
+| linkedin-mcp   | https://linkedin-mcp-6evyj7hdna-nw.a.run.app   |
+| meta-mcp       | https://meta-mcp-6evyj7hdna-nw.a.run.app       |
+| msads-mcp      | https://msads-mcp-6evyj7hdna-nw.a.run.app      |
+| pinterest-mcp  | https://pinterest-mcp-6evyj7hdna-nw.a.run.app  |
+| sa360-mcp      | https://sa360-mcp-6evyj7hdna-nw.a.run.app      |
+| snapchat-mcp   | https://snapchat-mcp-6evyj7hdna-nw.a.run.app   |
+| tiktok-mcp     | https://tiktok-mcp-6evyj7hdna-nw.a.run.app     |
+| ttd-mcp        | https://ttd-mcp-6evyj7hdna-nw.a.run.app        |
 
 (All `*-6evyj7hdna-nw.a.run.app` — the dev fleet's stable Cloud Run suffix. These
 are the origins for `FLEET_INVOKER_ALLOWED_ORIGINS` in the governance app.)

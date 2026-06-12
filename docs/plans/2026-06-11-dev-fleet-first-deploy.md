@@ -18,6 +18,7 @@ Registry, Secret Manager, Docker, gcloud SDK, bash.
 **Design doc:** `docs/plans/2026-06-11-dev-fleet-first-deploy-design.md`
 
 **Environment / preconditions (verified during brainstorming):**
+
 - gcloud authed as `daniel@cesteral.com`; `open-agentic-advertising-dev` +
   `cesteral-governance` projects ACTIVE.
 - `terraform` 1.14, `docker` 29, `gcloud` 517, `corepack pnpm` 10.34 present.
@@ -39,6 +40,7 @@ Registry, Secret Manager, Docker, gcloud SDK, bash.
 ### Task 1: Author the local config files (gitignored)
 
 **Files:**
+
 - Create: `terraform/backend-dev.conf` (gitignored — `*.conf` is not committed)
 - Create: `terraform/dev.tfvars` (gitignored — `*.tfvars`)
 
@@ -57,9 +59,9 @@ as in the example):
 - Replace every `YOUR_GCP_PROJECT_DEV` with `open-agentic-advertising-dev`
   (the `project_id` line **and** all 13 `*_mcp_image` URLs — though `deploy.sh`
   overrides the image vars per run, keep them consistent for hand-runs).
-- `allow_unauthenticated = true`   # was `false` — see design doc
-- `governance_token_secret_name = "GOVERNANCE_DECISION_TOKEN_SECRET"`   # real container name
-- `artifact_registry_repo_name = "cesteral"`   # was `YOUR_REGISTRY`
+- `allow_unauthenticated = true` # was `false` — see design doc
+- `governance_token_secret_name = "GOVERNANCE_DECISION_TOKEN_SECRET"` # real container name
+- `artifact_registry_repo_name = "cesteral"` # was `YOUR_REGISTRY`
 - `monitoring_notification_email = "daniel@cesteral.com"`
 - `gcs_bucket_name` — replace `YOUR_GCP_PROJECT_DEV` →
   `open-agentic-advertising-dev` (only used if `enable_gcs_persistence`, which
@@ -129,10 +131,12 @@ Expected: formats cleanly (no HCL syntax error). No commit (file is local-only).
 `secret_key_ref` fails revision deploys):
 
 Run:
+
 ```bash
 gcloud secrets versions list GOVERNANCE_DECISION_TOKEN_SECRET \
   --project=open-agentic-advertising-dev --filter="state=enabled" --format="value(name)" | head
 ```
+
 Expected: at least one enabled version. **If empty, STOP** — the secret must be
 populated out-of-band (shared with the governance mint side) before deploy.
 
@@ -147,12 +151,14 @@ populated out-of-band (shared with the governance mint side) before deploy.
 **Step 2: Confirm tooling + auth**
 
 Run:
+
 ```bash
 gcloud config get-value account            # expect daniel@cesteral.com
 export GCP_PROJECT_DEV=open-agentic-advertising-dev
 gcloud projects describe "$GCP_PROJECT_DEV" --format='value(lifecycleState)'  # ACTIVE
 terraform version | head -1; docker --version
 ```
+
 Expected: account is the cesteral owner, project ACTIVE, both tools present.
 
 **Step 3: Confirm Docker daemon is running** (deploy builds 13 images):
@@ -164,15 +170,17 @@ No commit (read-only).
 
 ---
 
-### Task 3: Bootstrap the dev project  ⚠️ OPERATOR-GATED (mutates GCP)
+### Task 3: Bootstrap the dev project ⚠️ OPERATOR-GATED (mutates GCP)
 
 **Step 1: Run the idempotent bootstrap**
 
 Run:
+
 ```bash
 export GCP_PROJECT_DEV=open-agentic-advertising-dev
 ./scripts/init-gcp-project.sh dev
 ```
+
 This enables 13 APIs, creates the `cesteral` Artifact Registry repo, the
 `<project>-terraform-state` + `<project>-build-artifacts` buckets (versioned
 state bucket w/ lifecycle), and the `terraform-deployer` SA with its 11 roles
@@ -183,11 +191,13 @@ Expected: ends with `[INFO] Initialization complete for open-agentic-advertising
 **Step 2: Verify the bootstrap artifacts**
 
 Run:
+
 ```bash
 gcloud artifacts repositories describe cesteral --location=europe-west2 --project=$GCP_PROJECT_DEV --format='value(name)'
 gsutil ls -b gs://${GCP_PROJECT_DEV}-terraform-state
 gcloud iam service-accounts describe terraform-deployer@${GCP_PROJECT_DEV}.iam.gserviceaccount.com --format='value(email)'
 ```
+
 Expected: all three resolve without error.
 
 ---
@@ -197,10 +207,12 @@ Expected: all three resolve without error.
 **Step 1: Run the plan**
 
 Run:
+
 ```bash
 export GCP_PROJECT_DEV=open-agentic-advertising-dev
 ./scripts/deploy.sh dev --plan-only
 ```
+
 On a fresh state this auto-runs `terraform init -backend-config=backend-dev.conf`
 and `terraform import` of the pre-existing `cesteral` Artifact Registry repo
 (avoids the 409 on first apply), then prints the plan.
@@ -208,6 +220,7 @@ and `terraform import` of the pre-existing `cesteral` Artifact Registry repo
 **Step 2: Review the plan output**
 
 Confirm:
+
 - It plans to **create** (not destroy) the 13 `mcp-service` modules, networking,
   and monitoring.
 - With the Step 2b `{}` overrides, the only `secret_key_ref` is the shared
@@ -223,17 +236,19 @@ before Task 5. No commit (read-only).
 
 ---
 
-### Task 5: Deploy  ⚠️ OPERATOR-GATED (builds, pushes, applies — billable)
+### Task 5: Deploy ⚠️ OPERATOR-GATED (builds, pushes, applies — billable)
 
 **Step 1: Ensure Docker is running** (Task 2 Step 3).
 
 **Step 2: Run the full deploy**
 
 Run:
+
 ```bash
 export GCP_PROJECT_DEV=open-agentic-advertising-dev
 ./scripts/deploy.sh dev
 ```
+
 Builds + pushes 13 images to
 `europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/*`, applies
 terraform (first apply enables runtime APIs + creates the 13 runtime SAs), then
@@ -254,20 +269,24 @@ Expected: 13 `*.run.app` URLs.
 **Step 1: Health-check all 13 from outside**
 
 Run (from `terraform/`):
+
 ```bash
 for o in $(terraform output -json | python3 -c 'import sys,json;d=json.load(sys.stdin);[print(v["value"]) for k,v in d.items() if k.endswith("service_url")]'); do
   printf "%s -> %s\n" "$o" "$(curl -s -o /dev/null -w '%{http_code}' "$o/health")"
 done
 ```
+
 Expected: every line ends `-> 200`.
 
 **Step 2: Confirm decision-token warn-mode logging**
 
 Run:
+
 ```bash
 gcloud run services logs tail meta-mcp --region=europe-west2 --project=open-agentic-advertising-dev \
   | grep decision_token_verification
 ```
+
 Expected: warn-mode lines. `MISSING_TOKEN` is normal until the governance mint
 side lands. **Any steady `*_MISMATCH` is a cross-repo parity regression** —
 stop and consult `docs/governance/decision-token-rollout-and-rotation.md`.

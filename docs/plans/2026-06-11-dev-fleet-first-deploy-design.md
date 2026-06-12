@@ -48,7 +48,7 @@ independent reasons:
    service returns `403`, so all 13 services would be flagged unhealthy on the
    first deploy.
 2. **The `governance-invoker` SA does not exist yet.** `cesteral-governance`
-   exists, but the governance plan's Phase A (which *creates* the SA) has not
+   exists, but the governance plan's Phase A (which _creates_ the SA) has not
    been applied, so `authorized_invokers` would reference a non-existent
    principal.
 
@@ -112,7 +112,7 @@ health-check fix (if undertaken) is a committed change; `dev.tfvars` and
    overrides the only `secret_key_ref` is the shared
    `GOVERNANCE_DECISION_TOKEN_SECRET` — confirm it has a live version.
 4. **Deploy:** `./scripts/deploy.sh dev` — build + push 13 images, `terraform
-   apply`, then the post-apply `/health` gate (passes because
+apply`, then the post-apply `/health` gate (passes because
    `allow_unauthenticated = true`).
 5. **Verify:**
    - `/health` → 200 on all 13 service URLs.
