@@ -146,6 +146,13 @@ export function hashActionInput(value: unknown): string {
  * to generate per-package attestation manifests, and `cesteral-intelligence`
  * governance uses it to hash observed tools. The two MUST stay
  * bit-identical — see the golden-vector tests.
+ *
+ * Canonicalization routes through `stableStringify`, so this entrypoint carries
+ * the SAME fail-loud guarantee as `hashActionInput`: a non-JSON value smuggled
+ * into the projection (BigInt / Date / NaN / Infinity / function / symbol /
+ * class instance) throws rather than being silently coerced into a wrong-but-
+ * stable hash. For valid wire JSON — which is all `tools/list` ever yields — the
+ * canonical bytes are unchanged, so every golden vector still holds.
  */
 export function computeDefinitionHash(tool: HashableToolDefinition): string {
   const projection: Record<string, unknown> = {};
@@ -155,12 +162,6 @@ export function computeDefinitionHash(tool: HashableToolDefinition): string {
       projection[field] = v;
     }
   }
-  // Route through stableStringify (not a bare JSON.stringify) so the
-  // definition-hash path shares the action-hash path's JSON-compatibility
-  // guard: a non-JSON projection value (BigInt/Date/NaN/function/…) fails
-  // loudly instead of silently coercing to a wrong-but-stable hash. For valid
-  // wire JSON — which every observed tool definition is — the bytes are
-  // identical, so the cross-repo golden vectors are unchanged.
   const canonical = stableStringify(projection);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
