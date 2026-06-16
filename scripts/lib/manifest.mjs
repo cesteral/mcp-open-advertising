@@ -71,6 +71,14 @@ export function toManifestEntry(tool) {
     );
   }
 
+  // NOTE on the schemaVersion number→string boundary: the annotation carries
+  // `schemaVersion` as a NUMBER (and the canonical definitionHash hashes that
+  // number, since the hash is taken over the raw tool), but the manifest record
+  // serializes it to a STRING to match `cesteralManifestSchema`. Attestation
+  // matching downstream is keyed on `definitionHash` alone — never on this
+  // record's schemaVersion — so the 1 vs "1" duality is cosmetic and safe.
+  // Do NOT start joining/matching on `schemaVersion` across the manifest and a
+  // live annotation without coercing both sides: `1 === "1"` is false.
   return {
     toolName: tool.name,
     contractPlatformSlug: platformSlug,
