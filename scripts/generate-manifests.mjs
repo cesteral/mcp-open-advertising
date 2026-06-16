@@ -18,13 +18,12 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, withServerClient, listRawTools } from "./lib/boot-server.mjs";
 import { toManifestEntry, validateManifest } from "./lib/manifest.mjs";
+import { assertManifestCoverage } from "./lib/governed-packages.mjs";
 
 const REGISTRY = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf-8"));
 
 async function generateForPackage(packageDir) {
-  const pkg = JSON.parse(
-    readFileSync(join(ROOT, "packages", packageDir, "package.json"), "utf-8")
-  );
+  const pkg = JSON.parse(readFileSync(join(ROOT, "packages", packageDir, "package.json"), "utf-8"));
   const manifestPath = join(ROOT, "packages", packageDir, "dist", "cesteral-manifest.json");
 
   const tools = await withServerClient(packageDir, listRawTools);
@@ -34,7 +33,7 @@ async function generateForPackage(packageDir) {
     // No governed tools — make sure no stale manifest ships in the tarball.
     if (existsSync(manifestPath)) rmSync(manifestPath);
     console.log(`  ${pkg.name}: no governed tools — no manifest`);
-    return;
+    return 0;
   }
 
   // Deterministic tool ordering so diffs across runs are minimal.
@@ -50,14 +49,30 @@ async function generateForPackage(packageDir) {
   validateManifest(manifest);
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   console.log(`  ${pkg.name}: wrote manifest with ${entries.length} governed tool(s)`);
+  return entries.length;
 }
 
 async function main() {
   console.log("Generating cesteral-manifest.json for MCP server packages...");
   // Sequential by design: each boot loads a full server graph in-process.
+  const entryCounts = {};
   for (const server of REGISTRY.servers) {
-    await generateForPackage(server.package);
+    entryCounts[server.package] = await generateForPackage(server.package);
   }
+
+  // Cross-check the statically-declared governed set (registry.json `governed`
+  // flag) against what generation actually produced. A declared-governed
+  // package that produced no manifest is a regression that would ship a tarball
+  // with no attestation manifest — silently fail-open downstream — so hard-fail
+  // the release here instead.
+  const coverageFailures = assertManifestCoverage({ registry: REGISTRY, entryCounts });
+  if (coverageFailures.length > 0) {
+    throw new Error(
+      `Governed-package coverage check failed:\n` +
+        coverageFailures.map((f) => `  - ${f}`).join("\n")
+    );
+  }
+
   console.log("Done.");
 }
 

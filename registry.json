@@ -7,6 +7,7 @@
   "servers": [
     {
       "package": "dbm-mcp",
+      "governed": false,
       "title": "Bid Manager MCP Server",
       "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
       "runtime_description": "Display & Video 360 Bid Manager reporting (delivery, pacing, custom queries).",
@@ -47,6 +48,7 @@
     },
     {
       "package": "dv360-mcp",
+      "governed": true,
       "title": "DV360 MCP Server",
       "description": "DV360 campaign management — writes, targeting, custom bidding, previews, and media uploads",
       "runtime_description": "Display & Video 360 campaign, line item, creative, and targeting management.",
@@ -118,6 +120,7 @@
     },
     {
       "package": "ttd-mcp",
+      "governed": true,
       "title": "The Trade Desk MCP Server",
       "description": "The Trade Desk management — CRUD, GraphQL, bulk ops, and async reports",
       "runtime_description": "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
@@ -206,6 +209,7 @@
     },
     {
       "package": "gads-mcp",
+      "governed": true,
       "title": "Google Ads MCP Server",
       "description": "Google Ads management — campaign writes, GAQL reporting, bulk mutate, validation, and previews",
       "runtime_description": "Google Ads search, display, and shopping campaign management with GAQL queries.",
@@ -260,6 +264,7 @@
     },
     {
       "package": "meta-mcp",
+      "governed": true,
       "title": "Meta Ads MCP Server",
       "description": "Meta Ads management — writes, insights, targeting, delivery estimates, previews, and media uploads",
       "runtime_description": "Meta Marketing API: Facebook/Instagram campaigns, ad sets, ads, audiences, insights.",
@@ -334,6 +339,7 @@
     },
     {
       "package": "linkedin-mcp",
+      "governed": true,
       "title": "LinkedIn Ads MCP Server",
       "description": "LinkedIn Ads management and analytics — CRUD, targeting, delivery forecasts, and media uploads",
       "runtime_description": "LinkedIn Marketing API: campaigns, creatives, audiences, conversions, analytics.",
@@ -394,6 +400,7 @@
     },
     {
       "package": "tiktok-mcp",
+      "governed": true,
       "title": "TikTok Ads MCP Server",
       "description": "TikTok Ads management — CRUD, async reports, targeting, and media uploads",
       "runtime_description": "TikTok Marketing API: campaigns, ad groups, ads, creatives, reporting.",
@@ -457,6 +464,7 @@
     },
     {
       "package": "cm360-mcp",
+      "governed": true,
       "title": "Campaign Manager 360 MCP Server",
       "description": "Campaign Manager 360 management — CRUD, Floodlight tracking, async reporting, and targeting",
       "runtime_description": "Campaign Manager 360 ad serving, placements, creatives, and Floodlight tracking.",
@@ -516,6 +524,7 @@
     },
     {
       "package": "snapchat-mcp",
+      "governed": true,
       "title": "Snapchat Ads MCP Server",
       "description": "Snapchat Ads management — CRUD, async reports, targeting, and audience estimates",
       "runtime_description": "Snapchat Ads API: campaigns, ad squads, ads, creatives, reporting.",
@@ -576,6 +585,7 @@
     },
     {
       "package": "sa360-mcp",
+      "governed": true,
       "title": "Search Ads 360 MCP Server",
       "description": "Search Ads 360 — reporting via query language, insights, and offline conversion upload",
       "runtime_description": "Search Ads 360 reporting and offline conversion uploads.",
@@ -628,6 +638,7 @@
     },
     {
       "package": "pinterest-mcp",
+      "governed": true,
       "title": "Pinterest Ads MCP Server",
       "description": "Pinterest Ads management — CRUD, async reports, targeting, and audience estimates",
       "runtime_description": "Pinterest Ads API: campaigns, ad groups, ads, creatives, reporting.",
@@ -689,6 +700,7 @@
     },
     {
       "package": "amazon-dsp-mcp",
+      "governed": true,
       "title": "Amazon DSP MCP Server",
       "description": "Amazon DSP management — CRUD, async reports, targeting, and audience management",
       "runtime_description": "Amazon DSP: orders, line items, creatives, reporting.",
@@ -753,6 +765,7 @@
     },
     {
       "package": "msads-mcp",
+      "governed": true,
       "title": "Microsoft Advertising MCP Server",
       "description": "Microsoft Ads management — CRUD, Google Ads import, ad extensions, and async reports",
       "runtime_description": "Microsoft Advertising: campaigns, ad groups, ads, keywords, ad extensions, reporting, Google Ads import.",
