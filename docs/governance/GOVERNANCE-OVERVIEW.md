@@ -43,3 +43,11 @@ Every new platform package must add:
 - Platform entry in `docs/guides/platform-mapping.md`
 - MCP prompts for core workflows
 - MCP resources for entity schemas and examples
+
+To be **governed** (required for any management server), it must also:
+
+- Carry a `cesteral` annotation block on every write tool (`entity` or `effect`), and a `kind: "read"` block on each entity write's `readPartner` read tool — see [`adding-a-new-server.md` Step 9.5](../guides/adding-a-new-server.md#step-95-governing-your-write-tools)
+- Register the package in `registry.json` (the manifest-discovery source of truth)
+- Produce a `dist/cesteral-manifest.json` via `pnpm run generate:manifests` (blesses each governed tool's `definitionHash`)
+
+A management server whose write tools omit the `cesteral` block ships no attestation manifest and cannot be admitted or token-enforced by the governance layer. The decision-token lifecycle is documented in `docs/governance/decision-token-rollout-and-rotation.md`.

@@ -18,6 +18,7 @@ Step-by-step guide for adding a new ad platform MCP server to this monorepo. Use
 - [Step 7: Entity Mapping](#step-7-entity-mapping)
 - [Step 8: Session Resolution](#step-8-session-resolution)
 - [Step 9: Tool Definitions](#step-9-tool-definitions)
+- [Step 9.5: Governing Your Write Tools](#step-95-governing-your-write-tools)
 - [Step 10: Resources](#step-10-resources)
 - [Step 11: Prompts](#step-11-prompts)
 - [Step 12: MCP Server Setup](#step-12-mcp-server-setup)
@@ -32,6 +33,7 @@ Step-by-step guide for adding a new ad platform MCP server to this monorepo. Use
 - [Quick Reference: File Creation Order](#quick-reference-file-creation-order)
 - [Appendix A: Auth Pattern Reference](#appendix-a-auth-pattern-reference)
 - [Appendix B: Cross-Server Contract Summary](#appendix-b-cross-server-contract-summary)
+- [Appendix C: Governance Cheat Sheet](#appendix-c-governance-cheat-sheet)
 
 ---
 
@@ -871,6 +873,104 @@ export { allTools } from "./definitions/index.js";
 
 > **Reference:** `packages/pinterest-mcp/src/mcp-server/tools/definitions/list-entities.tool.ts`, `packages/pinterest-mcp/src/mcp-server/tools/definitions/index.ts`
 
+## Step 9.5: Governing Your Write Tools
+
+The `annotations` block in Step 9 has two layers. The four MCP hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are protocol-standard. The **`cesteral` namespace inside `annotations` is what makes a tool _governed_** — it is the single declaration that wires a write tool into the attestation manifest, the `definitionHash` contract, and the decision-token enforcement path. A server whose write tools omit it builds and serves fine, but is invisible to the governance layer: it ships **no attestation manifest**, and its writes can never be admitted or token-enforced. This step is not optional for a management server.
+
+> **Why this matters:** the platform boundary is deliberate. The governance layer (`cesteral-intelligence`, the paid product) mints a short-lived signed **decision token** after a write clears admission, binding it to the tool's `contractId`, `definitionHash`, and `actionHash`. The MCP server (this repo, open source) verifies that token before executing the write. The `cesteral` annotation is the contract both halves agree on. See [`docs/governance/decision-token-rollout-and-rotation.md`](../governance/decision-token-rollout-and-rotation.md) for the full token lifecycle.
+
+### Which tools get a `cesteral` block
+
+| Tool kind                                                                                                    | `cesteral` block? | `kind` / `writeClass` |
+| ------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------- |
+| Mutates a canonical entity (`create`/`update`/`delete`/`bulk` on entity)                                     | **Yes**           | `write` / `entity`    |
+| Write with no canonical entity snapshot (uploads, report-schedule CRUD, conversion uploads, async bulk jobs) | **Yes**           | `write` / `effect`    |
+| Read tool that is a write tool's `readPartner`                                                               | **Yes**           | `read`                |
+| Other read-only tools (list, search, get-report, validate)                                                   | No                | —                     |
+
+The type lives in `@cesteral/contract-schema` (re-exported from `@cesteral/shared`). Author against it with `satisfies` so the compiler enforces the strict contract:
+
+```typescript
+import type { CesteralWriteToolAnnotations } from "@cesteral/shared";
+```
+
+### Entity write annotation (the strict contract)
+
+An **entity write** mutates a canonical entity, so it MUST declare a `readPartner` (the read tool that returns the before/after snapshot) and MUST promise `requiresValidation: true`, `requiresSimulation: true`, and `supportsBeforeAfterSnapshot: true`. The governance admission layer rejects the tool otherwise.
+
+```typescript
+annotations: {
+  // Standard MCP hints
+  readOnlyHint: false,
+  openWorldHint: false,
+  idempotentHint: false,
+  destructiveHint: true,
+  // Cesteral governance contract
+  cesteral: {
+    kind: "write",
+    writeClass: "entity",
+    platform: "{platform}",              // canonical platform key
+    contractPlatformSlug: "{prefix}",    // /^[a-z0-9_]{1,40}$/ — no hyphens
+    contractToolSlug: "create_entity",   // same slug shape
+    schemaVersion: 1,                     // bump on breaking contract changes
+    contractId: "{prefix}.create_entity.v1", // MUST equal `${slug}.${toolSlug}.v${schemaVersion}`
+    operation: ["create"],               // canonical operations this tool performs
+    entityKinds: ["campaign", "ad_group", "ad"], // CanonicalEntityKind values
+    entityIdArgs: ["accountId"],         // input args carrying platform entity IDs
+    executableArgsExclude: ["dry_run"],  // args excluded from the actionHash binding
+    readPartner: {
+      toolName: "{prefix}_get_entity",
+      argMap: { entityType: "entityType", accountId: "accountId" },
+    },
+    supportsDryRun: true,
+    supportsBeforeAfterSnapshot: true,
+    requiresValidation: true,
+    requiresSimulation: true,
+  } satisfies CesteralWriteToolAnnotations,
+},
+```
+
+### Effect write annotation
+
+An **effect write** has no canonical entity snapshot (e.g. media upload, report-schedule create, conversion upload, fire-and-forget bulk job). It carries **no `readPartner`**, `supportsBeforeAfterSnapshot: false`, and its `requiresValidation` / `requiresSimulation` are **honest booleans** — set them to `true` only if the tool actually validates/simulates. Effect writes are not currently token-governed (the control plane mints no token for them), so the factory forces token verification to `off` for them regardless of mode.
+
+```typescript
+cesteral: {
+  kind: "write",
+  writeClass: "effect",
+  platform: "{platform}",
+  contractPlatformSlug: "{prefix}",
+  contractToolSlug: "upload_video",
+  schemaVersion: 1,
+  contractId: "{prefix}.upload_video.v1",
+  operation: ["create"],
+  entityKinds: [],                      // may be empty for effect writes
+  entityIdArgs: ["accountId"],
+  executableArgsExclude: [],
+  supportsBeforeAfterSnapshot: false,
+  requiresValidation: false,            // honest: this upload neither validates...
+  requiresSimulation: false,            // ...nor simulates
+} satisfies CesteralWriteToolAnnotations,
+```
+
+### Field rules to get right
+
+- **`contractId` must equal `` `${contractPlatformSlug}.${contractToolSlug}.v${schemaVersion}` ``** — the admission layer rejects any divergence. The slugs match `/^[a-z0-9_]{1,40}$/` (lowercase, digits, underscores; **no hyphens**, so `amazon_dsp` not `amazon-dsp`).
+- **`entityKinds` are canonical** (`campaign`, `ad_group`, `ad`, etc. — the `CanonicalEntityKind` set), not your platform's raw type names. Map platform terminology to the canonical kinds, the same way Step 0 maps entity types.
+- **`executableArgsExclude`** lists control args that are not part of the executable write identity (e.g. `dry_run`). The decision-token verifier hashes the wire args **minus** this set into `actionHash`; `__`-prefixed internal args are excluded implicitly.
+- **`readPartner.argMap`** maps this write tool's arg names → the read tool's arg names, so the control plane can fetch the before/after snapshot with no out-of-band pairing. The `readPartner.toolName` must resolve to a real tool — give that read tool a `cesteral` block with `kind: "read"` and a matching `contractId`.
+- **`schemaVersion`** is the contract-surface version. Bump it (and the `contractId` suffix) on any breaking change to the tool's governed surface — this is how the governance repo detects drift.
+
+### What you do NOT have to wire by hand
+
+Once the annotation is correct, the shared `registerToolsFromDefinitions()` factory does the rest automatically:
+
+- **Decision-token verification** — for entity writes, the factory resolves the per-contract mode (`off` / `warn` / `enforce`), verifies signature, claims, expiry, issuer/audience, `definitionHash`, `actionHash`, and replay (`jti`) before invoking `tool.logic`. The **code default is `off`**, so self-hosted/open-source servers stay neutral with no `MISSING_TOKEN` noise.
+- **Dry-run / snapshot honesty checks** — if your handler honors `supportsDryRun`, the shared `governed-dry-run.ts` helpers enforce that a tool promising `requiresValidation` / `requiresSimulation` never returns `validationSource: "none"` / `expectedStateSource: "none"`. Wire your `create`/`update` logic to return the dry-run result and before/after snapshots; the factory validates the promises.
+- **`definitionHash`** — computed canonically by `@cesteral/contract-hash` and blessed in the release manifest (Step 19). You never compute it yourself; just keep the tool definition stable and bump `schemaVersion` on real changes.
+
+> **References:** `packages/pinterest-mcp/src/mcp-server/tools/definitions/create-entity.tool.ts` (entity write), `packages/pinterest-mcp/src/mcp-server/tools/definitions/upload-video.tool.ts` (effect write), `packages/contract-schema/src/annotations.ts` (the contract type), `docs/governance/decision-token-rollout-and-rotation.md`.
+
 ## Step 10: Resources
 
 Resources provide reference data that AI agents can read on demand (entity schemas, examples, hierarchy diagrams).
@@ -1586,11 +1686,41 @@ Add a row to the Server Inventory table:
 
 Add the server to the Server Reference table and any relevant sections.
 
-### 5. Add a Dockerfile (if deploying to Cloud Run)
+### 5. Register in `registry.json`
+
+`registry.json` is the **source of truth for governance and manifest discovery** — `scripts/generate-manifests.mjs` iterates `registry.servers` (not a filesystem glob), so a package missing from this file ships **no attestation manifest** even if its tools carry `cesteral` blocks. Add a server entry alongside the existing ones:
+
+```jsonc
+{
+  "package": "{platform}-mcp",
+  "title": "{Platform} MCP Server",
+  "description": "...",
+  "platform": "{Platform}",
+  "platform_display_name": "{PLATFORM}",
+  "documentation_url": "https://developers.{platform}.com",
+  "tools": ["{prefix}_list_entities", "{prefix}_get_entity" /* ... all tool names */],
+  "resources": ["{platform}://entity-schemas" /* ... */],
+  "prompts": ["{prefix}_campaign_setup_workflow" /* ... */],
+  "auth": { "modes": ["{platform}-bearer", "jwt", "none"] },
+  "tags": ["advertising", "{platform}"],
+}
+```
+
+### 6. Generate the attestation manifest
+
+After `pnpm run build`, generate the per-package manifest that blesses each governed tool's `definitionHash`:
+
+```bash
+pnpm run generate:manifests
+```
+
+This boots each server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package with governed (`cesteral`-annotated) tools. Confirm your new server prints `wrote manifest with N governed tool(s)` — if it prints `no governed tools`, your write tools are missing their `cesteral` block (revisit [Step 9.5](#step-95-governing-your-write-tools)). The tag-triggered `release.yml` regenerates and signs this manifest transitively via npm build provenance; the governance repo verifies that provenance to promote matching tools to `attested` trust.
+
+### 7. Add a Dockerfile (if deploying to Cloud Run)
 
 Follow the pattern in `terraform/` and existing Dockerfiles. Each server gets its own container.
 
-### 6. Build and verify
+### 8. Build and verify
 
 ```bash
 pnpm run build       # Must complete without errors
@@ -1617,6 +1747,12 @@ Run through this checklist before submitting your PR:
 - [ ] `curl http://localhost:{port}/health` returns 200
 - [ ] `curl -X POST http://localhost:{port}/mcp -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}'` returns a response
 - [ ] Cross-server contract table updated in `docs/CROSS_SERVER_CONTRACT.md`
+- [ ] Every write tool carries a `cesteral` annotation block (`satisfies CesteralWriteToolAnnotations`)
+- [ ] Each `contractId` equals `` `${contractPlatformSlug}.${contractToolSlug}.v${schemaVersion}` ``
+- [ ] Every entity write's `readPartner.toolName` resolves to a real read tool with a matching `cesteral` `kind: "read"` block
+- [ ] Server registered in `registry.json`
+- [ ] `pnpm run generate:manifests` reports `wrote manifest with N governed tool(s)` for the new server
+- [ ] Platform entry added to `docs/guides/platform-mapping.md`
 
 ---
 
@@ -1704,3 +1840,27 @@ Every management server must provide:
 **Exceptions:** `dbm-mcp` (reporting only) and `sa360-mcp` (reporting + conversions) are exempt from CRUD requirements.
 
 See `docs/CROSS_SERVER_CONTRACT.md` for the full specification.
+
+## Appendix C: Governance Cheat Sheet
+
+What "governed" means in practice, and the minimum a new platform must do to participate. Full detail in [Step 9.5](#step-95-governing-your-write-tools) and [`docs/governance/`](../governance/).
+
+**The chain:** `cesteral` annotation on a write tool → `definitionHash` (`@cesteral/contract-hash`) → blessed in `dist/cesteral-manifest.json` (`pnpm run generate:manifests`, driven by `registry.json`) → signed transitively by npm provenance on release → verified by the governance repo to promote the tool to `attested` trust → decision token bound to `contractId` + `definitionHash` + `actionHash` and verified at call time by `registerToolsFromDefinitions()`.
+
+**Minimum to be governed (per new platform):**
+
+| #   | Action                                                                                       | Where                        |
+| --- | -------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1   | Add a `cesteral` block to every write tool (`entity` or `effect`), authored with `satisfies` | each `*.tool.ts` (Step 9.5)  |
+| 2   | Add a `cesteral` `kind: "read"` block to each entity write's `readPartner` read tool         | the `get_entity` / read tool |
+| 3   | Keep `contractId` = `` `${slug}.${toolSlug}.v${schemaVersion}` ``                            | each annotation              |
+| 4   | Register the package in `registry.json`                                                      | `registry.json` (Step 19.5)  |
+| 5   | Verify `pnpm run generate:manifests` writes a manifest for the package                       | build step (Step 19.6)       |
+| 6   | Add the platform to `docs/guides/platform-mapping.md`                                        | platform-mapping doc         |
+
+**Free, handled by `@cesteral/shared` once the annotation is right:** decision-token verification (default `off`), dry-run/snapshot honesty enforcement, `definitionHash` computation, telemetry span attributes via `workflowIdByToolName`.
+
+**Two strictness axes — don't conflate them** (see decision-token runbook):
+
+- `GOVERNANCE_TOKEN_MODE` (`off`/`warn`/`enforce`) is **fleet-global**, set per deployment in terraform; the server _code_ default is `off`.
+- Per-tenant strictness is the governance layer's per-org `AttestedWritePolicy` — not a server-side setting.
