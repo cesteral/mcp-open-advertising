@@ -61,4 +61,20 @@ describe("computeDefinitionHash", () => {
       computeDefinitionHash({ name: "minimal_tool" })
     );
   });
+
+  // Fail-loud parity with hashActionInput: non-JSON values in the projection
+  // throw rather than silently coercing to a wrong-but-stable hash. The inputs
+  // never occur on the wire-JSON `tools/list` path, but a non-wire caller now
+  // gets a loud failure instead of a divergent hash.
+  it("throws on a NaN nested in a governance field", () => {
+    expect(() =>
+      computeDefinitionHash({ name: "bad_tool", inputSchema: { default: Number.NaN } })
+    ).toThrow();
+  });
+
+  it("throws on a BigInt nested in annotations", () => {
+    expect(() =>
+      computeDefinitionHash({ name: "bad_tool", annotations: { cesteral: { schemaVersion: 1n } } })
+    ).toThrow();
+  });
 });
