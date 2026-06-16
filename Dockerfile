@@ -8,6 +8,11 @@ WORKDIR /app
 # Install all dependencies (including devDeps for build)
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+# @cesteral/shared depends on both contract-* packages (workspace:*), so their
+# manifests must be present for `pnpm install --frozen-lockfile` to resolve the
+# full workspace graph deterministically.
+COPY packages/contract-hash/package.json ./packages/contract-hash/
+COPY packages/contract-schema/package.json ./packages/contract-schema/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/dbm-mcp/package.json ./packages/dbm-mcp/
 COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
