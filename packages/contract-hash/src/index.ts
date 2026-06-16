@@ -155,6 +155,12 @@ export function computeDefinitionHash(tool: HashableToolDefinition): string {
       projection[field] = v;
     }
   }
-  const canonical = JSON.stringify(sortKeysDeep(projection));
+  // Route through stableStringify (not a bare JSON.stringify) so the
+  // definition-hash path shares the action-hash path's JSON-compatibility
+  // guard: a non-JSON projection value (BigInt/Date/NaN/function/…) fails
+  // loudly instead of silently coercing to a wrong-but-stable hash. For valid
+  // wire JSON — which every observed tool definition is — the bytes are
+  // identical, so the cross-repo golden vectors are unchanged.
+  const canonical = stableStringify(projection);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
