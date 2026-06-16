@@ -881,12 +881,12 @@ The `annotations` block in Step 9 has two layers. The four MCP hints (`readOnlyH
 
 ### Which tools get a `cesteral` block
 
-| Tool kind                                                                | `cesteral` block?    | `kind` / `writeClass`     |
-| ------------------------------------------------------------------------ | -------------------- | ------------------------- |
-| Mutates a canonical entity (`create`/`update`/`delete`/`bulk` on entity) | **Yes**              | `write` / `entity`        |
-| Write with no canonical entity snapshot (uploads, report-schedule CRUD, conversion uploads, async bulk jobs) | **Yes** | `write` / `effect`        |
-| Read tool that is a write tool's `readPartner`                           | **Yes**              | `read`                    |
-| Other read-only tools (list, search, get-report, validate)              | No                   | —                         |
+| Tool kind                                                                                                    | `cesteral` block? | `kind` / `writeClass` |
+| ------------------------------------------------------------------------------------------------------------ | ----------------- | --------------------- |
+| Mutates a canonical entity (`create`/`update`/`delete`/`bulk` on entity)                                     | **Yes**           | `write` / `entity`    |
+| Write with no canonical entity snapshot (uploads, report-schedule CRUD, conversion uploads, async bulk jobs) | **Yes**           | `write` / `effect`    |
+| Read tool that is a write tool's `readPartner`                                                               | **Yes**           | `read`                |
+| Other read-only tools (list, search, get-report, validate)                                                   | No                | —                     |
 
 The type lives in `@cesteral/contract-schema` (re-exported from `@cesteral/shared`). Author against it with `satisfies` so the compiler enforces the strict contract:
 
@@ -1702,7 +1702,7 @@ Add the server to the Server Reference table and any relevant sections.
   "resources": ["{platform}://entity-schemas" /* ... */],
   "prompts": ["{prefix}_campaign_setup_workflow" /* ... */],
   "auth": { "modes": ["{platform}-bearer", "jwt", "none"] },
-  "tags": ["advertising", "{platform}"]
+  "tags": ["advertising", "{platform}"],
 }
 ```
 
@@ -1849,14 +1849,14 @@ What "governed" means in practice, and the minimum a new platform must do to par
 
 **Minimum to be governed (per new platform):**
 
-| #   | Action                                                                                          | Where                                          |
-| --- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| 1   | Add a `cesteral` block to every write tool (`entity` or `effect`), authored with `satisfies`    | each `*.tool.ts` (Step 9.5)                    |
-| 2   | Add a `cesteral` `kind: "read"` block to each entity write's `readPartner` read tool            | the `get_entity` / read tool                   |
-| 3   | Keep `contractId` = `` `${slug}.${toolSlug}.v${schemaVersion}` ``                                | each annotation                                |
-| 4   | Register the package in `registry.json`                                                          | `registry.json` (Step 19.5)                    |
-| 5   | Verify `pnpm run generate:manifests` writes a manifest for the package                          | build step (Step 19.6)                         |
-| 6   | Add the platform to `docs/guides/platform-mapping.md`                                            | platform-mapping doc                           |
+| #   | Action                                                                                       | Where                        |
+| --- | -------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1   | Add a `cesteral` block to every write tool (`entity` or `effect`), authored with `satisfies` | each `*.tool.ts` (Step 9.5)  |
+| 2   | Add a `cesteral` `kind: "read"` block to each entity write's `readPartner` read tool         | the `get_entity` / read tool |
+| 3   | Keep `contractId` = `` `${slug}.${toolSlug}.v${schemaVersion}` ``                            | each annotation              |
+| 4   | Register the package in `registry.json`                                                      | `registry.json` (Step 19.5)  |
+| 5   | Verify `pnpm run generate:manifests` writes a manifest for the package                       | build step (Step 19.6)       |
+| 6   | Add the platform to `docs/guides/platform-mapping.md`                                        | platform-mapping doc         |
 
 **Free, handled by `@cesteral/shared` once the annotation is right:** decision-token verification (default `off`), dry-run/snapshot honesty enforcement, `definitionHash` computation, telemetry span attributes via `workflowIdByToolName`.
 
