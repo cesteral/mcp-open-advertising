@@ -427,6 +427,46 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
   }
 
+  // Fail-open visibility guard (issue #102): governance defaults to `off`, so a
+  // deploy that never sets a GOVERNANCE_TOKEN_MODE* tier ships every governed
+  // write ungoverned while the manifest still advertises the tools as governed.
+  // The default is intentional for staged rollout, but it must not be silent —
+  // surface a single registration-time summary so an operator can see at boot
+  // exactly how many governed writes are actually gated vs. running fail-open.
+  {
+    const governedWrites = tools.filter((t) => {
+      const c = (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral;
+      return c?.kind === "write";
+    });
+    if (governedWrites.length > 0) {
+      const offCount = governedWrites.filter((t) => {
+        const c = (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral;
+        return c && resolveTokenMode({ contractId: c.contractId, env: governanceEnv }) === "off";
+      }).length;
+      const summary = {
+        component: "governance",
+        event: "token_mode_summary",
+        governedWrites: governedWrites.length,
+        ungoverned: offCount,
+        gated: governedWrites.length - offCount,
+      };
+      if (offCount === governedWrites.length) {
+        logger.warn(
+          summary,
+          `Governance fail-open: all ${governedWrites.length} governed write tool(s) resolve to ` +
+            `token mode 'off' — no decision-token verification will run. Set a ` +
+            `GOVERNANCE_TOKEN_MODE* tier (global, per-server, or per-contract) before go-live.`
+        );
+      } else {
+        logger.info(
+          summary,
+          `Governance token modes resolved: ${summary.gated}/${governedWrites.length} ` +
+            `governed write tool(s) gated, ${offCount} running 'off'.`
+        );
+      }
+    }
+  }
+
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
     const transformedInputSchema = transformSchema(tool.inputSchema);
@@ -594,26 +634,56 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               // writes. The governance control plane mints a token solely for
               // admitted entity writes; effect-class writes have no canonical
               // snapshot, are never admitted, and so never receive a token.
-              // Verifying them here would reject every effect-class mutation
-              // with MISSING_TOKEN the instant a mode other than `off` is set —
-              // even though the control plane cannot authorize them. Force `off`
-              // for effect writes until an effect-class mint path exists, and
-              // surface an audit line when a non-`off` mode was configured so an
-              // operator knows these are bypassed by design.
+              // There is no effect-class mint path yet, so an effect write can
+              // never be positively verified here.
+              //
+              // Behaviour by configured mode (the operator's explicit intent):
+              //  - `off`     → no-op (read-only behaviour preserved).
+              //  - `warn`    → log the skip; never block (warn is non-blocking).
+              //  - `enforce` → FAIL CLOSED. The operator explicitly asked for
+              //                this contract's mutations to be gated. Because we
+              //                cannot verify an effect write, the only way to
+              //                honour `enforce` is to refuse it — silently
+              //                downgrading to `off` and running the live
+              //                mutation unverified would drop the operator's
+              //                enforce intent on the floor (issue #101).
               const isEffectWrite = cesteralAnnotation.writeClass === "effect";
-              if (isEffectWrite && configuredMode !== "off") {
-                logger.warn(
-                  {
-                    component: "governance-audit",
-                    event: "decision_token_verification",
-                    status: "skipped",
-                    reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
-                    mode: configuredMode,
-                    contractId: cesteralAnnotation.contractId,
-                    toolName: tool.name,
-                  },
-                  "decision token: effect-class write is not token-governed (control plane mints no token); skipping verification"
-                );
+              if (isEffectWrite) {
+                if (configuredMode === "enforce") {
+                  logger.warn(
+                    {
+                      component: "governance-audit",
+                      event: "decision_token_verification",
+                      status: "rejected",
+                      reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
+                      mode: configuredMode,
+                      contractId: cesteralAnnotation.contractId,
+                      toolName: tool.name,
+                    },
+                    "decision token: effect-class write cannot be verified (no effect-class mint path); refusing under enforce mode"
+                  );
+                  recordToolExecution(tool.name, "error", Date.now() - startTime);
+                  throw new McpError(
+                    JsonRpcErrorCode.Unauthorized,
+                    `Governance: effect-class write ${tool.name} cannot be ` +
+                      `decision-token verified (no effect-class mint path); ` +
+                      `refusing under enforce mode`
+                  );
+                }
+                if (configuredMode === "warn") {
+                  logger.warn(
+                    {
+                      component: "governance-audit",
+                      event: "decision_token_verification",
+                      status: "skipped",
+                      reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
+                      mode: configuredMode,
+                      contractId: cesteralAnnotation.contractId,
+                      toolName: tool.name,
+                    },
+                    "decision token: effect-class write is not token-governed (control plane mints no token); skipping verification under warn mode"
+                  );
+                }
               }
               const mode = isEffectWrite ? "off" : configuredMode;
               if (mode !== "off") {
