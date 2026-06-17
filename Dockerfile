@@ -1,7 +1,11 @@
 # Multi-stage Dockerfile for Cesteral MCP servers
 # Build with: docker build --build-arg SERVER_NAME=dbm-mcp -t dbm-mcp .
 
-FROM node:20-alpine AS base
+# Pinned by digest for reproducible builds and supply-chain integrity. The bare
+# `node:20-alpine` tag floats, so identical source could otherwise resolve to
+# different OS packages on each rebuild. Digest is the multi-arch index for
+# node:20-alpine; bump it deliberately when refreshing the base.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS base
 RUN npm install -g pnpm@10.34.1
 WORKDIR /app
 
