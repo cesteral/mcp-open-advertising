@@ -164,6 +164,59 @@ function callWithToken(server: ReturnType<typeof createMockServer>, args: unknow
   return runWithRequestContext(ctx, () => server.callTool("meta_update_entity", args));
 }
 
+// ── Effect-class write harness ──────────────────────────────────────────────
+// Effect writes are verified through the SAME write-class-agnostic gate as
+// entity writes; only the contractId differs (no readPartner / snapshot).
+const EFFECT_CONTRACT_ID = "ttd.submit_report.v1";
+
+async function mintEffectToken(args: Record<string, unknown>, over: Record<string, unknown> = {}) {
+  const executable = canonicalizeExecutableArgs({ rawArgs: args, exclude: ["dry_run"] });
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: "cesteral-intelligence",
+    aud: "mcp-open-advertising",
+    sub: "tenant-1",
+    contractId: EFFECT_CONTRACT_ID,
+    definitionHash: DEF_HASH,
+    actionHash: hashActionInput(executable),
+    jti: `jti-eff-${now}-${JSON.stringify(args)}`,
+    iat: now - 5,
+    exp: now + 3600,
+    ...over,
+  };
+  return new jose.SignJWT(payload).setProtectedHeader({ alg: "HS256" }).sign(enc.encode(SECRET));
+}
+
+function registerEffect(opts: {
+  env: Record<string, string | undefined>;
+  jtiStore?: JtiStore;
+  resolveDefinitionHash?: (n: string) => string | undefined;
+  server: ReturnType<typeof createMockServer>;
+  logger: Logger;
+}) {
+  registerToolsFromDefinitions({
+    server: opts.server,
+    tools: [effectWriteTool],
+    logger: opts.logger,
+    sessionId: "s1",
+    transformSchema: (s) => s,
+    createRequestContext: ({ operation }) => ({
+      requestId: "req-1",
+      timestamp: new Date().toISOString(),
+      operation,
+    }),
+    governanceEnv: opts.env,
+    jtiStore: opts.jtiStore,
+    resolveDefinitionHash: opts.resolveDefinitionHash ?? (() => DEF_HASH),
+  });
+}
+
+function callEffect(server: ReturnType<typeof createMockServer>, args: unknown, token?: string) {
+  const ctx = createRequestContext("test");
+  if (token) ctx.decisionToken = token;
+  return runWithRequestContext(ctx, () => server.callTool("ttd_submit_report", args));
+}
+
 describe("tool-handler-factory governance verification", () => {
   let server: ReturnType<typeof createMockServer>;
   let logger: Logger;
@@ -173,6 +226,8 @@ describe("tool-handler-factory governance verification", () => {
     logger = createMockLogger();
     writeTool.logic.mockReset();
     writeTool.logic.mockImplementation(async (_input, _ctx, _sdk) => ({ ok: true }));
+    effectWriteTool.logic.mockReset();
+    effectWriteTool.logic.mockImplementation(async () => ({ ok: true }));
   });
 
   it("off mode: runs the write without any token", async () => {
@@ -293,38 +348,83 @@ describe("tool-handler-factory governance verification", () => {
     expect(hit).toBe(false);
   });
 
-  it("enforce mode: effect-class write is NOT token-governed — runs without a token + logs skip", async () => {
-    // Regression guard for the effect-write enforcement gap: the control plane
-    // never mints a decision token for effect-class writes, so enforcing them
-    // here would reject every effect mutation with MISSING_TOKEN. They must
-    // bypass verification (run as if `off`) and surface an audit skip line.
-    effectWriteTool.logic.mockReset();
-    effectWriteTool.logic.mockImplementation(async () => ({ ok: true }));
-    registerToolsFromDefinitions({
-      server,
-      tools: [effectWriteTool],
-      logger,
-      sessionId: "s1",
-      transformSchema: (s) => s,
-      createRequestContext: ({ operation }) => ({
-        requestId: "req-1",
-        timestamp: new Date().toISOString(),
-        operation,
-      }),
-      governanceEnv: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
-      resolveDefinitionHash: () => DEF_HASH,
-    });
-    // No decision token on the context — an entity write would be blocked here.
-    const res = (await runWithRequestContext(createRequestContext("test"), () =>
-      server.callTool("ttd_submit_report", { reportId: "r1" })
-    )) as { isError?: boolean };
+  // ── Effect-class writes are governed through the SAME gate (F2.1 fix) ──────
+  // Effect writes (bulk mutate, hard delete, conversion uploads) were formerly
+  // forced to `off` here, leaving the fleet's most destructive surface
+  // ungoverned even under `enforce`. They now flow through the write-class-
+  // agnostic verdict: off → skip, warn → never block, enforce → fail closed.
+
+  it("effect write, off mode: runs without a token (unchanged)", async () => {
+    registerEffect({ env: {}, server, logger });
+    const res = (await callEffect(server, { reportId: "r1" })) as { isError?: boolean };
     expect(res.isError).toBeUndefined();
     expect(effectWriteTool.logic).toHaveBeenCalledOnce();
-    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
-    const skipped = warn.calls.some(
-      ([obj]) => (obj as { reasonCode?: string })?.reasonCode === "EFFECT_WRITE_NOT_TOKEN_GOVERNED"
-    );
-    expect(skipped).toBe(true);
+  });
+
+  it("effect write, warn mode: missing token does NOT block", async () => {
+    registerEffect({ env: { GOVERNANCE_TOKEN_MODE: "warn" }, server, logger });
+    const res = (await callEffect(server, { reportId: "r1" })) as { isError?: boolean };
+    expect(res.isError).toBeUndefined();
+    expect(effectWriteTool.logic).toHaveBeenCalledOnce();
+  });
+
+  it("effect write, enforce mode: missing token fails closed (logic not called)", async () => {
+    // The core of the F2.1 fix: an effect-class mutation under enforce without a
+    // decision token is rejected exactly like an entity write, instead of
+    // silently executing the most destructive operations ungoverned.
+    registerEffect({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      server,
+      logger,
+    });
+    const res = (await callEffect(server, { reportId: "r1" })) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("MISSING_TOKEN");
+    expect(effectWriteTool.logic).not.toHaveBeenCalled();
+  });
+
+  it("effect write, enforce mode: valid token runs once, then replay is blocked", async () => {
+    const jtiStore = new InMemoryJtiStore();
+    registerEffect({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      jtiStore,
+      server,
+      logger,
+    });
+    const args = { reportId: "r1", dry_run: false };
+    const token = await mintEffectToken(args);
+
+    const res = (await callEffect(server, args, token)) as { isError?: boolean };
+    expect(res.isError).toBeUndefined();
+    expect(effectWriteTool.logic).toHaveBeenCalledOnce();
+
+    const replay = (await callEffect(server, args, token)) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(replay.isError).toBe(true);
+    expect(replay.content[0].text).toContain("REPLAYED_JTI");
+    expect(effectWriteTool.logic).toHaveBeenCalledOnce();
+  });
+
+  it("effect write, per-server enforce override fails closed without a token", async () => {
+    // Staged rollout via the platform-slug override (GOVERNANCE_TOKEN_MODE_TTD)
+    // must reach effect-class contracts too, not just entity writes.
+    registerEffect({
+      env: { GOVERNANCE_TOKEN_MODE_TTD: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      server,
+      logger,
+    });
+    const res = (await callEffect(server, { reportId: "r1" })) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("MISSING_TOKEN");
+    expect(effectWriteTool.logic).not.toHaveBeenCalled();
   });
 
   it("authz denial happens before jti consume (valid token not burned)", async () => {

@@ -586,36 +586,32 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
             )?.cesteral;
             if (cesteralAnnotation?.kind === "write") {
-              const configuredMode = resolveTokenMode({
+              // Decision-token verification is write-class AGNOSTIC. The token
+              // binds {contractId, definitionHash, actionHash} — none of which
+              // depend on whether the write produces a canonical before/after
+              // snapshot — so the same gate applies to BOTH entity- and
+              // effect-class writes.
+              //
+              // Effect-class writes (bulk mutate, hard delete, conversion
+              // uploads, bulk jobs) are the fleet's most destructive surface.
+              // Previously they were forced to `off` here on the rationale that
+              // the control plane never mints a token for them; the side effect
+              // was that the strongest mutations were the LEAST governed — under
+              // `enforce` an entity write without a token fails closed while an
+              // effect write sailed through. Routing effect writes through the
+              // same verdict closes that gap with fail-closed-by-default:
+              //   - `off`     → unchanged (verification skipped),
+              //   - `warn`    → verify + log the verdict, never block,
+              //   - `enforce` → a missing/invalid token fails closed
+              //                 (MISSING_TOKEN) exactly like an entity write.
+              // The moment the control plane mints decision tokens for effect
+              // writes, a valid token flows through with no further change here.
+              // Operators stage this per-contract via GOVERNANCE_TOKEN_MODE_*;
+              // an effect contract left in `off` keeps the prior behavior.
+              const mode = resolveTokenMode({
                 contractId: cesteralAnnotation.contractId,
                 env: governanceEnv,
               });
-              // Decision-token enforcement is only defined for ENTITY-class
-              // writes. The governance control plane mints a token solely for
-              // admitted entity writes; effect-class writes have no canonical
-              // snapshot, are never admitted, and so never receive a token.
-              // Verifying them here would reject every effect-class mutation
-              // with MISSING_TOKEN the instant a mode other than `off` is set —
-              // even though the control plane cannot authorize them. Force `off`
-              // for effect writes until an effect-class mint path exists, and
-              // surface an audit line when a non-`off` mode was configured so an
-              // operator knows these are bypassed by design.
-              const isEffectWrite = cesteralAnnotation.writeClass === "effect";
-              if (isEffectWrite && configuredMode !== "off") {
-                logger.warn(
-                  {
-                    component: "governance-audit",
-                    event: "decision_token_verification",
-                    status: "skipped",
-                    reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
-                    mode: configuredMode,
-                    contractId: cesteralAnnotation.contractId,
-                    toolName: tool.name,
-                  },
-                  "decision token: effect-class write is not token-governed (control plane mints no token); skipping verification"
-                );
-              }
-              const mode = isEffectWrite ? "off" : configuredMode;
               if (mode !== "off") {
                 const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
                 // Under enforce, an unresolved definition hash means the binding

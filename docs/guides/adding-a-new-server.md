@@ -932,7 +932,7 @@ annotations: {
 
 ### Effect write annotation
 
-An **effect write** has no canonical entity snapshot (e.g. media upload, report-schedule create, conversion upload, fire-and-forget bulk job). It carries **no `readPartner`**, `supportsBeforeAfterSnapshot: false`, and its `requiresValidation` / `requiresSimulation` are **honest booleans** — set them to `true` only if the tool actually validates/simulates. Effect writes are not currently token-governed (the control plane mints no token for them), so the factory forces token verification to `off` for them regardless of mode.
+An **effect write** has no canonical entity snapshot (e.g. media upload, report-schedule create, conversion upload, fire-and-forget bulk job). It carries **no `readPartner`**, `supportsBeforeAfterSnapshot: false`, and its `requiresValidation` / `requiresSimulation` are **honest booleans** — set them to `true` only if the tool actually validates/simulates. Effect writes are token-governed through the **same** write-class-agnostic gate as entity writes: under `enforce` a missing/invalid decision token fails closed (`MISSING_TOKEN`). The control plane does not yet mint tokens for effect-class contracts, so keep an effect contract in `off`/`warn` until its mint path is live — flipping it straight to `enforce` will reject every call.
 
 ```typescript
 cesteral: {

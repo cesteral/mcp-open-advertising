@@ -60,9 +60,17 @@ the two.
 - **`enforce`** — reject any write whose token does not verify (HTTP 401,
   `JsonRpcErrorCode.Unauthorized`).
 
-Effect-class writes are never token-governed (the control plane mints no token
-for them); they are forced to `off` regardless of mode, with an audit line when a
-non-`off` mode was configured.
+Verification is **write-class agnostic**: both entity- and effect-class writes
+flow through the same gate, because the token binds `{contractId,
+definitionHash, actionHash}` — none of which depend on a before/after snapshot.
+Effect-class writes (bulk mutate, hard delete, conversion uploads, bulk jobs)
+are therefore fail-closed under `enforce` exactly like entity writes: a missing
+or invalid token is rejected (`MISSING_TOKEN`). Until the control plane mints
+decision tokens for effect-class contracts, an effect contract flipped to
+`enforce` will reject — keep such contracts in `off`/`warn` until their mint
+path is live. (Earlier builds forced effect writes to `off` regardless of mode,
+leaving the fleet's most destructive surface ungoverned; that exemption has
+been removed.)
 
 Three-tier precedence lets a large rollout be staged without an all-or-nothing
 flip:
