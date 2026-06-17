@@ -1,18 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { toManifestEntry, validateManifest } from "./manifest.mjs";
 
+// A complete entity-write annotation — the shape a real `.tool.ts` ships and
+// what the full `cesteralAnnotationSchema` gate now requires at manifest time.
+const writeCesteral = {
+  kind: "write",
+  writeClass: "entity",
+  platform: "meta_ads",
+  contractPlatformSlug: "meta",
+  contractToolSlug: "update_entity",
+  contractId: "meta.update_entity.v1",
+  schemaVersion: 1,
+  operation: ["update"],
+  entityKinds: ["campaign"],
+  entityIdArgs: ["campaignId"],
+  executableArgsExclude: ["dry_run"],
+  readPartner: { toolName: "meta_get_entity", argMap: { campaignId: "campaignId" } },
+};
+
 const writeTool = {
   name: "meta_update_entity",
   description: "Update a Meta entity.",
   inputSchema: { type: "object" },
   annotations: {
     destructiveHint: true,
-    cesteral: {
-      kind: "write",
-      platform: "meta_ads",
-      contractId: "meta.update_entity.v1",
-      schemaVersion: 1,
-    },
+    cesteral: writeCesteral,
   },
 };
 
@@ -34,10 +46,10 @@ describe("toManifestEntry", () => {
       name: "gads_update_entity",
       annotations: {
         cesteral: {
-          kind: "write",
+          ...writeCesteral,
           platform: "google_ads",
+          contractPlatformSlug: "google_ads",
           contractId: "google_ads.update_entity.v1",
-          schemaVersion: 1,
         },
       },
     };
@@ -124,10 +136,15 @@ describe("toManifestEntry", () => {
       annotations: {
         cesteral: {
           kind: "write",
+          writeClass: "effect",
+          platform: "linkedin_ads",
           contractPlatformSlug: "linkedin_ads",
           contractToolSlug: "upload_image",
           contractId: "linkedin_ads.upload_image.v1",
           schemaVersion: 1,
+          operation: ["upload"],
+          entityKinds: [],
+          entityIdArgs: [],
         },
       },
     };
@@ -144,8 +161,12 @@ describe("toManifestEntry", () => {
         cesteral: {
           kind: "read",
           platform: "meta_ads",
+          contractPlatformSlug: "meta",
+          contractToolSlug: "get_entity",
           contractId: "meta.get_entity.v1",
           schemaVersion: 1,
+          entityKinds: ["campaign"],
+          entityIdArgs: ["campaignId"],
         },
       },
     };
@@ -157,6 +178,42 @@ describe("toManifestEntry", () => {
       schemaVersion: "1",
       definitionHash: expect.stringMatching(/^[0-9a-f]{64}$/),
     });
+  });
+
+  // The semantic gate (full cesteralAnnotationSchema) catches what the
+  // structural contractId/schemaVersion/slug checks never validated.
+  it("throws on an operation outside CESTERAL_WRITE_OPERATIONS", () => {
+    const bad = {
+      ...writeTool,
+      annotations: { cesteral: { ...writeCesteral, operation: ["frobnicate"] } },
+    };
+    expect(() => toManifestEntry(bad)).toThrow(/contract schema/);
+  });
+
+  it("throws when an entity-write omits its readPartner", () => {
+    const { readPartner, ...withoutPartner } = writeCesteral;
+    const bad = { ...writeTool, annotations: { cesteral: withoutPartner } };
+    expect(() => toManifestEntry(bad)).toThrow(/contract schema/);
+  });
+
+  it("throws when a read tool declares an empty entityKinds", () => {
+    const bad = {
+      ...writeTool,
+      name: "meta_get_entity",
+      annotations: {
+        cesteral: {
+          kind: "read",
+          platform: "meta_ads",
+          contractPlatformSlug: "meta",
+          contractToolSlug: "get_entity",
+          contractId: "meta.get_entity.v1",
+          schemaVersion: 1,
+          entityKinds: [],
+          entityIdArgs: ["campaignId"],
+        },
+      },
+    };
+    expect(() => toManifestEntry(bad)).toThrow(/contract schema/);
   });
 });
 

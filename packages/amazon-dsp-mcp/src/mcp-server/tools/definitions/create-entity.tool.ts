@@ -165,7 +165,11 @@ export const createEntityTool = {
       // canonical kind. creative / target / creativeAssociation are out of
       // scope (resolve canonicalEntityKind: null, no snapshot).
       entityKinds: ["order", "line_item"],
-      entityIdArgs: [],
+      // `profileId` is the required top-level scope arg that locates where the
+      // entity is created (hierarchy parent ids live in `data`). create has no
+      // pre-existing entity id; the contract allows an empty entityIdArgs for
+      // creates, but we declare the real scope arg we do have.
+      entityIdArgs: ["profileId"],
       readPartner: {
         toolName: "amazon_dsp_get_entity",
         argMap: { entityType: "entityType", profileId: "profileId" },
