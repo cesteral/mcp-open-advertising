@@ -90,14 +90,18 @@ export function toManifestEntry(tool) {
     );
   }
 
+  // NOTE on the schemaVersion number→string boundary: the annotation carries
+  // `schemaVersion` as a NUMBER (and the canonical definitionHash hashes that
+  // number, since the hash is taken over the raw tool), but the manifest record
+  // serializes it to a STRING to match `cesteralManifestSchema`. Attestation
+  // matching downstream is keyed on `definitionHash` alone — never on this
+  // record's schemaVersion — so the 1 vs "1" duality is cosmetic and safe.
+  // Do NOT start joining/matching on `schemaVersion` across the manifest and a
+  // live annotation without coercing both sides: `1 === "1"` is false.
   return {
     toolName: tool.name,
     contractPlatformSlug: platformSlug,
     contractToolSlug: toolSlug,
-    // schemaVersion is a `number` in the annotation (and in deriveContractId),
-    // but the manifest wire format stores it as a string — this `String(...)`
-    // is the single normalization point. A consumer comparing manifest
-    // schemaVersion must compare the string form, not numerically.
     schemaVersion: String(cesteral.schemaVersion),
     definitionHash: computeDefinitionHash(tool),
   };
