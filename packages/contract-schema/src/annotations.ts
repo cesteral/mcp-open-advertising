@@ -158,6 +158,22 @@ export interface CesteralEntityWriteToolAnnotations extends CesteralWriteToolAnn
    * `expectedStateSource: "none"`. Always `true` for an entity write.
    */
   requiresSimulation: true;
+
+  /**
+   * Entity writes always honor the `dry_run` input flag and return a dry-run
+   * result. Pinned to the `true` literal (narrowing the base's optional boolean)
+   * so an entity write cannot express the self-contradictory pairing
+   * `requiresSimulation: true` + `supportsDryRun: false` (issue #95): governance
+   * produces an expected post-state on every call, so the client-facing dry-run
+   * flag must be honored. The consumer's `admitWriteTool()` keys admission on
+   * `requiresSimulation: true`, so without this an entity write declaring
+   * `supportsDryRun: false` would be admitted and then forced onto the approval
+   * rail at runtime when a dry-run turned out unavailable — a contradiction that
+   * should be impossible to author, not resolved late. This is an authoring-type
+   * tightening only; the (deliberately loose) `cesteralAnnotationSchema` is
+   * unchanged so governance still emits specific admission reason codes.
+   */
+  supportsDryRun: true;
 }
 
 /**
