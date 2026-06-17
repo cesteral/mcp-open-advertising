@@ -293,11 +293,12 @@ describe("tool-handler-factory governance verification", () => {
     expect(hit).toBe(false);
   });
 
-  it("enforce mode: effect-class write is NOT token-governed — runs without a token + logs skip", async () => {
-    // Regression guard for the effect-write enforcement gap: the control plane
-    // never mints a decision token for effect-class writes, so enforcing them
-    // here would reject every effect mutation with MISSING_TOKEN. They must
-    // bypass verification (run as if `off`) and surface an audit skip line.
+  it("enforce mode: effect-class write FAILS CLOSED — refused, logic not called (issue #101)", async () => {
+    // The control plane never mints a decision token for effect-class writes,
+    // so they cannot be positively verified here. Under `enforce` the operator
+    // has explicitly asked for this contract to be gated; the only way to honour
+    // that is to refuse the write rather than silently downgrade to `off` and
+    // run the live mutation unverified. The audit line is status:"rejected".
     effectWriteTool.logic.mockReset();
     effectWriteTool.logic.mockImplementation(async () => ({ ok: true }));
     registerToolsFromDefinitions({
@@ -314,7 +315,40 @@ describe("tool-handler-factory governance verification", () => {
       governanceEnv: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
       resolveDefinitionHash: () => DEF_HASH,
     });
-    // No decision token on the context — an entity write would be blocked here.
+    // No decision token on the context — and no mint path exists for effect.
+    const res = (await runWithRequestContext(createRequestContext("test"), () =>
+      server.callTool("ttd_submit_report", { reportId: "r1" })
+    )) as { isError?: boolean };
+    expect(res.isError).toBe(true);
+    expect(effectWriteTool.logic).not.toHaveBeenCalled();
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const rejected = warn.calls.some(
+      ([obj]) =>
+        (obj as { reasonCode?: string })?.reasonCode === "EFFECT_WRITE_NOT_TOKEN_GOVERNED" &&
+        (obj as { status?: string })?.status === "rejected"
+    );
+    expect(rejected).toBe(true);
+  });
+
+  it("warn mode: effect-class write runs without a token + logs skip (non-blocking)", async () => {
+    // `warn` is non-blocking by definition, so an effect write proceeds and we
+    // surface an audit skip line — only `enforce` fails closed (issue #101).
+    effectWriteTool.logic.mockReset();
+    effectWriteTool.logic.mockImplementation(async () => ({ ok: true }));
+    registerToolsFromDefinitions({
+      server,
+      tools: [effectWriteTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      governanceEnv: { GOVERNANCE_TOKEN_MODE: "warn", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      resolveDefinitionHash: () => DEF_HASH,
+    });
     const res = (await runWithRequestContext(createRequestContext("test"), () =>
       server.callTool("ttd_submit_report", { reportId: "r1" })
     )) as { isError?: boolean };
@@ -322,7 +356,9 @@ describe("tool-handler-factory governance verification", () => {
     expect(effectWriteTool.logic).toHaveBeenCalledOnce();
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
     const skipped = warn.calls.some(
-      ([obj]) => (obj as { reasonCode?: string })?.reasonCode === "EFFECT_WRITE_NOT_TOKEN_GOVERNED"
+      ([obj]) =>
+        (obj as { reasonCode?: string })?.reasonCode === "EFFECT_WRITE_NOT_TOKEN_GOVERNED" &&
+        (obj as { status?: string })?.status === "skipped"
     );
     expect(skipped).toBe(true);
   });
