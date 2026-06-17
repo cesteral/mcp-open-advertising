@@ -120,4 +120,4 @@ recorded here for completeness.)
 - `pnpm run generate:manifests` — full fleet green; all 13 governed packages
   emit manifests, including the 5 formerly-broken create tools.
 - `pnpm exec turbo run typecheck --filter=@cesteral/contract-schema --filter=@cesteral/amazon-dsp-mcp` — clean.
-</content>
+  </content>

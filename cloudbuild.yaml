@@ -5,6 +5,10 @@ substitutions:
   _ENVIRONMENT: 'dev'
   _REGION: 'europe-west2'
   _ARTIFACT_REGISTRY_REPO: 'cesteral'
+  # Safety interlock: prod infrastructure is never mutated by an automated build
+  # unless this is explicitly set to 'true' (intended to be paired with a
+  # trigger-level approval gate). Non-prod environments apply automatically.
+  _CONFIRM_PROD_APPLY: 'false'
 
 options:
   machineType: 'N1_HIGHCPU_8'
@@ -74,6 +78,19 @@ steps:
           docker push --all-tags "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}" &
         done
         wait
+        # Resolve the immutable registry digest for each pushed image and persist
+        # it to /workspace so the Terraform step can deploy by digest rather than
+        # the mutable :SHORT_SHA tag (audit + reliable rollback).
+        mkdir -p /workspace/digests
+        for SERVICE in $SERVICES; do
+          IMAGE="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${SHORT_SHA}" | sed 's/^.*@//')
+          if [ -z "$DIGEST" ]; then
+            echo "Failed to resolve digest for ${IMAGE}:${SHORT_SHA}" >&2
+            exit 1
+          fi
+          echo "$DIGEST" > "/workspace/digests/${SERVICE}"
+        done
     id: 'push-images'
     waitFor: ['vulnerability-scan']
 
@@ -114,27 +131,26 @@ steps:
       - '-c'
       - |
         cd terraform
-        terraform plan \
-          -var="dbm_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}" \
-          -var="dv360_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}" \
-          -var="ttd_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}" \
-          -var="gads_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}" \
-          -var="meta_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}" \
-          -var="linkedin_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${SHORT_SHA}" \
-          -var="tiktok_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}" \
-          -var="cm360_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/cm360-mcp:${SHORT_SHA}" \
-          -var="sa360_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/sa360-mcp:${SHORT_SHA}" \
-          -var="pinterest_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/pinterest-mcp:${SHORT_SHA}" \
-          -var="snapchat_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/snapchat-mcp:${SHORT_SHA}" \
-          -var="amazon_dsp_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/amazon-dsp-mcp:${SHORT_SHA}" \
-          -var="msads_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/msads-mcp:${SHORT_SHA}" \
-          -var-file=${_ENVIRONMENT}.tfvars \
-          -out=tfplan
+        # Deploy by immutable digest (resolved in push-images) rather than the
+        # mutable :SHORT_SHA tag. Build the -var args from /workspace/digests so
+        # the Terraform var name (e.g. dbm_mcp_image) stays in sync with the
+        # service list automatically.
+        set --
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp; do
+          DIGEST=$(cat "/workspace/digests/${SERVICE}")
+          VARNAME=$(echo "$SERVICE" | tr '-' '_')_image
+          IMAGE_REF="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}@${DIGEST}"
+          set -- "$@" -var="${VARNAME}=${IMAGE_REF}"
+        done
+        terraform plan "$@" -var-file=${_ENVIRONMENT}.tfvars -out=tfplan
     id: 'terraform-plan'
     waitFor: ['terraform-validate', 'tflint']
 
-  # IMPORTANT: For production triggers, enable Cloud Build approval gates
-  # to require manual review before terraform-apply runs.
+  # Production must not be mutated by the automated pipeline without a human in
+  # the loop. This step stops after the reviewed plan (uploaded as a build
+  # artifact) unless _CONFIRM_PROD_APPLY=true — promote prod via a separate
+  # approval-gated trigger that sets it. Pair with the trigger-level approval
+  # config for defense in depth.
   # See: https://cloud.google.com/build/docs/securing-builds/gate-builds-on-approval
   - name: 'hashicorp/terraform:1.9'
     entrypoint: 'sh'
@@ -142,6 +158,12 @@ steps:
       - '-c'
       - |
         cd terraform
+        if [ "${_ENVIRONMENT}" = "prod" ] && [ "${_CONFIRM_PROD_APPLY}" != "true" ]; then
+          echo "Skipping terraform apply for prod: _CONFIRM_PROD_APPLY is not 'true'."
+          echo "The reviewed plan is saved to the build artifacts bucket."
+          echo "Promote it via the approval-gated prod apply trigger."
+          exit 0
+        fi
         terraform apply -auto-approve tfplan
     id: 'terraform-apply'
     waitFor: ['terraform-plan']
