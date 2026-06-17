@@ -7,7 +7,7 @@
 // free so it is unit-testable (generate-manifests.mjs auto-runs on import).
 
 import { computeDefinitionHash } from "@cesteral/contract-hash";
-import { cesteralManifestSchema } from "@cesteral/contract-schema";
+import { cesteralManifestSchema, parseCesteralAnnotation } from "@cesteral/contract-schema";
 
 // contractId is `<platformSlug>.<toolSlug>.v<schemaVersion>` — see
 // @cesteral/contract-schema CesteralToolAnnotations. Both slugs match the
@@ -68,6 +68,25 @@ export function toManifestEntry(tool) {
     throw new Error(
       `${tool.name}: cesteral.contractToolSlug ${JSON.stringify(cesteral.contractToolSlug)} ` +
         `disagrees with the tool segment of contractId (${JSON.stringify(toolSlug)}).`
+    );
+  }
+
+  // Full semantic gate. The structural checks above give precise, legible
+  // errors for the common contractId/schemaVersion/slug mistakes and fire
+  // first; this runs the canonical loose annotation schema
+  // (`cesteralAnnotationSchema`) — the SAME schema the governance layer parses
+  // released tool lists with — so a release fails here rather than shipping an
+  // annotation that only the downstream consumer's admission layer rejects.
+  // It covers the fields the structural checks do not: the write/read + entity/
+  // effect discriminator, `operation` membership in CESTERAL_WRITE_OPERATIONS,
+  // non-empty `entityKinds`/`entityIdArgs`, and the entity-write `readPartner`.
+  const parsed = parseCesteralAnnotation(cesteral);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("\n");
+    throw new Error(
+      `${tool.name}: cesteral annotation does not satisfy the contract schema:\n${issues}`
     );
   }
 
