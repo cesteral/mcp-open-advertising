@@ -99,17 +99,11 @@ const entityWrite: CesteralEntityWriteToolAnnotations = {
   requiresSimulation: true,
 };
 
-// Issue #95 authoring-type guard: an entity write cannot declare
-// `supportsDryRun: false` — it contradicts `requiresSimulation: true`. The
-// `@ts-expect-error` proves the authoring type rejects it; if the `true` literal
-// on the entity arm ever regresses to the base's optional boolean, this line's
-// suppression becomes unused and `tsc` fails the typecheck.
-const _entityWriteCannotDisableDryRun: CesteralEntityWriteToolAnnotations = {
-  ...entityWrite,
-  // @ts-expect-error supportsDryRun must be the `true` literal on an entity write (#95)
-  supportsDryRun: false,
-};
-void _entityWriteCannotDisableDryRun;
+// Issue #95 authoring-type guard (an entity write cannot disable supportsDryRun /
+// requiresSimulation) lives in `tests/types/annotations.type-test.ts`: a
+// `@ts-expect-error` in this runtime `.test.ts` is never evaluated (vitest's
+// esbuild strips types), so the guard has to live where `tsc` actually compiles
+// it — otherwise it silently rots into a no-op.
 
 const effectWrite: CesteralEffectWriteToolAnnotations = {
   kind: "write",

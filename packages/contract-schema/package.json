@@ -39,7 +39,7 @@
   "scripts": {
     "build": "tsc --build && tsc -p tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint src/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

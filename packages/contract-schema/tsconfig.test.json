@@ -1,0 +1,15 @@
+{
+  // Typecheck-only project that INCLUDES the test files. The build tsconfig.json
+  // excludes `**/*.test.ts`, so type-level guards living in tests (e.g. the
+  // `@ts-expect-error` on the entity-write `supportsDryRun` literal, issue #95)
+  // were never evaluated by CI and gave false confidence. This project is what
+  // `pnpm typecheck` runs, so those guards now fail the build if they regress.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*", "tests/types/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

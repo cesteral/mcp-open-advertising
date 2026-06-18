@@ -293,6 +293,40 @@ describe("tool-handler-factory governance verification", () => {
     expect(hit).toBe(false);
   });
 
+  it("warns at registration when every governed write resolves to token mode 'off' (issue #102)", () => {
+    // Default deploy sets no GOVERNANCE_TOKEN_MODE* tier, so the lone governed
+    // write resolves to `off` and ships ungoverned. The fail-open must not be
+    // silent — a single `token_mode_summary` warn surfaces it at boot.
+    register({ env: {}, server, logger });
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const summary = warn.calls
+      .map(([obj]) => obj as { event?: string; ungoverned?: number; gated?: number })
+      .find((o) => o?.event === "token_mode_summary");
+    expect(summary).toBeDefined();
+    expect(summary?.gated).toBe(0);
+    expect(summary?.ungoverned).toBe(1);
+  });
+
+  it("does NOT fail-open warn when a governed write is gated — logs an info summary instead (issue #102)", () => {
+    register({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      jtiStore: new InMemoryJtiStore(),
+      server,
+      logger,
+    });
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    const warnedSummary = warn.calls.some(
+      ([obj]) => (obj as { event?: string })?.event === "token_mode_summary"
+    );
+    expect(warnedSummary).toBe(false);
+    const info = (logger.info as unknown as { mock: { calls: unknown[][] } }).mock;
+    const infoSummary = info.calls
+      .map(([obj]) => obj as { event?: string; gated?: number })
+      .find((o) => o?.event === "token_mode_summary");
+    expect(infoSummary).toBeDefined();
+    expect(infoSummary?.gated).toBe(1);
+  });
+
   it("enforce mode: effect-class write FAILS CLOSED — refused, logic not called (issue #101)", async () => {
     // The control plane never mints a decision token for effect-class writes,
     // so they cannot be positively verified here. Under `enforce` the operator
