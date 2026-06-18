@@ -115,12 +115,18 @@ inspect_package() {
   fi
 
   # Governed packages emit dist/cesteral-manifest.json during the
-  # generate:manifests step above. When one exists on disk, require it to
-  # actually ship in the tarball — a dropped manifest fails open downstream
-  # (governance silently leaves the tools at 'observed' trust), so guard it
-  # here the same way we guard LICENSE.md.
+  # generate:manifests step above; require it to actually ship in the tarball —
+  # a dropped manifest fails open downstream (governance silently leaves the
+  # tools at 'observed' trust), so guard it here the same way we guard
+  # LICENSE.md. The expectation is driven by the statically-declared `governed`
+  # flag in registry.json (not on-disk file existence): if the file is missing
+  # for a declared-governed package we want the inspect step to FAIL, not
+  # silently skip the check. (generate:manifests already hard-fails on this same
+  # mismatch; this is the belt-and-braces second line.)
+  local pkg_name
+  pkg_name="$(basename "$pkg_dir")"
   local expect_manifest=""
-  if [ -f "$pkg_dir/dist/cesteral-manifest.json" ]; then
+  if node "$REPO_ROOT/scripts/is-governed-package.mjs" "$pkg_name"; then
     expect_manifest="--expect-manifest"
   fi
 

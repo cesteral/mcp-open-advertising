@@ -1,0 +1,18 @@
+{
+  "_comment": "Tools whose NAME contains a mutation-ish verb (create/update/delete/bulk/...) but which are genuinely READ-ONLY by design (e.g. async-job status pollers, getters). The mislabel ratchet in write-coverage.test.mjs flags any mutation-named tool that is not marked `readOnlyHint: false` UNLESS it is listed here — this converts 'trust the self-declared readOnlyHint' into 'the tool name and the hint must agree, with read-by-design exceptions made explicit and reviewable'. Adding an entry is a deliberate, reviewable act: only list a tool here if it performs NO outbound mutation. Two-way ratchet: a stale entry (no longer a mutation-named read) must be removed.",
+  "readByDesign": {
+    "amazon-dsp-mcp": [],
+    "cm360-mcp": [],
+    "dbm-mcp": [],
+    "dv360-mcp": [],
+    "gads-mcp": [],
+    "linkedin-mcp": [],
+    "meta-mcp": [],
+    "msads-mcp": [],
+    "pinterest-mcp": [],
+    "sa360-mcp": [],
+    "snapchat-mcp": [],
+    "tiktok-mcp": [],
+    "ttd-mcp": ["ttd_graphql_bulk_job"]
+  }
+}

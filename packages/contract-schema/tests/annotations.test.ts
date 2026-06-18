@@ -99,6 +99,18 @@ const entityWrite: CesteralEntityWriteToolAnnotations = {
   requiresSimulation: true,
 };
 
+// Issue #95 authoring-type guard: an entity write cannot declare
+// `supportsDryRun: false` — it contradicts `requiresSimulation: true`. The
+// `@ts-expect-error` proves the authoring type rejects it; if the `true` literal
+// on the entity arm ever regresses to the base's optional boolean, this line's
+// suppression becomes unused and `tsc` fails the typecheck.
+const _entityWriteCannotDisableDryRun: CesteralEntityWriteToolAnnotations = {
+  ...entityWrite,
+  // @ts-expect-error supportsDryRun must be the `true` literal on an entity write (#95)
+  supportsDryRun: false,
+};
+void _entityWriteCannotDisableDryRun;
+
 const effectWrite: CesteralEffectWriteToolAnnotations = {
   kind: "write",
   writeClass: "effect",
@@ -165,5 +177,46 @@ describe("parseCesteralAnnotation — rejections", () => {
   it("rejects a hyphenated contractPlatformSlug", () => {
     const bad = { ...read, contractPlatformSlug: "dv-360", contractId: "dv-360.get_entity.v1" };
     expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("rejects a non-create entity-write with empty entityIdArgs", () => {
+    // update/pause/delete/… reference an existing entity, so identity is required.
+    const bad = { ...entityWrite, entityIdArgs: [] };
+    const r = parseCesteralAnnotation(bad);
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.some((i) => i.path.includes("entityIdArgs"))).toBe(true);
+    }
+  });
+});
+
+describe("entityIdArgs create exemption", () => {
+  // A canonical create-entity annotation: entity-class, operation create-only,
+  // no pre-existing entity id to reference (parent ids live in the `data`
+  // payload on most platforms).
+  const createEntity = {
+    kind: "write",
+    writeClass: "entity",
+    platform: "ttd",
+    contractPlatformSlug: "ttd",
+    contractToolSlug: "create_entity",
+    operation: ["create"],
+    entityKinds: ["campaign", "ad_group"],
+    entityIdArgs: [],
+    executableArgsExclude: ["dry_run"],
+    schemaVersion: 1,
+    contractId: "ttd.create_entity.v1",
+    readPartner: { toolName: "ttd_get_entity", argMap: { entityType: "entityType" } },
+    supportsDryRun: true,
+    supportsBeforeAfterSnapshot: true,
+  };
+
+  it("accepts a create entity-write with empty entityIdArgs", () => {
+    expect(parseCesteralAnnotation(createEntity).success).toBe(true);
+  });
+
+  it("still accepts a create entity-write that does declare entityIdArgs", () => {
+    const withIds = { ...createEntity, entityIdArgs: ["advertiserId"] };
+    expect(parseCesteralAnnotation(withIds).success).toBe(true);
   });
 });

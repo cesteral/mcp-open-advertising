@@ -1,13 +1,22 @@
 # Multi-stage Dockerfile for Cesteral MCP servers
 # Build with: docker build --build-arg SERVER_NAME=dbm-mcp -t dbm-mcp .
 
-FROM node:20-alpine AS base
+# Pinned by digest for reproducible builds and supply-chain integrity. The bare
+# `node:20-alpine` tag floats, so identical source could otherwise resolve to
+# different OS packages on each rebuild. Digest is the multi-arch index for
+# node:20-alpine; bump it deliberately when refreshing the base.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS base
 RUN npm install -g pnpm@10.34.1
 WORKDIR /app
 
 # Install all dependencies (including devDeps for build)
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+# @cesteral/shared depends on both contract-* packages (workspace:*), so their
+# manifests must be present for `pnpm install --frozen-lockfile` to resolve the
+# full workspace graph deterministically.
+COPY packages/contract-hash/package.json ./packages/contract-hash/
+COPY packages/contract-schema/package.json ./packages/contract-schema/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/dbm-mcp/package.json ./packages/dbm-mcp/
 COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
@@ -25,14 +34,17 @@ COPY packages/msads-mcp/package.json ./packages/msads-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages, then deploy production-only bundle for the target server.
-# `pnpm deploy` copies workspace deps as real files (not symlinks) — correct for Docker.
+# `pnpm deploy` bundles workspace deps into a self-contained dir — correct for Docker.
+# pnpm 10 requires inject-workspace-packages for `deploy`; we pass it as a per-command
+# config (not repo-wide .npmrc) so the deps-stage `--frozen-lockfile` install and
+# local/CI installs are unaffected — only this deploy injects.
 FROM base AS builder
 ARG SERVER_NAME
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 RUN pnpm run build
-RUN pnpm --filter "@cesteral/${SERVER_NAME}" deploy --prod /app/deploy
+RUN pnpm --filter "@cesteral/${SERVER_NAME}" --config.inject-workspace-packages=true deploy --prod /app/deploy
 
 # Production image for specific server
 FROM base AS runner

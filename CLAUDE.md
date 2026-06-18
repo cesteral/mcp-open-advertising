@@ -24,7 +24,7 @@ cd packages/<server-name> && pnpm run dev:http   # Or run directly
 
 ## Monorepo Architecture
 
-**pnpm workspace** monorepo managed by **Turborepo**. Workspace: `@cesteral/shared` (types, utilities, auth) + `@cesteral/contract-hash` (canonical tool-definition hash) + one package per MCP server.
+**pnpm workspace** monorepo managed by **Turborepo**. Workspace: `@cesteral/shared` (types, utilities, auth) + `@cesteral/contract-schema` (canonical **shape** of the `cesteral.*` annotations, dry-run/snapshot response schemas, and the manifest — the source of truth `@cesteral/shared` re-exports) + `@cesteral/contract-hash` (canonical tool-definition **hash**) + one package per MCP server.
 
 - Build pipeline: `build` → `^build` (deps first), `typecheck`/`test` depend on `^build`
 - ES modules, Target: ES2022, moduleResolution: bundler
@@ -118,6 +118,7 @@ Cross-cutting platform quirks that are easy to forget when working in a given pa
 - **pinterest-mcp**: cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`).
 - **snapchat-mcp**: Ad Squads (adGroups), cursor-based pagination.
 - **amazon-dsp-mcp**: Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header. **Stdio auth prefers the LwA refresh-token flow** (`AMAZON_DSP_APP_ID` + `_APP_SECRET` + `_REFRESH_TOKEN` + `_PROFILE_ID`) — auto-refreshes the 60-min access token. Falls back to static `AMAZON_DSP_ACCESS_TOKEN` for short CI runs.
+- **sa360-mcp**: Cross-engine layer above Google/Microsoft/Yahoo Japan/Baidu. The **Reporting API v0 is read-only for campaign entities** — there are no campaign/ad-group/ad mutate ops, so the only governed writes are **offline conversion upload/modify via the legacy v2 (DoubleClick Search) API**. Reads use SQL-like queries that mirror GAQL; async reports follow submit → poll → download. OAuth2 refresh-token auth.
 
 ## Deployment & Infrastructure
 
@@ -137,7 +138,7 @@ gcloud run services logs tail <server-name> --region=europe-west2
 
 ### Release Attestation Manifest
 
-`scripts/generate-manifests.mjs` (`pnpm run generate:manifests`) boots each server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package with governed tools (those carrying an `annotations.cesteral` block). Each tool's `definitionHash` is a canonical SHA-256 from `@cesteral/contract-hash` — kept bit-identical with the downstream `cesteral-intelligence` governance repo. The tag-triggered `release.yml` publishes to npm with build provenance, signing the manifest transitively inside the tarball; the governance system verifies that provenance and promotes matching tools to `attested` trust.
+`scripts/generate-manifests.mjs` (`pnpm run generate:manifests`) boots each server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package with governed tools (those carrying an `annotations.cesteral` block). Each entry is validated against `cesteralManifestSchema` (from `@cesteral/contract-schema`); the manifest hard-fails on contractId/schemaVersion/slug inconsistency **and** when a tool's `cesteral` block does not satisfy the full `cesteralAnnotationSchema` — the same loose schema the governance layer parses released tool lists with at admission, so a malformed annotation fails the release here rather than silently failing to reach `attested` downstream. Each tool's `definitionHash` is a canonical SHA-256 from `@cesteral/contract-hash` — kept bit-identical with the downstream `cesteral-intelligence` governance repo. The tag-triggered `release.yml` publishes to npm with build provenance, signing the manifest transitively inside the tarball; the governance system verifies that provenance and promotes matching tools to `attested` trust.
 
 ## Key Design Principles
 

@@ -162,7 +162,11 @@ export const createCommitmentTool = {
       contractToolSlug: "create_commitment",
       operation: ["create"],
       entityKinds: ["commitment"],
-      entityIdArgs: [],
+      // `profileId` is the required top-level scope arg (also mapped in the
+      // readPartner below). A create has no pre-existing commitment id; the
+      // contract allows an empty entityIdArgs for creates, but we declare the
+      // real scope arg we do have.
+      entityIdArgs: ["profileId"],
       readPartner: {
         // A create has no commitment id to pass; the `after` snapshot is read
         // by the id Amazon returns. The read partner therefore only resolves

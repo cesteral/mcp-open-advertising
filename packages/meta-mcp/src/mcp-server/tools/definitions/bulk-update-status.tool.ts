@@ -255,7 +255,7 @@ export const bulkUpdateStatusTool = {
       kind: "write",
       writeClass: "effect",
       executableArgsExclude: ["dry_run"],
-      platform: "meta",
+      platform: "meta_ads",
       contractPlatformSlug: "meta",
       contractToolSlug: "bulk_update_status",
       operation: ["bulk_job"],

@@ -158,6 +158,22 @@ export interface CesteralEntityWriteToolAnnotations extends CesteralWriteToolAnn
    * `expectedStateSource: "none"`. Always `true` for an entity write.
    */
   requiresSimulation: true;
+
+  /**
+   * Entity writes always honor the `dry_run` input flag and return a dry-run
+   * result. Pinned to the `true` literal (narrowing the base's optional boolean)
+   * so an entity write cannot express the self-contradictory pairing
+   * `requiresSimulation: true` + `supportsDryRun: false` (issue #95): governance
+   * produces an expected post-state on every call, so the client-facing dry-run
+   * flag must be honored. The consumer's `admitWriteTool()` keys admission on
+   * `requiresSimulation: true`, so without this an entity write declaring
+   * `supportsDryRun: false` would be admitted and then forced onto the approval
+   * rail at runtime when a dry-run turned out unavailable — a contradiction that
+   * should be impossible to author, not resolved late. This is an authoring-type
+   * tightening only; the (deliberately loose) `cesteralAnnotationSchema` is
+   * unchanged so governance still emits specific admission reason codes.
+   */
+  supportsDryRun: true;
 }
 
 /**
@@ -220,9 +236,43 @@ const baseAnnotationFields = {
   contractId: z.string(),
 };
 
-/** Entity identity — required (non-empty) for read + entity-write tools. */
+/** Entity identity — required (non-empty) for read tools and non-create entity-writes. */
 const requiredEntityKinds = z.array(canonicalEntityKindSchema).min(1);
 const requiredEntityIdArgs = z.array(z.string().min(1)).min(1);
+/** Element-non-empty but length-unconstrained; the create exemption is enforced
+ * by {@link applyEntityWriteIdArgsRule} at the union level. */
+const entityWriteIdArgs = z.array(z.string().min(1));
+
+/**
+ * Enforces entity-write identity: an entity-class write must name at least one
+ * identifying arg in `entityIdArgs`, EXCEPT for `create` operations — a create
+ * has no pre-existing entity to reference (and platforms whose create takes a
+ * generic `data` payload carry no top-level parent-id arg at all). Applied at
+ * the union level because `entityWriteShape` is a `discriminatedUnion` member
+ * and so cannot carry its own `.superRefine` (that would make it a ZodEffects).
+ */
+function applyEntityWriteIdArgsRule<T extends z.ZodTypeAny>(schema: T) {
+  return schema.superRefine((value, ctx) => {
+    const v = value as {
+      kind?: string;
+      writeClass?: string;
+      operation?: string[];
+      entityIdArgs?: string[];
+    };
+    if (v.kind !== "write" || v.writeClass !== "entity") return;
+    const isCreate = Array.isArray(v.operation) && v.operation.includes("create");
+    if (!isCreate && (!Array.isArray(v.entityIdArgs) || v.entityIdArgs.length === 0)) {
+      ctx.addIssue({
+        // String literal (not `z.ZodIssueCode.custom`) for zod 3 / zod 4 parity.
+        code: "custom",
+        path: ["entityIdArgs"],
+        message:
+          "entityIdArgs must name at least one identifying arg for a non-create entity-write " +
+          "(only `create` operations may declare an empty entityIdArgs).",
+      });
+    }
+  });
+}
 
 function applyContractIdConsistency<T extends z.ZodTypeAny>(schema: T) {
   return schema.superRefine((value, ctx) => {
@@ -264,14 +314,16 @@ const writeBaseFields = {
 
 /**
  * Entity-class write — mutates a canonical entity, so it MUST declare a
- * `readPartner` and a non-empty entity identity. Mirrors
- * {@link CesteralEntityWriteToolAnnotations}.
+ * `readPartner`. It must also name a non-empty entity identity (`entityIdArgs`),
+ * EXCEPT for `create` operations, which have no pre-existing entity to reference
+ * — that exemption is enforced by {@link applyEntityWriteIdArgsRule} at the union
+ * level. Mirrors {@link CesteralEntityWriteToolAnnotations}.
  */
 const entityWriteShape = z.object({
   ...writeBaseFields,
   writeClass: z.literal("entity"),
   entityKinds: requiredEntityKinds,
-  entityIdArgs: requiredEntityIdArgs,
+  entityIdArgs: entityWriteIdArgs,
   readPartner: z.object({
     toolName: z.string().min(1),
     argMap: z.record(z.string(), z.string()),
@@ -354,14 +406,14 @@ export interface CesteralReadAnnotation extends CesteralParsedAnnotationBase {
 export type CesteralAnnotation = CesteralWriteAnnotation | CesteralReadAnnotation;
 
 export const cesteralWriteAnnotationSchema: z.ZodType<CesteralWriteAnnotation> =
-  applyContractIdConsistency(writeAnnotationShape);
+  applyEntityWriteIdArgsRule(applyContractIdConsistency(writeAnnotationShape));
 export const cesteralReadAnnotationSchema: z.ZodType<CesteralReadAnnotation> =
   applyContractIdConsistency(readAnnotationShape);
 // Top-level cannot be a single `discriminatedUnion("kind", …)` because the
 // write arm is itself a `discriminatedUnion("writeClass", …)`; a plain union
 // of the two arms gives the same parse result with slightly broader errors.
-export const cesteralAnnotationSchema: z.ZodType<CesteralAnnotation> = applyContractIdConsistency(
-  z.union([writeAnnotationShape, readAnnotationShape])
+export const cesteralAnnotationSchema: z.ZodType<CesteralAnnotation> = applyEntityWriteIdArgsRule(
+  applyContractIdConsistency(z.union([writeAnnotationShape, readAnnotationShape]))
 );
 
 export function parseCesteralAnnotation(

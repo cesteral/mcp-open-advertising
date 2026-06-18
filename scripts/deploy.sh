@@ -78,7 +78,11 @@ if [ "$SKIP_BUILD" = false ]; then
     IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVER}:${GIT_SHA}"
     IMAGE_LATEST="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVER}:latest"
     print_step "Building and pushing ${SERVER}..."
-    docker build -t "$IMAGE_TAG" -t "$IMAGE_LATEST" --build-arg "SERVER_NAME=${SERVER}" -f Dockerfile .
+    # --platform linux/amd64 is REQUIRED: Cloud Run runs amd64, and `docker build`
+    # defaults to the host arch — on an Apple Silicon (arm64) machine an
+    # unqualified build produces arm64 images that fail on Cloud Run with
+    # "exec format error". On arm64 hosts this builds under emulation (slower).
+    docker build --platform linux/amd64 -t "$IMAGE_TAG" -t "$IMAGE_LATEST" --build-arg "SERVER_NAME=${SERVER}" -f Dockerfile .
     docker push "$IMAGE_TAG"
     docker push "$IMAGE_LATEST"
   done

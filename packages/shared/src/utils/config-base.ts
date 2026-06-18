@@ -130,10 +130,17 @@ export function parseConfigWithSchema<T extends z.ZodTypeAny>(
 }
 
 /**
- * Compute default host based on NODE_ENV.
- * MCP Spec 2025-11-25: bind to localhost in development to prevent
- * DNS rebinding attacks; use 0.0.0.0 in production for Cloud Run.
+ * Compute the host to bind.
+ *
+ * Precedence: an explicit `MCP_HTTP_HOST` wins — the Cloud Run terraform sets it
+ * to `0.0.0.0` on every service, so a service must honor it regardless of
+ * NODE_ENV. This is what lets a *dev* Cloud Run service (NODE_ENV=development)
+ * bind `0.0.0.0` and be reachable by the Cloud Run proxy.
+ *
+ * Without the env (e.g. local dev), MCP Spec 2025-11-25 applies: bind localhost
+ * in development to prevent DNS-rebinding attacks; `0.0.0.0` in production.
  */
 export function getDefaultHost(): string {
+  if (process.env.MCP_HTTP_HOST) return process.env.MCP_HTTP_HOST;
   return process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
 }

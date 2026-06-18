@@ -1,6 +1,6 @@
 {
   "name": "@cesteral/contract-schema",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Canonical governance-contract surface (annotations, manifest, dry-run, contractId) shared by Cesteral MCP servers and governance",
   "license": "Apache-2.0",
   "repository": {
