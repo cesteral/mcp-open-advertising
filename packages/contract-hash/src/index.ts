@@ -165,3 +165,6 @@ export function computeDefinitionHash(tool: HashableToolDefinition): string {
   const canonical = stableStringify(projection);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
+
+// Single-sourced cross-repo definitionHash parity vector (see ./cross-repo-golden.ts).
+export { CROSS_REPO_DEFINITION_HASH_GOLDEN } from "./cross-repo-golden.js";
