@@ -168,10 +168,7 @@ function callWithToken(server: ReturnType<typeof createMockServer>, args: unknow
 // Effect-class parity helpers. Effect writes flow through the identical verify
 // path as entity writes (Phase 3), so the token is constructed the same way —
 // only the contractId and the effect fixture's executableArgsExclude differ.
-async function mintEffectToken(
-  args: Record<string, unknown>,
-  over: Record<string, unknown> = {}
-) {
+async function mintEffectToken(args: Record<string, unknown>, over: Record<string, unknown> = {}) {
   const executable = canonicalizeExecutableArgs({
     rawArgs: args,
     exclude: effectWriteTool.annotations.cesteral.executableArgsExclude,
@@ -405,12 +402,10 @@ describe("tool-handler-factory governance verification", () => {
     const token = await mintEffectToken(args);
 
     let seenIdem: unknown;
-    effectWriteTool.logic.mockImplementation(
-      async (_i, _c, sdk: { idempotencyKey?: string }) => {
-        seenIdem = sdk.idempotencyKey;
-        return { ok: true };
-      }
-    );
+    effectWriteTool.logic.mockImplementation(async (_i, _c, sdk: { idempotencyKey?: string }) => {
+      seenIdem = sdk.idempotencyKey;
+      return { ok: true };
+    });
 
     const res = (await callEffect(server, args, token)) as { isError?: boolean };
     expect(res.isError).toBeUndefined();
