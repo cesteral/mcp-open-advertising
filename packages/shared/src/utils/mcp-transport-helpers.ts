@@ -204,6 +204,14 @@ export interface SessionServiceStoreLike {
 
 interface SessionManagerOptions {
   onBeforeCleanup?: (sessionId: string) => Promise<void>;
+  /**
+   * Optional logger. When provided, best-effort cleanup failures
+   * (`onBeforeCleanup` and `server.close()`) are logged at `warn` instead of
+   * being silently swallowed — so a persistent cleanup failure (e.g. a leaking
+   * spill bucket) is observable rather than invisible until cost/orphans show
+   * up. Cleanup still never throws regardless of whether a logger is set.
+   */
+  logger?: Logger;
 }
 
 /**
@@ -249,12 +257,22 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
 
   async cleanupSession(sessionId: string): Promise<void> {
     if (this.options?.onBeforeCleanup) {
-      await this.options.onBeforeCleanup(sessionId).catch(() => {});
+      await this.options.onBeforeCleanup(sessionId).catch((err) => {
+        this.options?.logger?.warn(
+          { err, sessionId },
+          "onBeforeCleanup hook failed during session cleanup (continuing)"
+        );
+      });
     }
 
     const cachedServer = this.sessionServers.get(sessionId);
     if (cachedServer) {
-      await cachedServer.close().catch(() => {});
+      await cachedServer.close().catch((err) => {
+        this.options?.logger?.warn(
+          { err, sessionId },
+          "MCP server close failed during session cleanup (continuing)"
+        );
+      });
       this.sessionServers.delete(sessionId);
     }
     this.sessionServiceStore.delete(sessionId);
@@ -272,7 +290,9 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
         const idleMs = now - lastActivity;
         if (idleMs > timeoutMs) {
           logger.info({ sessionId, idleMs }, "Session timed out (idle) — cleaning up");
-          this.cleanupSession(sessionId).catch(() => {});
+          this.cleanupSession(sessionId).catch((err) => {
+            logger.warn({ err, sessionId }, "Idle session cleanup failed");
+          });
         }
       }
     }, 60_000);
@@ -291,12 +311,22 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
         ...this.sessionServers.keys(),
       ]);
       for (const sessionId of sessionIds) {
-        await this.options.onBeforeCleanup(sessionId).catch(() => {});
+        await this.options.onBeforeCleanup(sessionId).catch((err) => {
+          this.options?.logger?.warn(
+            { err, sessionId },
+            "onBeforeCleanup hook failed during shutdown (continuing)"
+          );
+        });
       }
     }
 
-    for (const [, cachedServer] of this.sessionServers) {
-      await cachedServer.close().catch(() => {});
+    for (const [sessionId, cachedServer] of this.sessionServers) {
+      await cachedServer.close().catch((err) => {
+        this.options?.logger?.warn(
+          { err, sessionId },
+          "MCP server close failed during shutdown (continuing)"
+        );
+      });
     }
     this.sessionServers.clear();
     this.sessionCreatedAt.clear();

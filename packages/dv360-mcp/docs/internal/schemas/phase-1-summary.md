@@ -28,11 +28,11 @@ This document summarizes the Phase 1 (MVP) setup for the OpenAPI schema extracti
 
 ### Implementation Scaffolds
 
-- ✅ **`scripts/lib/fetch-discovery.ts`** - Discovery doc fetcher skeleton
+- ✅ **`scripts/lib/fetch-discovery.ts`** - Discovery doc fetcher
   - Cache management (file-based)
   - Retry logic with exponential backoff
   - Timeout support
-  - Ready for fetch implementation (marked with TODO)
+  - Network fetch of the discovery document (implemented)
 
 ### Documentation
 
