@@ -244,6 +244,42 @@ describe("SessionManager", () => {
     expect(onBeforeCleanup).toHaveBeenCalledWith("s1");
   });
 
+  it("logs a warning (and does not throw) when onBeforeCleanup fails", async () => {
+    const onBeforeCleanup = vi.fn().mockRejectedValue(new Error("spill bucket unreachable"));
+    const manager = new SessionManager<{ close: () => Promise<void> }>(store, {
+      onBeforeCleanup,
+      logger,
+    });
+    manager.trackSession("s1");
+
+    await expect(manager.cleanupSession("s1")).resolves.toBeUndefined();
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    // The session is still fully torn down despite the hook failure.
+    expect(store.delete).toHaveBeenCalledWith("s1");
+  });
+
+  it("logs a warning (and does not throw) when server.close fails", async () => {
+    const manager = new SessionManager<{ close: () => Promise<void> }>(store, { logger });
+    const mockServer = { close: vi.fn().mockRejectedValue(new Error("socket already gone")) };
+    manager.trackSession("s1");
+    manager.setServer("s1", mockServer);
+
+    await expect(manager.cleanupSession("s1")).resolves.toBeUndefined();
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(manager.getServer("s1")).toBeUndefined();
+  });
+
+  it("stays silent (no logger) and still does not throw when cleanup fails", async () => {
+    const onBeforeCleanup = vi.fn().mockRejectedValue(new Error("boom"));
+    const manager = new SessionManager<{ close: () => Promise<void> }>(store, { onBeforeCleanup });
+    manager.trackSession("s1");
+
+    await expect(manager.cleanupSession("s1")).resolves.toBeUndefined();
+    expect(store.delete).toHaveBeenCalledWith("s1");
+  });
+
   it("should shutdown all sessions", async () => {
     const manager = new SessionManager<{ close: () => Promise<void> }>(store);
     const server1 = { close: vi.fn().mockResolvedValue(undefined) };

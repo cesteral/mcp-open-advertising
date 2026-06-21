@@ -206,10 +206,16 @@ export function createMcpHttpTransport(
     onBeforeCleanup: async (sessionId: string) => {
       const transport = sessionTransports.get(sessionId);
       if (transport) {
-        await transport.close?.().catch(() => {});
+        await transport.close?.().catch((err) => {
+          logger.warn(
+            { err, sessionId },
+            "Transport close failed during session cleanup (continuing)"
+          );
+        });
         sessionTransports.delete(sessionId);
       }
     },
+    logger,
   });
 
   registerActiveSessionsGauge(() => sessionServiceStore.size);
