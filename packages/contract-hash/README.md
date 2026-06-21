@@ -21,7 +21,7 @@ const hash = computeDefinitionHash({ name: "meta_update_entity", inputSchema, an
 Parity is now single-sourced: both repos consume `computeDefinitionHash` and the
 `CROSS_REPO_DEFINITION_HASH_GOLDEN` vector from this one published package, so
 there is no hand-copied fixture to drift. The residual failure mode is a
-**version skew** — the two repos resolving *different* releases of this package.
+**version skew** — the two repos resolving _different_ releases of this package.
 Each repo's golden test only proves its installed package is internally
 consistent, so a one-sided bump to a release that changed the canonicalization
 would pass on both sides while the repos silently computed different hashes,
