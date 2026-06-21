@@ -630,62 +630,21 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 contractId: cesteralAnnotation.contractId,
                 env: governanceEnv,
               });
-              // Decision-token enforcement is only defined for ENTITY-class
-              // writes. The governance control plane mints a token solely for
-              // admitted entity writes; effect-class writes have no canonical
-              // snapshot, are never admitted, and so never receive a token.
-              // There is no effect-class mint path yet, so an effect write can
-              // never be positively verified here.
+              // Effect-class writes are now token-governed identically to
+              // entity-class writes. The governance control plane mints a live
+              // decision token for admitted effect writes (Phase 2), so they
+              // flow through the exact same verify path below — there is no
+              // effect-specific fork. The only effect-specific note is that
+              // effect writes have no read-partner/snapshot, which is
+              // irrelevant to token verification (verify is writeClass-agnostic).
               //
               // Behaviour by configured mode (the operator's explicit intent):
-              //  - `off`     → no-op (read-only behaviour preserved).
-              //  - `warn`    → log the skip; never block (warn is non-blocking).
-              //  - `enforce` → FAIL CLOSED. The operator explicitly asked for
-              //                this contract's mutations to be gated. Because we
-              //                cannot verify an effect write, the only way to
-              //                honour `enforce` is to refuse it — silently
-              //                downgrading to `off` and running the live
-              //                mutation unverified would drop the operator's
-              //                enforce intent on the floor (issue #101).
-              const isEffectWrite = cesteralAnnotation.writeClass === "effect";
-              if (isEffectWrite) {
-                if (configuredMode === "enforce") {
-                  logger.warn(
-                    {
-                      component: "governance-audit",
-                      event: "decision_token_verification",
-                      status: "rejected",
-                      reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
-                      mode: configuredMode,
-                      contractId: cesteralAnnotation.contractId,
-                      toolName: tool.name,
-                    },
-                    "decision token: effect-class write cannot be verified (no effect-class mint path); refusing under enforce mode"
-                  );
-                  recordToolExecution(tool.name, "error", Date.now() - startTime);
-                  throw new McpError(
-                    JsonRpcErrorCode.Unauthorized,
-                    `Governance: effect-class write ${tool.name} cannot be ` +
-                      `decision-token verified (no effect-class mint path); ` +
-                      `refusing under enforce mode`
-                  );
-                }
-                if (configuredMode === "warn") {
-                  logger.warn(
-                    {
-                      component: "governance-audit",
-                      event: "decision_token_verification",
-                      status: "skipped",
-                      reasonCode: "EFFECT_WRITE_NOT_TOKEN_GOVERNED",
-                      mode: configuredMode,
-                      contractId: cesteralAnnotation.contractId,
-                      toolName: tool.name,
-                    },
-                    "decision token: effect-class write is not token-governed (control plane mints no token); skipping verification under warn mode"
-                  );
-                }
-              }
-              const mode = isEffectWrite ? "off" : configuredMode;
+              //  - `off`     → no-op (read-only behaviour preserved; global default).
+              //  - `warn`    → verify + log the verdict; never block.
+              //  - `enforce` → block on a bad verdict or an unresolved
+              //                definition hash; on ok, expose jti as
+              //                idempotencyKey.
+              const mode = configuredMode;
               if (mode !== "off") {
                 const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
                 // Under enforce, an unresolved definition hash means the binding
