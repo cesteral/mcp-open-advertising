@@ -43,6 +43,23 @@ export class DV360HttpClient {
     return `${parsed.origin}/upload${parsed.pathname}`;
   }
 
+  /**
+   * Build the media-upload URI for a reserved upload location.
+   *
+   * DV360's `media.upload` endpoint is version-less:
+   * `POST https://displayvideo.googleapis.com/upload/media/{resourceName=**}`
+   * — note it is NOT under the versioned `/upload/v4` path that
+   * {@link getUploadBaseUrl} produces for asset/creative uploads. The
+   * `resourceName` comes from a prior `:uploadScript` / `:uploadRules`
+   * reservation and is itself a multi-segment path, so its slashes are part of
+   * the URI (`{resourceName=**}` matches multiple segments) and must not be
+   * percent-encoded.
+   */
+  getMediaUploadUrl(resourceName: string): string {
+    const parsed = new URL(this.baseUrl);
+    return `${parsed.origin}/upload/media/${resourceName}`;
+  }
+
   // ==========================================================================
   // Public API
   // ==========================================================================

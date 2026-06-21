@@ -42,6 +42,11 @@ function createMockHttpClient() {
     fetch: vi.fn(),
     fetchRaw: vi.fn(),
     getUploadBaseUrl: vi.fn().mockReturnValue("https://displayvideo.googleapis.com/upload/v4"),
+    getMediaUploadUrl: vi
+      .fn()
+      .mockImplementation(
+        (resourceName: string) => `https://displayvideo.googleapis.com/upload/media/${resourceName}`
+      ),
   } as any;
 }
 
@@ -482,15 +487,20 @@ describe("DV360Service", () => {
   // ==========================================================================
 
   describe("uploadCustomBiddingScript", () => {
-    it("sends binary POST to the correct upload URL", async () => {
-      const responseObj = {
+    // DV360's reservation resourceName for the upload location.
+    const SCRIPT_REF = "customBiddingAlgorithm/algo-42/scriptRef/xyz";
+
+    it("reserves a location (GET) then POSTs the bytes to the media URL", async () => {
+      // Step 1: GET :uploadScript reserves a location.
+      httpClient.fetch.mockResolvedValue({ resourceName: SCRIPT_REF });
+      // Step 2: POST the bytes to the version-less media endpoint.
+      httpClient.fetchRaw.mockResolvedValue({
         ok: true,
         status: 200,
         statusText: "OK",
-        json: vi.fn().mockResolvedValue({ resourceName: "media/abc123" }),
+        json: vi.fn().mockResolvedValue({}),
         text: vi.fn().mockResolvedValue(""),
-      };
-      httpClient.fetchRaw.mockResolvedValue(responseObj);
+      });
 
       const result = await service.uploadCustomBiddingScript(
         "algo-42",
@@ -498,12 +508,21 @@ describe("DV360Service", () => {
         { advertiserId: "adv-1" }
       );
 
-      expect(result).toEqual({ resourceName: "media/abc123" });
-      expect(httpClient.fetchRaw).toHaveBeenCalledTimes(1);
+      // The reserved resourceName is returned for scripts.create.
+      expect(result).toEqual({ resourceName: SCRIPT_REF });
 
+      // Step 1 assertions: GET (no body) on the regular API base, owner-scoped.
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(httpClient.fetch).toHaveBeenCalledWith(
+        "/customBiddingAlgorithms/algo-42:uploadScript?advertiserId=adv-1",
+        undefined
+      );
+
+      // Step 2 assertions: POST the octet-stream body to /upload/media/{ref}.
+      expect(httpClient.fetchRaw).toHaveBeenCalledTimes(1);
       const [url, timeout, _context, opts] = httpClient.fetchRaw.mock.calls[0];
       expect(url).toBe(
-        "https://displayvideo.googleapis.com/upload/v4/customBiddingAlgorithms/algo-42:uploadScript?uploadType=media&advertiserId=adv-1"
+        `https://displayvideo.googleapis.com/upload/media/${SCRIPT_REF}?uploadType=media`
       );
       expect(timeout).toBe(30000);
       expect(opts.method).toBe("POST");
@@ -511,7 +530,18 @@ describe("DV360Service", () => {
       expect(opts.body).toBe("function main() { return 1.0; }");
     });
 
-    it("throws McpError on non-OK response (client error)", async () => {
+    it("throws if the reservation returns no resourceName", async () => {
+      httpClient.fetch.mockResolvedValue({});
+
+      await expect(
+        service.uploadCustomBiddingScript("algo-42", "content", { advertiserId: "adv-1" })
+      ).rejects.toThrow(McpError);
+      // No bytes are uploaded without a reserved location.
+      expect(httpClient.fetchRaw).not.toHaveBeenCalled();
+    });
+
+    it("throws McpError on non-OK media response (client error)", async () => {
+      httpClient.fetch.mockResolvedValue({ resourceName: SCRIPT_REF });
       const responseObj = {
         ok: false,
         status: 400,
@@ -521,31 +551,27 @@ describe("DV360Service", () => {
       };
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
-      await expect(
-        service.uploadCustomBiddingScript("algo-42", "bad content", { advertiserId: "adv-1" })
-      ).rejects.toThrow(McpError);
-
       try {
-        // Reset mock for second call
-        httpClient.fetchRaw.mockResolvedValue(responseObj);
         await service.uploadCustomBiddingScript("algo-42", "bad content", {
           advertiserId: "adv-1",
         });
+        expect.unreachable("should have thrown");
       } catch (err) {
+        expect(err).toBeInstanceOf(McpError);
         expect((err as McpError).code).toBe(JsonRpcErrorCode.InvalidRequest);
         expect((err as McpError).message).toContain("Failed to upload custom bidding script");
       }
     });
 
-    it("throws McpError with ServiceUnavailable for 5xx responses", async () => {
-      const responseObj = {
+    it("throws McpError with ServiceUnavailable for 5xx media responses", async () => {
+      httpClient.fetch.mockResolvedValue({ resourceName: SCRIPT_REF });
+      httpClient.fetchRaw.mockResolvedValue({
         ok: false,
         status: 503,
         statusText: "Service Unavailable",
         json: vi.fn(),
         text: vi.fn().mockResolvedValue("service down"),
-      };
-      httpClient.fetchRaw.mockResolvedValue(responseObj);
+      });
 
       try {
         await service.uploadCustomBiddingScript("algo-42", "some script", {
@@ -637,31 +663,40 @@ describe("DV360Service", () => {
   // ==========================================================================
 
   describe("uploadCustomBiddingRules", () => {
-    it("sends binary POST to the rules upload URL", async () => {
-      const responseObj = {
+    const RULES_REF = "customBiddingAlgorithm/algo-42/rulesRef/abc";
+
+    it("reserves a location (GET) then POSTs the bytes to the media URL", async () => {
+      httpClient.fetch.mockResolvedValue({ resourceName: RULES_REF });
+      httpClient.fetchRaw.mockResolvedValue({
         ok: true,
         status: 200,
         statusText: "OK",
-        json: vi.fn().mockResolvedValue({ resourceName: "media/rules-456" }),
+        json: vi.fn().mockResolvedValue({}),
         text: vi.fn().mockResolvedValue(""),
-      };
-      httpClient.fetchRaw.mockResolvedValue(responseObj);
+      });
 
       const result = await service.uploadCustomBiddingRules("algo-42", '{"rules": []}', {
         advertiserId: "adv-1",
       });
 
-      expect(result).toEqual({ resourceName: "media/rules-456" });
+      expect(result).toEqual({ resourceName: RULES_REF });
+
+      expect(httpClient.fetch).toHaveBeenCalledWith(
+        "/customBiddingAlgorithms/algo-42:uploadRules?advertiserId=adv-1",
+        undefined
+      );
 
       const [url, _timeout, _ctx, opts] = httpClient.fetchRaw.mock.calls[0];
       expect(url).toBe(
-        "https://displayvideo.googleapis.com/upload/v4/customBiddingAlgorithms/algo-42:uploadRules?uploadType=media&advertiserId=adv-1"
+        `https://displayvideo.googleapis.com/upload/media/${RULES_REF}?uploadType=media`
       );
       expect(opts.method).toBe("POST");
       expect(opts.headers["Content-Type"]).toBe("application/octet-stream");
+      expect(opts.body).toBe('{"rules": []}');
     });
 
-    it("throws McpError on non-OK rules upload response", async () => {
+    it("throws McpError on non-OK rules media response", async () => {
+      httpClient.fetch.mockResolvedValue({ resourceName: RULES_REF });
       const responseObj = {
         ok: false,
         status: 422,
