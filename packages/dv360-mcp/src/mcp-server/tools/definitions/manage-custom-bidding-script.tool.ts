@@ -27,7 +27,7 @@ const TOOL_TITLE = "Manage Custom Bidding Script";
 const TOOL_DESCRIPTION = `Upload and manage scripts for SCRIPT_BASED custom bidding algorithms (Tier 2 workflow tool).
 
 **Actions:**
-- upload: Upload a new script version to the algorithm (currently broken — see below)
+- upload: Upload a new script version to the algorithm
 - list: List all scripts for an algorithm
 - get: Get details of a specific script
 - getActive: Get the currently active script
@@ -43,7 +43,7 @@ const TOOL_DESCRIPTION = `Upload and manage scripts for SCRIPT_BASED custom bidd
 - Only one script can be active at a time per algorithm
 - New uploads automatically become active after ACCEPTED
 - Scripts cannot be deleted, only replaced with new versions
-- **Known limitation:** the \`upload\` action does not currently work. The DV360 v4 upload protocol is a two-step flow (\`GET :uploadScript\` → returns a Google Cloud Storage resourceName → upload bytes via separate PUT to that URI → \`scripts.create\`), and the simple POST currently used returns 404. Tracking issue: revisit before production use.`;
+- **Upload protocol:** \`upload\` performs DV360's two-step media flow internally — it reserves an upload location (\`GET :uploadScript\`), streams the script bytes to the media endpoint, then creates the script resource (\`scripts.create\`). Callers just pass \`scriptContent\`.`;
 
 /**
  * Input schema for manage custom bidding script tool

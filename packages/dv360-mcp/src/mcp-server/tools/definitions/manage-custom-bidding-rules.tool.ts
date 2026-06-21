@@ -44,7 +44,7 @@ is not allowlisted, you will receive an error when trying to use this feature.
 - New uploads automatically become active after ACCEPTED
 - Rules cannot be deleted, only replaced with new versions
 - **Required scope:** pass \`advertiserId\` (algorithm is advertiser-owned) OR \`partnerId\` (algorithm is partner-owned). DV360 returns 403 'permission for partner 0' otherwise.
-- **Known limitation:** the \`upload\` action does not currently work. Same root cause as script upload — the DV360 v4 upload protocol is a two-step flow that the simple POST currently used does not implement.`;
+- **Upload protocol:** \`upload\` performs DV360's two-step media flow internally — it reserves an upload location (\`GET :uploadRules\`), streams the rules bytes to the media endpoint, then creates the rules resource (\`rules.create\`). Callers just pass \`rulesContent\`.`;
 
 /**
  * Input schema for manage custom bidding rules tool

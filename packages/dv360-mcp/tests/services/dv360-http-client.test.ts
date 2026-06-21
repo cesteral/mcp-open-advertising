@@ -306,6 +306,23 @@ describe("DV360HttpClient", () => {
   });
 
   // ==========================================================================
+  // Upload URL derivation
+  // ==========================================================================
+
+  describe("upload URLs", () => {
+    it("derives the versioned upload base for asset/creative uploads", () => {
+      expect(client.getUploadBaseUrl()).toBe("https://displayvideo.googleapis.com/upload/v4");
+    });
+
+    it("builds the version-less media URL, preserving resourceName path segments", () => {
+      const resourceName = "customBiddingAlgorithm/algo-42/scriptRef/xyz";
+      expect(client.getMediaUploadUrl(resourceName)).toBe(
+        `https://displayvideo.googleapis.com/upload/media/${resourceName}`
+      );
+    });
+  });
+
+  // ==========================================================================
   // fetchRaw
   // ==========================================================================
 

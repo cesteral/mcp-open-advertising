@@ -518,14 +518,29 @@ export class DV360Service {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.scriptLength", scriptContent.length);
 
-      // Google media-upload protocol: uploadType=media for a simple raw body.
-      // Owner scope (advertiserId or partnerId) is required to authorize the call.
-      const queryParts = ["uploadType=media", ownerScopeQueryParams(scope)].filter(Boolean);
-      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript?${queryParts.join("&")}`;
+      // DV360 custom-bidding upload is a two-step media flow — a single POST to
+      // `:uploadScript` 404s, because the reservation verb is GET and the bytes
+      // go to a separate, version-less media URI:
+      //   1. GET `:uploadScript` (owner scope required) reserves an upload
+      //      location and returns a CustomBiddingScriptRef.resourceName.
+      //   2. POST the raw bytes to `/upload/media/{resourceName}?uploadType=media`.
+      // The same resourceName is then handed to `scripts.create`.
+      const scopeQs = ownerScopeQueryParams(scope);
+      const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript${scopeQs ? `?${scopeQs}` : ""}`;
+      const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
+      if (!ref?.resourceName) {
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
+          "DV360 :uploadScript did not return an upload resourceName",
+          { requestId: context?.requestId, customBiddingAlgorithmId }
+        );
+      }
+
+      const uploadUrl = `${this.httpClient.getMediaUploadUrl(ref.resourceName)}?uploadType=media`;
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
-        "Uploading custom bidding script"
+        "Uploading custom bidding script bytes"
       );
 
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
@@ -552,10 +567,9 @@ export class DV360Service {
         );
       }
 
-      const result = (await response.json()) as { resourceName: string };
-      setSpanAttribute("dv360.scriptResourceName", result.resourceName);
+      setSpanAttribute("dv360.scriptResourceName", ref.resourceName);
 
-      return result;
+      return { resourceName: ref.resourceName };
     });
   }
 
@@ -670,12 +684,26 @@ export class DV360Service {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.rulesLength", rulesContent.length);
 
-      const queryParts = ["uploadType=media", ownerScopeQueryParams(scope)].filter(Boolean);
-      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules?${queryParts.join("&")}`;
+      // Same two-step media flow as uploadCustomBiddingScript (see there): GET
+      // `:uploadRules` to reserve a location, then POST the bytes to the
+      // version-less `/upload/media/{resourceName}` URI. A single POST to
+      // `:uploadRules` 404s.
+      const scopeQs = ownerScopeQueryParams(scope);
+      const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules${scopeQs ? `?${scopeQs}` : ""}`;
+      const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
+      if (!ref?.resourceName) {
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
+          "DV360 :uploadRules did not return an upload resourceName",
+          { requestId: context?.requestId, customBiddingAlgorithmId }
+        );
+      }
+
+      const uploadUrl = `${this.httpClient.getMediaUploadUrl(ref.resourceName)}?uploadType=media`;
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
-        "Uploading custom bidding rules"
+        "Uploading custom bidding rules bytes"
       );
 
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
@@ -702,10 +730,9 @@ export class DV360Service {
         );
       }
 
-      const result = (await response.json()) as { resourceName: string };
-      setSpanAttribute("dv360.rulesResourceName", result.resourceName);
+      setSpanAttribute("dv360.rulesResourceName", ref.resourceName);
 
-      return result;
+      return { resourceName: ref.resourceName };
     });
   }
 
