@@ -1,10 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 
 import { describe, expect, it } from "vitest";
-import {
-  cesteralAnnotationSchema,
-  CROSS_REPO_ANNOTATION_PARITY_GOLDEN,
-} from "../src/index.js";
+import { cesteralAnnotationSchema, CROSS_REPO_ANNOTATION_PARITY_GOLDEN } from "../src/index.js";
 
 /**
  * Producer self-test for the cross-repo annotation-schema parity vector.
@@ -17,12 +14,16 @@ import {
  */
 describe("CROSS_REPO_ANNOTATION_PARITY_GOLDEN (producer self-test)", () => {
   it("accepts the pinned valid entity-write annotation", () => {
-    const r = cesteralAnnotationSchema.safeParse(CROSS_REPO_ANNOTATION_PARITY_GOLDEN.accepted.fixture);
+    const r = cesteralAnnotationSchema.safeParse(
+      CROSS_REPO_ANNOTATION_PARITY_GOLDEN.accepted.fixture
+    );
     expect(r.success).toBe(true);
   });
 
   it("rejects the pinned invalid annotation, for the pinned reason", () => {
-    const r = cesteralAnnotationSchema.safeParse(CROSS_REPO_ANNOTATION_PARITY_GOLDEN.rejected.fixture);
+    const r = cesteralAnnotationSchema.safeParse(
+      CROSS_REPO_ANNOTATION_PARITY_GOLDEN.rejected.fixture
+    );
     expect(r.success).toBe(false);
     if (!r.success) {
       const { expectedIssuePathIncludes } = CROSS_REPO_ANNOTATION_PARITY_GOLDEN.rejected;
