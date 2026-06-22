@@ -86,3 +86,7 @@ export {
   type CesteralManifest,
   type CesteralManifestTool,
 } from "./manifest.js";
+
+// Cross-repo annotation-schema parity vector (single-sourced; mirrors
+// @cesteral/contract-hash's CROSS_REPO_DEFINITION_HASH_GOLDEN).
+export { CROSS_REPO_ANNOTATION_PARITY_GOLDEN } from "./cross-repo-golden.js";
