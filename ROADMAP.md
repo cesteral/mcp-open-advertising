@@ -7,10 +7,10 @@ This is a living document and may change based on community feedback, platform A
 - Production hardening and operational reliability across all thirteen servers
 - Telemetry dashboards and observability improvements
 - Cross-platform workflow coverage and contract governance
+- MCP Registry listing — automated on tagged releases via `mcp-publisher`; all 13 `server.json` manifests live
 
 ## Next (Planned)
 
-- MCP Registry listing for all 13 servers
 - New platform server candidates (e.g., Reddit Ads, Twitter/X Ads)
 - JSDoc coverage across shared package utilities
 - Expanded test coverage for edge cases and error paths

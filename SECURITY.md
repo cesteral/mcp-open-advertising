@@ -5,6 +5,8 @@
 This policy covers security vulnerabilities in the following packages within the Cesteral MCP Servers repository:
 
 - `@cesteral/shared` -- shared types, utilities, and authentication
+- `@cesteral/contract-schema` -- canonical annotation + response schemas
+- `@cesteral/contract-hash` -- canonical tool-definition hash
 - `@cesteral/dbm-mcp` -- Bid Manager (DBM)
 - `@cesteral/dv360-mcp` -- Display & Video 360
 - `@cesteral/ttd-mcp` -- The Trade Desk
