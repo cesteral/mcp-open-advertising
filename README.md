@@ -100,7 +100,7 @@ Intelligence layers governance and orchestration on top:
 | [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 25    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 
-Thirteen servers, 280+ tools. Tool counts are the live registered total per
+Thirteen servers, 290+ tools. Tool counts are the live registered total per
 server, including the `*_search_tools` discovery tool where present.
 
 ### What Every Server Ships
@@ -279,6 +279,7 @@ mcp-open-advertising/
 │   ├── amazon-dsp-mcp/    # Amazon DSP
 │   ├── msads-mcp/         # Microsoft Ads
 │   ├── dbm-mcp/           # Bid Manager (reporting)
+│   ├── contract-schema/   # Shared library -- canonical annotation + response schemas
 │   ├── contract-hash/     # Shared library -- canonical tool-definition hash
 │   └── shared/            # Shared auth, telemetry, utilities
 ├── terraform/             # Infrastructure as Code

@@ -72,7 +72,7 @@ Contributions that need discussion first:
 
 ### TypeScript
 
-- Target: ES2022, Module: NodeNext
+- Target: ES2022, Module: ESNext, module resolution: bundler
 - Use Zod for runtime validation at system boundaries
 - Use explicit return types on exported functions
 - No `any` types except in factory/generic interfaces where necessary (document why)
@@ -88,7 +88,7 @@ Follow the existing package structure. Each MCP tool lives in its own file under
 └── Handler function
 ```
 
-Register new tools in `src/mcp-server/tools/index.ts` by adding to the `allTools` array.
+Register new tools in `src/mcp-server/tools/definitions/index.ts` by adding to the `allTools` array.
 
 ### Testing
 
