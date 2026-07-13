@@ -165,6 +165,55 @@ export class MsAdsService {
   }
 
   /**
+   * Duplicate an entity via the client-side read+create clone pattern (MS Ads
+   * has no native copy operation). Reads the source by ID, strips the
+   * server-assigned `Id`, then submits a fresh Add payload
+   * (`{ AccountId, <PluralName>: [copy] }`). Only `campaign` is supported.
+   */
+  async duplicateEntity(
+    entityType: MsAdsEntityType,
+    accountId: string,
+    entityId: string,
+    options?: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<{ result: unknown; item: Record<string, unknown> }> {
+    const config = getEntityConfig(entityType);
+    if (!config.supportsDuplicate) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Entity type ${entityType} does not support duplication`
+      );
+    }
+
+    const { entities } = await this.getEntity(
+      entityType,
+      [entityId],
+      { AccountId: Number(accountId) },
+      context
+    );
+    const source = (entities[0] ?? {}) as unknown as Record<string, unknown>;
+    if (Object.keys(source).length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${config.displayName} ${entityId} not found in account ${accountId}`
+      );
+    }
+
+    // Strip the server-assigned ID so the Add operation mints a new one.
+    const copy: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(source)) {
+      if (key !== config.idField) copy[key] = val;
+    }
+    if (options) Object.assign(copy, options);
+
+    const payload = { AccountId: Number(accountId), [config.pluralName]: [copy] };
+    // MS Ads Add returns only the new IDs; surface the submitted item too so the
+    // caller can normalize the `after` snapshot (mirrors msads_create_entity).
+    const result = await this.createEntity(entityType, payload, context);
+    return { result, item: copy };
+  }
+
+  /**
    * Update entities via the Update operation.
    */
   async updateEntity(

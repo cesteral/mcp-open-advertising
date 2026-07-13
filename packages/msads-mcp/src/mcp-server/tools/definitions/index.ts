@@ -6,6 +6,7 @@ import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
+import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
@@ -33,6 +34,7 @@ export const productionTools: ToolDefinitionForFactory[] = [
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,
+  duplicateEntityTool,
   listAccountsTool,
   getReportTool,
   getReportBreakdownsTool,

@@ -3,7 +3,7 @@ import { productionTools } from "../../src/mcp-server/tools/definitions/index.js
 
 describe("msads-mcp tool definitions coverage", () => {
   it("exports 25 production tools", () => {
-    expect(productionTools).toHaveLength(25);
+    expect(productionTools).toHaveLength(26);
   });
 
   it("all tools have required fields", () => {

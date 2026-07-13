@@ -40,6 +40,12 @@ export interface MsAdsEntityConfig {
   batchLimit: number;
   /** Additional required request body fields when querying by IDs */
   requiredGetByIdsFields?: string[];
+  /**
+   * Whether this entity type can be duplicated via the read+create clone
+   * pattern. Only `campaign` (account-scoped, self-contained Add payload) is
+   * currently supported.
+   */
+  supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
@@ -55,6 +61,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idsField: "CampaignIds",
     batchLimit: 100,
     requiredGetByIdsFields: ["AccountId"],
+    supportsDuplicate: true,
   },
   adGroup: {
     addOperation: "/AdGroups",
@@ -163,4 +170,15 @@ export function getSupportedEntityTypes(): MsAdsEntityType[] {
 export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
   return types as [string, ...string[]];
+}
+
+/** Entity types that support duplication via the read+create clone pattern. */
+export function getDuplicateSupportedEntityTypes(): MsAdsEntityType[] {
+  return (Object.entries(ENTITY_CONFIGS) as [MsAdsEntityType, MsAdsEntityConfig][])
+    .filter(([, config]) => config.supportsDuplicate)
+    .map(([type]) => type);
+}
+
+export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
+  return getDuplicateSupportedEntityTypes() as [string, ...string[]];
 }
