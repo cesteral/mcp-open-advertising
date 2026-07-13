@@ -38,6 +38,12 @@ export interface SnapchatEntityConfig {
   displayName: string;
   /** Default fields to include in responses */
   defaultFields: string[];
+  /**
+   * Whether this entity type can be duplicated via the read+create clone
+   * pattern. Only entities whose create endpoint is reachable from the source's
+   * own fields (i.e. needs no extra parent ID) are marked duplicable.
+   */
+  supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
@@ -51,6 +57,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
     responseKey: "campaigns",
     entityKey: "campaign",
     displayName: "Campaign",
+    supportsDuplicate: true,
     defaultFields: [
       "id",
       "name",
@@ -136,6 +143,17 @@ export function getSupportedEntityTypes(): SnapchatEntityType[] {
 export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
   return types as [string, ...string[]];
+}
+
+/** Entity types that support duplication via the read+create clone pattern. */
+export function getDuplicateSupportedEntityTypes(): SnapchatEntityType[] {
+  return (Object.entries(ENTITY_CONFIGS) as [SnapchatEntityType, SnapchatEntityConfig][])
+    .filter(([, config]) => config.supportsDuplicate)
+    .map(([type]) => type);
+}
+
+export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
+  return getDuplicateSupportedEntityTypes() as [string, ...string[]];
 }
 
 /**
