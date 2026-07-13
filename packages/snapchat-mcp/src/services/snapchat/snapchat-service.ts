@@ -362,15 +362,18 @@ export class SnapchatService {
   // ─── Advertiser Account ──────────────────────────────────────────
 
   async listAdAccounts(
+    params: { cursor?: string; limit?: number } = {},
     context?: RequestContext
   ): Promise<{ entities: SnapchatAdAccount[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    const response = await this.httpClient.get(
-      `/v1/organizations/${this.orgId}/adaccounts`,
-      {},
-      context
-    );
+    // Snapchat returns an absolute `next_link` URL as its cursor; follow it verbatim
+    // when supplied, otherwise hit the base endpoint with an optional `limit`.
+    const query: Record<string, string> = {};
+    if (params.limit !== undefined) query.limit = String(params.limit);
+    const response = params.cursor?.startsWith("http")
+      ? await this.httpClient.get(params.cursor, {}, context)
+      : await this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, query, context);
     const entities = unwrapEntities("adaccounts", "adaccount", response) as SnapchatAdAccount[];
     const nextCursor = extractNextCursor(response);
 
