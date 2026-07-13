@@ -4,9 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import { runMetaUpdateDryRun, resolveMetaDispatchedCapability } from "../utils/dry-run.js";
+import {
+  runMetaUpdateDryRun,
+  resolveMetaDispatchedCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -102,6 +108,25 @@ export async function updateEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid update payload before hitting the Graph
+  // API, applying the same symbolic validation the dry-run path uses (finding
+  // M3). Without this, `data: z.record(z.any())` let any shape through on the
+  // execute path while dry_run validated more strictly — a payload the tool
+  // reports "would FAIL" under dry-run would otherwise execute for real.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update a Meta Ads entity."
+    );
+  }
+  const validationErrors = symbolicValidate(input.data);
+  if (validationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid update payload: ${validationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   // PR-D: capture pre-state before mutating. Best-effort — out-of-scope entity

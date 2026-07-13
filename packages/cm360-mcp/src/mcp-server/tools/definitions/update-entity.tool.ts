@@ -4,9 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
-import { runCm360UpdateDryRun, resolveCm360DispatchedCapability } from "../utils/dry-run.js";
+import {
+  runCm360UpdateDryRun,
+  resolveCm360DispatchedCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
 import { captureCm360Snapshot, snapshotFromCm360Entity } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -90,6 +96,23 @@ export async function updateEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid update payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding M3) so
+  // a payload the tool reports "would FAIL" under dry-run can't execute for real.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update a CM360 entity."
+    );
+  }
+  const updateValidationErrors = symbolicValidate(input.data);
+  if (updateValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   // R4-U2: capture pre-state before mutating. Best-effort — out-of-scope
