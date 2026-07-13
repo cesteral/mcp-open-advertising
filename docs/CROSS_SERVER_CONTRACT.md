@@ -61,6 +61,17 @@ Some naming differences across servers are intentional and match platform API co
 | Bid tool      | `adjust_line_item_bids` | `adjust_bids`   | `adjust_bids`   | `adjust_bids`   | `adjust_bids`   | `adjust_bids`      | N/A             | `adjust_bids`   | `adjust_bids`   | `adjust_bids`   | `adjust_bids`   |
 | Status values | `ENTITY_STATUS_ACTIVE`  | `Active`        | `ENABLED`       | `ACTIVE`        | `ACTIVE`        | `ENABLE`/`DISABLE` | `true`/`false`  | `ACTIVE`        | `ACTIVE`        | `RUNNING`       | `Active`        |
 
+### Capability naming variants
+
+Four capabilities carry platform-vocabulary names that differ across servers. Code that enumerates or dispatches by `{prefix}_{verb}_{noun}` must expect **all** of these variants for the same concept — matching a single canonical name will miss servers:
+
+- **Delivery / audience estimate** — `get_delivery_estimate` (dv360, meta, pinterest) · `get_audience_estimate` (snapchat, tiktok) · `get_delivery_forecast` (linkedin) · `get_campaign_forecast` (amazon-dsp)
+- **Account listing** — `list_ad_accounts` (linkedin, meta, pinterest, snapchat) · `list_advertisers` (amazon-dsp, tiktok) · `list_accounts` (gads, msads, sa360) · `list_user_profiles` (cm360)
+- **Performance reporting** — `get_report(_breakdowns)` (amazon-dsp, msads, pinterest, snapchat, tiktok, ttd) · `get_insights(_breakdowns)` (gads, meta, sa360) · `get_analytics(_breakdowns)` (linkedin)
+- **Ad preview** — `get_ad_preview` fleet-wide, except `msads_get_ad_details` (MS Ads exposes ad details rather than a preview endpoint)
+
+Each name follows its platform's own API vocabulary, so these are intentional — but they are **not** interchangeable by string, and the [server matrix in README.md](../README.md) is the source of truth for which server exposes which.
+
 ## Required Tool Structure
 
 Every tool definition object passed to `registerToolsFromDefinitions()` must include these required fields:
@@ -104,7 +115,7 @@ When adding a new templated resource, register it via `registerTemplatedResource
 
 Servers with 20+ tools expose a `{prefix}_search_tools` dispatcher that ranks the server's own registry against a natural-language query. Use it to land on the right tool in one round-trip instead of paging through the full inventory.
 
-**Servers exposing the search tool:** ttd, meta, dv360, msads, tiktok, pinterest, snapchat.
+**Servers exposing the search tool (10):** ttd, meta, dv360, msads, tiktok, pinterest, snapchat, amazon-dsp, cm360, linkedin. The three smallest servers omit it — gads (15 tools), sa360 (16), and reporting-only dbm (6) are under the 20-tool threshold.
 
 **Recommended discovery flow:**
 

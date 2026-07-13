@@ -118,8 +118,8 @@ every server in the fleet exposes the full surface of the modern MCP spec
   unions off the wire (`entity-schema://`, `entity-fields://`, `entity-examples://`).
 - **Tool discovery** — a `<platform>_search_tools` tool that lets an agent
   search the server's own catalog by intent instead of paging the full list.
-  On 11 servers (all except the small `gads-mcp` and `sa360-mcp` / reporting-only
-  `dbm-mcp`).
+  On 10 of the 13 servers (all except the small `gads-mcp` and `sa360-mcp` /
+  reporting-only `dbm-mcp`).
 - **Server discovery cards** — SEP-2127 metadata at
   `/.well-known/mcp/server-card.json` (name, version, transports, auth modes,
   capabilities) on every server, in every auth mode.
