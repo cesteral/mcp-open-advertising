@@ -223,7 +223,7 @@ describe("snapchat_create_entity governance contract", () => {
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     mockCreateEntity.mockResolvedValue({ id: "x" });
     const result = await createEntityLogic(
-      { entityType: "creative", adAccountId: "1", data: {} } as any,
+      { entityType: "creative", adAccountId: "1", data: { name: "Test" } } as any,
       ctx,
       sdk
     );

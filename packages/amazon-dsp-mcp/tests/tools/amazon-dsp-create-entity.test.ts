@@ -227,7 +227,7 @@ describe("amazon_dsp_create_entity governance contract", () => {
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     mockCreateEntity.mockResolvedValue({ creativeId: "cr_1" });
     const result = await createEntityLogic(
-      { entityType: "creative", profileId: "1", data: {} } as any,
+      { entityType: "creative", profileId: "1", data: { name: "Test" } } as any,
       ctx,
       sdk
     );

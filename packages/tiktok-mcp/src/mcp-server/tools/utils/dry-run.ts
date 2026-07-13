@@ -36,7 +36,7 @@ const VALID_OPERATION_STATUS = ["ENABLE", "DISABLE", "DELETE"];
 const VALID_BUDGET_MODE = ["BUDGET_MODE_DAY", "BUDGET_MODE_TOTAL", "BUDGET_MODE_INFINITE"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("operation_status" in data) {

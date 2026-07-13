@@ -35,7 +35,7 @@ export type { AmazonDspServiceLike };
 const VALID_STATES = ["ENABLED", "PAUSED", "ARCHIVED"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("state" in data) {

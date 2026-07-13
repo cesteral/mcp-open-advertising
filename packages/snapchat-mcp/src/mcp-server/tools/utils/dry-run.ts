@@ -38,7 +38,7 @@ const ACTIVE_STATUSES = ["ACTIVE"];
 const BUDGET_FIELDS = ["daily_budget_micro", "lifetime_budget_micro"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("status" in data) {

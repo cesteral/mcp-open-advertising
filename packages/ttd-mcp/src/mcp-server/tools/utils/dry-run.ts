@@ -31,7 +31,7 @@ export type { TtdServiceLike };
 const VALID_AVAILABILITY = ["Available", "Paused", "Archived"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("Availability" in data) {

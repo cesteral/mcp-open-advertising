@@ -35,7 +35,7 @@ import { buildMetaSnapshot, ENTITY_KIND_MAP, type MetaServiceLike } from "./capt
 
 export type { MetaServiceLike };
 
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
   if ("status" in data) {
     const status = data.status;

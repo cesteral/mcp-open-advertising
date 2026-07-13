@@ -4,9 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
-import { runMetaCreateDryRun, resolveMetaCreateCapability } from "../utils/dry-run.js";
+import {
+  runMetaCreateDryRun,
+  resolveMetaCreateCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -95,6 +101,24 @@ export async function createEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid create payload before hitting the Graph API,
+  // applying the same symbolic validation the dry-run path uses (finding 6.20).
+  // Without this, `data: z.record(z.any())` let any shape through to the API on
+  // the execute path while dry_run silently validated more strictly.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a Meta Ads entity."
+    );
+  }
+  const validationErrors = symbolicValidate(input.data);
+  if (validationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid create payload: ${validationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   const entity = (await metaService.createEntity(

@@ -7,6 +7,7 @@ import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import { runGAdsCreateDryRun, resolveGAdsCreateCapability } from "../utils/dry-run.js";
 import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -94,6 +95,17 @@ export async function createEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty create payload before hitting the API (finding 6.20).
+  // Google Ads validates field-level payloads server-side via the mutate call
+  // (native validateOnly), so no extra client-side symbolic pass is added here —
+  // only the empty-payload guard, which the API would otherwise reject opaquely.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a Google Ads entity."
+    );
   }
 
   const result = (await gadsService.createEntity(

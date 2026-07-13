@@ -5,7 +5,12 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
-import { runTiktokCreateDryRun, resolveTiktokCreateCapability } from "../utils/dry-run.js";
+import {
+  runTiktokCreateDryRun,
+  resolveTiktokCreateCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -103,6 +108,22 @@ export async function createEntityLogic(
   // Fail fast on a mismatched account — but only on the real-execution path, so a
   // dry-run preview with a different id is allowed (matches the other write tools).
   assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
+
+  // Fail fast on an empty or invalid create payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding 6.20).
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a TikTok entity."
+    );
+  }
+  const createValidationErrors = symbolicValidate(input.data);
+  if (createValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid create payload: ${createValidationErrors.map((e) => e.message).join("; ")}`
+    );
+  }
 
   const entity = (await tiktokService.createEntity(
     input.entityType as TikTokEntityType,

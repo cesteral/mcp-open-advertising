@@ -224,7 +224,7 @@ describe("tiktok_create_entity governance contract", () => {
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     mockCreateEntity.mockResolvedValue({ id: "x" });
     const result = await createEntityLogic(
-      { entityType: "creative", advertiserId: "1", data: {} } as any,
+      { entityType: "creative", advertiserId: "1", data: { name: "Test" } } as any,
       baseContext,
       baseSdk
     );
