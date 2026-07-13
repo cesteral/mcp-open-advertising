@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   PaginationOutputSchema,
@@ -65,7 +66,8 @@ export async function listEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const result = await amazonDspService.listEntities(
     input.entityType as AmazonDspEntityType,

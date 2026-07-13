@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkDeleteConfirmation,
@@ -118,7 +119,8 @@ export async function deleteEntityLogic(
     };
   }
 
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   await tiktokService.deleteEntity(input.entityType as TikTokEntityType, input.entityIds, context);
 

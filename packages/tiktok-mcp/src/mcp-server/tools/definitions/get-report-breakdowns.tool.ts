@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   arrayRowsToRecords,
   computeMetrics,
@@ -128,7 +129,8 @@ export async function getReportBreakdownsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetReportBreakdownsOutput> {
-  const { tiktokReportingService } = resolveSessionServices(sdkContext);
+  const { tiktokReportingService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   let resolvedStartDate = input.startDate;
   let resolvedEndDate = input.endDate;

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   resolveDatePreset,
   DATE_PRESET_VALUES,
@@ -133,7 +134,8 @@ export async function submitReportLogic(
     };
   }
 
-  const { pinterestReportingService } = resolveSessionServices(sdkContext);
+  const { pinterestReportingService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   let resolvedStartDate = input.startDate;
   let resolvedEndDate = input.endDate;

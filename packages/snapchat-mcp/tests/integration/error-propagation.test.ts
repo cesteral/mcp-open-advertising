@@ -18,6 +18,7 @@ const mockState = vi.hoisted(() => ({
 const mockServices = {
   snapchatService: mockState.snapchatService,
   snapchatReportingService: mockState.snapchatReportingService,
+  boundAdAccountId: "1234567890",
 };
 
 vi.mock("../../src/services/session-services.js", async () => {

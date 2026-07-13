@@ -34,7 +34,7 @@ describe("tiktok_bulk_create_entities governance contract (effect class)", () =>
         .fn()
         .mockResolvedValue({ results: [{ success: true }, { success: false, error: "x" }] }),
     };
-    mockResolveSessionServices.mockReturnValue({ tiktokService: svc });
+    mockResolveSessionServices.mockReturnValue({ tiktokService: svc, boundAdvertiserId: "1234567890" });
   });
 
   it("dry_run returns a symbolic effect preview, no API call", async () => {

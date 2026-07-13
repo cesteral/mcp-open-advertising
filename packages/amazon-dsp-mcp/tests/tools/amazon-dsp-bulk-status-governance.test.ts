@@ -44,7 +44,7 @@ describe("amazon_dsp_bulk_update_status governance contract (effect class)", () 
         ],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ amazonDspService: svc });
+    mockResolveSessionServices.mockReturnValue({ amazonDspService: svc, boundProfileId: "1234567890" } as any);
     mockElicit.mockResolvedValue(true);
   });
 

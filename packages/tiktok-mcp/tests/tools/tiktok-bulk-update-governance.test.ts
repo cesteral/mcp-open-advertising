@@ -46,7 +46,7 @@ describe("tiktok_bulk_update_entities governance contract (effect class)", () =>
         ],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ tiktokService: svc });
+    mockResolveSessionServices.mockReturnValue({ tiktokService: svc, boundAdvertiserId: "1234567890" });
     mockElicit.mockResolvedValue(true);
   });
 

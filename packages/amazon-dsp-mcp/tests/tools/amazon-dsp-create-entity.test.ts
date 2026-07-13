@@ -34,6 +34,7 @@ beforeEach(() => {
     amazonDspService: {
       createEntity: mockCreateEntity,
     },
+    boundProfileId: "1234567890",
   } as any);
 });
 
@@ -177,6 +178,7 @@ describe("amazon_dsp_create_entity governance contract", () => {
       .mockResolvedValue({ orderId: "ord_999", name: "New Order", state: "PAUSED" });
     mockResolveSession.mockReturnValue({
       amazonDspService: { createEntity: mockCreateEntity },
+      boundProfileId: "1",
     } as any);
   });
 

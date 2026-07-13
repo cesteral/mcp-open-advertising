@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -107,7 +108,8 @@ export async function bulkCreateEntitiesLogic(
     };
   }
 
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const bulkResult = await amazonDspService.bulkCreateEntities(
     input.entityType as AmazonDspEntityType,

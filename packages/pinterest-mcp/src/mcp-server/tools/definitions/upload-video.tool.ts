@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   downloadFileToBuffer,
   McpError,
@@ -111,7 +112,8 @@ export async function uploadVideoLogic(
     };
   }
 
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,

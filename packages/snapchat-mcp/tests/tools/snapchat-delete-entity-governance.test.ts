@@ -34,7 +34,7 @@ describe("snapchat_delete_entity governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = { deleteEntity: vi.fn().mockResolvedValue(undefined) };
-    mockResolveSessionServices.mockReturnValue({ snapchatService: svc });
+    mockResolveSessionServices.mockReturnValue({ snapchatService: svc, boundAdAccountId: "1234567890" });
     mockElicit.mockResolvedValue(true);
   });
 

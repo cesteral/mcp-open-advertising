@@ -33,6 +33,7 @@ beforeEach(() => {
     tiktokReportingService: {
       checkReportStatus: mockCheckReportStatus,
     },
+    boundAdvertiserId: "1234567890",
   } as any);
 });
 

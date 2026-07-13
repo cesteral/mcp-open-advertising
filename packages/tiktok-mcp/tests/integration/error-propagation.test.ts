@@ -19,6 +19,7 @@ const mockState = vi.hoisted(() => ({
 const mockServices = {
   tiktokService: mockState.tiktokService,
   tiktokReportingService: mockState.tiktokReportingService,
+  boundAdvertiserId: "1234567890",
 };
 
 vi.mock("../../src/services/session-services.js", async () => {

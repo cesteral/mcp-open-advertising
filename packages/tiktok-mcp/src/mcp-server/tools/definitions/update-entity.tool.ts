@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import { runTiktokUpdateDryRun, resolveTiktokDispatchedCapability } from "../utils/dry-run.js";
 import { captureTiktokSnapshot, snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
@@ -71,7 +72,8 @@ export async function updateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { fromPinterestStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -42,7 +43,8 @@ export async function checkReportStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CheckReportStatusOutput> {
-  const { pinterestReportingService } = resolveSessionServices(sdkContext);
+  const { pinterestReportingService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await pinterestReportingService.checkReportStatus(input.taskId, context);
 

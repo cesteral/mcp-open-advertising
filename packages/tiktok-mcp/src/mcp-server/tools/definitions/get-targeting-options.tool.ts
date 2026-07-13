@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -76,7 +77,8 @@ export async function getTargetingOptionsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetTargetingOptionsOutput> {
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const options = (await tiktokService.getTargetingOptions(
     input.optionType,

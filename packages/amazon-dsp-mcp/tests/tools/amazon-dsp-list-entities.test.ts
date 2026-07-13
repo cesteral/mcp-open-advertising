@@ -35,6 +35,7 @@ beforeEach(() => {
     amazonDspService: {
       listEntities: mockListEntities,
     },
+    boundProfileId: "1234567890",
   } as any);
 });
 

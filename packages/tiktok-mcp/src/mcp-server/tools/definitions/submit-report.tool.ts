@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   resolveDatePreset,
   DATE_PRESET_VALUES,
@@ -132,7 +133,8 @@ export async function submitReportLogic(
     };
   }
 
-  const { tiktokReportingService } = resolveSessionServices(sdkContext);
+  const { tiktokReportingService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   let resolvedStartDate = input.startDate;
   let resolvedEndDate = input.endDate;

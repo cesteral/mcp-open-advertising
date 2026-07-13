@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   runAmazonDspUpdateDryRun,
@@ -77,7 +78,8 @@ export async function updateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.

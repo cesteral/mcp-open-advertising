@@ -4,6 +4,7 @@
 import { z } from "zod";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   DSPCampaignForecastMultiStatusResponseSchema,
   DSPSelectedForecastMetricSchema,
@@ -77,7 +78,8 @@ export async function getCampaignForecastLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetCampaignForecastOutput> {
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
   const response = await amazonDspV1Service.retrieveCampaignForecast(
     { campaignForecastDescriptions: input.campaignForecastDescriptions },
     context

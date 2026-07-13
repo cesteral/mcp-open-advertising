@@ -34,7 +34,7 @@ describe("tiktok_submit_report governance contract (effect class)", () => {
     svc = {
       submitReport: vi.fn().mockResolvedValue({ task_id: "task-1" }),
     };
-    mockResolveSessionServices.mockReturnValue({ tiktokReportingService: svc });
+    mockResolveSessionServices.mockReturnValue({ tiktokReportingService: svc, boundAdvertiserId: "1234567890" });
   });
 
   it("dry_run returns a symbolic effect preview, no API call", async () => {

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { fromSnapchatStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -40,7 +41,8 @@ export async function checkReportStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CheckReportStatusOutput> {
-  const { snapchatReportingService } = resolveSessionServices(sdkContext);
+  const { snapchatReportingService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await snapchatReportingService.checkReportStatus(input.taskId, context);
 
