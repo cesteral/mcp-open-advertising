@@ -13,7 +13,7 @@ const TOOL_DESCRIPTION = `Get a single SA360 entity by type and ID using an SA36
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Returns all default fields for the entity type. Use \`sa360_search\` for custom field selection.`;
+Returns all default fields for the entity type. Use \`sa360_gaql_search\` for custom field selection.`;
 
 export const GetEntityInputSchema = z
   .object({

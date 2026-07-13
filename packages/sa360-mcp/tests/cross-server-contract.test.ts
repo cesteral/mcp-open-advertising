@@ -23,8 +23,8 @@ describe("Cross-server contract compliance", () => {
       expect(toolNames).toContain(`${PREFIX}list_accounts`);
     });
 
-    it("has search tool", () => {
-      expect(toolNames).toContain(`${PREFIX}search`);
+    it("has gaql_search tool", () => {
+      expect(toolNames).toContain(`${PREFIX}gaql_search`);
     });
 
     it("has insert_conversions tool", () => {

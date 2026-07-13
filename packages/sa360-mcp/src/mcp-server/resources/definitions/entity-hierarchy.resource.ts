@@ -54,7 +54,7 @@ Customer (Manager Account)
 | Tool | Purpose | API |
 |------|---------|-----|
 | \`sa360_list_accounts\` | Discover accounts | Reporting v0 |
-| \`sa360_search\` | Flexible query language | Reporting v0 |
+| \`sa360_gaql_search\` | Flexible query language | Reporting v0 |
 | \`sa360_get_entity\` | Get single entity | Reporting v0 |
 | \`sa360_list_entities\` | List with filters | Reporting v0 |
 | \`sa360_get_insights\` | Performance metrics | Reporting v0 |

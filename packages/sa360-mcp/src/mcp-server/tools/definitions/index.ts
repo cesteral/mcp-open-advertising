@@ -14,7 +14,7 @@
  *   1 audit: get change history
  */
 
-export { sa360SearchTool } from "./sa360-search.tool.js";
+export { sa360SearchTool } from "./gaql-search.tool.js";
 export { listAccountsTool } from "./list-accounts.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -31,7 +31,7 @@ export { checkReportStatusTool } from "./check-report-status.tool.js";
 export { downloadReportTool } from "./download-report.tool.js";
 export { getChangeHistoryTool } from "./get-change-history.tool.js";
 
-import { sa360SearchTool } from "./sa360-search.tool.js";
+import { sa360SearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";

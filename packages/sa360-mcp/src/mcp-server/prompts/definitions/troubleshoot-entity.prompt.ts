@@ -35,7 +35,7 @@ export function getTroubleshootEntityMessage(args?: Record<string, string>): str
 
 ### Step 3: Test Simple Query
 \`\`\`json
-{ "tool": "sa360_search", "params": { "customerId": "CUSTOMER_ID", "query": "SELECT campaign.name, campaign.status FROM campaign LIMIT 5" } }
+{ "tool": "sa360_gaql_search", "params": { "customerId": "CUSTOMER_ID", "query": "SELECT campaign.name, campaign.status FROM campaign LIMIT 5" } }
 \`\`\`
 
 ## Conversion Upload Errors

@@ -593,7 +593,7 @@
       "platform_display_name": "Search Ads 360",
       "documentation_url": "https://developers.google.com/search-ads/v0/reference",
       "tools": [
-        "sa360_search",
+        "sa360_gaql_search",
         "sa360_list_accounts",
         "sa360_get_entity",
         "sa360_list_entities",

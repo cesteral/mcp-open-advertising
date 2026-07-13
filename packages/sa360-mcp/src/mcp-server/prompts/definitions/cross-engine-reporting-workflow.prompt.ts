@@ -37,7 +37,7 @@ SA360 provides unified reporting across all search engines managed through a sin
 
 \`\`\`json
 {
-  "tool": "sa360_search",
+  "tool": "sa360_gaql_search",
   "params": {
     "customerId": "${customerId}",
     "query": "SELECT campaign.name, campaign.status, campaign.engine_id, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.cost_micros DESC"
@@ -63,7 +63,7 @@ SA360 provides unified reporting across all search engines managed through a sin
 
 \`\`\`json
 {
-  "tool": "sa360_search",
+  "tool": "sa360_gaql_search",
   "params": {
     "customerId": "${customerId}",
     "query": "SELECT ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, metrics.impressions, metrics.clicks, metrics.conversions, metrics.cost_micros FROM ad_group_criterion WHERE ad_group_criterion.type = 'KEYWORD' AND segments.date DURING LAST_30_DAYS ORDER BY metrics.conversions DESC LIMIT 50"

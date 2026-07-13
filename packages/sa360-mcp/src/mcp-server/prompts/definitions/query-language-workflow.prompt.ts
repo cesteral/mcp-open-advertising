@@ -38,7 +38,7 @@ SA360 uses a SQL-like query language:
 
 \`\`\`json
 {
-  "tool": "sa360_search",
+  "tool": "sa360_gaql_search",
   "params": {
     "customerId": "${customerId}",
     "query": "SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE campaign.status = 'ENABLED' AND segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC"

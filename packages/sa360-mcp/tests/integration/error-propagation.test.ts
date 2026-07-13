@@ -181,13 +181,13 @@ describe("SA360 MCP transport error propagation", () => {
     await shutdown();
   });
 
-  it("returns MCP tool error when sa360_search service throws", async () => {
+  it("returns MCP tool error when sa360_gaql_search service throws", async () => {
     const result = await postMcp(app, {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
       params: {
-        name: "sa360_search",
+        name: "sa360_gaql_search",
         arguments: {
           customerId: "1234567890",
           query: "SELECT campaign.id FROM campaign",

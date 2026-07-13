@@ -56,7 +56,7 @@ Fetch these resources for detailed schema information:
 - \`sa360_list_accounts\` — List accessible SA360 customer accounts
 
 ### Read Operations
-- \`sa360_search\` — Execute arbitrary SA360 query language queries
+- \`sa360_gaql_search\` — Execute arbitrary SA360 query language queries
 - \`sa360_get_entity\` — Get single entity by type and ID
 - \`sa360_list_entities\` — List entities with query filters
 - \`sa360_search_fields\` — Search available SA360 query fields
@@ -99,6 +99,6 @@ Fetch these resources for detailed schema information:
 2. Use \`sa360_search_fields\` to explore available query fields
 3. Fetch \`query-reference://all\` for query language syntax
 4. Fetch \`entity-schema://{type}\` for entity field details
-5. Use \`sa360_search\` for flexible queries
+5. Use \`sa360_gaql_search\` for flexible queries
 `;
 }
