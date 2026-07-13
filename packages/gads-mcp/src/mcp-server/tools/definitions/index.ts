@@ -4,12 +4,13 @@
 /**
  * Tool definitions barrel export
  *
- * 16 tools total:
+ * 17 tools total:
  *   5 read:  gaql search, list accounts, get entity, list entities, get insights
  *   8 write: create entity, update entity, remove entity, duplicate entity, bulk mutate, bulk create entities, bulk update status, adjust bids
  *   1 validate: validate entity (dry-run via validateOnly)
  *   1 preview: get ad preview
  *   1 pacing:  get pacing status
+ *   1 asset:  upload image
  */
 
 export { gaqlSearchTool } from "./gaql-search.tool.js";
@@ -28,6 +29,7 @@ export { validateEntityTool } from "./validate-entity.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { getPacingStatusTool } from "./get-pacing-status.tool.js";
+export { uploadImageTool } from "./upload-image.tool.js";
 
 import { gaqlSearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -45,6 +47,7 @@ import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
+import { uploadImageTool } from "./upload-image.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -69,6 +72,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   getAdPreviewTool,
   // ── Pacing ──
   getPacingStatusTool,
+  // ── Assets ──
+  uploadImageTool,
 ];
 
 /**
