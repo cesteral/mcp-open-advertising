@@ -69,6 +69,7 @@ Four capabilities carry platform-vocabulary names that differ across servers. Co
 - **Account listing** — `list_ad_accounts` (linkedin, meta, pinterest, snapchat) · `list_advertisers` (amazon-dsp, tiktok) · `list_accounts` (gads, msads, sa360) · `list_user_profiles` (cm360)
 - **Performance reporting** — `get_report(_breakdowns)` (amazon-dsp, msads, pinterest, snapchat, tiktok, ttd) · `get_insights(_breakdowns)` (gads, meta, sa360) · `get_analytics(_breakdowns)` (linkedin)
 - **Ad preview** — `get_ad_preview` fleet-wide, except `msads_get_ad_details` (MS Ads exposes ad details rather than a preview endpoint)
+- **Bulk entity mutation** — `bulk_update_entities` (dv360, ttd, meta, linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp, msads) · `bulk_mutate` (gads). Google Ads names its batch tool after the platform's `GoogleAdsService.Mutate` verb: `gads_bulk_mutate` is a **superset** that applies heterogeneous create/update/remove operations in a single atomic call, whereas the sibling `bulk_update_entities` tools only batch updates. gads still ships `bulk_create_entities` and `bulk_update_status` alongside it, so the create/update/status coverage is complete under different names.
 
 Each name follows its platform's own API vocabulary, so these are intentional — but they are **not** interchangeable by string, and the [server matrix in README.md](../README.md) is the source of truth for which server exposes which.
 
