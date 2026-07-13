@@ -11,7 +11,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 import {
   manageSeedLogic,
   ManageSeedInputSchema,
-} from "../../src/mcp-server/tools/definitions/seed.tool.js";
+} from "../../src/mcp-server/tools/definitions/manage-seed.tool.js";
 
 function createMockContext() {
   return {

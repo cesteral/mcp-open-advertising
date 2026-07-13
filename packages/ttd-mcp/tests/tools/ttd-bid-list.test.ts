@@ -14,11 +14,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 import {
   bidListLogic,
   BidListInputSchema,
-} from "../../src/mcp-server/tools/definitions/bid-list.tool.js";
+} from "../../src/mcp-server/tools/definitions/manage-bid-list.tool.js";
 import {
   bidListBulkLogic,
   BidListBulkInputSchema,
-} from "../../src/mcp-server/tools/definitions/bid-list-bulk.tool.js";
+} from "../../src/mcp-server/tools/definitions/bulk-manage-bid-lists.tool.js";
 
 function createMockContext() {
   return {
