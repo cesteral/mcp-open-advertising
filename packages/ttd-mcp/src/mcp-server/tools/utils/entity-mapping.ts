@@ -37,6 +37,12 @@ export interface TtdEntityConfig {
   supportsBulk?: boolean;
   /** Whether the entity can be archived (soft-deleted). */
   supportsArchive?: boolean;
+  /**
+   * Whether this entity type can be duplicated via the read+create clone
+   * pattern. Only entities whose create body is self-contained (carries its own
+   * parent IDs, e.g. AdvertiserId) are marked duplicable.
+   */
+  supportsDuplicate?: boolean;
 }
 
 export type ParentIdKey = "advertiserId" | "campaignId" | "adGroupId" | "partnerId";
@@ -55,6 +61,7 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
     idField: "CampaignId",
     supportsBulk: true,
     supportsArchive: true,
+    supportsDuplicate: true,
   },
   adGroup: {
     apiPath: "/adgroup",
@@ -99,6 +106,17 @@ export function getBulkSupportedEntityTypes(): BulkSupportedEntityType[] {
   return (Object.entries(ENTITY_CONFIGS) as [TtdEntityType, TtdEntityConfig][])
     .filter(([, config]) => config.supportsBulk)
     .map(([type]) => type) as BulkSupportedEntityType[];
+}
+
+/** Entity types that support duplication via the read+create clone pattern. */
+export function getDuplicateSupportedEntityTypes(): TtdEntityType[] {
+  return (Object.entries(ENTITY_CONFIGS) as [TtdEntityType, TtdEntityConfig][])
+    .filter(([, config]) => config.supportsDuplicate)
+    .map(([type]) => type);
+}
+
+export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
+  return getDuplicateSupportedEntityTypes() as [string, ...string[]];
 }
 
 export function getBulkEntityTypeEnum(): [string, ...string[]] {
