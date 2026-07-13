@@ -46,7 +46,12 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "msads_bulk_update_status",
       "msads_adjust_bids",
     ],
-    targeting: ["msads_manage_criterions", "msads_manage_ad_extensions", "msads_search_targeting"],
+    targeting: [
+      "msads_manage_criterions",
+      "msads_manage_ad_extensions",
+      "msads_search_targeting",
+      "msads_get_targeting_options",
+    ],
     specialized: ["msads_get_ad_details", "msads_import_from_google"],
     validation: ["msads_validate_entity"],
     discovery: ["msads_search_tools"],

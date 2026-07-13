@@ -6,15 +6,15 @@ import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/share
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_search_targeting";
-const TOOL_TITLE = "List Microsoft Ads Targeting Options";
-const TOOL_DESCRIPTION = `List the enumerated targeting option values supported by Microsoft Advertising.
+const TOOL_TITLE = "List Microsoft Ads Targeting Options (Static Reference)";
+const TOOL_DESCRIPTION = `Static reference catalog of the demographic targeting enum values Microsoft Advertising accepts — this tool does NOT call the Microsoft Advertising API. These values are fixed enums in the Campaign Management API schema (not a queryable endpoint), so they are served locally.
 
 Supported targeting types:
-- age: List available age range targets
-- gender: List available gender targets
-- device: List available device targets
+- age: the fixed AgeRange enum values
+- gender: the fixed Gender enum values
+- device: the fixed DeviceType enum values
 
-Note: location targets are not searchable via the Microsoft Advertising REST API. Use the Campaign Management GetGeoLocationsFileUrl operation to download the full geo-location reference file.`;
+For the fuller criterion reference (adds dayparting days), use \`msads_get_targeting_options\`. Location targets are not enumerable via the REST API — use the Campaign Management \`GetGeoLocationsFileUrl\` operation to download the full geo-location reference file.`;
 
 export const SearchTargetingInputSchema = z
   .object({
