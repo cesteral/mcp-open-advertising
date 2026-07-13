@@ -37,10 +37,7 @@ export const DuplicateEntityInputSchema = z
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
     adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
-    options: z
-      .record(z.any())
-      .optional()
-      .describe("Optional copy overrides (e.g., new name)"),
+    options: z.record(z.any()).optional().describe("Optional copy overrides (e.g., new name)"),
     dry_run: z
       .boolean()
       .optional()

@@ -92,15 +92,19 @@ describe("snapchat_duplicate_entity", () => {
   });
 
   it("only allows duplicable entity types in the input schema", () => {
-    expect(DuplicateEntityInputSchema.safeParse({
-      entityType: "campaign",
-      adAccountId: "a",
-      entityId: "e",
-    }).success).toBe(true);
-    expect(DuplicateEntityInputSchema.safeParse({
-      entityType: "ad",
-      adAccountId: "a",
-      entityId: "e",
-    }).success).toBe(false);
+    expect(
+      DuplicateEntityInputSchema.safeParse({
+        entityType: "campaign",
+        adAccountId: "a",
+        entityId: "e",
+      }).success
+    ).toBe(true);
+    expect(
+      DuplicateEntityInputSchema.safeParse({
+        entityType: "ad",
+        adAccountId: "a",
+        entityId: "e",
+      }).success
+    ).toBe(false);
   });
 });
