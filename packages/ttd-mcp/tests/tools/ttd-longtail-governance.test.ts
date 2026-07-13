@@ -55,17 +55,17 @@ import {
   bidListLogic,
   manageBidListTool,
   BidListOutputSchema,
-} from "../../src/mcp-server/tools/definitions/bid-list.tool.js";
+} from "../../src/mcp-server/tools/definitions/manage-bid-list.tool.js";
 import {
   bidListBulkLogic,
   bulkManageBidListsTool,
   BidListBulkOutputSchema,
-} from "../../src/mcp-server/tools/definitions/bid-list-bulk.tool.js";
+} from "../../src/mcp-server/tools/definitions/bulk-manage-bid-lists.tool.js";
 import {
   manageSeedLogic,
   manageSeedTool,
   ManageSeedOutputSchema,
-} from "../../src/mcp-server/tools/definitions/seed.tool.js";
+} from "../../src/mcp-server/tools/definitions/manage-seed.tool.js";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;

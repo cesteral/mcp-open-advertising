@@ -68,9 +68,9 @@ export { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 export { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
 export { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 export { getReportExecutionsTool } from "./get-report-executions.tool.js";
-export { manageBidListTool } from "./bid-list.tool.js";
-export { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
-export { manageSeedTool } from "./seed.tool.js";
+export { manageBidListTool } from "./manage-bid-list.tool.js";
+export { bulkManageBidListsTool } from "./bulk-manage-bid-lists.tool.js";
+export { manageSeedTool } from "./manage-seed.tool.js";
 
 import { getContextTool } from "./get-context.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
@@ -111,9 +111,9 @@ import { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 import { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
 import { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 import { getReportExecutionsTool } from "./get-report-executions.tool.js";
-import { manageBidListTool } from "./bid-list.tool.js";
-import { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
-import { manageSeedTool } from "./seed.tool.js";
+import { manageBidListTool } from "./manage-bid-list.tool.js";
+import { bulkManageBidListsTool } from "./bulk-manage-bid-lists.tool.js";
+import { manageSeedTool } from "./manage-seed.tool.js";
 import {
   conformanceTools,
   createToolSearchTool,

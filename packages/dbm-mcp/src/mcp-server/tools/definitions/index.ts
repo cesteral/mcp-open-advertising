@@ -31,6 +31,13 @@ const productionTools: ToolDefinitionForFactory[] = [
  * All tool definitions for the DBM MCP server.
  * Used by server.ts for registration via registerToolsFromDefinitions().
  * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+ *
+ * NOTE: `dbm_run_custom_query_async` is intentionally NOT in this array. It is a
+ * task-based (long-running) tool with a bespoke registration path —
+ * `registerRunCustomQueryAsyncTool()` in server.ts, called after
+ * `registerToolsFromDefinitions()`. Any code that counts this server's tools by
+ * enumerating `allTools` (or `productionTools`) therefore undercounts dbm by one;
+ * the live `tools/list` includes it.
  */
 export const allTools: ToolDefinitionForFactory[] = [
   ...productionTools,
