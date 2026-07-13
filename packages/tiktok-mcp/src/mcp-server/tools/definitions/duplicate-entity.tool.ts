@@ -75,7 +75,6 @@ export async function duplicateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
   const dispatchedCapability = resolveTiktokDuplicateCapability(input.entityType);
 
   if (input.dry_run === true) {
@@ -93,6 +92,10 @@ export async function duplicateEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const newEntity = (await tiktokService.duplicateEntity(
     input.entityType as TikTokEntityType,

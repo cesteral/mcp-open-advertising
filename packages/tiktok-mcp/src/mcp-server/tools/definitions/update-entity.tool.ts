@@ -73,7 +73,6 @@ export async function updateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.
@@ -94,6 +93,10 @@ export async function updateEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   // R3-U4: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined.

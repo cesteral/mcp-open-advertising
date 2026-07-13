@@ -34,7 +34,10 @@ describe("amazon_dsp_bulk_create_entities governance contract (effect class)", (
         .fn()
         .mockResolvedValue({ results: [{ success: true }, { success: false, error: "x" }] }),
     };
-    mockResolveSessionServices.mockReturnValue({ amazonDspService: svc, boundProfileId: "1234567890" } as any);
+    mockResolveSessionServices.mockReturnValue({
+      amazonDspService: svc,
+      boundProfileId: "1234567890",
+    } as any);
   });
 
   it("dry_run returns a symbolic effect preview, no API call", async () => {

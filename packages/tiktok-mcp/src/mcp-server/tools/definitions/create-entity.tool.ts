@@ -83,7 +83,6 @@ export async function createEntityLogic(
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
   const dispatchedCapability = resolveTiktokCreateCapability(input.entityType);
 
   if (input.dry_run === true) {
@@ -100,6 +99,10 @@ export async function createEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const entity = (await tiktokService.createEntity(
     input.entityType as TikTokEntityType,

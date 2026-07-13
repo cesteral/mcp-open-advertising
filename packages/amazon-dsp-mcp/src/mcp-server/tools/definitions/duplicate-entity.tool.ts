@@ -78,7 +78,6 @@ export async function duplicateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
   const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.profileId, boundProfileId, "profileId");
   const dispatchedCapability = resolveAmazonDspDuplicateCapability(input.entityType);
 
   if (input.dry_run === true) {
@@ -96,6 +95,10 @@ export async function duplicateEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const newEntity = (await amazonDspService.duplicateEntity(
     input.entityType as AmazonDspEntityType,
