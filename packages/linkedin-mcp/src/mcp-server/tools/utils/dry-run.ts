@@ -44,7 +44,7 @@ const VALID_STATUSES = [
 ];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("status" in data) {

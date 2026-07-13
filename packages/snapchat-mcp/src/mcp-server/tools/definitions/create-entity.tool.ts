@@ -4,7 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
-import { runSnapchatCreateDryRun, resolveSnapchatCreateCapability } from "../utils/dry-run.js";
+import {
+  runSnapchatCreateDryRun,
+  resolveSnapchatCreateCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromSnapchatEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -105,6 +110,22 @@ export async function createEntityLogic(
   const filters: Record<string, string> = { adAccountId: input.adAccountId };
   if (input.campaignId) filters.campaignId = input.campaignId;
   if (input.adSquadId) filters.adSquadId = input.adSquadId;
+
+  // Fail fast on an empty or invalid create payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding 6.20).
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a Snapchat entity."
+    );
+  }
+  const createValidationErrors = symbolicValidate(input.data);
+  if (createValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid create payload: ${createValidationErrors.map((e) => e.message).join("; ")}`
+    );
+  }
 
   const entity = (await snapchatService.createEntity(
     input.entityType as SnapchatEntityType,

@@ -8,7 +8,12 @@ import {
   getEntityTypeEnum,
   type MsAdsEntityType,
 } from "../utils/entity-mapping.js";
-import { runMsAdsCreateDryRun, resolveMsAdsCreateCapability } from "../utils/dry-run.js";
+import {
+  runMsAdsCreateDryRun,
+  resolveMsAdsCreateCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -117,6 +122,23 @@ export async function createEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid create payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses on the unwrapped
+  // entity item (finding 6.20).
+  if (Object.keys(entityItem).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a Microsoft Ads entity."
+    );
+  }
+  const createValidationErrors = symbolicValidate(entityItem);
+  if (createValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid create payload: ${createValidationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   const result = (await msadsService.createEntity(

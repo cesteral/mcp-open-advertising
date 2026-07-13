@@ -5,7 +5,12 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
-import { runTtdCreateDryRun, resolveTtdCreateCapability } from "../utils/dry-run.js";
+import {
+  runTtdCreateDryRun,
+  resolveTtdCreateCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromTtdEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -121,6 +126,23 @@ export async function createEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid create payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses on the merged
+  // data (finding 6.20).
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to create a Trade Desk entity."
+    );
+  }
+  const createValidationErrors = symbolicValidate(data);
+  if (createValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid create payload: ${createValidationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   const entity = (await ttdService.createEntity(input.entityType as TtdEntityType, data, context, {

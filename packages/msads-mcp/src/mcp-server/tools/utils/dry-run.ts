@@ -59,7 +59,7 @@ const PAUSED_STATUSES = new Set([
 const BUDGET_FIELDS = ["Amount", "DailyBudget", "MonthlyBudget"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("Status" in data) {

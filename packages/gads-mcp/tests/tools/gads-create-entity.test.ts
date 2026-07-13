@@ -135,4 +135,11 @@ describe("createEntityLogic governance contract", () => {
     expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
     expect(result.after).toBeUndefined();
   });
+
+  it("rejects an empty data payload before calling the service", async () => {
+    await expect(
+      createEntityLogic({ entityType: "campaign", customerId: "1", data: {} } as any, ctx, sdk)
+    ).rejects.toThrow(/at least one field/);
+    expect(svc.createEntity).not.toHaveBeenCalled();
+  });
 });

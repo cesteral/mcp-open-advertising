@@ -97,6 +97,32 @@ describe("createEntityLogic", () => {
     expect(passedData).toEqual(data);
   });
 
+  it("rejects an empty data payload before calling the service", async () => {
+    await expect(
+      createEntityLogic(
+        { entityType: "campaign" as any, adAccountId: "act_123", data: {} },
+        createMockContext(),
+        createMockSdkContext()
+      )
+    ).rejects.toThrow(/at least one field/);
+    expect(mockMetaService.createEntity).not.toHaveBeenCalled();
+  });
+
+  it("rejects a payload that fails symbolic validation before calling the service", async () => {
+    await expect(
+      createEntityLogic(
+        {
+          entityType: "campaign" as any,
+          adAccountId: "act_123",
+          data: { name: "Bad", status: "NOT_A_STATUS" },
+        },
+        createMockContext(),
+        createMockSdkContext()
+      )
+    ).rejects.toThrow(/Invalid create payload/);
+    expect(mockMetaService.createEntity).not.toHaveBeenCalled();
+  });
+
   it("throws when resolveSessionServices fails (no session)", async () => {
     mockResolveSessionServices.mockImplementation(() => {
       throw new Error("No session ID available.");

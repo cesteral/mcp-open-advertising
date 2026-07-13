@@ -29,7 +29,7 @@ import { buildCm360Snapshot, ENTITY_KIND_MAP, type Cm360ServiceLike } from "./ca
 export type { Cm360ServiceLike };
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
-function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
 
   if ("archived" in data && data.archived != null && typeof data.archived !== "boolean") {

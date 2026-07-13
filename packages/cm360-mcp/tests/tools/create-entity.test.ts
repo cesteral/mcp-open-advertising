@@ -183,7 +183,7 @@ describe("createEntityLogic", () => {
     mockState.cm360Service.createEntity.mockResolvedValue({ id: "1" });
 
     const result = await createEntityLogic(
-      { profileId: "123", entityType: "campaign" as const, data: {} },
+      { profileId: "123", entityType: "campaign" as const, data: { name: "Test" } },
       mockContext
     );
 
@@ -197,7 +197,7 @@ describe("createEntityLogic", () => {
 
     await expect(
       createEntityLogic(
-        { profileId: "123", entityType: "campaign" as const, data: {} },
+        { profileId: "123", entityType: "campaign" as const, data: { name: "Test" } },
         mockContext
       )
     ).rejects.toThrow("API error");

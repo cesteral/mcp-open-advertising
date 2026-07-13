@@ -64,6 +64,13 @@ describe("msads_create_entity", () => {
     });
   });
 
+  it("rejects an empty unwrapped entity item before calling the service", async () => {
+    await expect(
+      createEntityLogic({ entityType: "campaign", data: { Campaigns: [] } }, { requestId: "req-1" })
+    ).rejects.toThrow(/at least one field/);
+    expect(mockServices.msadsService.createEntity).not.toHaveBeenCalled();
+  });
+
   it("formats response correctly", () => {
     const output = {
       result: { CampaignIds: [111] },
