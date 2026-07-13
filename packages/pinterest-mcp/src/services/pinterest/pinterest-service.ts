@@ -255,15 +255,23 @@ export class PinterestService {
   // ─── Ad Accounts ──────────────────────────────────────────────────
 
   async listAdAccounts(
+    params: { bookmark?: string; pageSize?: number } = {},
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume("pinterest:default");
-    const response = (await this.httpClient.get("/v5/ad_accounts", {}, context)) as Record<
+    const query: Record<string, string> = {};
+    if (params.bookmark) query.bookmark = params.bookmark;
+    if (params.pageSize !== undefined) query.page_size = String(params.pageSize);
+    const response = (await this.httpClient.get("/v5/ad_accounts", query, context)) as Record<
       string,
       unknown
     >;
     const entities = Array.isArray(response.items) ? response.items : [];
-    const nextCursor = typeof response.bookmark === "string" ? response.bookmark : undefined;
+    // Pinterest returns an empty-string bookmark on the last page — treat that as exhausted.
+    const nextCursor =
+      typeof response.bookmark === "string" && response.bookmark !== ""
+        ? response.bookmark
+        : undefined;
     return { entities, nextCursor };
   }
 
