@@ -108,7 +108,8 @@ export const getAvailableMetricsTool = {
       input: {},
     },
     {
-      label: "Scope the catalog to campaign-level reporting",
+      label:
+        "Tag the response with your intended reporting level (the catalog is identical across levels)",
       input: { level: "campaign" },
     },
   ],
