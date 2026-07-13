@@ -47,7 +47,6 @@ export const UploadImageInputSchema = z
       .string()
       .describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
     mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-    filename: z.string().optional().describe("Override filename"),
     dry_run: z
       .boolean()
       .optional()
