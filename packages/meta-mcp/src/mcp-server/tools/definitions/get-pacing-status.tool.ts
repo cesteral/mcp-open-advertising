@@ -7,9 +7,10 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_pacing_status";
-const TOOL_TITLE = "Get Pacing Status";
+const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
-  "Calculate real-time pacing status for a Meta campaign (actual vs expected delivery). Requires budget, spend to date, and flight dates as inputs.";
+  "Client-side pacing calculator — does NOT call the Meta API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
+  "To populate spend, first call `meta_get_insights`; to populate budget and flight dates, first call `meta_get_entity` for the campaign.";
 
 /**
  * Input schema

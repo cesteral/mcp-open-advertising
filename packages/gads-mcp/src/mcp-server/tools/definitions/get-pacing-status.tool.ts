@@ -7,9 +7,11 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_get_pacing_status";
-const TOOL_TITLE = "Get Pacing Status";
+const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
-  "Calculate real-time pacing status for a Google Ads campaign (actual vs expected delivery). Requires budget, spend to date, and flight dates as inputs. Note: spendToDate should be in actual currency units (not micros).";
+  "Client-side pacing calculator — does NOT call the Google Ads API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
+  "To populate spend, first call `gads_get_insights`; to populate budget and flight dates, first call `gads_get_entity` for the campaign. " +
+  "Note: spendToDate should be in actual currency units (not micros).";
 
 /**
  * Input schema
