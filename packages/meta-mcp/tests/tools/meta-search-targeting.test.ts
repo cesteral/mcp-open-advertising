@@ -99,6 +99,41 @@ describe("searchTargetingLogic", () => {
     expect(limit).toBe(10);
   });
 
+  it("emits an `after` cursor when the response carries paging.next", async () => {
+    mockMetaTargetingService.searchTargeting.mockResolvedValue({
+      data: [{ id: "1", name: "Running" }],
+      paging: { next: "https://graph.facebook.com/search?after=CUR2", cursors: { after: "CUR2" } },
+    });
+
+    const result = await searchTargetingLogic(
+      { type: "adinterest", query: "running", after: "CUR1" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    // cursor threaded to the service as the 5th positional arg
+    expect(mockMetaTargetingService.searchTargeting.mock.calls[0][4]).toBe("CUR1");
+    expect(result.pagination.nextCursor).toBe("CUR2");
+    expect(result.pagination.hasMore).toBe(true);
+    expect(result.pagination.nextPageInputKey).toBe("after");
+  });
+
+  it("reports exhausted pagination when there is no paging.next", async () => {
+    mockMetaTargetingService.searchTargeting.mockResolvedValue({
+      data: [{ id: "1", name: "Running" }],
+      paging: { cursors: { after: "CUR2" } },
+    });
+
+    const result = await searchTargetingLogic(
+      { type: "adinterest", query: "running" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(result.pagination.nextCursor).toBeNull();
+    expect(result.pagination.hasMore).toBe(false);
+  });
+
   it("handles empty results", async () => {
     mockMetaTargetingService.searchTargeting.mockResolvedValue({ data: [] });
 
@@ -144,6 +179,12 @@ describe("searchTargetingResponseFormatter", () => {
         { id: "2", name: "Marathon" },
       ],
       totalCount: 2,
+      pagination: {
+        nextCursor: null,
+        hasMore: false,
+        pageSize: 2,
+        nextPageInputKey: "after",
+      },
       timestamp: new Date().toISOString(),
     };
 
@@ -158,6 +199,12 @@ describe("searchTargetingResponseFormatter", () => {
     const result = {
       results: [],
       totalCount: 0,
+      pagination: {
+        nextCursor: null,
+        hasMore: false,
+        pageSize: 0,
+        nextPageInputKey: "after",
+      },
       timestamp: new Date().toISOString(),
     };
 
