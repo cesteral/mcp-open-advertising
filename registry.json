@@ -233,7 +233,8 @@
         "gads_adjust_bids",
         "gads_get_ad_preview",
         "gads_get_pacing_status",
-        "gads_duplicate_entity"
+        "gads_duplicate_entity",
+        "gads_upload_image"
       ],
       "resources": [
         "entity-hierarchy://gads",

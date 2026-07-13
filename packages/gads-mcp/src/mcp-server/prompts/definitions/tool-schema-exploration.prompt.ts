@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (16 tools)
+## Available Tools Summary (17 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -117,6 +117,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_validate_entity\` | Dry-run validate entity payload | Returns validation errors |
 | \`gads_get_ad_preview\` | Get ad preview HTML/URL | Returns preview for an ad |
 | \`gads_get_pacing_status\` | Real-time pacing calc for a campaign | Reads spend + budget |
+| \`gads_upload_image\` | Upload an image asset from a URL | Downloads + base64, creates ImageAsset |
 
 ### Supported Entity Types (6)
 \`campaign\`, \`adGroup\`, \`ad\`, \`keyword\`, \`campaignBudget\`, \`asset\`
