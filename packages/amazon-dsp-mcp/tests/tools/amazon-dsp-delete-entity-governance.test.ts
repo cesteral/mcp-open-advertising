@@ -42,7 +42,10 @@ describe("amazon_dsp_delete_entity governance contract (effect class)", () => {
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error("archive failed")),
     };
-    mockResolveSessionServices.mockReturnValue({ amazonDspService: svc });
+    mockResolveSessionServices.mockReturnValue({
+      amazonDspService: svc,
+      boundProfileId: "1234567890",
+    } as any);
     mockElicit.mockResolvedValue(true);
   });
 

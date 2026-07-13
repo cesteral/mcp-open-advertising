@@ -88,7 +88,11 @@ const tiktokReportingService = {
 };
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
-  resolveSessionServices: () => ({ tiktokService, tiktokReportingService }),
+  resolveSessionServices: () => ({
+    tiktokService,
+    tiktokReportingService,
+    boundAdvertiserId: "1234567890",
+  }),
 }));
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";

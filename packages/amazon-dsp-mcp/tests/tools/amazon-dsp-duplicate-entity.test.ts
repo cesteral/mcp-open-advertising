@@ -45,7 +45,7 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
       }),
       getEntity: vi.fn(),
     };
-    mockResolveSession.mockReturnValue({ amazonDspService: svc } as any);
+    mockResolveSession.mockReturnValue({ amazonDspService: svc, boundProfileId: "1" } as any);
   });
 
   it("dry_run reads the source and projects the PAUSED copy, no API call", async () => {

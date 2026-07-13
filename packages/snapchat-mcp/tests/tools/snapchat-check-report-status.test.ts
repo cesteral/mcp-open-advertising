@@ -33,6 +33,7 @@ beforeEach(() => {
     snapchatReportingService: {
       checkReportStatus: mockCheckReportStatus,
     },
+    boundAdAccountId: "1234567890",
   } as any);
 });
 

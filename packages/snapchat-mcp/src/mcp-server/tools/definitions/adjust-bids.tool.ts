@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -136,7 +137,8 @@ export async function adjustBidsLogic(
     };
   }
 
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await snapchatService.adjustBids(
     input.adjustments.map((a) => ({

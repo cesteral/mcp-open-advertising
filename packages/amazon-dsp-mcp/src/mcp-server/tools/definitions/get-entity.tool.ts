@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
@@ -36,7 +37,8 @@ export async function getEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetEntityOutput> {
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const entity = await amazonDspService.getEntity(
     input.entityType as AmazonDspEntityType,

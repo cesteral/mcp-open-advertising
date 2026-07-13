@@ -83,7 +83,11 @@ const snapchatReportingService = {
 };
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
-  resolveSessionServices: () => ({ snapchatService, snapchatReportingService }),
+  resolveSessionServices: () => ({
+    snapchatService,
+    snapchatReportingService,
+    boundAdAccountId: "1234567890",
+  }),
 }));
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";

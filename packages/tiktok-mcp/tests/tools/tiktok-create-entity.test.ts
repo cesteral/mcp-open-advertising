@@ -34,6 +34,7 @@ beforeEach(() => {
     tiktokService: {
       createEntity: mockCreateEntity,
     },
+    boundAdvertiserId: "1234567890",
   } as any);
 });
 
@@ -185,6 +186,7 @@ describe("tiktok_create_entity governance contract", () => {
     });
     mockResolveSession.mockReturnValue({
       tiktokService: { createEntity: mockCreateEntity },
+      boundAdvertiserId: "1",
     } as any);
   });
 

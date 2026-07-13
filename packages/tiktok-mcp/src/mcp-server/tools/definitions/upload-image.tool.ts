@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   downloadFileToBuffer,
   McpError,
@@ -113,7 +114,8 @@ export async function uploadImageLogic(
     };
   }
 
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,

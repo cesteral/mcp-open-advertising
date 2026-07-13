@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkDeleteConfirmation,
@@ -135,7 +136,8 @@ export async function deleteEntityLogic(
     };
   }
 
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   // Snapchat deletes entities one request each (entity-specific DELETE paths).
   // Use allSettled so a failure after an earlier success is recorded honestly —

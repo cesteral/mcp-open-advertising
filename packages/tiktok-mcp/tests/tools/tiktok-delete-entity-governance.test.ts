@@ -34,7 +34,10 @@ describe("tiktok_delete_entity governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = { deleteEntity: vi.fn().mockResolvedValue(undefined) };
-    mockResolveSessionServices.mockReturnValue({ tiktokService: svc });
+    mockResolveSessionServices.mockReturnValue({
+      tiktokService: svc,
+      boundAdvertiserId: "1234567890",
+    });
     mockElicit.mockResolvedValue(true);
   });
 

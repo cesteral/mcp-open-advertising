@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -112,7 +113,8 @@ export async function bulkCreateEntitiesLogic(
     };
   }
 
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const bulkResult = await tiktokService.bulkCreateEntities(
     input.entityType as TikTokEntityType,

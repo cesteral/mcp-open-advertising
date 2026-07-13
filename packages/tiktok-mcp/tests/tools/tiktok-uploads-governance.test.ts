@@ -57,7 +57,10 @@ describe("tiktok uploads governance contract (effect class)", () => {
         .fn()
         .mockResolvedValue({ list: [{ video_id: "vid-1", video_status: "bind_success" }] }),
     };
-    mockResolveSessionServices.mockReturnValue({ tiktokService: { client } });
+    mockResolveSessionServices.mockReturnValue({
+      tiktokService: { client },
+      boundAdvertiserId: "1",
+    });
   });
 
   describe("tiktok_upload_image", () => {

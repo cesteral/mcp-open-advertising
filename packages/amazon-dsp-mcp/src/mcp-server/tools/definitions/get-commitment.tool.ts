@@ -9,6 +9,7 @@ import type {
   CesteralReadToolAnnotations,
 } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   DSPCommitmentSchema,
   type DSPCommitmentT,
@@ -47,7 +48,8 @@ export async function getCommitmentLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetCommitmentOutput> {
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
   const commitment = (await amazonDspV1Service.getCommitment(
     input.commitmentId,
     context

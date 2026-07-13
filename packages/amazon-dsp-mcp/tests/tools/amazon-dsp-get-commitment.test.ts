@@ -34,6 +34,7 @@ beforeEach(() => {
   mockGetCommitment.mockReset();
   mockResolveSession.mockReturnValue({
     amazonDspV1Service: { getCommitment: mockGetCommitment },
+    boundProfileId: "1234567890",
   } as never);
 });
 

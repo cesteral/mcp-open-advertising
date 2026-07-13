@@ -19,6 +19,12 @@ export interface SessionServices {
   amazonDspService: AmazonDspService;
   amazonDspReportingService: AmazonDspReportingService;
   amazonDspV1Service: AmazonDspV1Service;
+  /**
+   * The profile id this session is bound to at authentication time. Used by
+   * tool handlers to fail-fast (via `assertAccountScope`) when a caller-supplied
+   * `profileId` names a different profile than the session is bound to.
+   */
+  boundProfileId: string;
 }
 
 export interface AmazonDspSessionConfig {
@@ -53,6 +59,7 @@ export function createSessionServices(
     amazonDspService,
     amazonDspReportingService,
     amazonDspV1Service,
+    boundProfileId: authAdapter.profileId,
   };
 }
 

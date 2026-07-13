@@ -4,6 +4,7 @@
 import { z } from "zod";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   DSPCommitmentSpendMultiStatusResponseSchema,
   type DSPCommitmentSpendMultiStatusResponseT,
@@ -82,7 +83,8 @@ export async function getCommitmentSpendLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetCommitmentSpendOutput> {
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
   // superRefine above guarantees `spendDimension` has exactly one key set
   // when present, so the wider `{a?,b?,c?}` shape narrows safely to the
   // OpenAPI-typed `{a}|{b}|{c}` union on its way to the service.

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { fromTikTokStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -40,7 +41,8 @@ export async function checkReportStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CheckReportStatusOutput> {
-  const { tiktokReportingService } = resolveSessionServices(sdkContext);
+  const { tiktokReportingService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const result = await tiktokReportingService.checkReportStatus(input.taskId, context);
 

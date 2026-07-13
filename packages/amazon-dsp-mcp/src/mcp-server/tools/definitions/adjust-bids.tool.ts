@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -139,7 +140,8 @@ export async function adjustBidsLogic(
     };
   }
 
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const result = await amazonDspService.adjustBids(
     input.adjustments.map((a) => ({

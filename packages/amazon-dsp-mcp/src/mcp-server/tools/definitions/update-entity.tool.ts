@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   runAmazonDspUpdateDryRun,
@@ -77,7 +78,7 @@ export async function updateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.
@@ -98,6 +99,10 @@ export async function updateEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   // R2-U4: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined.

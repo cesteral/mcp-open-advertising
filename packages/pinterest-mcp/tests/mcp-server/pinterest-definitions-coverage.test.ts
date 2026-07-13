@@ -102,7 +102,11 @@ const pinterestReportingService = {
 };
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
-  resolveSessionServices: () => ({ pinterestService, pinterestReportingService }),
+  resolveSessionServices: () => ({
+    pinterestService,
+    pinterestReportingService,
+    boundAdAccountId: "1234567890",
+  }),
 }));
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";

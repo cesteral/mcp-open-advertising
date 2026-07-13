@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -57,7 +58,8 @@ export async function searchTargetingLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<SearchTargetingOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const results = (await pinterestService.searchTargeting(
     input.targetingType,

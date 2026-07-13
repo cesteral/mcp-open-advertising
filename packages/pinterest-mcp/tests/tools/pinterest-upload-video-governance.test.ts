@@ -49,7 +49,10 @@ describe("pinterest_upload_video governance contract (effect class)", () => {
       uploadToS3: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue({ media_processing_record: { status: "succeeded" } }),
     };
-    mockResolveSessionServices.mockReturnValue({ pinterestService: { client } });
+    mockResolveSessionServices.mockReturnValue({
+      pinterestService: { client },
+      boundAdAccountId: "1234567890",
+    });
   });
 
   it("dry_run returns a symbolic effect preview, no download or API call", async () => {

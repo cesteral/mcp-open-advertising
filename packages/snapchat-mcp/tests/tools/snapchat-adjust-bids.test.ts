@@ -35,7 +35,7 @@ describe("snapchat_adjust_bids governance contract (effect class)", () => {
         results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ snapchatService: svc });
+    mockResolveSessionServices.mockReturnValue({ snapchatService: svc, boundAdAccountId: "1" });
     mockElicit.mockResolvedValue(true);
   });
 

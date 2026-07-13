@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import { runTiktokCreateDryRun, resolveTiktokCreateCapability } from "../utils/dry-run.js";
 import { snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
@@ -81,7 +82,7 @@ export async function createEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
   const dispatchedCapability = resolveTiktokCreateCapability(input.entityType);
 
   if (input.dry_run === true) {
@@ -98,6 +99,10 @@ export async function createEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const entity = (await tiktokService.createEntity(
     input.entityType as TikTokEntityType,

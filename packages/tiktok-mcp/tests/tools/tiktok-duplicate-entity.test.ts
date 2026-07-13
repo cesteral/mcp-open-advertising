@@ -45,7 +45,7 @@ describe("tiktok_duplicate_entity governance contract", () => {
       }),
       getEntity: vi.fn(),
     };
-    mockResolveSession.mockReturnValue({ tiktokService: svc } as any);
+    mockResolveSession.mockReturnValue({ tiktokService: svc, boundAdvertiserId: "adv-1" } as any);
   });
 
   it("dry_run reads the source and projects the disabled copy, no API call", async () => {

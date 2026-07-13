@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import { runAmazonDspCreateDryRun, resolveAmazonDspCreateCapability } from "../utils/dry-run.js";
 import { snapshotFromAmazonDspEntity } from "../utils/capture-snapshot.js";
@@ -77,7 +78,7 @@ export async function createEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
   const dispatchedCapability = resolveAmazonDspCreateCapability(input.entityType);
 
   if (input.dry_run === true) {
@@ -94,6 +95,10 @@ export async function createEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account — but only on the real-execution path, so a
+  // dry-run preview with a different id is allowed (matches the other write tools).
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const entity = (await amazonDspService.createEntity(
     input.entityType as AmazonDspEntityType,

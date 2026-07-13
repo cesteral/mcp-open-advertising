@@ -17,6 +17,12 @@ import { PinterestReportingService } from "./pinterest/pinterest-reporting-servi
 export interface SessionServices {
   pinterestService: PinterestService;
   pinterestReportingService: PinterestReportingService;
+  /**
+   * The ad account id this session is bound to at authentication time. Used by
+   * tool handlers to fail-fast (via `assertAccountScope`) when a caller-supplied
+   * `adAccountId` names a different account than the session is bound to.
+   */
+  boundAdAccountId: string;
 }
 
 export interface PinterestSessionConfig {
@@ -51,6 +57,7 @@ export function createSessionServices(
   return {
     pinterestService,
     pinterestReportingService,
+    boundAdAccountId: authAdapter.adAccountId,
   };
 }
 

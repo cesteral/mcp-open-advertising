@@ -17,6 +17,12 @@ import { SnapchatReportingService } from "./snapchat/snapchat-reporting-service.
 export interface SessionServices {
   snapchatService: SnapchatService;
   snapchatReportingService: SnapchatReportingService;
+  /**
+   * The ad account id this session is bound to at authentication time. Used by
+   * tool handlers to fail-fast (via `assertAccountScope`) when a caller-supplied
+   * `adAccountId` names a different account than the session is bound to.
+   */
+  boundAdAccountId: string;
 }
 
 export interface SnapchatSessionConfig {
@@ -50,6 +56,7 @@ export function createSessionServices(
   return {
     snapchatService,
     snapchatReportingService,
+    boundAdAccountId: authAdapter.adAccountId,
   };
 }
 

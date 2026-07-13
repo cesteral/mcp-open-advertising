@@ -36,6 +36,7 @@ beforeEach(() => {
   mockRetrieveForecast.mockReset();
   mockResolveSession.mockReturnValue({
     amazonDspV1Service: { retrieveCampaignForecast: mockRetrieveForecast },
+    boundProfileId: "1234567890",
   } as never);
 });
 

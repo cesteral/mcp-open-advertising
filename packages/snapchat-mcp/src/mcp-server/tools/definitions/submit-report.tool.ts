@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   resolveDatePreset,
   DATE_PRESET_VALUES,
@@ -132,7 +133,8 @@ export async function submitReportLogic(
     };
   }
 
-  const { snapchatReportingService } = resolveSessionServices(sdkContext);
+  const { snapchatReportingService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   let resolvedStartTime = input.startTime;
   let resolvedEndTime = input.endTime;

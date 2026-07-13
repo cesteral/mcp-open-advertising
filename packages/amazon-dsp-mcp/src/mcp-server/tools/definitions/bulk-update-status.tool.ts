@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkStatusChangeConfirmation,
@@ -137,7 +138,8 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
-  const { amazonDspService } = resolveSessionServices(sdkContext);
+  const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const result = await amazonDspService.bulkUpdateStatus(
     input.entityType as AmazonDspEntityType,

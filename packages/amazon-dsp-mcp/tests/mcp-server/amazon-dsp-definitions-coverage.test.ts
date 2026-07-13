@@ -120,6 +120,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
     amazonDspService,
     amazonDspReportingService,
     amazonDspV1Service,
+    boundProfileId: "1234567890",
   }),
 }));
 

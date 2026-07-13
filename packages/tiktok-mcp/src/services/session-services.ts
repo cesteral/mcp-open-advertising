@@ -18,6 +18,12 @@ import { setApiVersion } from "../mcp-server/tools/utils/entity-mapping.js";
 export interface SessionServices {
   tiktokService: TikTokService;
   tiktokReportingService: TikTokReportingService;
+  /**
+   * The advertiser id this session is bound to at authentication time. Used by
+   * tool handlers to fail-fast (via `assertAccountScope`) when a caller-supplied
+   * `advertiserId` names a different advertiser than the session is bound to.
+   */
+  boundAdvertiserId: string;
 }
 
 export interface TikTokSessionConfig {
@@ -56,6 +62,7 @@ export function createSessionServices(
   return {
     tiktokService,
     tiktokReportingService,
+    boundAdvertiserId: authAdapter.advertiserId,
   };
 }
 

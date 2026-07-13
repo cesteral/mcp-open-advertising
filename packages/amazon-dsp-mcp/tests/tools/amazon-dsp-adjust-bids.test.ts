@@ -42,7 +42,7 @@ describe("amazon_dsp_adjust_bids governance contract (effect class)", () => {
         results: [{ lineItemId: "li-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),
     };
-    mockResolveSession.mockReturnValue({ amazonDspService: svc } as any);
+    mockResolveSession.mockReturnValue({ amazonDspService: svc, boundProfileId: "1" } as any);
     mockElicit.mockResolvedValue(true);
   });
 

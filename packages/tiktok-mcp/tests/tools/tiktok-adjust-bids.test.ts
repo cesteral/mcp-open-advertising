@@ -35,7 +35,7 @@ describe("tiktok_adjust_bids governance contract (effect class)", () => {
         results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ tiktokService: svc });
+    mockResolveSessionServices.mockReturnValue({ tiktokService: svc, boundAdvertiserId: "1" });
     mockElicit.mockResolvedValue(true);
   });
 

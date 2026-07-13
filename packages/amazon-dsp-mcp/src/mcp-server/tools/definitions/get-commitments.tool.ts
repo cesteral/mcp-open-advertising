@@ -4,6 +4,7 @@
 import { z } from "zod";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   DSPCommitmentMultiStatusResponseSchema,
   type DSPCommitmentMultiStatusResponseT,
@@ -47,7 +48,8 @@ export async function getCommitmentsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetCommitmentsOutput> {
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
   const response = await amazonDspV1Service.retrieveCommitments(
     { commitmentIds: input.commitmentIds },
     context

@@ -33,6 +33,7 @@ beforeEach(() => {
     tiktokReportingService: {
       submitReport: mockSubmitReport,
     },
+    boundAdvertiserId: "1234567890",
   } as any);
 });
 
