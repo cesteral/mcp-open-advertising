@@ -170,7 +170,8 @@
         "ttd_rerun_report_schedule",
         "ttd_update_report_schedule",
         "ttd_update_report_template",
-        "ttd_search_tools"
+        "ttd_search_tools",
+        "ttd_duplicate_entity"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -231,7 +232,8 @@
         "gads_validate_entity",
         "gads_adjust_bids",
         "gads_get_ad_preview",
-        "gads_get_pacing_status"
+        "gads_get_pacing_status",
+        "gads_duplicate_entity"
       ],
       "resources": [
         "entity-hierarchy://gads",
@@ -554,7 +556,8 @@
         "snapchat_validate_entity",
         "snapchat_upload_image",
         "snapchat_upload_video",
-        "snapchat_search_tools"
+        "snapchat_search_tools",
+        "snapchat_duplicate_entity"
       ],
       "resources": [
         "entity-hierarchy://snapchat/all",
@@ -797,7 +800,8 @@
         "msads_get_ad_details",
         "msads_get_report_breakdowns",
         "msads_list_report_schedules",
-        "msads_search_tools"
+        "msads_search_tools",
+        "msads_duplicate_entity"
       ],
       "resources": [
         "msads://entity-hierarchy",
