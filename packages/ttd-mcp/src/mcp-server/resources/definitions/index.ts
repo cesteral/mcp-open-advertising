@@ -32,6 +32,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "ttd_create_entity",
       "ttd_update_entity",
       "ttd_delete_entity",
+      "ttd_duplicate_entity",
     ],
     reporting: [
       "ttd_get_report",

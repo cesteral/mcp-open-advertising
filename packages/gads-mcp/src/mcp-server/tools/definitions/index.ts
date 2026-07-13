@@ -4,9 +4,9 @@
 /**
  * Tool definitions barrel export
  *
- * 15 tools total:
+ * 16 tools total:
  *   5 read:  gaql search, list accounts, get entity, list entities, get insights
- *   7 write: create entity, update entity, remove entity, bulk mutate, bulk create entities, bulk update status, adjust bids
+ *   8 write: create entity, update entity, remove entity, duplicate entity, bulk mutate, bulk create entities, bulk update status, adjust bids
  *   1 validate: validate entity (dry-run via validateOnly)
  *   1 preview: get ad preview
  *   1 pacing:  get pacing status
@@ -20,6 +20,7 @@ export { getInsightsTool } from "./get-insights.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { removeEntityTool } from "./remove-entity.tool.js";
+export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { bulkMutateTool } from "./bulk-mutate.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
@@ -36,6 +37,7 @@ import { getInsightsTool } from "./get-insights.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { removeEntityTool } from "./remove-entity.tool.js";
+import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { bulkMutateTool } from "./bulk-mutate.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
@@ -56,6 +58,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   createEntityTool,
   updateEntityTool,
   removeEntityTool,
+  duplicateEntityTool,
   bulkMutateTool,
   bulkCreateEntitiesTool,
   bulkUpdateStatusTool,

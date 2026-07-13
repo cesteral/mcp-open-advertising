@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (43 tools)
+## Available Tools Summary (44 tools)
 
 This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foundations §1, §6. For single-record writes use \`ttd_create_entity\` / \`ttd_update_entity\` (REST). For >100-record batch writes use \`ttd_graphql_mutation_bulk\` (GraphQL bulk — TTD's documented bulk path).
 
@@ -106,6 +106,7 @@ This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foun
 | \`ttd_create_entity\` | Create an entity | Write |
 | \`ttd_update_entity\` | Update an entity (PUT) | Write |
 | \`ttd_delete_entity\` | Delete an entity | Write |
+| \`ttd_duplicate_entity\` | Duplicate an entity (clone via read + create) | Write |
 | \`ttd_validate_entity\` | Dry-run entity validation | Read/Write |
 
 ### Reporting

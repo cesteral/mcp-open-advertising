@@ -307,6 +307,53 @@ export class SnapchatService {
     ) as SnapchatEntityMap[T];
   }
 
+  /**
+   * Duplicate an entity via the client-side read+create clone pattern (Snapchat
+   * has no native copy endpoint). Reads the source, strips system-managed
+   * fields, then creates a fresh copy. Only entity types whose create endpoint
+   * needs no extra parent ID (campaign) are duplicable — enforced client-side.
+   */
+  async duplicateEntity(
+    entityType: SnapchatEntityType,
+    filters: Record<string, string>,
+    entityId: string,
+    options?: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getEntityConfig(entityType);
+    if (!config.supportsDuplicate) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Entity type ${entityType} does not support duplication`
+      );
+    }
+
+    const source = (await this.getEntity(entityType, entityId, context)) as unknown as Record<
+      string,
+      unknown
+    >;
+
+    // System-managed fields the create endpoint rejects or reassigns.
+    const SYSTEM_FIELDS = [
+      "id",
+      "created_at",
+      "updated_at",
+      "ad_account_id",
+      "delivery_status",
+      "deleted",
+    ] as const;
+    const body: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(source)) {
+      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
+        body[key] = val;
+      }
+    }
+    // Caller overrides (e.g. a new name) win over the copied fields.
+    if (options) Object.assign(body, options);
+
+    return this.createEntity(entityType, filters, body, context);
+  }
+
   async updateEntity<T extends SnapchatEntityType>(
     entityType: T,
     entityId: string,

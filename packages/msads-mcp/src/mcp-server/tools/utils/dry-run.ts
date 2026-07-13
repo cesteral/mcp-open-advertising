@@ -148,6 +148,63 @@ export function resolveMsAdsCreateCapability(entityType: string): DispatchedCapa
   };
 }
 
+export function resolveMsAdsDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface MsAdsDuplicateDryRunArgs {
+  entityType: string;
+  accountId: string;
+  entityId: string;
+  options?: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `msads_duplicate_entity`. Reads the source entity and
+ * projects the would-be copy (source fields with any `options` overlaid, empty
+ * new ID) as the expected post-state. Duplicate has no `before`. A read failure
+ * on an in-scope kind fails the governed call via `assertGovernedDryRunResult`.
+ */
+export async function runMsAdsDuplicateDryRun(
+  input: MsAdsDuplicateDryRunArgs,
+  service: MsAdsServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[input.entityType]);
+  if (inScope && service.getEntity) {
+    const { entities } = await service.getEntity(
+      input.entityType,
+      [input.entityId],
+      { AccountId: Number(input.accountId) },
+      context
+    );
+    const source = (entities[0] ?? {}) as Record<string, unknown>;
+    if (Object.keys(source).length > 0) {
+      const snapshot = buildMsAdsSnapshot(input.entityType, "", source, input.options ?? {});
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "msads_duplicate_entity") : result;
+}
+
 export interface MsAdsCreateDryRunArgs {
   entityType: string;
   /** The single entity item, already unwrapped from its plural collection key. */

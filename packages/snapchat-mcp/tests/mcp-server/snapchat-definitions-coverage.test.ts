@@ -21,6 +21,7 @@ const snapchatService = {
   createEntity: vi.fn(async () => ({ campaign_id: "new" })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
+  duplicateEntity: vi.fn(async () => ({ id: "new", name: "Copy", status: "PAUSED" })),
   listAdAccounts: vi.fn(async () => ({
     entities: [{ ad_account_id: "123" }],
     nextCursor: undefined,
@@ -110,7 +111,7 @@ describe("Snapchat MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 22 business + 1 dynamic search_tools + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 30 : 24); // 23 business + 1 dynamic search_tools + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(10);
     expect(promptRegistry.size).toBe(10);

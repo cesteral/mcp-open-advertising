@@ -131,6 +131,46 @@ export class TtdService {
     }) as Promise<TtdEntityMap[T]>;
   }
 
+  /**
+   * Duplicate an entity via the client-side read+create clone pattern (TTD has
+   * no native copy endpoint). Reads the source, strips server-managed fields
+   * (the id + audit timestamps), then creates a fresh copy. The source's own
+   * `AdvertiserId` rides along in the body, so no extra parent ID is needed.
+   * Only entity types flagged `supportsDuplicate` (campaign) are allowed.
+   */
+  async duplicateEntity<T extends TtdEntityType>(
+    entityType: T,
+    entityId: string,
+    options?: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<TtdEntityMap[T]> {
+    const config = getEntityConfig(entityType);
+    if (!config.supportsDuplicate) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Entity type ${entityType} does not support duplication`
+      );
+    }
+
+    const source = (await this.getEntity(entityType, entityId, context)) as unknown as Record<
+      string,
+      unknown
+    >;
+
+    // Server-managed fields the create endpoint rejects or reassigns.
+    const SYSTEM_FIELDS = [config.idField, "CreatedAtUTC", "LastModifiedAtUTC", "Version"] as const;
+    const body: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(source)) {
+      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
+        body[key] = val;
+      }
+    }
+    // Caller overrides (e.g. a new CampaignName) win over the copied fields.
+    if (options) Object.assign(body, options);
+
+    return this.createEntity(entityType, body, context);
+  }
+
   async updateEntity<T extends TtdEntityType>(
     entityType: T,
     entityId: string,

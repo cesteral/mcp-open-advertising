@@ -123,6 +123,58 @@ export function resolveSnapchatCreateCapability(entityType: string): DispatchedC
   };
 }
 
+export function resolveSnapchatDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface SnapchatDuplicateDryRunArgs {
+  entityType: string;
+  entityId: string;
+  options?: Record<string, unknown>;
+}
+
+/**
+ * Symbolic dry-run for `snapchat_duplicate_entity`. Reads the source entity and
+ * projects the would-be copy (source fields with any `options` overlaid, empty
+ * new ID) as the expected post-state. Duplicate has no `before`. A read failure
+ * on an in-scope kind fails the governed call via `assertGovernedDryRunResult`.
+ */
+export async function runSnapchatDuplicateDryRun(
+  args: SnapchatDuplicateDryRunArgs,
+  service: SnapchatServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(args.entityType, args.entityId, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (source && typeof source === "object") {
+      const snapshot = buildSnapchatSnapshot(args.entityType, "", source, args.options ?? {});
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "snapchat_duplicate_entity") : result;
+}
+
 export interface SnapchatCreateDryRunArgs {
   entityType: string;
   data: Record<string, unknown>;

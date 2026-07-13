@@ -26,6 +26,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "msads_create_entity",
       "msads_update_entity",
       "msads_delete_entity",
+      "msads_duplicate_entity",
     ],
     reporting: [
       "msads_get_report",

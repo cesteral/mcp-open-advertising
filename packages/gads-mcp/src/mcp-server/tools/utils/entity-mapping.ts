@@ -40,6 +40,12 @@ export interface GAdsEntityConfig {
   nameField?: string;
   /** Mutate operations the API supports for this entity. Defaults to all three. */
   supportedMutateOps: readonly MutateOp[];
+  /**
+   * Whether this entity type can be duplicated via the read+create clone
+   * pattern. Only `campaign` is supported — its default SELECT fields are all
+   * writable-on-create, so stripping the id/resourceName yields a valid create.
+   */
+  supportsDuplicate?: boolean;
 }
 
 const ALL_MUTATE_OPS: readonly MutateOp[] = ["create", "update", "remove"];
@@ -54,6 +60,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     statusField: "campaign.status",
     nameField: "campaign.name",
     supportedMutateOps: ALL_MUTATE_OPS,
+    supportsDuplicate: true,
   },
   adGroup: {
     gaqlResource: "ad_group",
@@ -135,6 +142,17 @@ export function getSupportedEntityTypes(): GAdsEntityType[] {
 export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
   return types as [string, ...string[]];
+}
+
+/** Entity types that support duplication via the read+create clone pattern. */
+export function getDuplicateSupportedEntityTypes(): GAdsEntityType[] {
+  return (Object.entries(ENTITY_CONFIGS) as [GAdsEntityType, GAdsEntityConfig][])
+    .filter(([, config]) => config.supportsDuplicate)
+    .map(([type]) => type);
+}
+
+export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
+  return getDuplicateSupportedEntityTypes() as [string, ...string[]];
 }
 
 /**

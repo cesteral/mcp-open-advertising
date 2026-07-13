@@ -124,6 +124,7 @@ List queries use POST to scoped query endpoints. Each endpoint is scoped to a pa
 | \`ttd_create_entity\` | Create single entity | |
 | \`ttd_update_entity\` | Update single entity (PUT) | |
 | \`ttd_delete_entity\` | Delete single entity | |
+| \`ttd_duplicate_entity\` | Duplicate single entity (clone) | |
 | \`ttd_bulk_create_entities\` | Batch create (campaigns/ad groups) | ✓ |
 | \`ttd_bulk_update_entities\` | Batch update (campaigns/ad groups) | ✓ |
 | \`ttd_bulk_update_status\` | Batch pause/resume/archive | ✓ |
