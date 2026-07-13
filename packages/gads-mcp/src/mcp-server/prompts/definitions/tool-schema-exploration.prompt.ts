@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (15 tools)
+## Available Tools Summary (16 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -109,6 +109,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_create_entity\` | Create a new entity | Returns resource name |
 | \`gads_update_entity\` | Update an entity | Requires \`updateMask\` |
 | \`gads_remove_entity\` | Remove an entity | Sets status to REMOVED (permanent) |
+| \`gads_duplicate_entity\` | Duplicate an entity (clone via read + create) | Campaign only |
 | \`gads_bulk_mutate\` | Batch create/update/remove | Up to 5000 operations |
 | \`gads_bulk_create_entities\` | Batch create entities | Max 50, partial failure |
 | \`gads_bulk_update_status\` | Batch enable/pause/remove | Convenience wrapper |

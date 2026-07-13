@@ -213,6 +213,69 @@ export interface GAdsCreateDryRunArgs {
   data: Record<string, unknown>;
 }
 
+export function resolveGAdsDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+/**
+ * Symbolic dry-run for `gads_duplicate_entity`. The caller has already read the
+ * source and projected it to a create payload (`data`); this validates that
+ * payload with Google Ads' native `validateOnly` mutate and projects the copy
+ * as the expected post-state. Duplicate has no `before`. Same two-axis model as
+ * the create dry-run — only the governed tool name differs.
+ */
+export async function runGAdsDuplicateDryRun(
+  args: GAdsCreateDryRunArgs,
+  gadsService: GAdsDryRunServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  let validationErrors: DryRunValidationError[] = [];
+  let validationSource: DryRunResult["validationSource"] = "none";
+  if (gadsService.validateEntity) {
+    const verdict = await gadsService.validateEntity(
+      args.entityType,
+      args.customerId,
+      args.data,
+      "create",
+      undefined,
+      undefined,
+      context
+    );
+    validationSource = "native_validator";
+    if (!verdict.valid) {
+      validationErrors = (
+        verdict.errors && verdict.errors.length > 0
+          ? verdict.errors
+          : ["Google Ads rejected the duplication"]
+      ).map((message) => ({ code: "GOOGLE_ADS_VALIDATION", message }));
+    }
+  }
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[args.entityType]) {
+    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource,
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "gads_duplicate_entity"
+  );
+}
+
 /**
  * Dry-run for `gads_create_entity`. Validation is NATIVE — `:mutate` with
  * `validateOnly: true` on a create operation. Expected post-state is symbolic:
