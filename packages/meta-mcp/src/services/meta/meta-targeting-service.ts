@@ -26,7 +26,8 @@ export class MetaTargetingService {
     type: string,
     query: string,
     limit?: number,
-    context?: RequestContext
+    context?: RequestContext,
+    after?: string
   ): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`);
 
@@ -51,6 +52,10 @@ export class MetaTargetingService {
 
     if (limit) {
       params.limit = String(limit);
+    }
+
+    if (after) {
+      params.after = after;
     }
 
     return this.httpClient.get("/search", params, context);

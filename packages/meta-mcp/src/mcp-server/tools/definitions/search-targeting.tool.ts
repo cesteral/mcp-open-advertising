@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -27,14 +32,19 @@ export const SearchTargetingInputSchema = z
       .string()
       .describe("Search type (adinterest, adinterestsuggestion, adgeolocation, adlocale, etc.)"),
     query: z.string().min(1).describe("Search keyword or query"),
-    limit: z.number().min(1).max(100).optional().describe("Max results to return (default 25)"),
+    limit: z.number().min(1).max(100).optional().describe("Max results per page (default 25)"),
+    after: z
+      .string()
+      .optional()
+      .describe("Opaque pagination cursor from a previous response's `pagination.nextCursor`."),
   })
   .describe("Parameters for searching targeting options");
 
 export const SearchTargetingOutputSchema = z
   .object({
     results: z.array(z.record(z.any())).describe("Matching targeting options"),
-    totalCount: z.number(),
+    totalCount: z.number().describe("Number of targeting options returned in this page"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Targeting search result");
@@ -53,14 +63,26 @@ export async function searchTargetingLogic(
     input.type,
     input.query,
     input.limit,
-    context
+    context,
+    input.after
   );
 
-  const data = ((result as Record<string, unknown>)?.data as unknown[]) || [];
+  const response = (result as Record<string, unknown>) ?? {};
+  const data = (response.data as unknown[]) || [];
+
+  // Meta cursor pagination: `paging.next` present ⇒ more pages; the cursor to
+  // pass back is `paging.cursors.after`. Absent when the result set is exhausted.
+  const paging = response.paging as { next?: string; cursors?: { after?: string } } | undefined;
+  const nextCursor = paging?.next ? (paging.cursors?.after ?? null) : null;
 
   return {
     results: data as Record<string, unknown>[],
     totalCount: data.length,
+    pagination: buildPaginationOutput({
+      nextCursor,
+      pageSize: data.length,
+      nextPageInputKey: "after",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -75,7 +97,7 @@ export function searchTargetingResponseFormatter(result: SearchTargetingOutput):
   return [
     {
       type: "text" as const,
-      text: `${summary}${data}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${data}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
