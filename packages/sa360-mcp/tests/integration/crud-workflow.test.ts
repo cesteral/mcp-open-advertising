@@ -197,13 +197,13 @@ describe("SA360 MCP transport search/list/get workflow", () => {
     await shutdown();
   });
 
-  it("supports sa360_search through /mcp", async () => {
+  it("supports sa360_gaql_search through /mcp", async () => {
     const result = await postMcp(app, {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
       params: {
-        name: "sa360_search",
+        name: "sa360_gaql_search",
         arguments: {
           customerId: "1234567890",
           query: "SELECT campaign.id, campaign.name FROM campaign",

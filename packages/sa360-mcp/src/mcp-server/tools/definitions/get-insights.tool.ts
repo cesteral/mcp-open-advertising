@@ -26,7 +26,7 @@ const TOOL_NAME = "sa360_get_insights";
 const TOOL_TITLE = "SA360 Performance Insights";
 const TOOL_DESCRIPTION = `Get performance insights for SA360 entities using preset parameters.
 
-Convenience wrapper around SA360 query language that constructs queries from simple inputs. For ad-hoc queries, use \`sa360_search\` directly.
+Convenience wrapper around SA360 query language that constructs queries from simple inputs. For ad-hoc queries, use \`sa360_gaql_search\` directly.
 
 **Supported entity types:** ${getInsightsEntityTypeEnum().join(", ")}
 

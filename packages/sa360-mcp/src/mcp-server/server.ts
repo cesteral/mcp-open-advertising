@@ -27,7 +27,7 @@ const SA360_PLATFORM = "sa360";
 
 const sa360WorkflowIdByToolName: Record<string, string> = {
   // Read tools
-  sa360_search: "mcp.execute.sa360_query",
+  sa360_gaql_search: "mcp.execute.sa360_query",
   sa360_list_accounts: "mcp.execute.sa360_query",
   sa360_get_entity: "mcp.execute.sa360_query",
   sa360_list_entities: "mcp.execute.sa360_query",
@@ -67,7 +67,7 @@ export async function createMcpServer(
       },
       instructions:
         "Search Ads 360 reporting and conversion upload server. " +
-        "Use sa360_list_accounts to discover accounts, sa360_search for flexible queries. " +
+        "Use sa360_list_accounts to discover accounts, sa360_gaql_search for flexible queries. " +
         "SA360 provides cross-engine reporting across Google Ads, Microsoft Ads, Yahoo Japan, and Baidu. " +
         "Entity data is read-only; only conversion upload is supported for writes.",
     }

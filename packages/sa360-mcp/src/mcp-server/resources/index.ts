@@ -17,7 +17,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "sa360-mcp",
   toolGroups: {
     read: [
-      "sa360_search",
+      "sa360_gaql_search",
       "sa360_list_accounts",
       "sa360_get_entity",
       "sa360_list_entities",

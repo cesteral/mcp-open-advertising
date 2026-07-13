@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SA360SearchInputSchema } from "../../src/mcp-server/tools/definitions/sa360-search.tool.js";
+import { SA360SearchInputSchema } from "../../src/mcp-server/tools/definitions/gaql-search.tool.js";
 
 describe("SA360SearchInputSchema", () => {
   it("accepts valid search input", () => {

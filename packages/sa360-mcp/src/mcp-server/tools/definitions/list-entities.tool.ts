@@ -14,7 +14,7 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_list_entities";
 const TOOL_TITLE = "List SA360 Entities";
-const TOOL_DESCRIPTION = `List SA360 entities of a given type with optional query filters. Filters are applied as WHERE conditions. For complex queries, use \`sa360_search\` directly.
+const TOOL_DESCRIPTION = `List SA360 entities of a given type with optional query filters. Filters are applied as WHERE conditions. For complex queries, use \`sa360_gaql_search\` directly.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}`;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sa360SearchTool } from "../src/mcp-server/tools/definitions/sa360-search.tool.js";
+import { sa360SearchTool } from "../src/mcp-server/tools/definitions/gaql-search.tool.js";
 import { listAccountsTool } from "../src/mcp-server/tools/definitions/list-accounts.tool.js";
 import { getEntityTool } from "../src/mcp-server/tools/definitions/get-entity.tool.js";
 import { listEntitiesTool } from "../src/mcp-server/tools/definitions/list-entities.tool.js";

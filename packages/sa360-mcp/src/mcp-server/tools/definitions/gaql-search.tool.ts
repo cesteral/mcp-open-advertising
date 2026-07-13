@@ -13,8 +13,8 @@ import {
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
-const TOOL_NAME = "sa360_search";
-const TOOL_TITLE = "SA360 Query Search";
+const TOOL_NAME = "sa360_gaql_search";
+const TOOL_TITLE = "SA360 GAQL Search";
 const TOOL_DESCRIPTION = `Execute a Search Ads 360 query language query against any SA360 resource. Supports resource fields, segment fields, and metrics with SQL-like syntax (same syntax as GAQL).
 
 SA360 is read-only — queries return data across Google Ads, Microsoft Ads, Yahoo Japan, and Baidu engines.`;
