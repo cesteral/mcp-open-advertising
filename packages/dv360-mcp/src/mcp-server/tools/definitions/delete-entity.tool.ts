@@ -10,10 +10,13 @@ import { runDv360DeleteDryRun, resolveDv360DeleteCapability } from "../utils/dry
 import { snapshotFromDv360Entity, buildDv360Snapshot } from "../utils/capture-snapshot.js";
 import {
   elicitDeleteConfirmation,
+  createLogger,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
+
+const logger = createLogger("dv360-delete-entity");
 import type {
   RequestContext,
   McpTextContent,
@@ -127,6 +130,14 @@ export async function deleteEntityLogic(
   );
 
   await dv360Service.deleteEntity(input.entityType, entityIds, context);
+
+  // Record the operator-supplied audit reason (finding M1). This is a
+  // snapshot-class write with no effect summary, so the reason is emitted to the
+  // structured audit log rather than dropped silently.
+  logger.info(
+    { entityType: input.entityType, entityIds, reason: input.reason ?? null },
+    "dv360 entity deleted"
+  );
 
   // DV360 hard-deletes; a re-read 404s. The post-state is the pre-delete entity
   // with canonical status `deleted` (undefined for out-of-scope kinds).

@@ -167,10 +167,20 @@ export async function adjustLineItemBidsLogic(
     };
   }
 
+  // Operator-supplied audit reasons are per-adjustment (finding M1). Collect the
+  // distinct non-empty ones so they surface in the confirmation prompt and the
+  // governed effect summary instead of being dropped silently.
+  const adjustmentReasons = [
+    ...new Set(input.adjustments.map((a) => a.reason).filter((r): r is string => Boolean(r))),
+  ];
+
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "line item",
-    summary: "Applying fixedBid micros changes (1 USD = 1,000,000 micros).",
+    summary:
+      adjustmentReasons.length > 0
+        ? adjustmentReasons.join("; ")
+        : "Applying fixedBid micros changes (1 USD = 1,000,000 micros).",
     impactPreview: input.adjustments.map((a) => a.lineItemId ?? "(to elicit)"),
     sdkContext,
   });
@@ -318,6 +328,11 @@ export async function adjustLineItemBidsLogic(
       requested: input.adjustments.length,
       succeeded: successful.length,
       failed: failed.length,
+      // Record the operator-supplied per-adjustment audit reasons into the
+      // governed effect summary (finding M1) so they survive into the tool
+      // response / audit log instead of being dropped. The summary holds scalars,
+      // so the distinct reasons are joined into one field.
+      ...(adjustmentReasons.length > 0 ? { reason: adjustmentReasons.join("; ") } : {}),
     },
   };
 
