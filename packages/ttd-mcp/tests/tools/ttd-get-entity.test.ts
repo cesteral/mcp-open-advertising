@@ -48,7 +48,6 @@ describe("getEntityLogic", () => {
       {
         entityType: "campaign" as any,
         entityId: "cmp-001",
-        advertiserId: "adv-123",
       },
       createMockContext(),
       createMockSdkContext()
@@ -67,17 +66,12 @@ describe("getEntityLogic", () => {
 });
 
 describe("GetEntityInputSchema", () => {
-  it("requires advertiserId for campaign lookups", () => {
+  it("looks up any entity type by ID alone — TTD GET-by-ID needs no parent IDs", () => {
     const parsed = GetEntityInputSchema.safeParse({
       entityType: "campaign",
       entityId: "cmp-001",
     });
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      expect(parsed.error.issues[0]?.message).toContain(
-        'Missing required parent identifier(s) for entity type "campaign"'
-      );
-    }
+    expect(parsed.success).toBe(true);
   });
 });
 
