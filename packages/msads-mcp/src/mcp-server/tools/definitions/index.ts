@@ -23,6 +23,7 @@ import { getAdDetailsTool } from "./get-ad-details.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { importFromGoogleTool } from "./import-from-google.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
+import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { createReportScheduleTool } from "./create-report-schedule.tool.js";
 import { listReportSchedulesTool } from "./list-report-schedules.tool.js";
 import { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
@@ -51,6 +52,7 @@ export const productionTools: ToolDefinitionForFactory[] = [
   validateEntityTool,
   importFromGoogleTool,
   searchTargetingTool,
+  getTargetingOptionsTool,
   createReportScheduleTool,
   listReportSchedulesTool,
   deleteReportScheduleTool,

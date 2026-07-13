@@ -801,7 +801,8 @@
         "msads_get_report_breakdowns",
         "msads_list_report_schedules",
         "msads_search_tools",
-        "msads_duplicate_entity"
+        "msads_duplicate_entity",
+        "msads_get_targeting_options"
       ],
       "resources": [
         "msads://entity-hierarchy",
