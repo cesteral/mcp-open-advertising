@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { getEntitySchemaByType, getFieldSchemaByPath } from "../utils/schema-introspection.js";
+import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
@@ -114,9 +115,18 @@ export async function validateEntityLogic(
   // Get the Zod schema for this entity type
   const schema = getEntitySchemaByType(input.entityType);
 
-  // For create mode, validate full payload against entity schema.
+  // For create mode, validate full payload against entity schema. Merge the
+  // advertiser context into the payload first so the required `advertiserId`
+  // param actually contributes to validation (finding M6) — mirrors
+  // `dv360_create_entity`'s `mergeIdsIntoData` on its execute path. Previously
+  // `advertiserId` was required (superRefine) yet unused by the check.
   if (input.mode === "create") {
-    const parseResult = schema.safeParse(input.data);
+    const dataToValidate = input.advertiserId
+      ? mergeIdsIntoData(input.entityType, input.data, {
+          advertiserId: input.advertiserId,
+        } as Record<string, unknown>)
+      : input.data;
+    const parseResult = schema.safeParse(dataToValidate);
     if (!parseResult.success) {
       for (const zodIssue of parseResult.error.issues) {
         const path = zodIssue.path.join(".");

@@ -4,7 +4,10 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
+import {
+  getSupportedEntityTypesDynamic,
+  getEntitySchemaForOperation,
+} from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import {
@@ -134,20 +137,25 @@ export async function bulkCreateEntitiesLogic(
     };
   }
 
-  // Reuse the symbolic batch validator on the execute path: the dry-run
-  // branch is opt-in, so without this an empty/degenerate item (Zod's
-  // z.record admits {}) would otherwise reach the platform API.
-  const preflight = buildBulkEffectDryRun(input);
-  if (!preflight.wouldSucceed) {
+  // Execute-path guard (finding M4): reject only degenerate empty items (Zod's
+  // z.record admits `{}`) before they reach the platform API. The full
+  // per-entity schema check (finding M5) is applied on the dry-run *preview*
+  // path only — execute deliberately stays as lenient as `dv360_create_entity`
+  // (which does not re-parse on execute), so the DV360 API remains the validator
+  // for non-empty items and partial success is preserved. Gating execute on the
+  // full schema would risk client-side false rejections if the generated schema
+  // is ever stricter than the live API.
+  const emptyItemErrors = collectEmptyItemErrors(input.items as Record<string, unknown>[]);
+  if (emptyItemErrors.length > 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
-      `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
+      `Invalid bulk create payload: ${emptyItemErrors.map((e) => e.message).join("; ")}`
     );
   }
 
   const { dv360Service } = resolveSessionServices(sdkContext);
 
-  // Pre-process all items (merge IDs, extract parent IDs) before parallel execution
+  // Pre-process all items (merge IDs, extract parent IDs) before parallel execution.
   const preparedItems = input.items.map((itemData) => ({
     entityIds: extractParentIds({ advertiserId: input.advertiserId }),
     mergedData: mergeIdsIntoData(
@@ -211,22 +219,95 @@ export async function bulkCreateEntitiesLogic(
 }
 
 /**
- * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
- * admits `{}`) and projects the would-be effect (an N-item create of one
+ * Empty-item guard (finding M4). Zod's `z.record(z.any())` admits `{}`, so an
+ * empty/degenerate item must be caught explicitly. Shared by the execute
+ * preflight (which gates on empty items only) and the per-item dry-run
+ * validator (which additionally applies the full schema).
+ */
+function collectEmptyItemErrors(items: Record<string, unknown>[]): DryRunValidationError[] {
+  const errors: DryRunValidationError[] = [];
+  items.forEach((item, i) => {
+    if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
+      errors.push({
+        code: "EMPTY_ITEM",
+        message: `items[${i}] must be a non-empty entity object`,
+        field: `items.${i}`,
+      });
+    }
+  });
+  return errors;
+}
+
+/**
+ * Validate a single bulk-create item against the per-entity create schema —
+ * the same `getEntitySchemaForOperation(entityType, "create")` schema
+ * `dv360_create_entity` validates against in its own dry-run. The tool
+ * description promises "Each item follows the same schema as dv360_create_entity
+ * data field" (finding M5), so parent IDs are merged in first (mirroring the
+ * execute path's `mergeIdsIntoData`) before the schema is applied. Zod issues
+ * are returned as `items[i]`-scoped `DryRunValidationError`s. Used on the
+ * dry-run *preview* path only — see the execute-path note for why execute stays
+ * empty-item-only.
+ */
+function validateBulkItem(
+  input: BulkCreateEntitiesInput,
+  item: Record<string, unknown>,
+  index: number
+): DryRunValidationError[] {
+  const emptyErrors = collectEmptyItemErrors([item]);
+  if (emptyErrors.length > 0) {
+    // Re-scope the index to this item's real position in the batch.
+    return [
+      {
+        code: "EMPTY_ITEM",
+        message: `items[${index}] must be a non-empty entity object`,
+        field: `items.${index}`,
+      },
+    ];
+  }
+
+  const errors: DryRunValidationError[] = [];
+  const merged = mergeIdsIntoData(input.entityType, item, {
+    advertiserId: input.advertiserId,
+  } as Record<string, unknown>);
+
+  try {
+    getEntitySchemaForOperation(input.entityType, "create").parse(merged);
+  } catch (err: any) {
+    if (err?.issues && Array.isArray(err.issues)) {
+      for (const issue of err.issues) {
+        const path = Array.isArray(issue.path) ? issue.path.join(".") : undefined;
+        errors.push({
+          code: issue.code ?? "ZOD",
+          message: `items[${index}]${path ? "." + path : ""}: ${issue.message ?? String(err)}`,
+          field: path ? `items.${index}.${path}` : `items.${index}`,
+        });
+      }
+    } else {
+      errors.push({
+        code: "ZOD",
+        message: `items[${index}]: ${err?.message ?? String(err)}`,
+        field: `items.${index}`,
+      });
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Symbolic effect dry-run for `bulk_create_entities`. Validates each item
+ * against the per-entity create schema (finding M5 — previously only the
+ * empty-object case was checked, so the "would succeed" verdict did not reflect
+ * the per-entity create schema that `dv360_create_entity` documents and the
+ * DV360 API enforces) and projects the would-be effect (an N-item create of one
  * entity kind). DV360 has no native bulk validate, so both axes are symbolic.
  * Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
-    if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
-      validationErrors.push({
-        code: "EMPTY_ITEM",
-        message: `items[${i}] must be a non-empty entity object`,
-        field: `items.${i}`,
-      });
-    }
+    validationErrors.push(...validateBulkItem(input, item as Record<string, unknown>, i));
   });
 
   const expectedEffect: EffectResult = {
