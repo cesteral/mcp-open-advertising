@@ -22,6 +22,10 @@ import {
 } from "./run-custom-query.tool.js";
 import { validateQueryParams } from "../utils/query-validation.js";
 
+// Hoisted to the fleet-standard module-level const so TOOL_NAME-based static
+// tooling (registry scans, manifest checks) resolves this tool like every other.
+const TOOL_NAME = "dbm_run_custom_query_async";
+
 export function registerRunCustomQueryAsyncTool(
   server: McpServer,
   logger: Logger,
@@ -33,7 +37,7 @@ export function registerRunCustomQueryAsyncTool(
     sessionId,
     invalidParams: (message) => new McpError(JsonRpcErrorCode.InvalidParams, message),
     config: {
-      name: "dbm_run_custom_query_async",
+      name: TOOL_NAME,
       title: "Run Custom Query (Async)",
       description:
         "Execute a custom Bid Manager API query asynchronously. Returns a task handle immediately — " +

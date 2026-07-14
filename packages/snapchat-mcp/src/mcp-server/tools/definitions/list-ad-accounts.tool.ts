@@ -24,7 +24,7 @@ The organization ID scopes which ad accounts are returned.
 Snapchat paginates with an opaque \`cursor\`. When the response's \`pagination.nextCursor\` is
 non-null, call again with \`cursor\` set to it to fetch the next page.`;
 
-export const ListAdvertisersInputSchema = z
+export const ListAdAccountsInputSchema = z
   .object({
     cursor: z
       .string()
@@ -40,7 +40,7 @@ export const ListAdvertisersInputSchema = z
   })
   .describe("Parameters for listing Snapchat advertisers");
 
-export const ListAdvertisersOutputSchema = z
+export const ListAdAccountsOutputSchema = z
   .object({
     advertisers: z.array(z.record(z.any())).describe("List of advertiser accounts"),
     count: z.number().describe("Number of advertisers returned in this page"),
@@ -49,14 +49,14 @@ export const ListAdvertisersOutputSchema = z
   })
   .describe("Advertiser list result");
 
-type ListAdvertisersInput = z.infer<typeof ListAdvertisersInputSchema>;
-type ListAdvertisersOutput = z.infer<typeof ListAdvertisersOutputSchema>;
+type ListAdAccountsInput = z.infer<typeof ListAdAccountsInputSchema>;
+type ListAdAccountsOutput = z.infer<typeof ListAdAccountsOutputSchema>;
 
 export async function listAdAccountsLogic(
-  input: ListAdvertisersInput,
+  input: ListAdAccountsInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<ListAdvertisersOutput> {
+): Promise<ListAdAccountsOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
   const result = await snapchatService.listAdAccounts(
@@ -77,7 +77,7 @@ export async function listAdAccountsLogic(
   };
 }
 
-export function listAdAccountsResponseFormatter(result: ListAdvertisersOutput): McpTextContent[] {
+export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -90,8 +90,8 @@ export const listAdAccountsTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
-  inputSchema: ListAdvertisersInputSchema,
-  outputSchema: ListAdvertisersOutputSchema,
+  inputSchema: ListAdAccountsInputSchema,
+  outputSchema: ListAdAccountsOutputSchema,
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
