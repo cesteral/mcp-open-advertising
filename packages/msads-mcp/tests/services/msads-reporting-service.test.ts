@@ -45,7 +45,8 @@ function textResponse(text: string): Response {
   const bytes = Buffer.from(text, "utf-8");
   return {
     ok: true,
-    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    arrayBuffer: async () =>
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
   } as unknown as Response;
 }
 

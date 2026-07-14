@@ -156,9 +156,7 @@ export class MsAdsReportingService {
     // (headers begin with the ZIP magic "PK"), so detect ZIP framing and inflate
     // the single CSV entry before parsing. Non-ZIP bodies are decoded as UTF-8.
     const buffer = Buffer.from(await response.arrayBuffer());
-    const text = isZipArchive(buffer)
-      ? inflateSingleZipEntry(buffer)
-      : buffer.toString("utf-8");
+    const text = isZipArchive(buffer) ? inflateSingleZipEntry(buffer) : buffer.toString("utf-8");
     const parsed = this.parseCsv(text, maxRows);
     return options.includeRawCsv ? { ...parsed, rawCsv: text } : parsed;
   }
