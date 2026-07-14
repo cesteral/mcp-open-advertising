@@ -61,7 +61,25 @@ describe("dv360_bulk_create_entities governance contract (effect class)", () => 
       sdk
     );
     expect(result.dryRun?.wouldSucceed).toBe(false);
-    expect(result.dryRun?.validationErrors[0]?.code).toBe("EMPTY_ITEM");
+    // The empty item surfaces an explicit EMPTY_ITEM error (finding M5 also adds
+    // per-entity create-schema validation, so incomplete items report Zod issues
+    // too — the empty-object error must still be present and actionable).
+    expect(result.dryRun?.validationErrors.some((e) => e.code === "EMPTY_ITEM")).toBe(true);
+  });
+
+  it("dry_run flags items that violate the per-entity create schema (M5)", async () => {
+    // Stub payloads that are non-empty but miss required create fields must now
+    // be reported as "would FAIL" — the dry-run applies the same per-entity
+    // schema dv360_create_entity documents, so preview matches what the API
+    // would reject.
+    const result = await bulkCreateEntitiesLogic(
+      { ...baseInput, items: [{ displayName: "A" }], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.length).toBeGreaterThan(0);
+    expect(result.dryRun?.validationErrors.every((e) => e.field?.startsWith("items.0"))).toBe(true);
   });
 
   it("execute rejects an empty item before any API call (M4 regression)", async () => {
@@ -71,6 +89,8 @@ describe("dv360_bulk_create_entities governance contract (effect class)", () => 
   });
 
   it("execute returns the batch effect identity + null-kind capability", async () => {
+    // Execute mirrors create_entity: the API validates items (partial success),
+    // so the batch is still dispatched even though the stub payloads are thin.
     const result = await bulkCreateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.bulkCreateEntities).toHaveBeenCalledOnce();
     expect(result.successCount).toBe(2);

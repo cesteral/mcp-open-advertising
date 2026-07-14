@@ -46,6 +46,18 @@ Every management server MUST provide these tool categories:
 
 - `{prefix}_validate_entity` — Validate entity payloads (client-side or server-side)
 
+### Entity duplication
+
+- `{prefix}_duplicate_entity` — Clone an existing entity (get + create under the hood; no native platform "duplicate" API is required). Shipped on **10 of the 11** write servers: dv360, ttd, gads, meta, linkedin, tiktok, pinterest, snapchat, amazon-dsp, msads.
+- **cm360 does not expose `duplicate_entity`.** This is the sole write-platform gap; it is a coverage omission, not an API limitation (the get+create clone pattern the siblings use needs no native support). Documented here so enumeration code does not assume fleet-wide coverage; adding it later is a pure add (new tool → new `definitionHash`, no change to existing tools).
+
+### Write-body validation
+
+The strictness of the `data:` / `items:` payload validation differs by server, by design:
+
+- **dv360** carries a generated **per-entity schema registry** (`getEntitySchemaForOperation`). `create_entity` / `bulk_create_entities` validate each payload against the per-entity **create** schema on the dry-run (symbolic preview) path, and `update_entity` validates the merged post-state against the **update** schema. Execute mirrors the platform: the DV360 API is the final validator, so a bulk batch keeps partial success.
+- **Every other server** accepts write bodies as `z.record(...)` at the tool-input layer and applies **symbolic validation** on the write paths (status-enum / empty-payload guards, added fleet-wide in the create-path and update-path hardening) rather than a full typed per-entity schema. Those platforms have **no equivalent generated per-entity schema source** to validate against, so porting dv360's registry pattern is a per-platform schema-authoring effort, not a mechanical change — tracked as a known limitation rather than a uniform contract guarantee. The platform API remains the authoritative validator on execute.
+
 ### Exceptions
 
 - **dbm-mcp**: Reporting only — provides query tools, not CRUD. No management tools required.
@@ -69,6 +81,7 @@ Four capabilities carry platform-vocabulary names that differ across servers. Co
 - **Account listing** — `list_ad_accounts` (linkedin, meta, pinterest, snapchat) · `list_advertisers` (amazon-dsp, tiktok) · `list_accounts` (gads, msads, sa360) · `list_user_profiles` (cm360)
 - **Performance reporting** — `get_report(_breakdowns)` (amazon-dsp, msads, pinterest, snapchat, tiktok, ttd) · `get_insights(_breakdowns)` (gads, meta, sa360) · `get_analytics(_breakdowns)` (linkedin)
 - **Ad preview** — `get_ad_preview` fleet-wide, except `msads_get_ad_details` (MS Ads exposes ad details rather than a preview endpoint)
+- **Targeting discovery** — `get_targeting_options` (linkedin, meta, msads, pinterest, snapchat, tiktok) · `list_targeting_options` (cm360). CM360's tool is a discovery/list read like its siblings; it follows the DCM/CM360 API's `*targeting*` list vocabulary. The name is a **frozen wire identifier** (renaming it would change the published `definitionHash`), so the variant is documented here rather than renamed.
 - **Bulk entity mutation** — `bulk_update_entities` (dv360, ttd, meta, linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp, msads) · `bulk_mutate` (gads). Google Ads names its batch tool after the platform's `GoogleAdsService.Mutate` verb: `gads_bulk_mutate` is a **superset** that applies heterogeneous create/update/remove operations in a single atomic call, whereas the sibling `bulk_update_entities` tools only batch updates. gads still ships `bulk_create_entities` and `bulk_update_status` alongside it, so the create/update/status coverage is complete under different names.
 
 Each name follows its platform's own API vocabulary, so these are intentional — but they are **not** interchangeable by string, and the [server matrix in README.md](../README.md) is the source of truth for which server exposes which.
