@@ -42,6 +42,10 @@ const amazonDspService = {
   })),
   duplicateEntity: vi.fn(async () => ({ orderId: "ord_copy" })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
+  uploadCreativeAsset: vi.fn(async () => ({
+    uploadUrl: "https://s3.example/u",
+    asset: { assetId: "asset_new" },
+  })),
   client: {
     postMultipart: vi.fn(async (path: string) => {
       if (path.includes("image")) {
@@ -144,10 +148,12 @@ describe("Amazon DSP MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    // 26 business = 18 entity tools + amazon_dsp_search_tools + 7 v1 commitment tools
-    // (list/get-batch/get-singular/create/update + get-campaign-forecast + get-commitment-spend).
+    // 28 business = 18 entity tools + amazon_dsp_get_pacing_status +
+    // amazon_dsp_upload_video + amazon_dsp_search_tools + 7 v1 commitment tools
+    // (list/get-batch/get-singular/create/update + get-campaign-forecast +
+    // get-commitment-spend).
     // +6 conformance when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
-    expect(allTools).toHaveLength(conformanceEnabled ? 33 : 27);
+    expect(allTools).toHaveLength(conformanceEnabled ? 34 : 28);
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

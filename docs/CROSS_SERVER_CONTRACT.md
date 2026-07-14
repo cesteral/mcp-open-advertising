@@ -94,7 +94,7 @@ Each name follows its platform's own API vocabulary, so these are intentional �
 
 ## Media / creative-asset upload coverage
 
-`{prefix}_upload_image` / `{prefix}_upload_video` are **effect-class** convenience tools that create a reusable media/creative asset (they return an asset handle referenced by ads, not a canonical entity). Coverage is **not uniform**, and the gaps are API limitations, not omissions — a platform only gets an upload tool where its API actually accepts one. Enumeration code must not assume fleet-wide coverage.
+`{prefix}_upload_image` / `{prefix}_upload_video` are **effect-class** convenience tools that create a reusable media/creative asset (they return an asset handle referenced by ads, not a canonical entity). Coverage is **not uniform**, and the remaining gaps are API limitations, not omissions — a platform only gets an upload tool where its API actually accepts one. Enumeration code must not assume fleet-wide coverage.
 
 | Server                      | `upload_image`      | `upload_video`           | Notes                                                                                             |
 | --------------------------- | ------------------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
@@ -105,21 +105,21 @@ Each name follows its platform's own API vocabulary, so these are intentional �
 | tiktok-mcp                  | ✅ binary           | ✅ binary                | `/file/image` + `/file/video` upload.                                                             |
 | snapchat-mcp                | ✅ binary           | ✅ binary                | Media create → binary POST → poll `READY`.                                                        |
 | pinterest-mcp               | ❌ (URL-referenced) | ✅ binary                | Image creatives reference URLs directly; only `/v5/media` (`media_type="video"`) takes an upload. |
-| ttd-mcp                     | ❌                  | ❌                       | See below — no binary media-upload endpoint on TTD's public API.                                  |
-| amazon-dsp-mcp              | ❌                  | ❌                       | See below — creative writes are subtype-routed and not currently wired.                           |
+| ttd-mcp                     | ❌                  | ✅ binary                | See below — TTD-hosted video via generate-upload-URL → PUT → create creative.                     |
+| amazon-dsp-mcp              | ❌                  | ✅ binary                | See below — Creative Asset Library upload → register.                                             |
 | cm360 / msads / sa360 / dbm | ❌                  | ❌                       | Not applicable to these servers' scope.                                                           |
 
 ### gads — no binary video upload (YouTube-referenced)
 
 `gads_upload_image` uploads raw bytes (→ `ImageAsset`), but Google Ads has **no binary video upload**: a video asset is a `YouTubeVideoAsset` that _references_ a video already hosted on YouTube. `gads_upload_video` therefore takes a **YouTube video ID** (not a file / not a URL) and creates the `YOUTUBE_VIDEO` asset via `assets:mutate`. Callers must host the video on YouTube first. This differs from DV360 (a separate Google product) which does expose a binary asset-upload API — same company, different API surface, so the two Google servers are intentionally asymmetric here.
 
-### ttd — no media upload (VAST / externally-hosted)
+### ttd — hosted video upload (three-step)
 
-The Trade Desk's public Platform API (REST `/v3` + GraphQL) exposes **no binary media/asset upload endpoint**. TTD creatives reference **externally-hosted assets**: banner creatives point at a hosted `ImageUrl`, and video creatives carry `VastXml` / a hosted VAST URL. There is nothing to "upload" — a video creative is created with `ttd_create_entity` (`entityType: "creative"`, `CreativeType: "video"`, `VastXml`), so no `ttd_upload_video` tool is provided. See the `creative_setup_workflow` prompt for the full flow.
+TTD **can** host video creatives (they need not be third-party VAST-hosted). `ttd_upload_video` runs TTD's documented three-step flow: `POST /v3/creative/generateuploadurlforvideocreative` (presigned URL) → `PUT` the bytes → `POST /v3/creative` (`CreativeType: "Video"`) with the returned upload attributes. It returns the `CreativeId`. A third-party VAST creative is still available via `ttd_create_entity` (`CreativeType: "video"`, `VastXml`) when the video is hosted elsewhere. **Verification note:** the exact JSON field casing of the generate-upload-URL response is not documented in the repo and TTD's Partner Portal reference is auth-walled, so the response is parsed defensively (the presigned URL is the first https-valued field; all other fields are forwarded as the create call's required upload attributes).
 
-### amazon-dsp — subtype-routed creatives, not wired
+### amazon-dsp — Creative Asset Library upload (three-step)
 
-Amazon DSP has no plain `POST /dsp/creatives`; creative writes are **subtype-routed** (`/dsp/creatives/image`, `/video`, `/thirdParty`, `/rec`) each with their own vendor media type, and a video creative references an asset from the account's media library. Per `amazon-dsp-api-contract.ts`, creative create/update is **not currently implemented** in this server (the `createPath`/`updatePath` are read-side aggregation only). A `amazon_dsp_upload_video` tool therefore requires implementing subtype-routed creative creation + the media-library asset flow first; it is tracked as a coverage gap rather than shimmed against a non-existent simple endpoint.
+A DSP video creative references an `assetId` from the account's Creative Asset Library. `amazon_dsp_upload_video` runs Amazon's documented three-step flow: `POST /assets/upload {fileName}` (presigned URL, 15-min TTL) → `PUT` the bytes → `POST /assets/register {url, name, assetType: "VIDEO", …}` (returns the `assetId`). Paths/bodies mirror the official `python-amazon-ad-api` client; the DSP program context (`programName: "AMAZON_DSP"`) is set on register. **Verification note:** the exact `/assets/upload` response field holding the upload URL is parsed defensively for the same auth-walled-docs reason.
 
 ## Required Tool Structure
 

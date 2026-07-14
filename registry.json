@@ -172,7 +172,8 @@
         "ttd_update_report_template",
         "ttd_search_tools",
         "ttd_duplicate_entity",
-        "ttd_get_pacing_status"
+        "ttd_get_pacing_status",
+        "ttd_upload_video"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -746,7 +747,8 @@
         "amazon_dsp_get_commitments",
         "amazon_dsp_list_commitments",
         "amazon_dsp_update_commitment",
-        "amazon_dsp_get_pacing_status"
+        "amazon_dsp_get_pacing_status",
+        "amazon_dsp_upload_video"
       ],
       "resources": [
         "entity-hierarchy://amazonDsp/all",
