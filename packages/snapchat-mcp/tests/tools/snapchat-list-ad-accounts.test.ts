@@ -20,7 +20,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import { resolveSessionServicesFromStore } from "@cesteral/shared";
 const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
-import { listAdAccountsLogic } from "../../src/mcp-server/tools/definitions/list-advertisers.tool.js";
+import { listAdAccountsLogic } from "../../src/mcp-server/tools/definitions/list-ad-accounts.tool.js";
 
 const mockListAdAccounts = vi.fn();
 
