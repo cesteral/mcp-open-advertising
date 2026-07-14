@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { inflateRawSync } from "node:zlib";
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
@@ -150,7 +151,14 @@ export class MsAdsReportingService {
       );
     }
 
-    const text = await response.text();
+    // Microsoft Advertising delivers the report body as a ZIP archive, not raw
+    // CSV. Reading it with `response.text()` yields the archive's raw bytes
+    // (headers begin with the ZIP magic "PK"), so detect ZIP framing and inflate
+    // the single CSV entry before parsing. Non-ZIP bodies are decoded as UTF-8.
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const text = isZipArchive(buffer)
+      ? inflateSingleZipEntry(buffer)
+      : buffer.toString("utf-8");
     const parsed = this.parseCsv(text, maxRows);
     return options.includeRawCsv ? { ...parsed, rawCsv: text } : parsed;
   }
@@ -277,10 +285,12 @@ export class MsAdsReportingService {
     text: string,
     maxRows?: number
   ): { headers: string[]; rows: string[][]; totalRows: number } {
-    // Microsoft Ads CSV reports are prefixed with @-metadata and suffixed with
-    // ©-footer rows. Strip both before handing off to the shared parser so it
-    // never interprets them as data rows.
+    // Microsoft Ads CSV reports carry metadata rows around the tabular data:
+    // `@`-prefixed lines and a `©` footer, plus quoted key/value lines
+    // ("Report Name: ...", etc.) ahead of the column header. Strip all of them
+    // before handing off to the shared parser so none are read as data rows.
     const stripped = text.replace(/^\uFEFF/, "");
+    let headerSeen = false;
     const filtered = stripped
       .split(/\r?\n/)
       .filter((line) => {
@@ -288,6 +298,11 @@ export class MsAdsReportingService {
         if (trimmed.length === 0) return false;
         if (trimmed.startsWith("@") || trimmed.startsWith('"@')) return false;
         if (trimmed.startsWith("©") || trimmed.startsWith('"©')) return false;
+        // Quoted metadata rows ("Report Name: ...", "Report Time: ...",
+        // "Time Zone: ...") precede the header. Only strip them before the
+        // header is seen so a data value containing ": " is never dropped.
+        if (!headerSeen && /^"[A-Za-z ]+:\s/.test(trimmed)) return false;
+        headerSeen = true;
         return true;
       })
       .join("\n");
@@ -301,4 +316,82 @@ export class MsAdsReportingService {
     const limitedRows = maxRows ? rows.slice(0, maxRows) : rows;
     return { headers, rows: limitedRows, totalRows };
   }
+}
+
+// ── ZIP handling ────────────────────────────────────────────────────────────
+// Microsoft Advertising returns the report body as a ZIP archive containing a
+// single CSV. Node has no built-in ZIP reader, so we parse the archive directly
+// and inflate the entry with `node:zlib` — avoiding a runtime dependency.
+
+const ZIP_LOCAL_FILE_SIG = 0x04034b50;
+const ZIP_CENTRAL_DIR_SIG = 0x02014b50;
+const ZIP_EOCD_SIG = 0x06054b50;
+
+/** Detect a ZIP archive by its local-file-header magic bytes ("PK\x03\x04"). */
+function isZipArchive(buffer: Buffer): boolean {
+  return buffer.length >= 4 && buffer.readUInt32LE(0) === ZIP_LOCAL_FILE_SIG;
+}
+
+/**
+ * Extract and decode the first entry of a single-file ZIP archive.
+ *
+ * Reads the End-Of-Central-Directory record and the first central-directory
+ * header (which always carry the correct compressed size and local-header
+ * offset, even when the local header defers sizes to a data descriptor), then
+ * inflates the stored/deflated bytes and decodes them as UTF-8.
+ */
+function inflateSingleZipEntry(buffer: Buffer): string {
+  // Locate the End-Of-Central-Directory record by scanning backward for its
+  // signature (the record is 22 bytes when there is no archive comment).
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= 0; i--) {
+    if (buffer.readUInt32LE(i) === ZIP_EOCD_SIG) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd === -1) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Malformed report archive: ZIP end-of-central-directory record not found"
+    );
+  }
+
+  const centralDirOffset = buffer.readUInt32LE(eocd + 16);
+  if (buffer.readUInt32LE(centralDirOffset) !== ZIP_CENTRAL_DIR_SIG) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Malformed report archive: ZIP central-directory header not found"
+    );
+  }
+
+  const method = buffer.readUInt16LE(centralDirOffset + 10);
+  const compressedSize = buffer.readUInt32LE(centralDirOffset + 20);
+  const localHeaderOffset = buffer.readUInt32LE(centralDirOffset + 42);
+
+  if (buffer.readUInt32LE(localHeaderOffset) !== ZIP_LOCAL_FILE_SIG) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Malformed report archive: ZIP local-file header not found"
+    );
+  }
+
+  const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+  const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+  const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+  const compressed = buffer.subarray(dataStart, dataStart + compressedSize);
+
+  let decoded: Buffer;
+  if (method === 0) {
+    decoded = Buffer.from(compressed); // stored, no compression
+  } else if (method === 8) {
+    decoded = inflateRawSync(compressed); // deflate
+  } else {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Unsupported ZIP compression method in report archive: ${method}`
+    );
+  }
+
+  return decoded.toString("utf-8");
 }
