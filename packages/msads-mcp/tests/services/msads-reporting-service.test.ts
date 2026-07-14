@@ -1,3 +1,4 @@
+import { deflateRawSync } from "node:zlib";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   MsAdsReportingService,
@@ -38,6 +39,62 @@ const sampleConfig: ReportConfig = {
   columns: ["CampaignName", "Impressions", "Clicks"],
   dateRange: { startDate: "2026-01-01", endDate: "2026-01-31" },
 };
+
+/** Build a Response-like whose body is `text` encoded as UTF-8 bytes. */
+function textResponse(text: string): Response {
+  const bytes = Buffer.from(text, "utf-8");
+  return {
+    ok: true,
+    arrayBuffer: async () =>
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  } as unknown as Response;
+}
+
+/** Build a Response-like whose body is a valid single-entry ZIP of `content`. */
+function zipResponse(content: string, name = "report.csv"): Response {
+  const data = deflateRawSync(Buffer.from(content, "utf-8"));
+  const nameBuf = Buffer.from(name, "utf-8");
+  const method = 8;
+  const uncompressed = Buffer.byteLength(content, "utf-8");
+
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(0, 6);
+  local.writeUInt16LE(method, 8);
+  local.writeUInt32LE(0, 14); // crc32 (not verified by the reader)
+  local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(uncompressed, 22);
+  local.writeUInt16LE(nameBuf.length, 26);
+  local.writeUInt16LE(0, 28);
+  const localHeader = Buffer.concat([local, nameBuf, data]);
+
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(0, 8);
+  central.writeUInt16LE(method, 10);
+  central.writeUInt32LE(0, 16); // crc32
+  central.writeUInt32LE(data.length, 20);
+  central.writeUInt32LE(uncompressed, 24);
+  central.writeUInt16LE(nameBuf.length, 28);
+  central.writeUInt32LE(0, 42); // local header offset
+  const centralHeader = Buffer.concat([central, nameBuf]);
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(centralHeader.length, 12);
+  eocd.writeUInt32LE(localHeader.length, 16);
+
+  const zip = Buffer.concat([localHeader, centralHeader, eocd]);
+  return {
+    ok: true,
+    arrayBuffer: async () => zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength),
+  } as unknown as Response;
+}
 
 describe("MsAdsReportingService", () => {
   let service: MsAdsReportingService;
@@ -153,10 +210,7 @@ describe("MsAdsReportingService", () => {
         "Campaign B,2000,100",
       ].join("\n");
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => csvContent,
-      } as Response);
+      mockFetch.mockResolvedValueOnce(textResponse(csvContent));
 
       const result = await service.downloadReport("https://download.example.com/report.csv");
       expect(result.headers).toEqual(["CampaignName", "Impressions", "Clicks"]);
@@ -167,10 +221,7 @@ describe("MsAdsReportingService", () => {
     it("respects maxRows limit", async () => {
       const csvContent = ["Name,Value", "A,1", "B,2", "C,3"].join("\n");
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => csvContent,
-      } as Response);
+      mockFetch.mockResolvedValueOnce(textResponse(csvContent));
 
       const result = await service.downloadReport("https://example.com/report.csv", 2);
       expect(result.rows).toHaveLength(2);
@@ -185,15 +236,61 @@ describe("MsAdsReportingService", () => {
         "© Microsoft Corporation",
       ].join("\n");
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => csvContent,
-      } as Response);
+      mockFetch.mockResolvedValueOnce(textResponse(csvContent));
 
       const result = await service.downloadReport("https://example.com/report.csv");
       expect(result.headers).toEqual(["CampaignName", "Impressions"]);
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0]).toEqual(["Test", "500"]);
+    });
+
+    it("decompresses a ZIP report body before parsing", async () => {
+      const csvContent = [
+        '"Report Name: Campaign Performance Report"',
+        '"Report Time: 1/1/2026 12:00:00 AM - 1/31/2026 11:59:59 PM"',
+        '"Time Zone: (GMT) Coordinated Universal Time"',
+        "CampaignName,Impressions,Clicks",
+        "Campaign A,1000,50",
+        "Campaign B,2000,100",
+        '"©2026 Microsoft Corporation. All rights reserved."',
+      ].join("\n");
+
+      mockFetch.mockResolvedValueOnce(zipResponse(csvContent));
+
+      const result = await service.downloadReport("https://download.example.com/report.csv");
+      // Headers must be the real column row, not ZIP magic bytes or metadata.
+      expect(result.headers).toEqual(["CampaignName", "Impressions", "Clicks"]);
+      expect(result.headers[0]).not.toMatch(/^PK/);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toEqual(["Campaign A", "1000", "50"]);
+    });
+
+    it("strips quoted key/value metadata rows before the header (plain CSV)", async () => {
+      const csvContent = [
+        '"Report Name: Campaign Performance Report"',
+        '"Report Time: 1/1/2026 - 1/31/2026"',
+        '"Time Zone: (GMT) Coordinated Universal Time"',
+        "CampaignName,Impressions",
+        "Winter Sale,500",
+      ].join("\n");
+
+      mockFetch.mockResolvedValueOnce(textResponse(csvContent));
+
+      const result = await service.downloadReport("https://example.com/report.csv");
+      expect(result.headers).toEqual(["CampaignName", "Impressions"]);
+      expect(result.rows).toEqual([["Winter Sale", "500"]]);
+    });
+
+    it("keeps data values that contain ': ' after the header row", async () => {
+      // A metadata-looking value ("Q1: Launch") appears in the DATA, past the
+      // header — it must be preserved, not stripped as a metadata row.
+      const csvContent = ["CampaignName,Impressions", '"Q1: Launch",750'].join("\n");
+
+      mockFetch.mockResolvedValueOnce(textResponse(csvContent));
+
+      const result = await service.downloadReport("https://example.com/report.csv");
+      expect(result.headers).toEqual(["CampaignName", "Impressions"]);
+      expect(result.rows).toEqual([["Q1: Launch", "750"]]);
     });
 
     it("throws on download failure", async () => {
@@ -223,10 +320,7 @@ describe("MsAdsReportingService", () => {
         });
 
       // Download
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => "Col1,Col2\nA,B",
-      } as Response);
+      mockFetch.mockResolvedValueOnce(textResponse("Col1,Col2\nA,B"));
 
       const result = await service.getReport(sampleConfig);
       expect(result.reportRequestId).toBe("req-full");
