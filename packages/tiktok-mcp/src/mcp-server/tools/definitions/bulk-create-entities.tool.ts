@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
@@ -111,6 +112,17 @@ export async function bulkCreateEntitiesLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Reuse the symbolic batch validator on the execute path: the dry-run
+  // branch is opt-in, so without this an empty/degenerate item (Zod's
+  // z.record admits {}) would otherwise reach the platform API.
+  const preflight = buildBulkEffectDryRun(input);
+  if (!preflight.wouldSucceed) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);

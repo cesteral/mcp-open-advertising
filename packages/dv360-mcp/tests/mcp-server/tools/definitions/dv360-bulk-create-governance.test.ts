@@ -64,6 +64,12 @@ describe("dv360_bulk_create_entities governance contract (effect class)", () => 
     expect(result.dryRun?.validationErrors[0]?.code).toBe("EMPTY_ITEM");
   });
 
+  it("execute rejects an empty item before any API call (M4 regression)", async () => {
+    await expect(
+      bulkCreateEntitiesLogic({ ...baseInput, items: [{ name: "A" }, {}] } as any, ctx, sdk)
+    ).rejects.toThrow(/Invalid bulk create payload/);
+  });
+
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await bulkCreateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.bulkCreateEntities).toHaveBeenCalledOnce();
