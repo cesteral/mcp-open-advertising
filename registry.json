@@ -234,7 +234,8 @@
         "gads_get_ad_preview",
         "gads_get_pacing_status",
         "gads_duplicate_entity",
-        "gads_upload_image"
+        "gads_upload_image",
+        "gads_upload_video"
       ],
       "resources": [
         "entity-hierarchy://gads",

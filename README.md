@@ -86,7 +86,7 @@ Intelligence layers governance and orchestration on top:
 
 | Server                                    | Platform                          | Tools | Auth                            |
 | ----------------------------------------- | --------------------------------- | ----- | ------------------------------- |
-| [gads-mcp](packages/gads-mcp)             | Google Ads REST API v23           | 17    | OAuth2 refresh token            |
+| [gads-mcp](packages/gads-mcp)             | Google Ads REST API v23           | 18    | OAuth2 refresh token            |
 | [meta-mcp](packages/meta-mcp)             | Meta Marketing API v25.0          | 27    | Bearer token                    |
 | [dv360-mcp](packages/dv360-mcp)           | DV360 API v4                      | 26    | Google OAuth2 / service account |
 | [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 44    | User token (TTD-Auth header)    |

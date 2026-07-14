@@ -1,6 +1,6 @@
 # Cross-Server Contract
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-07-14
 
 Standards that all MCP servers in this repository should follow for consistent AI agent orchestration.
 
@@ -85,6 +85,35 @@ Four capabilities carry platform-vocabulary names that differ across servers. Co
 - **Bulk entity mutation** — `bulk_update_entities` (dv360, ttd, meta, linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp, msads) · `bulk_mutate` (gads). Google Ads names its batch tool after the platform's `GoogleAdsService.Mutate` verb: `gads_bulk_mutate` is a **superset** that applies heterogeneous create/update/remove operations in a single atomic call, whereas the sibling `bulk_update_entities` tools only batch updates. gads still ships `bulk_create_entities` and `bulk_update_status` alongside it, so the create/update/status coverage is complete under different names.
 
 Each name follows its platform's own API vocabulary, so these are intentional — but they are **not** interchangeable by string, and the [server matrix in README.md](../README.md) is the source of truth for which server exposes which.
+
+## Media / creative-asset upload coverage
+
+`{prefix}_upload_image` / `{prefix}_upload_video` are **effect-class** convenience tools that create a reusable media/creative asset (they return an asset handle referenced by ads, not a canonical entity). Coverage is **not uniform**, and the gaps are API limitations, not omissions — a platform only gets an upload tool where its API actually accepts one. Enumeration code must not assume fleet-wide coverage.
+
+| Server                      | `upload_image`      | `upload_video`           | Notes                                                                                             |
+| --------------------------- | ------------------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| dv360-mcp                   | ✅ binary           | ✅ binary                | Uploads bytes via the DV360 asset API (`advertisers/{id}/assets`).                                |
+| gads-mcp                    | ✅ binary           | ⚠️ **YouTube reference** | See below — Google Ads has **no binary video upload**.                                            |
+| meta-mcp                    | ✅ binary           | ✅ binary                | Ad-account media library.                                                                         |
+| linkedin-mcp                | ✅ binary           | ✅ binary                | Vector/registerUpload flow.                                                                       |
+| tiktok-mcp                  | ✅ binary           | ✅ binary                | `/file/image` + `/file/video` upload.                                                             |
+| snapchat-mcp                | ✅ binary           | ✅ binary                | Media create → binary POST → poll `READY`.                                                        |
+| pinterest-mcp               | ❌ (URL-referenced) | ✅ binary                | Image creatives reference URLs directly; only `/v5/media` (`media_type="video"`) takes an upload. |
+| ttd-mcp                     | ❌                  | ❌                       | See below — no binary media-upload endpoint on TTD's public API.                                  |
+| amazon-dsp-mcp              | ❌                  | ❌                       | See below — creative writes are subtype-routed and not currently wired.                           |
+| cm360 / msads / sa360 / dbm | ❌                  | ❌                       | Not applicable to these servers' scope.                                                           |
+
+### gads — no binary video upload (YouTube-referenced)
+
+`gads_upload_image` uploads raw bytes (→ `ImageAsset`), but Google Ads has **no binary video upload**: a video asset is a `YouTubeVideoAsset` that _references_ a video already hosted on YouTube. `gads_upload_video` therefore takes a **YouTube video ID** (not a file / not a URL) and creates the `YOUTUBE_VIDEO` asset via `assets:mutate`. Callers must host the video on YouTube first. This differs from DV360 (a separate Google product) which does expose a binary asset-upload API — same company, different API surface, so the two Google servers are intentionally asymmetric here.
+
+### ttd — no media upload (VAST / externally-hosted)
+
+The Trade Desk's public Platform API (REST `/v3` + GraphQL) exposes **no binary media/asset upload endpoint**. TTD creatives reference **externally-hosted assets**: banner creatives point at a hosted `ImageUrl`, and video creatives carry `VastXml` / a hosted VAST URL. There is nothing to "upload" — a video creative is created with `ttd_create_entity` (`entityType: "creative"`, `CreativeType: "video"`, `VastXml`), so no `ttd_upload_video` tool is provided. See the `creative_setup_workflow` prompt for the full flow.
+
+### amazon-dsp — subtype-routed creatives, not wired
+
+Amazon DSP has no plain `POST /dsp/creatives`; creative writes are **subtype-routed** (`/dsp/creatives/image`, `/video`, `/thirdParty`, `/rec`) each with their own vendor media type, and a video creative references an asset from the account's media library. Per `amazon-dsp-api-contract.ts`, creative create/update is **not currently implemented** in this server (the `createPath`/`updatePath` are read-side aggregation only). A `amazon_dsp_upload_video` tool therefore requires implementing subtype-routed creative creation + the media-library asset flow first; it is tracked as a coverage gap rather than shimmed against a non-existent simple endpoint.
 
 ## Required Tool Structure
 
