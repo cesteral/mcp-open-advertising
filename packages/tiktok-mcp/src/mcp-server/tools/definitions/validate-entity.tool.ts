@@ -204,6 +204,25 @@ export async function validateEntityLogic(
   if (mode === "create") {
     issues.push(...validateRequiredFieldsStructured(data, requiredRules));
 
+    // TikTok create endpoints are advertiser-scoped — `advertiser_id` is sent at
+    // execute time. Surface it here so the recommended `advertiserId` param
+    // contributes to validation instead of being silently ignored (finding M6).
+    const advertiserId = input.advertiserId;
+    const dataAdvertiserId = (data as Record<string, unknown>).advertiser_id;
+    const advertiserScoped =
+      (typeof advertiserId === "string" && advertiserId.trim().length > 0) ||
+      (typeof dataAdvertiserId === "string" && dataAdvertiserId.trim().length > 0);
+    if (!advertiserScoped) {
+      issues.push({
+        field: "advertiserId",
+        code: "missing",
+        message:
+          "advertiser_id is required to create a TikTok entity — pass advertiserId or include advertiser_id in data",
+        hint: "TikTok create endpoints are advertiser-scoped",
+        severity: "warning",
+      });
+    }
+
     if (entityType === "ad") {
       if (!Array.isArray(data.creatives) || data.creatives.length === 0) {
         issues.push({
