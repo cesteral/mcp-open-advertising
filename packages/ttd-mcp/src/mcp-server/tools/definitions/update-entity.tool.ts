@@ -5,9 +5,15 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
-import { runTtdUpdateDryRun, resolveTtdDispatchedCapability } from "../utils/dry-run.js";
+import {
+  runTtdUpdateDryRun,
+  resolveTtdDispatchedCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
 import { captureTtdSnapshot, snapshotFromTtdEntity } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -115,6 +121,23 @@ export async function updateEntityLogic(
   const before = await captureTtdSnapshot(ttdService, input.entityType, input.entityId, context);
 
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
+
+  // Fail fast on an empty or invalid update payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding M3) so
+  // a payload the tool reports "would FAIL" under dry-run can't execute for real.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update a Trade Desk entity."
+    );
+  }
+  const updateValidationErrors = symbolicValidate(data);
+  if (updateValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
+    );
+  }
 
   const entity = await ttdService.updateEntity(
     input.entityType as TtdEntityType,

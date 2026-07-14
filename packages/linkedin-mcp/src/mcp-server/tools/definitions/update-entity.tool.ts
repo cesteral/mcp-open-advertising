@@ -4,9 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import { runLinkedInUpdateDryRun, resolveLinkedInDispatchedCapability } from "../utils/dry-run.js";
+import {
+  runLinkedInUpdateDryRun,
+  resolveLinkedInDispatchedCapability,
+  symbolicValidate,
+} from "../utils/dry-run.js";
 import { captureLinkedInSnapshot, snapshotFromLinkedInEntity } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -95,6 +101,23 @@ export async function updateEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty or invalid update payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding M3) so
+  // a payload the tool reports "would FAIL" under dry-run can't execute for real.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update a LinkedIn entity."
+    );
+  }
+  const updateValidationErrors = symbolicValidate(input.data);
+  if (updateValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   // R3-U3: capture pre-state before mutating. Best-effort — out-of-scope

@@ -8,12 +8,15 @@ import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-map
 import {
   runAmazonDspUpdateDryRun,
   resolveAmazonDspDispatchedCapability,
+  symbolicValidate,
 } from "../utils/dry-run.js";
 import {
   captureAmazonDspSnapshot,
   snapshotFromAmazonDspEntity,
 } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -103,6 +106,23 @@ export async function updateEntityLogic(
   // Fail fast on a mismatched account — but only on the real-execution path, so a
   // dry-run preview with a different id is allowed (matches the other write tools).
   assertAccountScope(input.profileId, boundProfileId, "profileId");
+
+  // Fail fast on an empty or invalid update payload before hitting the API,
+  // applying the same symbolic validation the dry-run path uses (finding M3) so
+  // a payload the tool reports "would FAIL" under dry-run can't execute for real.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update an Amazon DSP entity."
+    );
+  }
+  const updateValidationErrors = symbolicValidate(input.data);
+  if (updateValidationErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
+    );
+  }
 
   // R2-U4: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined.

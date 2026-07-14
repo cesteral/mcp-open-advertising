@@ -8,6 +8,8 @@ import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import { runGAdsUpdateDryRun, resolveGAdsDispatchedCapability } from "../utils/dry-run.js";
 import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -108,6 +110,18 @@ export async function updateEntityLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  // Fail fast on an empty update payload before hitting the API (finding M3),
+  // mirroring create_entity. Google Ads validates field-level payloads
+  // server-side via the mutate call (native validateOnly), so no extra
+  // client-side symbolic pass is added — only the empty-payload guard, which
+  // the API would otherwise reject opaquely.
+  if (Object.keys(input.data).length === 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "`data` must contain at least one field to update a Google Ads entity."
+    );
   }
 
   // R2-U3: capture pre-state before mutating. Best-effort — out-of-scope
