@@ -37,3 +37,41 @@ describe("ttd_validate_entity nextAction", () => {
     expect(result.nextAction).toMatch(/ttd-field-rules:\/\/campaign/);
   });
 });
+
+describe("ttd_validate_entity update-target identification (M6)", () => {
+  const updatePayload = { Budget: { Amount: 100, CurrencyCode: "USD" } };
+
+  it("warns when an update identifies no target (no entityId, no idField in data)", async () => {
+    const result = await validateEntityLogic(
+      { entityType: "campaign", mode: "update", data: updatePayload },
+      { requestId: "test" }
+    );
+
+    const entityIdIssue = result.issues.find((i) => i.field === "entityId");
+    expect(entityIdIssue).toBeDefined();
+    expect(entityIdIssue?.severity).toBe("warning");
+    expect(entityIdIssue?.message).toMatch(/CampaignId/);
+    // Warning only — a real field is present, so the payload itself is valid.
+    expect(result.valid).toBe(true);
+  });
+
+  it("accepts the target via the entityId param", async () => {
+    const result = await validateEntityLogic(
+      { entityType: "campaign", mode: "update", entityId: "camp123", data: updatePayload },
+      { requestId: "test" }
+    );
+    expect(result.issues.find((i) => i.field === "entityId")).toBeUndefined();
+  });
+
+  it("accepts the target via the entity's own idField in data", async () => {
+    const result = await validateEntityLogic(
+      {
+        entityType: "campaign",
+        mode: "update",
+        data: { ...updatePayload, CampaignId: "camp123" },
+      },
+      { requestId: "test" }
+    );
+    expect(result.issues.find((i) => i.field === "entityId")).toBeUndefined();
+  });
+});

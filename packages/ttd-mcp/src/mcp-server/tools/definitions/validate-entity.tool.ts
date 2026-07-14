@@ -10,7 +10,7 @@
  */
 
 import { z } from "zod";
-import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import { getEntityTypeEnum, getEntityConfig, type TtdEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   type ValidationIssue,
@@ -165,6 +165,27 @@ export async function validateEntityLogic(
   }
 
   if (mode === "update") {
+    // A TTD update must identify its target entity — via the recommended
+    // `entityId` param or the entity's own id field in `data` (e.g. `CampaignId`
+    // for a campaign). Surface it so `entityId` contributes to validation
+    // instead of being silently ignored (finding M6). Uses the entity's precise
+    // `idField` so a merged parent id (e.g. `AdvertiserId` on a campaign update)
+    // is not mistaken for the target.
+    const idField = getEntityConfig(entityType as TtdEntityType).idField;
+    const ownIdValue = data[idField];
+    const targetIdentified =
+      (typeof input.entityId === "string" && input.entityId.trim().length > 0) ||
+      (typeof ownIdValue === "string" && ownIdValue.trim().length > 0);
+    if (!targetIdentified) {
+      issues.push({
+        field: "entityId",
+        code: "missing",
+        message: `An update must identify its target — pass entityId or include ${idField} in data`,
+        hint: `TTD updates the entity named by ${idField}`,
+        severity: "warning",
+      });
+    }
+
     if (Object.keys(data).length === 0) {
       issues.push({
         field: "data",
