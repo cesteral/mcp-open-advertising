@@ -65,6 +65,7 @@ Fetch these resources for detailed schema information:
 ### Insights
 - \`sa360_get_insights\` — Performance insights with preset or custom date ranges
 - \`sa360_get_insights_breakdowns\` — Metrics with segment breakdowns
+- \`sa360_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Async Reporting (v2 API)
 - \`sa360_submit_report\` — Submit async report request (returns report ID)

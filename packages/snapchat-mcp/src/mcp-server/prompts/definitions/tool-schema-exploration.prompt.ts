@@ -73,6 +73,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`snapchat_get_audience_estimate\` — Audience size estimation
 - \`snapchat_get_ad_preview\` — Ad preview for video/image ads
+- \`snapchat_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
 - \`snapchat_validate_entity\` — Client-side entity validation

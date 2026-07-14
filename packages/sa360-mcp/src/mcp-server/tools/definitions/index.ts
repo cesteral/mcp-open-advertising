@@ -4,19 +4,21 @@
 /**
  * Tool definitions barrel export
  *
- * 16 tools total:
+ * 17 tools total:
  *   9 read:  sa360 search, list accounts, get entity, list entities, get insights,
  *            get insights breakdowns, list custom columns, search fields,
  *            list report columns (discovery)
  *   3 async reporting: submit report, check report status, download report (v2 API)
  *   2 write: insert conversions, update conversions (v2 API)
  *   1 validation: validate conversion
+ *   1 pacing: get pacing status (client-side, no API call)
  *   1 audit: get change history
  */
 
 export { sa360SearchTool } from "./gaql-search.tool.js";
 export { listAccountsTool } from "./list-accounts.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getInsightsTool } from "./get-insights.tool.js";
 export { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
@@ -34,6 +36,7 @@ export { getChangeHistoryTool } from "./get-change-history.tool.js";
 import { sa360SearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getInsightsTool } from "./get-insights.tool.js";
 import { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
@@ -54,6 +57,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   sa360SearchTool,
   listAccountsTool,
   getEntityTool,
+  getPacingStatusTool,
   listEntitiesTool,
   getInsightsTool,
   getInsightsBreakdownsTool,

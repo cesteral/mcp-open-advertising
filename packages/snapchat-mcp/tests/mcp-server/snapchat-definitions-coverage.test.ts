@@ -111,7 +111,7 @@ describe("Snapchat MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 30 : 24); // 23 business + 1 dynamic search_tools + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 31 : 25); // 24 business + 1 dynamic search_tools + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(10);
     expect(promptRegistry.size).toBe(10);

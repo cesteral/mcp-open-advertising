@@ -11,7 +11,7 @@
  * no TypeScript SDK and is gated behind a User-Agent check. We expose
  * Platform API operations directly via REST + GraphQL instead.
  *
- * 43 tools total:
+ * 44 tools total:
  *   1  context: get context (cold-start partner discovery)
  *   5  core CRUD: list, get, create, update, delete
  *   4  reporting (REST async): get report (blocking), submit, check status, download
@@ -21,6 +21,7 @@
  *   2  advanced: graphql query, validate entity
  *   4  GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1  preview: get ad preview
+ *   1  pacing: get pacing status (client-side, no API call)
  *   10 report schedule management: create, update, list, get, delete, list templates,
  *      create template schedule, cancel execution, rerun schedule, get executions
  *   2  GQL entity reports: execute, get types
@@ -32,6 +33,7 @@
 export { getContextTool } from "./get-context.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
@@ -76,6 +78,7 @@ export { manageSeedTool } from "./manage-seed.tool.js";
 import { getContextTool } from "./get-context.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
@@ -128,6 +131,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD (REST) ──
   listEntitiesTool,
   getEntityTool,
+  getPacingStatusTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,

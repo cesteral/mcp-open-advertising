@@ -52,7 +52,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "msads_search_targeting",
       "msads_get_targeting_options",
     ],
-    specialized: ["msads_get_ad_details", "msads_import_from_google"],
+    specialized: ["msads_get_ad_details", "msads_import_from_google", "msads_get_pacing_status"],
     validation: ["msads_validate_entity"],
     discovery: ["msads_search_tools"],
   },

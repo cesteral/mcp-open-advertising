@@ -44,7 +44,11 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "amazon_dsp_adjust_bids",
     ],
     targeting: ["amazon_dsp_search_targeting"],
-    specialized: ["amazon_dsp_duplicate_entity", "amazon_dsp_get_ad_preview"],
+    specialized: [
+      "amazon_dsp_duplicate_entity",
+      "amazon_dsp_get_ad_preview",
+      "amazon_dsp_get_pacing_status",
+    ],
     validation: ["amazon_dsp_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],

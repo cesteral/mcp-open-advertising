@@ -44,6 +44,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "linkedin_duplicate_entity",
       "linkedin_get_delivery_forecast",
       "linkedin_get_ad_preview",
+      "linkedin_get_pacing_status",
     ],
     validation: ["linkedin_validate_entity"],
   },

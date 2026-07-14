@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 23 tools total:
+ * 24 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -13,10 +13,12 @@
  *   2 targeting: search targeting, get targeting options
  *   5 specialized: duplicate entity, get audience estimate, get ad preview, upload image, upload video
  *   1 validation: validate entity (client-side)
+ *   1 pacing: get pacing status (client-side, no API call)
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
@@ -41,6 +43,7 @@ export { uploadVideoTool } from "./upload-video.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
@@ -72,6 +75,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
   listEntitiesTool,
   getEntityTool,
+  getPacingStatusTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,

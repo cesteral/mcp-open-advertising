@@ -75,6 +75,7 @@ Fetch these resources for detailed schema information:
 - \`amazon_dsp_duplicate_entity\` — Copy campaigns, ad groups, ads
 - \`amazon_dsp_get_audience_estimate\` — Audience size estimation
 - \`amazon_dsp_get_ad_preview\` — Ad preview for video/image ads
+- \`amazon_dsp_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
 - \`amazon_dsp_validate_entity\` — Client-side entity validation
