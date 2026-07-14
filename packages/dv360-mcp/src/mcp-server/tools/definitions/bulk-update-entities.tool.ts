@@ -150,7 +150,7 @@ export async function bulkUpdateEntitiesLogic(
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
-    summary: "Applying field updates across multiple entities.",
+    summary: input.reason ?? "Applying field updates across multiple entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
     sdkContext,
@@ -232,6 +232,9 @@ export async function bulkUpdateEntitiesLogic(
       succeeded: successCount,
       failed: failureCount,
       partial_success: successCount > 0 && failureCount > 0,
+      // Record the operator-supplied audit reason into the governed effect
+      // summary (finding M1) so it survives into the tool response / audit log.
+      ...(input.reason ? { reason: input.reason } : {}),
     },
   };
 

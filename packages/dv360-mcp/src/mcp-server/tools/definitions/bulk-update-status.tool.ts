@@ -307,6 +307,9 @@ export async function bulkUpdateStatusLogic(
       failed: failed.length,
       partial_success: successful.length > 0 && failed.length > 0,
       target_status: input.status,
+      // Record the operator-supplied audit reason into the governed effect
+      // summary (finding M1) so it survives into the tool response / audit log.
+      ...(input.reason ? { reason: input.reason } : {}),
     },
   };
 

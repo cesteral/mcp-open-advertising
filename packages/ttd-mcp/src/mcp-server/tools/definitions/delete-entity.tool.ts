@@ -13,10 +13,13 @@ import {
 } from "../utils/capture-snapshot.js";
 import {
   elicitDeleteConfirmation,
+  createLogger,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
+
+const logger = createLogger("ttd-delete-entity");
 import type {
   McpTextContent,
   RequestContext,
@@ -160,6 +163,14 @@ export async function deleteEntityLogic(
     : undefined;
 
   await ttdService.deleteEntity(input.entityType as TtdEntityType, input.entityId, context);
+
+  // Record the operator-supplied audit reason (finding M2). This is a
+  // snapshot-class write with no effect summary, so the reason is emitted to the
+  // structured audit log rather than dropped silently.
+  logger.info(
+    { entityType: input.entityType, entityId: input.entityId, reason: input.reason ?? null },
+    "ttd entity deleted"
+  );
 
   const after: NormalizedEntitySnapshot | undefined = beforeRaw
     ? (buildTtdSnapshot(input.entityType, input.entityId, beforeRaw, {

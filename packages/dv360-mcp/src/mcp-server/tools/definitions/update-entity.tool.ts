@@ -18,10 +18,13 @@ import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-vali
 import { runDv360UpdateDryRun, resolveDv360DispatchedCapability } from "../utils/dry-run.js";
 import { snapshotFromDv360Entity, captureDv360Snapshot } from "../utils/capture-snapshot.js";
 import {
+  createLogger,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
+
+const logger = createLogger("dv360-update-entity");
 import type {
   RequestContext,
   McpTextContent,
@@ -188,6 +191,19 @@ export async function updateEntityLogic(
       validatedInput.updateMask,
       context,
       current
+    );
+
+    // Record the operator-supplied audit reason (finding M1). This is a
+    // snapshot-class write with no effect summary, so the reason is emitted to
+    // the structured audit log rather than dropped silently.
+    logger.info(
+      {
+        entityType: validatedInput.entityType,
+        entityIds,
+        updateMask: validatedInput.updateMask,
+        reason: validatedInput.reason ?? null,
+      },
+      "dv360 entity updated"
     );
     // PR-D: DV360 PATCH returns the patched resource directly. If the SDK
     // shape is unexpected (e.g. wrapped), fall back to a re-read so `after`
