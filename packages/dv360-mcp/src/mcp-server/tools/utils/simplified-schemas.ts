@@ -2,21 +2,23 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { getSupportedEntityTypesDynamic } from "./entity-mapping-dynamic.js";
+import {
+  getCreatableEntityTypesDynamic,
+  getUpdatableEntityTypesDynamic,
+} from "./entity-mapping-dynamic.js";
 import { EntityIdFieldsSchema } from "./entity-id-extraction.js";
 
-function getEntityTypeEnum(): [string, ...string[]] {
-  const supportedTypes = getSupportedEntityTypesDynamic();
-  if (supportedTypes.length === 0) {
+function toEntityTypeEnum(types: string[]): [string, ...string[]] {
+  if (types.length === 0) {
     throw new Error("No supported DV360 entity types discovered for simplified schema generation");
   }
-  return supportedTypes as [string, ...string[]];
+  return types as [string, ...string[]];
 }
 
 export function createSimplifiedCreateEntityInputSchema(): z.ZodTypeAny {
   return z.object({
     entityType: z
-      .enum(getEntityTypeEnum())
+      .enum(toEntityTypeEnum(getCreatableEntityTypesDynamic()))
       .describe("Entity type. Fetch entity-schema://{entityType} for required fields."),
     ...EntityIdFieldsSchema,
     data: z
@@ -37,7 +39,7 @@ export function createSimplifiedCreateEntityInputSchema(): z.ZodTypeAny {
 export function createSimplifiedUpdateEntityInputSchema(): z.ZodTypeAny {
   return z.object({
     entityType: z
-      .enum(getEntityTypeEnum())
+      .enum(toEntityTypeEnum(getUpdatableEntityTypesDynamic()))
       .describe("Entity type. Fetch entity-fields://{entityType} for valid updateMask paths."),
     ...EntityIdFieldsSchema,
     data: z.record(z.any()).describe("Partial payload containing only fields to update."),
