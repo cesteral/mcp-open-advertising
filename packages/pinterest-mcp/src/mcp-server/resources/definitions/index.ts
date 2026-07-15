@@ -48,6 +48,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "pinterest_duplicate_entity",
       "pinterest_get_audience_estimate",
       "pinterest_get_ad_preview",
+      "pinterest_get_pacing_status",
     ],
     validation: ["pinterest_validate_entity"],
     discovery: ["pinterest_search_tools"],

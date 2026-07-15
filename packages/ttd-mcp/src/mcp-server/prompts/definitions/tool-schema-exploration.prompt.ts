@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (44 tools)
+## Available Tools Summary (45 tools)
 
 This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foundations §1, §6. For single-record writes use \`ttd_create_entity\` / \`ttd_update_entity\` (REST). For >100-record batch writes use \`ttd_graphql_mutation_bulk\` (GraphQL bulk — TTD's documented bulk path).
 
@@ -143,6 +143,11 @@ This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foun
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_get_ad_preview\` | Get preview URL for a creative | Read |
+
+### Analysis (1 tool)
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_get_pacing_status\` | Calculate campaign pacing from caller-supplied spend/budget/flight dates (client-side, no API call) | Read |
 
 ### Report Schedule Management
 | Tool | Purpose | Read/Write |

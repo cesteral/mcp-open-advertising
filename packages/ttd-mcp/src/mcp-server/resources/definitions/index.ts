@@ -77,6 +77,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     ],
     bidListsAndSeeds: ["ttd_manage_bid_list", "ttd_bulk_manage_bid_lists", "ttd_manage_seed"],
     preview: ["ttd_get_ad_preview"],
+    analysis: ["ttd_get_pacing_status"],
     validation: ["ttd_validate_entity"],
     discovery: ["ttd_search_tools"],
   },

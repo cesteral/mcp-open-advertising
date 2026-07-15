@@ -44,7 +44,11 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "snapchat_adjust_bids",
     ],
     targeting: ["snapchat_search_targeting", "snapchat_get_targeting_options"],
-    specialized: ["snapchat_get_audience_estimate", "snapchat_get_ad_preview"],
+    specialized: [
+      "snapchat_get_audience_estimate",
+      "snapchat_get_ad_preview",
+      "snapchat_get_pacing_status",
+    ],
     validation: ["snapchat_validate_entity"],
     discovery: ["snapchat_search_tools"],
   },

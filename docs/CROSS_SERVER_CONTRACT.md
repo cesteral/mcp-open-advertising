@@ -51,6 +51,12 @@ Every management server MUST provide these tool categories:
 - `{prefix}_duplicate_entity` — Clone an existing entity (get + create under the hood; no native platform "duplicate" API is required). Shipped on **10 of the 11** write servers: dv360, ttd, gads, meta, linkedin, tiktok, pinterest, snapchat, amazon-dsp, msads.
 - **cm360 does not expose `duplicate_entity`.** This is the sole write-platform gap; it is a coverage omission, not an API limitation (the get+create clone pattern the siblings use needs no native support). Documented here so enumeration code does not assume fleet-wide coverage; adding it later is a pure add (new tool → new `definitionHash`, no change to existing tools).
 
+### Derived analysis tools (client-side)
+
+- `{prefix}_get_pacing_status` — Compute actual-vs-expected delivery for a campaign flight from **caller-supplied** budget, spend-to-date, and flight dates. This is a **pure derived computation** (spend-vs-time), not a platform endpoint — it does **not** call the platform API. All servers share the same math via `calculatePacingStatus` in `@cesteral/shared`, so results are identical across platforms; only the echoed account/campaign identifier field name differs per platform vocabulary.
+- Shipped on **all 13** MCP servers: dbm, dv360, gads, meta (original four), plus amazon-dsp, cm360, linkedin, msads, pinterest, sa360, snapchat, tiktok, ttd (ported here). Because it takes its inputs from the caller rather than an endpoint, coverage is uniform — a server exposes it regardless of whether its own API surfaces a native pacing metric. To populate the inputs, callers first read spend from the platform's reporting/insights tool and budget + flight dates from `{prefix}_get_entity`.
+- All variants are `readOnlyHint: true` / `openWorldHint: false` and ungoverned (no `cesteral` annotation), so each is a pure add — new `definitionHash`, no change to existing tools.
+
 ### Write-body validation
 
 The strictness of the `data:` / `items:` payload validation differs by server, by design:

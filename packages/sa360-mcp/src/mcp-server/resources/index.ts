@@ -27,6 +27,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "sa360_search_fields",
     ],
     write: ["sa360_insert_conversions", "sa360_update_conversions"],
+    analysis: ["sa360_get_pacing_status"],
     validation: ["sa360_validate_conversion"],
   },
   commonWorkflows: ["cross_engine_performance_analysis", "offline_conversion_upload"],

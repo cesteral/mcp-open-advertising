@@ -76,6 +76,7 @@ Fetch these resources for detailed schema information:
 - \`linkedin_duplicate_entity\` — Copy campaign groups, campaigns, creatives
 - \`linkedin_get_delivery_forecast\` — Audience/delivery forecast
 - \`linkedin_get_ad_preview\` — Ad preview rendering
+- \`linkedin_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
 - \`linkedin_validate_entity\` — Client-side entity validation

@@ -74,6 +74,7 @@ Fetch these resources for detailed schema information:
 - \`tiktok_duplicate_entity\` — Copy campaigns, ad groups, ads
 - \`tiktok_get_audience_estimate\` — Audience size estimation
 - \`tiktok_get_ad_preview\` — Ad preview for video/image ads
+- \`tiktok_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
 - \`tiktok_validate_entity\` — Client-side entity validation

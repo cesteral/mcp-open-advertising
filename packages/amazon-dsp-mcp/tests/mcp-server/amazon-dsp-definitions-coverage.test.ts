@@ -147,7 +147,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
     // 26 business = 18 entity tools + amazon_dsp_search_tools + 7 v1 commitment tools
     // (list/get-batch/get-singular/create/update + get-campaign-forecast + get-commitment-spend).
     // +6 conformance when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
-    expect(allTools).toHaveLength(conformanceEnabled ? 32 : 26);
+    expect(allTools).toHaveLength(conformanceEnabled ? 33 : 27);
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

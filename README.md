@@ -89,15 +89,15 @@ Intelligence layers governance and orchestration on top:
 | [gads-mcp](packages/gads-mcp)             | Google Ads REST API v23           | 18    | OAuth2 refresh token            |
 | [meta-mcp](packages/meta-mcp)             | Meta Marketing API v25.0          | 27    | Bearer token                    |
 | [dv360-mcp](packages/dv360-mcp)           | DV360 API v4                      | 26    | Google OAuth2 / service account |
-| [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 44    | User token (TTD-Auth header)    |
-| [linkedin-mcp](packages/linkedin-mcp)     | LinkedIn Marketing API v2         | 21    | Bearer token                    |
-| [tiktok-mcp](packages/tiktok-mcp)         | TikTok Marketing API v1.3         | 24    | Bearer token + advertiser ID    |
-| [cm360-mcp](packages/cm360-mcp)           | CM360 API v5                      | 21    | Google OAuth2                   |
-| [sa360-mcp](packages/sa360-mcp)           | SA360 Reporting API v0 + DS v2    | 16    | OAuth2 refresh token            |
-| [pinterest-mcp](packages/pinterest-mcp)   | Pinterest Ads API v5              | 23    | Bearer token                    |
-| [snapchat-mcp](packages/snapchat-mcp)     | Snapchat Ads API v1               | 24    | Bearer token                    |
-| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 26    | Bearer token                    |
-| [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 27    | Access token + developer token  |
+| [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 45    | User token (TTD-Auth header)    |
+| [linkedin-mcp](packages/linkedin-mcp)     | LinkedIn Marketing API v2         | 22    | Bearer token                    |
+| [tiktok-mcp](packages/tiktok-mcp)         | TikTok Marketing API v1.3         | 25    | Bearer token + advertiser ID    |
+| [cm360-mcp](packages/cm360-mcp)           | CM360 API v5                      | 22    | Google OAuth2                   |
+| [sa360-mcp](packages/sa360-mcp)           | SA360 Reporting API v0 + DS v2    | 17    | OAuth2 refresh token            |
+| [pinterest-mcp](packages/pinterest-mcp)   | Pinterest Ads API v5              | 24    | Bearer token                    |
+| [snapchat-mcp](packages/snapchat-mcp)     | Snapchat Ads API v1               | 25    | Bearer token                    |
+| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 27    | Bearer token                    |
+| [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 28    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 
 Thirteen servers, 290+ tools. Tool counts are the live registered total per

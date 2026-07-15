@@ -39,7 +39,11 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "cm360_download_report",
     ],
     bulk: ["cm360_bulk_update_status", "cm360_bulk_create_entities", "cm360_bulk_update_entities"],
-    specialized: ["cm360_get_ad_preview", "cm360_list_targeting_options"],
+    specialized: [
+      "cm360_get_ad_preview",
+      "cm360_list_targeting_options",
+      "cm360_get_pacing_status",
+    ],
     validation: ["cm360_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "reporting", "floodlight_tracking"],

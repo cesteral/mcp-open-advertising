@@ -82,6 +82,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`cm360_get_ad_preview\` — Ad preview URL
 - \`cm360_list_targeting_options\` — Browse targeting option categories
+- \`cm360_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
 - \`cm360_validate_entity\` — Client-side entity validation (no API call)

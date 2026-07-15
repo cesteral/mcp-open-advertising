@@ -171,7 +171,8 @@
         "ttd_update_report_schedule",
         "ttd_update_report_template",
         "ttd_search_tools",
-        "ttd_duplicate_entity"
+        "ttd_duplicate_entity",
+        "ttd_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -371,7 +372,8 @@
         "linkedin_validate_entity",
         "linkedin_upload_image",
         "linkedin_upload_video",
-        "linkedin_search_tools"
+        "linkedin_search_tools",
+        "linkedin_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://linkedin/all",
@@ -435,7 +437,8 @@
         "tiktok_validate_entity",
         "tiktok_upload_image",
         "tiktok_upload_video",
-        "tiktok_search_tools"
+        "tiktok_search_tools",
+        "tiktok_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://tiktok/all",
@@ -496,7 +499,8 @@
         "cm360_delete_report_schedule",
         "cm360_get_report_breakdowns",
         "cm360_list_report_schedules",
-        "cm360_search_tools"
+        "cm360_search_tools",
+        "cm360_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -559,7 +563,8 @@
         "snapchat_upload_image",
         "snapchat_upload_video",
         "snapchat_search_tools",
-        "snapchat_duplicate_entity"
+        "snapchat_duplicate_entity",
+        "snapchat_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://snapchat/all",
@@ -613,7 +618,8 @@
         "sa360_check_report_status",
         "sa360_download_report",
         "sa360_get_change_history",
-        "sa360_list_report_columns"
+        "sa360_list_report_columns",
+        "sa360_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -673,7 +679,8 @@
         "pinterest_get_ad_preview",
         "pinterest_validate_entity",
         "pinterest_upload_video",
-        "pinterest_search_tools"
+        "pinterest_search_tools",
+        "pinterest_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://pinterest/all",
@@ -738,7 +745,8 @@
         "amazon_dsp_get_commitment_spend",
         "amazon_dsp_get_commitments",
         "amazon_dsp_list_commitments",
-        "amazon_dsp_update_commitment"
+        "amazon_dsp_update_commitment",
+        "amazon_dsp_get_pacing_status"
       ],
       "resources": [
         "entity-hierarchy://amazonDsp/all",
@@ -804,7 +812,8 @@
         "msads_list_report_schedules",
         "msads_search_tools",
         "msads_duplicate_entity",
-        "msads_get_targeting_options"
+        "msads_get_targeting_options",
+        "msads_get_pacing_status"
       ],
       "resources": [
         "msads://entity-hierarchy",

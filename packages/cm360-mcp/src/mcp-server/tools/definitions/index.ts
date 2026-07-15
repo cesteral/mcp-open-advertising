@@ -4,17 +4,19 @@
 /**
  * Tool definitions barrel export
  *
- * 20 tools total:
+ * 21 tools total:
  *   7 core CRUD: list user profiles, list entities, get entity, create entity, update entity, delete entity, validate entity
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 scheduling: create report schedule, list report schedules, delete report schedule
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   2 specialized: get ad preview, list targeting options
+ *   1 pacing: get pacing status (client-side, no API call)
  */
 
 export { listUserProfilesTool } from "./list-user-profiles.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
@@ -36,6 +38,7 @@ export { listTargetingOptionsTool } from "./list-targeting-options.tool.js";
 import { listUserProfilesTool } from "./list-user-profiles.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
@@ -64,6 +67,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   listUserProfilesTool,
   listEntitiesTool,
   getEntityTool,
+  getPacingStatusTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,

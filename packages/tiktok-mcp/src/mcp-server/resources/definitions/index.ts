@@ -52,6 +52,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "tiktok_duplicate_entity",
       "tiktok_get_audience_estimate",
       "tiktok_get_ad_preview",
+      "tiktok_get_pacing_status",
     ],
     validation: ["tiktok_validate_entity"],
     discovery: ["tiktok_search_tools"],

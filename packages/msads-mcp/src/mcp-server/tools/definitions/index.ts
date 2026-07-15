@@ -3,6 +3,7 @@
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
@@ -32,6 +33,7 @@ import { createToolSearchTool, type ToolDefinitionForFactory } from "@cesteral/s
 export const productionTools: ToolDefinitionForFactory[] = [
   listEntitiesTool,
   getEntityTool,
+  getPacingStatusTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,
