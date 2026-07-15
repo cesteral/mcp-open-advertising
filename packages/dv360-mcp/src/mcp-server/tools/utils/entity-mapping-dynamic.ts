@@ -391,6 +391,32 @@ export function getSupportedEntityTypesDynamic(): string[] {
 }
 
 /**
+ * Entity types that support create (i.e. not `isReadOnly`).
+ *
+ * `getSupportedEntityTypesDynamic()` returns every configured type, including
+ * read-only ones (`partner`, `adGroupAd`) that DV360 refuses to create. Feeding
+ * those into the create tool's `entityType` enum lets a call pass Zod validation
+ * only to fail opaquely at API dispatch — filter them out at the schema boundary.
+ */
+export function getCreatableEntityTypesDynamic(): string[] {
+  return Array.from(getAllEntityConfigs().entries())
+    .filter(([, config]) => config.supportsCreate)
+    .map(([entityType]) => entityType)
+    .sort();
+}
+
+/**
+ * Entity types that support update (i.e. not `isReadOnly`). Same rationale as
+ * {@link getCreatableEntityTypesDynamic} for the update tool's `entityType` enum.
+ */
+export function getUpdatableEntityTypesDynamic(): string[] {
+  return Array.from(getAllEntityConfigs().entries())
+    .filter(([, config]) => config.supportsUpdate)
+    .map(([entityType]) => entityType)
+    .sort();
+}
+
+/**
  * Validate entity type is supported
  */
 export function isEntityTypeSupported(entityType: string): boolean {

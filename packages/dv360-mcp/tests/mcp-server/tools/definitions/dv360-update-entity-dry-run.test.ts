@@ -216,6 +216,34 @@ describe("dv360_update_entity dry_run", () => {
     expect(dv360Service.updateEntity).not.toHaveBeenCalled();
   });
 
+  it("dry_run on an out-of-scope kind returns an honest result instead of throwing", async () => {
+    // `advertiser` is token-gated but not snapshot-governed (not in
+    // ENTITY_KIND_MAP), so no canonical snapshot is produced. The update
+    // dry-run must NOT apply the in-scope simulation guard for it — otherwise
+    // it throws even though the real write and the create/delete dry-runs on
+    // the same kind succeed.
+    const result = await updateEntityLogic(
+      {
+        entityType: "advertiser",
+        advertiserId: "adv-1",
+        data: { displayName: "New Name" },
+        updateMask: "displayName",
+        dry_run: true,
+      } as any,
+      ctx(),
+      { sessionId: "s" } as any
+    );
+
+    expect(dv360Service.updateEntity).not.toHaveBeenCalled();
+    expect(result.dryRun).toBeDefined();
+    expect(result.dryRun!.wouldSucceed).toBe(true);
+    expect(result.dryRun!.expectedStateSource).toBe("none");
+    expect(result.dryRun!.expectedPostState).toBeUndefined();
+    // Out-of-scope kinds resolve canonicalEntityKind: null (parity with
+    // create/delete), never the raw platform entityType string.
+    expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
+  });
+
   it("default (dry_run unset) preserves existing write behavior", async () => {
     dv360Service.updateEntity.mockResolvedValueOnce({
       displayName: "Updated",

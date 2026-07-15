@@ -116,9 +116,15 @@ export function resolveDv360DispatchedCapability(
   } else {
     operation = "update";
   }
+  // Out-of-scope kinds (creative, adGroup, advertiser, …) resolve to
+  // `canonicalEntityKind: null` — still token-gated under enforce, just no
+  // canonical snapshot — exactly as create/delete/duplicate do. Emitting the
+  // raw platform `entityType` here instead would hand governance a string that
+  // is not a member of `CanonicalEntityKind`, which it would then mis-classify
+  // as a recognized kind still owing a snapshot.
   return {
     operation,
-    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
   };
 }
 
@@ -320,16 +326,22 @@ export async function runDv360UpdateDryRun(
     }
   }
 
-  return assertGovernedDryRunResult(
-    {
-      wouldSucceed: validationErrors.length === 0,
-      validationErrors,
-      validationSource: "symbolic",
-      expectedStateSource,
-      ...(expectedPostState ? { expectedPostState } : {}),
-    },
-    "dv360_update_entity"
-  );
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): they legitimately resolve canonicalEntityKind: null and emit
+  // no canonical snapshot — on dry-run as well as execute. The in-scope
+  // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
+  // for them; applying it would fail an honest no-snapshot result, so a dry-run
+  // on e.g. `creative` would throw even though the real write and the
+  // create/delete dry-runs on the same kind succeed.
+  const inScope = Boolean(ENTITY_KIND_MAP[input.entityType]);
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0,
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "dv360_update_entity") : result;
 }
 
 /**
