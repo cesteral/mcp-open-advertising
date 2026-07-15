@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import { type RequestContext, executeBulkConcurrent, fetchWithTimeout } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
@@ -129,6 +129,86 @@ export class TtdService {
       body: JSON.stringify(data),
       ...(options?.strictMode ? { headers: { "TTD-Strict-Mode": "true" } } : {}),
     }) as Promise<TtdEntityMap[T]>;
+  }
+
+  // ─── Hosted Video Creative Upload ─────────────────────────────────
+  //
+  // TTD CAN host video creatives (they need not be third-party VAST-hosted).
+  // The documented flow is three steps (repo docs:
+  // packages/ttd-mcp/docs/api/ttd-api-reference-part2.md:641 —
+  // "Generates a URL for uploading video files. The returned upload attributes
+  // must be included in the subsequent POST creative call"):
+  //   1. POST /v3/creative/generateuploadurlforvideocreative → presigned URL + attributes
+  //   2. PUT the raw video bytes to the presigned URL (no TTD auth — it is a
+  //      self-authenticating storage URL)
+  //   3. POST /v3/creative with CreativeType "Video" + the returned upload attributes
+  //
+  // VERIFICATION NOTE: the exact JSON field names in the step-1 response are not
+  // documented in the repo and TTD's Partner Portal reference is auth-walled, so
+  // step 1's response is parsed defensively (`extractVideoUploadUrl`): the
+  // presigned URL is the first https-valued string field, and every other field
+  // is forwarded verbatim into the create body as TTD's required "upload
+  // attributes". This is robust to the precise field casing; if TTD nests the
+  // attributes under a single key, forwarding the whole object still satisfies
+  // "include the returned attributes in the POST creative call".
+
+  /**
+   * Upload a video file to TTD and create a hosted video creative.
+   *
+   * `creativeFields` carries the standard POST /v3/creative fields (CreativeName,
+   * Width, Height, AdvertiserId is passed separately, AdFormatId/ClickThroughUrl
+   * optional). CreativeType is forced to "Video".
+   */
+  async uploadVideoCreative(
+    advertiserId: string,
+    fileName: string,
+    buffer: Buffer,
+    contentType: string,
+    creativeFields: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<TtdCreative> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    // Step 1 — presigned upload URL + attributes to echo back on create.
+    const genResponse = (await this.httpClient.fetch(
+      "/creative/generateuploadurlforvideocreative",
+      context,
+      {
+        method: "POST",
+        body: JSON.stringify({ FileName: fileName, AdvertiserId: advertiserId }),
+      }
+    )) as Record<string, unknown>;
+
+    const { uploadUrl, uploadAttributes } = extractVideoUploadUrl(genResponse);
+
+    // Step 2 — PUT the bytes to the presigned URL. No TTD-Auth header: presigned
+    // storage URLs carry their own signature and reject extra auth. `fetchDirect`
+    // would inject TTD-Auth, so use the bare timeout-guarded fetch instead.
+    const putResponse = await fetchWithTimeout(uploadUrl, 300_000, context, {
+      method: "PUT",
+      body: buffer,
+      headers: { "Content-Type": contentType },
+    });
+    if (!putResponse.ok) {
+      const errBody = await putResponse.text().catch(() => "");
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TTD video upload failed: PUT to presigned URL returned HTTP ${putResponse.status}. ${errBody.substring(0, 200)}`
+      );
+    }
+
+    // Step 3 — create the hosted video creative referencing the uploaded file.
+    const body: Record<string, unknown> = {
+      ...uploadAttributes,
+      ...creativeFields,
+      AdvertiserId: advertiserId,
+      CreativeType: "Video",
+    };
+    return this.httpClient.fetch("/creative", context, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }) as Promise<TtdCreative>;
   }
 
   /**
@@ -674,4 +754,34 @@ export class TtdService {
       error: r.error,
     }));
   }
+}
+
+/**
+ * Parse the `generateuploadurlforvideocreative` response into the presigned
+ * upload URL plus the "upload attributes" that must be echoed back on the
+ * create call. TTD's exact field casing is not documented in the repo, so:
+ *   - the upload URL is the first field whose value is an http(s) string;
+ *   - all remaining fields are forwarded verbatim as upload attributes.
+ * Throws if no upload URL is present (an unexpected/failed response).
+ */
+export function extractVideoUploadUrl(response: Record<string, unknown>): {
+  uploadUrl: string;
+  uploadAttributes: Record<string, unknown>;
+} {
+  let uploadUrl: string | undefined;
+  const uploadAttributes: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(response ?? {})) {
+    if (uploadUrl === undefined && typeof value === "string" && /^https?:\/\//i.test(value)) {
+      uploadUrl = value;
+      continue;
+    }
+    uploadAttributes[key] = value;
+  }
+  if (!uploadUrl) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "TTD did not return a presigned upload URL from generateuploadurlforvideocreative"
+    );
+  }
+  return { uploadUrl, uploadAttributes };
 }

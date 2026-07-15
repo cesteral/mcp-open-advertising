@@ -79,6 +79,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     preview: ["ttd_get_ad_preview"],
     analysis: ["ttd_get_pacing_status"],
     validation: ["ttd_validate_entity"],
+    creatives: ["ttd_upload_video"],
     discovery: ["ttd_search_tools"],
   },
   commonWorkflows: [

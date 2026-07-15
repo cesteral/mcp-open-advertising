@@ -46,6 +46,7 @@ export { graphqlQueryTool } from "./graphql-query.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { uploadVideoTool } from "./upload-video.tool.js";
 export { downloadReportTool } from "./download-report.tool.js";
 export { submitReportTool } from "./submit-report.tool.js";
 export { checkReportStatusTool } from "./check-report-status.tool.js";
@@ -91,6 +92,7 @@ import { graphqlQueryTool } from "./graphql-query.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { uploadVideoTool } from "./upload-video.tool.js";
 import { downloadReportTool } from "./download-report.tool.js";
 import { submitReportTool } from "./submit-report.tool.js";
 import { checkReportStatusTool } from "./check-report-status.tool.js";
@@ -155,6 +157,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Advanced ──
   graphqlQueryTool,
   validateEntityTool,
+  uploadVideoTool,
   // ── GraphQL Bulk (TTD's documented path for >100-record operations) ──
   graphqlQueryBulkTool,
   graphqlMutationBulkTool,

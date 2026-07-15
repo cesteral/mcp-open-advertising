@@ -3,7 +3,13 @@
 
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import {
+  type RequestContext,
+  executeBulkConcurrent,
+  fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import {
   getEntityConfig,
   getCanonicalEntityType,
@@ -89,6 +95,23 @@ interface AmazonDspRawListResponse {
 }
 
 /**
+ * Parse the `/assets/upload` response into the presigned upload URL. Amazon's
+ * exact field casing is not confirmable from the auth-walled reference, so the
+ * URL is the first field whose value is an http(s) string. Throws if none.
+ */
+export function extractAssetUploadUrl(response: Record<string, unknown>): string {
+  for (const value of Object.values(response ?? {})) {
+    if (typeof value === "string" && /^https?:\/\//i.test(value)) {
+      return value;
+    }
+  }
+  throw new McpError(
+    JsonRpcErrorCode.InternalError,
+    "Amazon did not return an upload URL from /assets/upload"
+  );
+}
+
+/**
  * AmazonDspService — Generic CRUD operations for Amazon DSP Advertising API entities.
  *
  * Key Amazon DSP patterns:
@@ -107,6 +130,72 @@ export class AmazonDspService {
   /** Expose the underlying HTTP client for direct use. */
   get client(): AmazonDspHttpClient {
     return this.httpClient;
+  }
+
+  // ─── Creative Asset Library Upload ──────────────────────────────
+  //
+  // Amazon's Creative Asset Library is the media-upload surface behind DSP
+  // video creatives (a DSP video creative references an assetId from the
+  // library). The documented three-step flow (Amazon Ads "Creative asset
+  // library API"; exact paths/bodies mirror the official python-amazon-ad-api
+  // client, ad_api/api/creative_assets.py):
+  //   1. POST /assets/upload  { fileName }            → presigned upload URL (15-min TTL)
+  //   2. PUT the raw bytes to that URL
+  //   3. POST /assets/register { url, name, assetType, ... } → registered assetId
+  //
+  // VERIFICATION NOTE: /assets/* is the same Amazon Ads API host + Bearer/Scope
+  // auth the DSP entity endpoints use, so the existing httpClient carries it.
+  // The step-1 response field holding the upload URL is parsed defensively
+  // (`extractAssetUploadUrl`) because Amazon's exact casing is not confirmable
+  // from the auth-walled reference; `assetType: "VIDEO"` and the DSP program
+  // context are supplied by the caller in `registerFields`.
+
+  /**
+   * Upload a media asset to the Creative Asset Library and register it.
+   * `registerFields` carries `name`, `assetType` (e.g. "VIDEO"), and any
+   * optional metadata (asinList, tags, registrationContext, …).
+   * Returns the raw registered-asset response (which carries the assetId).
+   */
+  async uploadCreativeAsset(
+    fileName: string,
+    buffer: Buffer,
+    contentType: string,
+    registerFields: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<{ uploadUrl: string; asset: Record<string, unknown> }> {
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
+
+    // Step 1 — register an upload location.
+    const uploadResponse = (await this.httpClient.post(
+      "/assets/upload",
+      { fileName },
+      context
+    )) as Record<string, unknown>;
+    const uploadUrl = extractAssetUploadUrl(uploadResponse);
+
+    // Step 2 — PUT bytes to the presigned URL. No Amazon auth headers: presigned
+    // storage URLs are self-signed and reject extra Authorization headers.
+    const putResponse = await fetchWithTimeout(uploadUrl, 300_000, context, {
+      method: "PUT",
+      body: buffer,
+      headers: { "Content-Type": contentType },
+    });
+    if (!putResponse.ok) {
+      const errBody = await putResponse.text().catch(() => "");
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Amazon asset upload failed: PUT to presigned URL returned HTTP ${putResponse.status}. ${errBody.substring(0, 200)}`
+      );
+    }
+
+    // Step 3 — register the uploaded asset in the library.
+    const asset = (await this.httpClient.post(
+      "/assets/register",
+      { url: uploadUrl, ...registerFields },
+      context
+    )) as Record<string, unknown>;
+
+    return { uploadUrl, asset };
   }
 
   // ─── Standard CRUD ──────────────────────────────────────────────

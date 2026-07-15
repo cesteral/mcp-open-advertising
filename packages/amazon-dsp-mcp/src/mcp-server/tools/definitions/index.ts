@@ -38,6 +38,7 @@ export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { uploadVideoTool } from "./upload-video.tool.js";
 export { listCommitmentsTool } from "./list-commitments.tool.js";
 export { getCommitmentsTool } from "./get-commitments.tool.js";
 export { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
@@ -65,6 +66,7 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { uploadVideoTool } from "./upload-video.tool.js";
 import { listCommitmentsTool } from "./list-commitments.tool.js";
 import { getCommitmentsTool } from "./get-commitments.tool.js";
 import { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
@@ -105,6 +107,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Assets ──
+  uploadVideoTool,
   // ── v1 Commitments ──
   listCommitmentsTool,
   getCommitmentsTool,
