@@ -46,9 +46,9 @@ describe("read-only entity types are excluded from create/update schemas", () =>
   it("the create schema rejects a read-only entityType and accepts a writable one", () => {
     const schema = createSimplifiedCreateEntityInputSchema();
     expect(schema.safeParse({ entityType: "partner", data: {} }).success).toBe(false);
-    expect(
-      schema.safeParse({ entityType: "campaign", advertiserId: "1", data: {} }).success
-    ).toBe(true);
+    expect(schema.safeParse({ entityType: "campaign", advertiserId: "1", data: {} }).success).toBe(
+      true
+    );
   });
 
   it("the update schema rejects a read-only entityType and accepts a writable one", () => {
