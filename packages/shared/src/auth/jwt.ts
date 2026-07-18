@@ -32,6 +32,11 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     const secretKey = new TextEncoder().encode(secret);
 
     const { payload } = await jose.jwtVerify(token, secretKey, {
+      // Pin the accepted algorithm. jose already infers HS* from the symmetric
+      // key (so `alg: "none"` and RS/HS confusion are rejected), but stating it
+      // explicitly makes the single supported algorithm auditable and defends
+      // against a future key-type change silently widening what is accepted.
+      algorithms: ["HS256"],
       issuer: getJwtIssuer(),
       audience: getJwtAudience(),
     });
