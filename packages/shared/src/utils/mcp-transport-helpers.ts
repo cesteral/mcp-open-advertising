@@ -123,6 +123,13 @@ export function oauthProtectedResourceBody(
 interface SessionFingerprintStore {
   validateFingerprint(sessionId: string, fingerprint: string): boolean;
   getFingerprint(sessionId: string): string | undefined;
+  /**
+   * Presence check for the session's services. Lets reuse validation tell a
+   * live in-store session apart from one that has not been rebuilt yet on this
+   * instance (cold-instance rehydration), so the fail-closed guard below only
+   * fires for sessions that actually hold credentials.
+   */
+  get(sessionId: string): unknown;
 }
 
 export interface SessionReuseResult {
@@ -178,6 +185,27 @@ export async function validateSessionReuse(
       valid: false,
       reason: "Credential fingerprint mismatch — possible session hijacking attempt",
       storedFingerprint,
+      requestFingerprint,
+    };
+  }
+
+  // Fail closed on an unbound live session. `validateFingerprint` returns true
+  // when no fingerprint is stored — legitimate for `none`-mode / stdio sessions
+  // that never produce one (there, the caller has no fingerprint either). But if
+  // the caller DID present fingerprintable credentials (`requestFingerprint` is
+  // set) while the session already holds services yet has no stored fingerprint,
+  // that session was created without credential binding. Allowing reuse would let
+  // any credentialed caller ride another holder's session (defeating the binding
+  // the fingerprint exists to enforce). Reject. Rebuilds (session absent, no
+  // services yet) and genuine `none` mode (no request fingerprint) are unaffected.
+  if (
+    requestFingerprint &&
+    sessionServiceStore.get(sessionId) !== undefined &&
+    sessionServiceStore.getFingerprint(sessionId) === undefined
+  ) {
+    return {
+      valid: false,
+      reason: "Session is not credential-bound — refusing credentialed reuse",
       requestFingerprint,
     };
   }
