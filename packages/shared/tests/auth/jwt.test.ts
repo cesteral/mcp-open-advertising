@@ -182,6 +182,39 @@ describe("verifyJwt", () => {
 
     await expect(verifyJwt(tampered, SECRET)).rejects.toThrow(McpError);
   });
+
+  it("rejects a token signed with a non-HS256 HMAC algorithm (algorithm pin)", async () => {
+    // A validly-HMAC-signed HS384 token with the correct secret, issuer, and
+    // audience — the ONLY thing wrong is the algorithm. The `algorithms: ["HS256"]`
+    // pin must reject it rather than accept any HMAC variant.
+    const { SignJWT } = await import("jose");
+    const key = new TextEncoder().encode(SECRET);
+    const token = await new SignJWT({ sub: "user-1" })
+      .setProtectedHeader({ alg: "HS384" })
+      .setIssuedAt()
+      .setIssuer("test-issuer")
+      .setAudience("test-audience")
+      .setExpirationTime("1h")
+      .sign(key);
+
+    await expect(verifyJwt(token, SECRET)).rejects.toThrow(McpError);
+    await expect(verifyJwt(token, SECRET)).rejects.toThrow(/verification failed/);
+  });
+
+  it("rejects an unsecured (alg:none) token", async () => {
+    const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: "user-1",
+        iss: "test-issuer",
+        aud: "test-audience",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      })
+    ).toString("base64url");
+    const unsecured = `${header}.${payload}.`;
+
+    await expect(verifyJwt(unsecured, SECRET)).rejects.toThrow(McpError);
+  });
 });
 
 // ---------------------------------------------------------------------------
