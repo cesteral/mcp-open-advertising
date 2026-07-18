@@ -22,14 +22,22 @@ function createFakeServer() {
     name: string;
     template: FakeResourceTemplate;
     metadata: { description?: string; mimeType?: string };
-    handler: (uri: { href: string }) => Promise<unknown>;
+    handler: (
+      uri: { href: string },
+      variables?: unknown,
+      extra?: { sessionId?: string }
+    ) => Promise<unknown>;
   }> = [];
   const server = {
     registerResource(
       name: string,
       template: unknown,
       metadata: { description?: string; mimeType?: string },
-      handler: (uri: { href: string }) => Promise<unknown>
+      handler: (
+        uri: { href: string },
+        variables?: unknown,
+        extra?: { sessionId?: string }
+      ) => Promise<unknown>
     ) {
       registered.push({
         name,
@@ -98,7 +106,7 @@ describe("registerReportCsvResource", () => {
     expect(listResult.resources[0]!.mimeType).toBe("text/csv");
   });
 
-  it("resolves a known URI to the stored CSV body", async () => {
+  it("resolves a known URI to the stored CSV body for the owning session", async () => {
     const store = new ReportCsvStore();
     const entry = store.store({
       csv: "col\n42\n",
@@ -115,14 +123,83 @@ describe("registerReportCsvResource", () => {
       logger,
     });
 
-    const readResult = (await registered[0]!.handler({
-      href: `report-csv://${entry.resourceId}`,
-    })) as {
+    const readResult = (await registered[0]!.handler(
+      { href: `report-csv://${entry.resourceId}` },
+      {},
+      { sessionId: "s-2" }
+    )) as {
       contents: Array<{ uri: string; mimeType: string; text: string }>;
     };
     expect(readResult.contents).toHaveLength(1);
     expect(readResult.contents[0]!.text).toBe("col\n42\n");
     expect(readResult.contents[0]!.mimeType).toBe("text/csv");
+  });
+
+  it("denies a read from a different session (tenant isolation)", async () => {
+    // Regression for security review Finding 8: a session-scoped entry must not
+    // be readable by another session, even if it knows the (leaked) resource id.
+    // The error is indistinguishable from not-found so existence isn't confirmed.
+    const store = new ReportCsvStore();
+    const entry = store.store({ csv: "secret,spend\nacme,9999\n", sessionId: "victim-session" });
+
+    const { server, registered } = createFakeServer();
+    registerReportCsvResource({
+      server,
+      ResourceTemplate: FakeResourceTemplate as any,
+      store,
+      platform: "TTD",
+      downloadToolName: "ttd_download_report",
+      logger,
+    });
+
+    await expect(
+      registered[0]!.handler(
+        { href: `report-csv://${entry.resourceId}` },
+        {},
+        { sessionId: "attacker-session" }
+      )
+    ).rejects.toThrow(/not found or expired/);
+  });
+
+  it("denies a session-scoped read when the caller has no session", async () => {
+    const store = new ReportCsvStore();
+    const entry = store.store({ csv: "col\n42\n", sessionId: "owner" });
+
+    const { server, registered } = createFakeServer();
+    registerReportCsvResource({
+      server,
+      ResourceTemplate: FakeResourceTemplate as any,
+      store,
+      platform: "TTD",
+      downloadToolName: "ttd_download_report",
+      logger,
+    });
+
+    await expect(
+      registered[0]!.handler({ href: `report-csv://${entry.resourceId}` }, {}, undefined)
+    ).rejects.toThrow(/not found or expired/);
+  });
+
+  it("allows reading an unscoped entry (no sessionId) from any session", async () => {
+    const store = new ReportCsvStore();
+    const entry = store.store({ csv: "col\n7\n" }); // no sessionId — single-tenant / stdio
+
+    const { server, registered } = createFakeServer();
+    registerReportCsvResource({
+      server,
+      ResourceTemplate: FakeResourceTemplate as any,
+      store,
+      platform: "TTD",
+      downloadToolName: "ttd_download_report",
+      logger,
+    });
+
+    const readResult = (await registered[0]!.handler(
+      { href: `report-csv://${entry.resourceId}` },
+      {},
+      { sessionId: "any-session" }
+    )) as { contents: Array<{ uri: string; mimeType: string; text: string }> };
+    expect(readResult.contents[0]!.text).toBe("col\n7\n");
   });
 
   it("throws a not-found error for unknown or expired URIs", async () => {

@@ -15,7 +15,11 @@ export interface McpServerResourceLike {
     name: string,
     template: unknown,
     metadata: { description?: string; mimeType?: string },
-    handler: (uri: { href: string }) => Promise<{
+    handler: (
+      uri: { href: string },
+      variables: unknown,
+      extra?: { sessionId?: string }
+    ) => Promise<{
       contents: Array<{ uri: string; mimeType: string; text: string }>;
     }>
   ): void;
@@ -97,13 +101,29 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
         `Entries expire after 30 minutes.`,
       mimeType: "text/csv",
     },
-    async (uri) => {
+    async (uri, _variables, extra) => {
+      const callerSessionId = extra?.sessionId;
       logger.info({ uri: uri.href }, "Reading report CSV resource");
       // getRemoteByUri falls back to the GCS mirror when the local store has
       // no entry — handles Cloud Run scale-out, where a follow-up read can
       // land on an instance that didn't produce the URI.
       const entry = await store.getRemoteByUri(uri.href);
       if (!entry) {
+        throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
+      }
+      // Tenant isolation. The resource id is a random UUID (a bearer capability),
+      // but in a multi-tenant hosted deployment a leaked id must not let another
+      // tenant read the owner's report data. A stored entry is owned by the
+      // session that produced it; refuse to serve a session-scoped entry to any
+      // other session. Report "not found" (not "forbidden") so a non-owner
+      // cannot confirm the id even exists. Unscoped entries (no sessionId — e.g.
+      // stdio / single-tenant dev) stay readable, since there is no tenant to
+      // isolate them from.
+      if (entry.sessionId !== undefined && entry.sessionId !== callerSessionId) {
+        logger.warn(
+          { uri: uri.href, event: "report_csv_cross_session_denied" },
+          "Report CSV resource read denied — session mismatch"
+        );
         throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
       }
       return {
