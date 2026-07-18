@@ -17,7 +17,20 @@ import type { AuthResult, AuthStrategy } from "../auth/auth-strategy.js";
 // Session ID validation
 // ---------------------------------------------------------------------------
 
-const SESSION_ID_PATTERN = /^[a-f0-9-]{20,100}$/i;
+// Accept only session IDs the server itself could have minted:
+// `generateSessionId()` produces exactly 64 hex chars (randomBytes(32)). Per the
+// MCP Streamable HTTP spec the client only ever echoes back the server-assigned
+// `Mcp-Session-Id` — it never invents one — so a stricter pattern rejects no
+// conformant client while keeping arbitrary attacker-chosen identifiers out of
+// the session-create / rebuild path.
+//
+// Residual (accepted, availability-only): a caller who learns a victim's real
+// (leaked) session ID can still present it to a cold instance, where the rebuild
+// binds it to the caller's OWN credentials — locking the victim out of that one
+// instance until their client re-initializes and is issued a fresh ID. Closing
+// that fully needs a distributed session→fingerprint store, which this fleet
+// deliberately avoids (sessions are per-instance and rebuilt from credentials).
+const SESSION_ID_PATTERN = /^[a-f0-9]{64}$/i;
 
 export function isValidSessionId(id: string): boolean {
   return SESSION_ID_PATTERN.test(id);

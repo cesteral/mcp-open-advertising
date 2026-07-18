@@ -393,12 +393,18 @@ export function createMcpHttpTransport(
         );
         if (!reuseResult.valid) {
           const auditLogger = logger.child({ component: "audit" });
+          // Fingerprints are hashes derived from the caller's credential (for
+          // bearer/TTD, a hash of the secret token). They are not reversible,
+          // but they are credential-derived material — log only a short prefix,
+          // enough to correlate a mismatch across entries without persisting the
+          // full value to the audit sink.
+          const fpPrefix = (fp?: string) => (fp ? `${fp.slice(0, 12)}…` : undefined);
           auditLogger.warn(
             {
               event: "session_fingerprint_mismatch",
               sessionId: providedSessionId,
-              storedFingerprint: reuseResult.storedFingerprint,
-              requestFingerprint: reuseResult.requestFingerprint,
+              storedFingerprint: fpPrefix(reuseResult.storedFingerprint),
+              requestFingerprint: fpPrefix(reuseResult.requestFingerprint),
             },
             reuseResult.reason ?? "Session credential mismatch"
           );
