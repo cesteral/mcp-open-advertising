@@ -426,15 +426,53 @@ describe("parseCredentialsFromHeaders", () => {
 });
 
 describe("getCredentialFingerprint", () => {
-  it("returns SHA-256 hash of client_email for service accounts", () => {
-    const result = getCredentialFingerprint(MOCK_SA_CREDENTIALS);
-    const expected = createHash("sha256").update("test@test.iam.gserviceaccount.com").digest("hex");
-    expect(result).toBe(expected);
+  it("is stable for identical credentials", () => {
+    expect(getCredentialFingerprint(MOCK_SA_CREDENTIALS)).toBe(
+      getCredentialFingerprint({ ...MOCK_SA_CREDENTIALS })
+    );
+    expect(getCredentialFingerprint(MOCK_OAUTH2_CREDENTIALS)).toBe(
+      getCredentialFingerprint({ ...MOCK_OAUTH2_CREDENTIALS })
+    );
   });
 
-  it("returns SHA-256 hash of clientId for OAuth2", () => {
-    const result = getCredentialFingerprint(MOCK_OAUTH2_CREDENTIALS);
-    const expected = createHash("sha256").update("client-123").digest("hex");
-    expect(result).toBe(expected);
+  it("binds the fingerprint to the secret, not just the public identifier", () => {
+    // The public identifier alone (client_email / clientId) must NOT determine
+    // the fingerprint — otherwise anyone who knows the (public) identifier can
+    // reproduce it and hijack a reused session. See security review Finding 1.
+    const publicIdOnlySa = createHash("sha256")
+      .update("test@test.iam.gserviceaccount.com")
+      .digest("hex");
+    expect(getCredentialFingerprint(MOCK_SA_CREDENTIALS)).not.toBe(publicIdOnlySa);
+
+    const publicIdOnlyOauth = createHash("sha256").update("client-123").digest("hex");
+    expect(getCredentialFingerprint(MOCK_OAUTH2_CREDENTIALS)).not.toBe(publicIdOnlyOauth);
+  });
+
+  it("changes when the service-account private key changes (proof-of-possession)", () => {
+    const attacker: ServiceAccountCredentials = {
+      ...MOCK_SA_CREDENTIALS,
+      // Same public client_email, attacker-controlled private key.
+      private_key: "-----BEGIN RSA PRIVATE KEY-----\nATTACKER\n-----END RSA PRIVATE KEY-----\n",
+    };
+    expect(getCredentialFingerprint(attacker)).not.toBe(
+      getCredentialFingerprint(MOCK_SA_CREDENTIALS)
+    );
+  });
+
+  it("changes when the OAuth2 client secret or refresh token changes", () => {
+    const wrongSecret: OAuth2RefreshCredentials = {
+      ...MOCK_OAUTH2_CREDENTIALS,
+      clientSecret: "attacker-secret",
+    };
+    const wrongRefresh: OAuth2RefreshCredentials = {
+      ...MOCK_OAUTH2_CREDENTIALS,
+      refreshToken: "attacker-refresh",
+    };
+    expect(getCredentialFingerprint(wrongSecret)).not.toBe(
+      getCredentialFingerprint(MOCK_OAUTH2_CREDENTIALS)
+    );
+    expect(getCredentialFingerprint(wrongRefresh)).not.toBe(
+      getCredentialFingerprint(MOCK_OAUTH2_CREDENTIALS)
+    );
   });
 });

@@ -9,8 +9,8 @@
  * supplied by the end-user via HTTP headers at SSE connection time.
  */
 
-import { createHash } from "crypto";
 import { fetchWithTimeout } from "../utils/fetch-with-timeout.js";
+import { fingerprintCredentials } from "./fingerprint.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -343,11 +343,30 @@ export function parseCredentialsFromHeaders(
 // ---------------------------------------------------------------------------
 
 /**
- * Generate a SHA-256 fingerprint of Google credentials for session binding.
- * Uses `client_email` for service accounts or `clientId` for OAuth2.
+ * Generate a fingerprint of Google credentials for session binding.
+ *
+ * The fingerprint MUST require proof-of-possession of the credential secret,
+ * not merely knowledge of the public identifier. `client_email` and `clientId`
+ * are public (or semi-public) by design, so a fingerprint derived from them
+ * alone can be reproduced by anyone who knows the identifier — which, on the
+ * session-reuse path (where the secret is never re-validated), would let an
+ * attacker who also knows a victim's session ID ride the victim's authenticated
+ * session. Binding the hash to the secret (`private_key` for service accounts;
+ * `clientSecret` + `refreshToken` for OAuth2) closes that gap: a caller without
+ * the secret produces a different fingerprint and is rejected as a mismatch.
+ *
+ * The identity component (`client_email` / `clientId`) is retained so the
+ * fingerprint still differs if the same secret is presented under a different
+ * identity. Only fields guaranteed present by `parseCredentialsFromHeaders`
+ * are used, so this never dereferences an absent optional field.
  */
 export function getCredentialFingerprint(credentials: GoogleCredentials): string {
-  const identifier =
-    credentials.type === "service_account" ? credentials.client_email : credentials.clientId;
-  return createHash("sha256").update(identifier).digest("hex");
+  if (credentials.type === "service_account") {
+    return fingerprintCredentials(credentials.client_email, credentials.private_key);
+  }
+  return fingerprintCredentials(
+    credentials.clientId,
+    credentials.clientSecret,
+    credentials.refreshToken
+  );
 }
