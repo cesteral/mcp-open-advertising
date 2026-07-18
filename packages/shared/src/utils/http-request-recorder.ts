@@ -55,9 +55,21 @@ const SENSITIVE_HEADER_PATTERNS = [
   "x-goog-api-key",
 ];
 
+/**
+ * Normalize by lower-casing and stripping separators (`-`, `_`, spaces) so a
+ * pattern matches regardless of how a header spells its word boundaries. Without
+ * this, `"developertoken"` fails to match the real Google Ads `developer-token`
+ * header (the hyphen breaks the substring match) and the token leaks into the
+ * failure log. Matching on the separator-free form catches all spellings
+ * (`developer-token`, `developer_token`, `DeveloperToken`) at once.
+ */
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/[-_\s]/g, "");
+}
+
 function isSensitiveHeader(name: string): boolean {
-  const lower = name.toLowerCase();
-  return SENSITIVE_HEADER_PATTERNS.some((p) => lower.includes(p));
+  const norm = normalizeForMatch(name);
+  return SENSITIVE_HEADER_PATTERNS.some((p) => norm.includes(normalizeForMatch(p)));
 }
 
 export function redactHeaders(
@@ -120,11 +132,18 @@ export function truncateBody(
   );
 }
 
-// Crude but effective: redact common bearer-token-looking substrings in JSON bodies
+// Redact secret-bearing fields in request/response bodies. The first pattern
+// covers both JSON (`"key":"value"`) and form-urlencoded / query (`key=value`)
+// shapes — the OAuth2 token-exchange and refresh bodies are
+// `application/x-www-form-urlencoded` (e.g. `client_secret=…&refresh_token=…`),
+// which a JSON-only (`":"`-anchored) pattern would miss entirely. Optional
+// quotes are tolerated on both key and value; the value runs until the next
+// quote, comma, ampersand, or whitespace. `developer[_-]?token` matches the
+// snake_case and hyphenated spellings.
 const BODY_SECRET_PATTERNS: Array<[RegExp, string]> = [
   [
-    /("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
-    "$1[REDACTED]$2",
+    /("?(?:access_token|refresh_token|client_secret|api_secret|developer[_-]?token|password|assertion|id_token)"?\s*[:=]\s*"?)[^"&,\s]+/gi,
+    "$1[REDACTED]",
   ],
   [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
 ];

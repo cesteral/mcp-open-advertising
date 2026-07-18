@@ -41,6 +41,20 @@ describe("redactHeaders", () => {
     expect(out["x-request-id"]).toBe("req-1");
   });
 
+  it("redacts the developer-token header across separator spellings", () => {
+    // Regression for security review Finding 4: the Google Ads `developer-token`
+    // header must be redacted even though the pattern list spells it without a
+    // hyphen. Matching is separator-insensitive, so every spelling is covered.
+    const out = redactHeaders({
+      "developer-token": "dev-secret-1",
+      DeveloperToken: "dev-secret-2",
+      developer_token: "dev-secret-3",
+    });
+    expect(out["developer-token"]).toBe("[REDACTED]");
+    expect(out["DeveloperToken"]).toBe("[REDACTED]");
+    expect(out["developer_token"]).toBe("[REDACTED]");
+  });
+
   it("returns empty object for undefined", () => {
     expect(redactHeaders(undefined)).toEqual({});
   });
@@ -95,6 +109,26 @@ describe("truncateBody", () => {
     expect(out).toContain("[REDACTED]");
     expect(out).not.toContain("super-secret");
     expect(out).toContain("ok");
+  });
+
+  it("redacts secrets in form-urlencoded bodies", () => {
+    // Regression for security review Finding 4: OAuth2 token-exchange / refresh
+    // bodies are application/x-www-form-urlencoded, not JSON. The prior JSON-only
+    // pattern left client_secret / refresh_token in the clear.
+    const out = truncateBody(
+      "grant_type=refresh_token&client_id=pub-123&client_secret=CS-leak&refresh_token=RT-leak"
+    );
+    expect(out).not.toContain("CS-leak");
+    expect(out).not.toContain("RT-leak");
+    expect(out).toContain("client_secret=[REDACTED]");
+    expect(out).toContain("refresh_token=[REDACTED]");
+    expect(out).toContain("client_id=pub-123"); // non-secret field preserved
+  });
+
+  it("redacts a signed JWT assertion in a form body", () => {
+    const out = truncateBody("grant_type=urn:jwt-bearer&assertion=eyJhbGci.PAYLOAD.SIG");
+    expect(out).not.toContain("eyJhbGci.PAYLOAD.SIG");
+    expect(out).toContain("assertion=[REDACTED]");
   });
 
   it("truncates bodies that exceed the byte cap", () => {
