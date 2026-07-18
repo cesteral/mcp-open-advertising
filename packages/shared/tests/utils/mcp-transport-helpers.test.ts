@@ -172,13 +172,37 @@ describe("validateSessionReuse", () => {
     expect(strategy.verify).toHaveBeenCalled();
   });
 
-  it("should return valid when no stored fingerprint (stdio mode)", async () => {
+  it("rejects a live session that has services but no stored fingerprint when the caller is credentialed", async () => {
+    // Regression for security review Finding 2: a session created without a
+    // credential fingerprint must not be reusable by a caller that DOES present
+    // fingerprintable credentials, or any credentialed caller could ride it.
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }); // services stored WITHOUT a fingerprint
+    const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-any" });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(false);
+    expect(result.reason).toContain("not credential-bound");
+  });
+
+  it("allows a session with no fingerprint when the caller is also uncredentialed (none mode)", async () => {
     const store = new SessionServiceStore<MockServices>();
     store.set("s1", { svc: "a" }); // no fingerprint
+    const strategy = createMockAuthStrategy({}); // extractor + verify yield undefined
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(true);
+    expect(result.requestFingerprint).toBeUndefined();
+  });
+
+  it("allows rebuild when the session is not yet in the store (cold instance)", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    // No store.set — session absent, as on a scaled-out instance before rehydration.
     const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-any" });
 
     const result = await validateSessionReuse(strategy, store, {}, "s1");
     expect(result.valid).toBe(true);
+    expect(result.requestFingerprint).toBe("fp-any");
   });
 
   it("should return invalid when extractor throws", async () => {
