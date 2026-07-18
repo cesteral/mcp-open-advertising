@@ -40,6 +40,9 @@ jobs:
       - name: Check registry → docs (README + CLAUDE.md tool counts match registry.json)
         run: pnpm run check:doc-tool-counts
 
+      - name: Check account-scope coverage (session-bound tools assert caller-supplied scope)
+        run: pnpm run check:account-scope
+
       - name: Build
         run: pnpm run build
 
