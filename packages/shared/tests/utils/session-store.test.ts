@@ -58,6 +58,14 @@ describe("SessionServiceStore", () => {
       expect(store.validateFingerprint("s1", "fp-xyz")).toBe(false);
     });
 
+    it("rejects (without throwing) fingerprints of a different length", () => {
+      // The constant-time comparison must handle unequal lengths gracefully —
+      // `timingSafeEqual` throws on length mismatch, so the guard returns false.
+      store.set("s1", { serviceA: "a", serviceB: 1 }, "fp-abc");
+      expect(store.validateFingerprint("s1", "fp-abcd")).toBe(false);
+      expect(store.validateFingerprint("s1", "")).toBe(false);
+    });
+
     it("should allow when no fingerprint stored (stdio mode)", () => {
       store.set("s1", { serviceA: "a", serviceB: 1 });
       expect(store.validateFingerprint("s1", "any-fp")).toBe(true);

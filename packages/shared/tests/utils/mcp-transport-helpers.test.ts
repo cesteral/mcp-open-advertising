@@ -25,21 +25,28 @@ function createMockLogger(): Logger {
 }
 
 describe("isValidSessionId", () => {
-  it("should accept valid hex session IDs", () => {
+  it("accepts a server-minted 64-char hex id (the only shape generateSessionId produces)", () => {
+    expect(isValidSessionId(generateSessionId())).toBe(true);
     expect(isValidSessionId("a".repeat(64))).toBe(true);
-    expect(isValidSessionId("abcdef0123456789abcdef")).toBe(true);
+    expect(isValidSessionId("A1B2C3D4".repeat(8))).toBe(true); // case-insensitive
   });
 
-  it("should reject too-short IDs", () => {
+  it("rejects too-short or too-long ids", () => {
     expect(isValidSessionId("abc")).toBe(false);
+    expect(isValidSessionId("a".repeat(22))).toBe(false); // hex but wrong length
+    expect(isValidSessionId("a".repeat(63))).toBe(false);
+    expect(isValidSessionId("a".repeat(65))).toBe(false);
   });
 
-  it("should reject IDs with invalid characters", () => {
+  it("rejects ids with non-hex characters", () => {
     expect(isValidSessionId("g".repeat(64))).toBe(false);
   });
 
-  it("should accept IDs with hyphens", () => {
-    expect(isValidSessionId("abcdef01-2345-6789-abcd-ef0123456789")).toBe(true);
+  it("rejects hyphenated / client-invented ids (server never mints these)", () => {
+    // Regression for security review Finding 3: only the server-minted shape is
+    // accepted, so arbitrary attacker-chosen identifiers can't enter the
+    // session-create / rebuild path.
+    expect(isValidSessionId("abcdef01-2345-6789-abcd-ef0123456789")).toBe(false);
   });
 });
 

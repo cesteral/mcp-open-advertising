@@ -11,9 +11,26 @@
  * Each MCP server instantiates this with its own SessionServices type.
  */
 
+import { timingSafeEqual } from "crypto";
+
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
 const DEFAULT_MAX_SESSIONS = 1000;
+
+/**
+ * Constant-time string comparison. Fingerprints are hashes of credentials, so a
+ * timing side channel here is low-risk, but the comparison guards session
+ * binding — compare in constant time so a match/mismatch cannot be probed by
+ * timing. A length difference means definitely-not-equal; fingerprint length is
+ * a function of the auth mode (public), never of a secret, so short-circuiting
+ * on it leaks nothing, and `timingSafeEqual` requires equal-length inputs.
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 /**
  * Callback fired when a session is deleted (explicit delete, transport close,
@@ -79,7 +96,7 @@ export class SessionServiceStore<T> {
   validateFingerprint(sessionId: string, credentialFingerprint: string): boolean {
     const stored = this.fingerprints.get(sessionId);
     if (!stored) return true; // No fingerprint stored (e.g. stdio mode) — allow
-    return stored === credentialFingerprint;
+    return constantTimeEqual(stored, credentialFingerprint);
   }
 
   delete(sessionId: string): void {
