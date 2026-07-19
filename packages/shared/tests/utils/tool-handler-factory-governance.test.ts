@@ -396,9 +396,9 @@ describe("tool-handler-factory governance verification", () => {
       })
     ).not.toThrow();
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
-    expect(warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")).toBe(
-      true
-    );
+    expect(
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+    ).toBe(true);
   });
 
   it("P3: hosted + injected distributed store is OK (no throw, no in-memory warn)", () => {
@@ -415,24 +415,34 @@ describe("tool-handler-factory governance verification", () => {
       })
     ).not.toThrow();
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
-    expect(warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")).toBe(
-      false
-    );
+    expect(
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+    ).toBe(false);
   });
 
   describe("evaluateJtiStoreEnforcementSafety (pure)", () => {
     it("ok when not enforcing", () => {
-      expect(evaluateJtiStoreEnforcementSafety({ anyEnforce: false, storeInjected: false, env: {} })).toEqual({
+      expect(
+        evaluateJtiStoreEnforcementSafety({ anyEnforce: false, storeInjected: false, env: {} })
+      ).toEqual({
         action: "ok",
       });
     });
     it("ok when a store was injected", () => {
       expect(
-        evaluateJtiStoreEnforcementSafety({ anyEnforce: true, storeInjected: true, env: { K_SERVICE: "x" } })
+        evaluateJtiStoreEnforcementSafety({
+          anyEnforce: true,
+          storeInjected: true,
+          env: { K_SERVICE: "x" },
+        })
       ).toEqual({ action: "ok" });
     });
     it("warn for stdio / self-host (no hosted signal, no firestore declared)", () => {
-      const r = evaluateJtiStoreEnforcementSafety({ anyEnforce: true, storeInjected: false, env: {} });
+      const r = evaluateJtiStoreEnforcementSafety({
+        anyEnforce: true,
+        storeInjected: false,
+        env: {},
+      });
       expect(r.action).toBe("warn");
     });
     it("throw on hosted", () => {

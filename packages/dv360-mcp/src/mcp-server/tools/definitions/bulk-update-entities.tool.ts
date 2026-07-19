@@ -294,10 +294,14 @@ function validateBulkUpdateItem(
   }
 
   // Mirror the execute path's field mapping + schema validation exactly.
-  const merged = mergeIdsIntoData(input.entityType, item.data as Record<string, unknown>, {
-    advertiserId: input.advertiserId,
-    [`${input.entityType}Id`]: item.entityId,
-  } as Record<string, unknown>);
+  const merged = mergeIdsIntoData(
+    input.entityType,
+    item.data as Record<string, unknown>,
+    {
+      advertiserId: input.advertiserId,
+      [`${input.entityType}Id`]: item.entityId,
+    } as Record<string, unknown>
+  );
 
   try {
     getEntitySchemaForOperation(input.entityType, "update").parse(merged);

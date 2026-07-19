@@ -81,7 +81,11 @@ describe("dv360_bulk_update_entities governance contract (effect class)", () => 
       {
         ...baseInput,
         items: [
-          { entityId: "1", data: { entityStatus: "NOT_A_REAL_STATUS" }, updateMask: "entityStatus" },
+          {
+            entityId: "1",
+            data: { entityStatus: "NOT_A_REAL_STATUS" },
+            updateMask: "entityStatus",
+          },
         ],
         dry_run: true,
       } as any,
