@@ -74,6 +74,26 @@ describe("dv360_bulk_update_entities governance contract (effect class)", () => 
     expect(result.dryRun?.validationErrors[0]?.code).toBe("EMPTY_UPDATE_MASK");
   });
 
+  it("P4: dry_run flags an item whose data violates the per-entity update schema", async () => {
+    // Non-empty data with an invalid entityStatus enum value passes the old
+    // non-emptiness check but fails the update schema the execute path enforces.
+    const result = await bulkUpdateEntitiesLogic(
+      {
+        ...baseInput,
+        items: [
+          { entityId: "1", data: { entityStatus: "NOT_A_REAL_STATUS" }, updateMask: "entityStatus" },
+        ],
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.updateEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.length).toBeGreaterThan(0);
+    expect(result.dryRun?.validationErrors.every((e) => e.field?.startsWith("items.0"))).toBe(true);
+  });
+
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await bulkUpdateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.updateEntity).toHaveBeenCalledTimes(2);

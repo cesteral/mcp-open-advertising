@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import { getEntitySchemaForOperation } from "../utils/entity-mapping-dynamic.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import {
   BulkOperationResultSchema,
@@ -252,36 +253,86 @@ export async function bulkUpdateEntitiesLogic(
 }
 
 /**
- * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
- * item must target a non-empty entityId, carry a non-empty data payload, and a
- * non-empty updateMask) and projects the would-be effect (an N-item update of
- * one entity kind). DV360 has no native bulk validate, so both axes are symbolic.
- * Pure (no I/O).
+ * Per-item validation for the dry-run, mirroring what the execute path sends to
+ * DV360: the same `mergeIdsIntoData` + per-entity **update** schema
+ * (`getEntitySchemaForOperation(entityType, "update")`) that `updateEntity`
+ * enforces at execute (P4). Previously the dry-run checked only non-emptiness of
+ * entityId/data/updateMask, so an approver could green-light a batch whose items
+ * then fail the update schema per-item at execute. Structural checks
+ * (entityId / updateMask presence) run first because they are not covered by the
+ * data schema. Pure (no I/O).
+ */
+function validateBulkUpdateItem(
+  input: BulkUpdateEntitiesInput,
+  item: BulkUpdateEntitiesInput["items"][number],
+  index: number
+): DryRunValidationError[] {
+  const errors: DryRunValidationError[] = [];
+
+  if (!item.entityId || item.entityId.trim().length === 0) {
+    errors.push({
+      code: "INVALID_ENTITY_ID",
+      message: `items[${index}].entityId must be a non-empty entity id`,
+      field: `items.${index}.entityId`,
+    });
+  }
+  if (!item.updateMask || item.updateMask.trim().length === 0) {
+    errors.push({
+      code: "EMPTY_UPDATE_MASK",
+      message: `items[${index}].updateMask must list at least one field path`,
+      field: `items.${index}.updateMask`,
+    });
+  }
+  if (!item.data || typeof item.data !== "object" || Object.keys(item.data).length === 0) {
+    errors.push({
+      code: "EMPTY_UPDATE",
+      message: `items[${index}].data must contain at least one field to update`,
+      field: `items.${index}.data`,
+    });
+    // No data to schema-check — return the structural errors gathered so far.
+    return errors;
+  }
+
+  // Mirror the execute path's field mapping + schema validation exactly.
+  const merged = mergeIdsIntoData(input.entityType, item.data as Record<string, unknown>, {
+    advertiserId: input.advertiserId,
+    [`${input.entityType}Id`]: item.entityId,
+  } as Record<string, unknown>);
+
+  try {
+    getEntitySchemaForOperation(input.entityType, "update").parse(merged);
+  } catch (err: any) {
+    if (err?.issues && Array.isArray(err.issues)) {
+      for (const issue of err.issues) {
+        const path = Array.isArray(issue.path) ? issue.path.join(".") : undefined;
+        errors.push({
+          code: issue.code ?? "ZOD",
+          message: `items[${index}]${path ? "." + path : ""}: ${issue.message ?? String(err)}`,
+          field: path ? `items.${index}.${path}` : `items.${index}`,
+        });
+      }
+    } else {
+      errors.push({
+        code: "ZOD",
+        message: `items[${index}]: ${err?.message ?? String(err)}`,
+        field: `items.${index}`,
+      });
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Symbolic effect dry-run for `bulk_update_entities`. Validates every item
+ * against the per-entity update schema (the same one execute enforces) and
+ * projects the would-be effect (an N-item update of one entity kind). DV360 has
+ * no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
-    if (!item.entityId || item.entityId.trim().length === 0) {
-      validationErrors.push({
-        code: "INVALID_ENTITY_ID",
-        message: `items[${i}].entityId must be a non-empty entity id`,
-        field: `items.${i}.entityId`,
-      });
-    }
-    if (!item.data || typeof item.data !== "object" || Object.keys(item.data).length === 0) {
-      validationErrors.push({
-        code: "EMPTY_UPDATE",
-        message: `items[${i}].data must contain at least one field to update`,
-        field: `items.${i}.data`,
-      });
-    }
-    if (!item.updateMask || item.updateMask.trim().length === 0) {
-      validationErrors.push({
-        code: "EMPTY_UPDATE_MASK",
-        message: `items[${i}].updateMask must list at least one field path`,
-        field: `items.${i}.updateMask`,
-      });
-    }
+    validationErrors.push(...validateBulkUpdateItem(input, item, i));
   });
 
   const expectedEffect: EffectResult = {

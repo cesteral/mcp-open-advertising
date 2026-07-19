@@ -68,6 +68,8 @@ describe("DV360 long-tail governance contracts (effect class)", () => {
     targetingService = {
       createAssignedTargetingOption: vi.fn(),
       deleteAssignedTargetingOption: vi.fn().mockResolvedValue(undefined),
+      // Default: the option exists (dry-run existence check succeeds).
+      getAssignedTargetingOption: vi.fn().mockResolvedValue({ assignedTargetingOptionId: "ato-1" }),
     };
     dv360Service = {
       createEntity: vi.fn(),
@@ -164,7 +166,10 @@ describe("DV360 long-tail governance contracts (effect class)", () => {
     );
     expect(mockElicitDelete).not.toHaveBeenCalled();
     expect(targetingService.deleteAssignedTargetingOption).not.toHaveBeenCalled();
+    // P4: the dry-run now does a read-only existence check (no mutation).
+    expect(targetingService.getAssignedTargetingOption).toHaveBeenCalled();
     expect(dry.dryRun?.expectedEffect?.effectKind).toBe("assigned_targeting_deleted");
+    expect(dry.dryRun?.wouldSucceed).toBe(true);
     expect(() => DeleteAssignedTargetingOutputSchema.parse(dry)).not.toThrow();
 
     const exec = await deleteAssignedTargetingLogic(
@@ -180,6 +185,52 @@ describe("DV360 long-tail governance contracts (effect class)", () => {
     );
     expect(exec.effect?.effectKind).toBe("assigned_targeting_deleted");
     expect(exec.dispatchedCapability.canonicalEntityKind).toBeNull();
+  });
+
+  it("P4: delete_assigned_targeting dry_run reports would-fail when the option is not found (404)", async () => {
+    targetingService.getAssignedTargetingOption.mockRejectedValue(
+      Object.assign(new Error("Targeting option not found"), { statusCode: 404 })
+    );
+    const dry = await deleteAssignedTargetingLogic(
+      {
+        parentType: "lineItem",
+        advertiserId: "1",
+        lineItemId: "2",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+        assignedTargetingOptionId: "missing",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(targetingService.deleteAssignedTargetingOption).not.toHaveBeenCalled();
+    expect(dry.dryRun?.wouldSucceed).toBe(false);
+    expect(dry.dryRun?.validationErrors[0]?.code).toBe("TARGETING_OPTION_NOT_FOUND");
+    expect(() => DeleteAssignedTargetingOutputSchema.parse(dry)).not.toThrow();
+  });
+
+  it("P4: delete_assigned_targeting dry_run stays conservative on a transient read failure", async () => {
+    targetingService.getAssignedTargetingOption.mockRejectedValue(
+      Object.assign(new Error("upstream 503"), { statusCode: 503 })
+    );
+    const dry = await deleteAssignedTargetingLogic(
+      {
+        parentType: "lineItem",
+        advertiserId: "1",
+        lineItemId: "2",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+        assignedTargetingOptionId: "ato-1",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    // A flaky preview read must not block a real delete — wouldSucceed stays true,
+    // no false NOT_FOUND error, and validationSource never claims native validation.
+    expect(dry.dryRun?.wouldSucceed).toBe(true);
+    expect(dry.dryRun?.validationErrors).toHaveLength(0);
+    expect(dry.dryRun?.validationSource).toBe("symbolic");
+    expect(() => DeleteAssignedTargetingOutputSchema.parse(dry)).not.toThrow();
   });
 
   it("create_custom_bidding_algorithm: dry_run flags missing fields; execute emits the effect", async () => {

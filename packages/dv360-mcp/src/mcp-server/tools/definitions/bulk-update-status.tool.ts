@@ -355,10 +355,24 @@ export async function bulkUpdateStatusLogic(
 function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.entityIds.forEach((id, i) => {
-    if (!id || id.trim().length === 0) {
+    const trimmed = (id ?? "").trim();
+    if (trimmed.length === 0) {
       validationErrors.push({
         code: "INVALID_ENTITY_ID",
         message: `entityIds[${i}] must be a non-empty entity ID`,
+        field: `entityIds.${i}`,
+      });
+      return;
+    }
+    // DV360 resource IDs are numeric strings (P4). A non-numeric id passes the
+    // non-empty check but 400/404s at execute — surface it in the preview so the
+    // "would succeed" verdict matches what the API will accept. The target
+    // `status` is already constrained to the valid entityStatus enum by the
+    // input schema, so no re-check is needed for it.
+    if (!/^\d+$/.test(trimmed)) {
+      validationErrors.push({
+        code: "INVALID_ENTITY_ID",
+        message: `entityIds[${i}] "${id}" must be a numeric DV360 resource id`,
         field: `entityIds.${i}`,
       });
     }

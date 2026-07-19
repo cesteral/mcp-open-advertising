@@ -74,6 +74,17 @@ describe("dv360_bulk_update_status governance contract (effect class)", () => {
     expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_ENTITY_ID");
   });
 
+  it("P4: dry_run flags a non-numeric entity ID (would 400/404 at execute)", async () => {
+    const result = await bulkUpdateStatusLogic(
+      { ...baseInput, entityIds: ["not-a-number"], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_ENTITY_ID");
+    expect(result.dryRun?.validationErrors[0]?.message).toContain("numeric");
+  });
+
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await bulkUpdateStatusLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.updateEntity).toHaveBeenCalledOnce();
