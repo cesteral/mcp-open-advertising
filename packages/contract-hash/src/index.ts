@@ -32,7 +32,23 @@ function sortKeysDeep(value: unknown): unknown {
   if (value !== null && typeof value === "object") {
     const sorted: Record<string, unknown> = {};
     for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      sorted[key] = sortKeysDeep((value as Record<string, unknown>)[key]);
+      // Use defineProperty, NOT `sorted[key] = …`. A plain assignment for the key
+      // `"__proto__"` invokes `Object.prototype`'s `__proto__` setter, which sets
+      // the object's prototype instead of creating an own property — so the key is
+      // silently DROPPED and `JSON.stringify` omits it. That let an attacker add an
+      // own nested `__proto__` property to a hashed object and keep the SAME
+      // `definitionHash` as the property-free definition — a deterministic collision
+      // that carried a semantically-mutated tool to a blessed hash and `attested`
+      // trust (2026-07-19 follow-up review, C1). Defining an own enumerable data
+      // property makes every key — `__proto__` included — part of the canonical
+      // bytes. `__proto__`-free values serialize identically to before, so existing
+      // blessed hashes and golden vectors are unchanged.
+      Object.defineProperty(sorted, key, {
+        value: sortKeysDeep((value as Record<string, unknown>)[key]),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
     return sorted;
   }
@@ -171,5 +187,7 @@ export {
   CROSS_REPO_DEFINITION_HASH_GOLDEN,
   CROSS_REPO_DEFINITION_HASH_GOLDEN_VECTORS,
   CROSS_REPO_GOLDEN_DISTINCTNESS_PAIRS,
+  CROSS_REPO_PROTO_POLLUTION_VECTORS,
   type CrossRepoGoldenVector,
+  type CrossRepoProtoPollutionVector,
 } from "./cross-repo-golden.js";

@@ -190,3 +190,59 @@ export const CROSS_REPO_GOLDEN_DISTINCTNESS_PAIRS: ReadonlyArray<readonly [strin
     "property omitted (pairs with explicit-null — must differ)",
   ],
 ];
+
+/**
+ * Prototype-pollution parity vectors (2026-07-19 follow-up review, C1).
+ *
+ * An own `__proto__` property cannot be written as an object literal (`{ __proto__:
+ * … }` sets the prototype), so these vectors ship the definition as a JSON SOURCE
+ * string that both repos `JSON.parse` — which yields a real OWN `__proto__` data
+ * property, exactly what an attacker's `tools/list` JSON produces over the wire.
+ *
+ * Each vector pins that the polluted definition (a) hashes to a STABLE value and
+ * (b) hashes DIFFERENTLY from its prototype-key-free twin. Before the canonicalizer
+ * fix, the `__proto__` cases collided with their twins (the key was dropped during
+ * key-sorting), letting a mutated definition retain a blessed hash and reach
+ * `attested`. `constructor` / `prototype` were always retained; they are covered
+ * defensively so any future canonicalizer change that special-cased them is caught.
+ */
+export interface CrossRepoProtoPollutionVector {
+  label: string;
+  /** Full HashableToolDefinition as JSON; `JSON.parse` yields OWN prototype-sensitive keys. */
+  pollutedJson: string;
+  /** The same definition WITHOUT the prototype-sensitive key. */
+  cleanJson: string;
+  /** Canonical hash of `JSON.parse(pollutedJson)`. MUST differ from the clean twin's hash. */
+  expectedPollutedHash: string;
+}
+
+export const CROSS_REPO_PROTO_POLLUTION_VECTORS: readonly CrossRepoProtoPollutionVector[] = [
+  {
+    label: "own __proto__ nested in inputSchema.properties",
+    cleanJson:
+      '{"name":"vec_pp","inputSchema":{"type":"object","properties":{"a":{"type":"string"}}}}',
+    pollutedJson:
+      '{"name":"vec_pp","inputSchema":{"type":"object","properties":{"a":{"type":"string"},"__proto__":{"type":"number"}}}}',
+    expectedPollutedHash: "170b510bc0cb8394633f1347fd4643cfb901737c96e15be7bb055e7e95e01dad",
+  },
+  {
+    label: "own __proto__ in annotations.cesteral.capabilityDispatch.entityKindValueMap",
+    cleanJson:
+      '{"name":"vec_pp","annotations":{"cesteral":{"schemaVersion":1,"platform":"x","contractId":"x.y.v1","capabilityDispatch":{"entityKindValueMap":{"campaign":"CAMPAIGN"}}}}}',
+    pollutedJson:
+      '{"name":"vec_pp","annotations":{"cesteral":{"schemaVersion":1,"platform":"x","contractId":"x.y.v1","capabilityDispatch":{"entityKindValueMap":{"campaign":"CAMPAIGN","__proto__":"campaign"}}}}}',
+    expectedPollutedHash: "b906a2b6ae2677cde13d9c65640f70886b5c0986dc88f593463b5a59f3b4065f",
+  },
+  {
+    label: "own __proto__ at inputSchema top level",
+    cleanJson: '{"name":"vec_pp","inputSchema":{"type":"object"}}',
+    pollutedJson: '{"name":"vec_pp","inputSchema":{"type":"object","__proto__":{"evil":true}}}',
+    expectedPollutedHash: "1b377d1126d5a56c70fad4d90b773645a2eddaee27c8f726c46977d0deed07f9",
+  },
+  {
+    label: "own constructor key retained (defensive; always distinct)",
+    cleanJson: '{"name":"vec_pp","inputSchema":{"type":"object"}}',
+    pollutedJson: '{"name":"vec_pp","inputSchema":{"type":"object","constructor":{"x":1}}}',
+    expectedPollutedHash: "538fd756d27d2432eedf89c5ab08a3cf6fd6d3af607115a3bf9ce6e478d968d3",
+  },
+];
