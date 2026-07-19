@@ -167,4 +167,9 @@ export function computeDefinitionHash(tool: HashableToolDefinition): string {
 }
 
 // Single-sourced cross-repo definitionHash parity vector (see ./cross-repo-golden.ts).
-export { CROSS_REPO_DEFINITION_HASH_GOLDEN } from "./cross-repo-golden.js";
+export {
+  CROSS_REPO_DEFINITION_HASH_GOLDEN,
+  CROSS_REPO_DEFINITION_HASH_GOLDEN_VECTORS,
+  CROSS_REPO_GOLDEN_DISTINCTNESS_PAIRS,
+  type CrossRepoGoldenVector,
+} from "./cross-repo-golden.js";
