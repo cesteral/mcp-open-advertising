@@ -176,6 +176,13 @@ export class PinterestHttpClient {
           };
         },
         buildNextAction: buildPinterestNextAction,
+        // Deliberate opt-in to 5xx retry for this POST: the shared default no
+        // longer retries non-idempotent methods on 5xx (a re-send after an
+        // ambiguous failure could duplicate a committed mutation). A media
+        // upload is safe to re-send — a duplicate registration is an inert
+        // orphan asset until a later create call references it, and Pinterest
+        // media uploads are transient/idempotent in effect.
+        isRetryable: (status) => status === 429 || status >= 500,
       });
       span.setAttribute("http.response.status_code", 200);
       return result;

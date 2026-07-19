@@ -13,7 +13,10 @@ vi.mock("../../src/utils/telemetry.js", () => ({
   recordSpanError: vi.fn(),
 }));
 
-import { registerToolsFromDefinitions } from "../../src/utils/tool-handler-factory.js";
+import {
+  registerToolsFromDefinitions,
+  evaluateJtiStoreEnforcementSafety,
+} from "../../src/utils/tool-handler-factory.js";
 import { runWithRequestContext, createRequestContext } from "../../src/utils/request-context.js";
 import { InMemoryJtiStore } from "../../src/index.js";
 import type { JtiStore } from "../../src/index.js";
@@ -348,6 +351,124 @@ describe("tool-handler-factory governance verification", () => {
       ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
     );
     expect(hit).toBe(false);
+  });
+
+  // P3: enforce + in-memory fallback fails closed on a hosted deployment.
+  it("P3: THROWS at registration on a hosted (K_SERVICE) deployment with enforce + in-memory store", () => {
+    expect(() =>
+      register({
+        env: {
+          GOVERNANCE_TOKEN_MODE: "enforce",
+          GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+          K_SERVICE: "meta-mcp",
+        },
+        server,
+        logger,
+      })
+    ).toThrow(/jti-store misconfiguration/i);
+  });
+
+  it("P3: THROWS when GOVERNANCE_JTI_STORE=firestore is declared but never wired into the factory", () => {
+    expect(() =>
+      register({
+        env: {
+          GOVERNANCE_TOKEN_MODE: "enforce",
+          GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+          GOVERNANCE_JTI_STORE: "firestore",
+        },
+        server,
+        logger,
+      })
+    ).toThrow(/never wired/i);
+  });
+
+  it("P3: the opt-out downgrades the hosted throw to a warn (deliberate single instance)", () => {
+    expect(() =>
+      register({
+        env: {
+          GOVERNANCE_TOKEN_MODE: "enforce",
+          GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+          K_SERVICE: "meta-mcp",
+          GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE: "true",
+        },
+        server,
+        logger,
+      })
+    ).not.toThrow();
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    expect(
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+    ).toBe(true);
+  });
+
+  it("P3: hosted + injected distributed store is OK (no throw, no in-memory warn)", () => {
+    expect(() =>
+      register({
+        env: {
+          GOVERNANCE_TOKEN_MODE: "enforce",
+          GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+          K_SERVICE: "meta-mcp",
+        },
+        jtiStore: new InMemoryJtiStore(),
+        server,
+        logger,
+      })
+    ).not.toThrow();
+    const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
+    expect(
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+    ).toBe(false);
+  });
+
+  describe("evaluateJtiStoreEnforcementSafety (pure)", () => {
+    it("ok when not enforcing", () => {
+      expect(
+        evaluateJtiStoreEnforcementSafety({ anyEnforce: false, storeInjected: false, env: {} })
+      ).toEqual({
+        action: "ok",
+      });
+    });
+    it("ok when a store was injected", () => {
+      expect(
+        evaluateJtiStoreEnforcementSafety({
+          anyEnforce: true,
+          storeInjected: true,
+          env: { K_SERVICE: "x" },
+        })
+      ).toEqual({ action: "ok" });
+    });
+    it("warn for stdio / self-host (no hosted signal, no firestore declared)", () => {
+      const r = evaluateJtiStoreEnforcementSafety({
+        anyEnforce: true,
+        storeInjected: false,
+        env: {},
+      });
+      expect(r.action).toBe("warn");
+    });
+    it("throw on hosted", () => {
+      const r = evaluateJtiStoreEnforcementSafety({
+        anyEnforce: true,
+        storeInjected: false,
+        env: { K_SERVICE: "svc" },
+      });
+      expect(r.action).toBe("throw");
+    });
+    it("throw when firestore declared but unwired", () => {
+      const r = evaluateJtiStoreEnforcementSafety({
+        anyEnforce: true,
+        storeInjected: false,
+        env: { GOVERNANCE_JTI_STORE: "firestore" },
+      });
+      expect(r.action).toBe("throw");
+    });
+    it("opt-out downgrades throw to warn", () => {
+      const r = evaluateJtiStoreEnforcementSafety({
+        anyEnforce: true,
+        storeInjected: false,
+        env: { K_SERVICE: "svc", GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE: "true" },
+      });
+      expect(r.action).toBe("warn");
+    });
   });
 
   it("warns at registration when every governed write resolves to token mode 'off' (issue #102)", () => {

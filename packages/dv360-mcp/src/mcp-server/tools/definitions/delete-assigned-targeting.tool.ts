@@ -21,14 +21,18 @@ import {
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
+import { createLogger } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
   SdkContext,
   EffectResult,
   DispatchedCapability,
+  DryRunValidationError,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
+
+const logger = createLogger("dv360-delete-assigned-targeting");
 
 const TOOL_NAME = "dv360_delete_assigned_targeting";
 const TOOL_TITLE = "Delete DV360 Assigned Targeting Option";
@@ -116,6 +120,58 @@ export async function deleteAssignedTargetingLogic(
         deleted_targeting_option_id: input.assignedTargetingOptionId,
       },
     };
+
+    // P4: the dry-run used to hard-code wouldSucceed:true, so it reported
+    // "would succeed" for a targeting option that will 404 at execute. Do a
+    // read-only existence check via the same coordinates the delete uses: a
+    // confirmed-missing option flips wouldSucceed to false with a NOT_FOUND
+    // error; a transient read failure stays conservative (wouldSucceed:true,
+    // don't block a real delete on a flaky preview). validationSource stays
+    // "symbolic" — the only non-"none" value the effect dry-run schema allows,
+    // and it never claims native/upstream validation succeeded.
+    const validationErrors: DryRunValidationError[] = [];
+    let wouldSucceed = true;
+    try {
+      const { targetingService } = resolveSessionServices(sdkContext);
+      const ids = buildTargetingIds(
+        input.parentType as TargetingParentType,
+        input.advertiserId,
+        input
+      );
+      await targetingService.getAssignedTargetingOption(
+        input.parentType as TargetingParentType,
+        ids,
+        input.targetingType as TargetingType,
+        input.assignedTargetingOptionId,
+        context
+      );
+    } catch (err: any) {
+      const status = err?.data?.httpStatus ?? err?.statusCode;
+      const message: string = err?.message ?? String(err);
+      const isNotFound = status === 404 || /not\s*found/i.test(message);
+      if (isNotFound) {
+        wouldSucceed = false;
+        validationErrors.push({
+          code: "TARGETING_OPTION_NOT_FOUND",
+          message:
+            `assignedTargetingOptionId "${input.assignedTargetingOptionId}" was not found on ` +
+            `the ${input.parentType} for ${input.targetingType} — the delete would 404`,
+          field: "assignedTargetingOptionId",
+        });
+      } else {
+        // Transient / non-404: do not block the delete on a preview read that
+        // could not confirm existence either way. Log for observability.
+        logger.warn(
+          {
+            toolName: TOOL_NAME,
+            assignedTargetingOptionId: input.assignedTargetingOptionId,
+            error: message,
+          },
+          "delete-assigned-targeting dry-run existence check failed transiently; not blocking"
+        );
+      }
+    }
+
     return {
       confirmed: true,
       success: false,
@@ -125,8 +181,8 @@ export async function deleteAssignedTargetingLogic(
       timestamp: new Date().toISOString(),
       dryRun: assertGovernedEffectDryRun(
         {
-          wouldSucceed: true,
-          validationErrors: [],
+          wouldSucceed,
+          validationErrors,
           validationSource: "symbolic",
           expectedEffectSource: "symbolic",
           expectedEffect,

@@ -124,6 +124,31 @@ function isRetryableStatus(status: number): boolean {
 }
 
 /**
+ * Methods whose re-send after an ambiguous failure cannot duplicate a
+ * resource. GET/HEAD/OPTIONS are read-only; PUT and DELETE are idempotent by
+ * HTTP semantics; PATCH is included because this fleet's PATCH bodies are
+ * absolute field sets under an updateMask (re-applying yields the same
+ * state). POST is deliberately absent: a 5xx observed by the client (e.g. a
+ * gateway 502/504) can arrive AFTER the platform committed the create, and a
+ * blind re-send then duplicates the entity — real budget/spend on an ad
+ * platform (external-write-rail review C3).
+ */
+const IDEMPOTENT_RETRY_METHODS = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE", "PATCH"]);
+
+/**
+ * Default retry decision when the caller supplies no custom `isRetryable`:
+ * 429 is always retryable (the platform rejected the request without
+ * processing it); 5xx is retryable only for idempotent methods. Callers with
+ * POST endpoints that are semantically safe to re-send (GraphQL reads, report
+ * polling) keep full control via the existing `isRetryable` override.
+ */
+function isRetryableStatusForMethod(status: number, method: string): boolean {
+  if (status === 429) return true;
+  if (!isRetryableStatus(status)) return false;
+  return IDEMPOTENT_RETRY_METHODS.has(method.toUpperCase());
+}
+
+/**
  * Default HTTP status -> JsonRpcErrorCode mapper.
  *
  * Platform HTTP clients should use this as a fallback after handling any
@@ -388,7 +413,7 @@ export async function executeWithRetry(
 
     const retryable = isRetryable
       ? isRetryable(response.status, errorBody)
-      : isRetryableStatus(response.status);
+      : isRetryableStatusForMethod(response.status, method);
 
     if (!retryable || attempt >= maxRetries) {
       throw mcpError;

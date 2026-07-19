@@ -278,3 +278,107 @@ describe("executeWithRetry — buildNextAction callback", () => {
     });
   });
 });
+
+describe("executeWithRetry — method-aware default 5xx retry (review C3)", () => {
+  function countingFetch(status: number): { fetchFn: FetchWithTimeoutFn; calls: () => number } {
+    let callCount = 0;
+    const fetchFn: FetchWithTimeoutFn = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return new Response("upstream error", { status, statusText: "Error" });
+      }
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    };
+    return { fetchFn, calls: () => callCount };
+  }
+
+  it("does NOT retry a POST on 5xx by default — an ambiguous failure after commit would duplicate the mutation", async () => {
+    const { fetchFn, calls } = countingFetch(503);
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 2 },
+        {
+          url: "https://api.example.com/entities",
+          fetchOptions: { method: "POST", body: JSON.stringify({ name: "camp" }) },
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+        }
+      )
+    ).rejects.toThrow();
+    expect(calls()).toBe(1);
+  });
+
+  it("still retries a POST on 429 (request was rejected, not processed)", async () => {
+    const { fetchFn, calls } = countingFetch(429);
+
+    const result = await executeWithRetry(
+      { ...baseConfig, maxRetries: 1 },
+      {
+        url: "https://api.example.com/entities",
+        fetchOptions: { method: "POST" },
+        logger,
+        getHeaders: async () => ({}),
+        fetchFn,
+      }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(calls()).toBe(2);
+  });
+
+  it("retries a GET on 5xx (read re-send is harmless)", async () => {
+    const { fetchFn, calls } = countingFetch(500);
+
+    const result = await executeWithRetry(
+      { ...baseConfig, maxRetries: 1 },
+      {
+        url: "https://api.example.com/entities/1",
+        logger,
+        getHeaders: async () => ({}),
+        fetchFn,
+      }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(calls()).toBe(2);
+  });
+
+  it("retries a PATCH on 5xx (absolute-value updateMask writes are value-idempotent)", async () => {
+    const { fetchFn, calls } = countingFetch(502);
+
+    const result = await executeWithRetry(
+      { ...baseConfig, maxRetries: 1 },
+      {
+        url: "https://api.example.com/entities/1",
+        fetchOptions: { method: "PATCH", body: JSON.stringify({ status: "PAUSED" }) },
+        logger,
+        getHeaders: async () => ({}),
+        fetchFn,
+      }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(calls()).toBe(2);
+  });
+
+  it("a custom isRetryable override still opts a POST back into 5xx retry (GraphQL reads etc.)", async () => {
+    const { fetchFn, calls } = countingFetch(503);
+
+    const result = await executeWithRetry(
+      { ...baseConfig, maxRetries: 1 },
+      {
+        url: "https://api.example.com/graphql",
+        fetchOptions: { method: "POST", body: JSON.stringify({ query: "{ __typename }" }) },
+        logger,
+        getHeaders: async () => ({}),
+        fetchFn,
+        isRetryable: (status) => status === 429 || status >= 500,
+      }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(calls()).toBe(2);
+  });
+});
