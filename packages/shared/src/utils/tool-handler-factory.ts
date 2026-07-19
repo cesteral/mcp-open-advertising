@@ -49,6 +49,68 @@ function getFallbackJtiStore(): JtiStore {
 }
 
 /**
+ * Decide what to do when governed writes resolve to `enforce` but the factory
+ * fell back to the in-memory jti store (external-write-rail review P3).
+ *
+ * In-memory replay protection is correct for stdio / self-host / single
+ * instance but does NOT hold across Cloud Run instances: a replayed decision
+ * token routed to a second instance is accepted as fresh, so an at-most-once
+ * guarantee the operator believes `enforce` gives them is silently absent.
+ *
+ * - Not enforcing, or a store was explicitly injected → `ok` (no concern).
+ * - `GOVERNANCE_JTI_STORE=firestore` is set but the factory still got the
+ *   in-memory fallback → the deployment INTENDED a distributed store but never
+ *   wired `selectJtiStore` into the factory. That is a misconfiguration on a
+ *   money-moving path → `throw` (unless explicitly allowed).
+ * - A hosted signal is present (`K_SERVICE` — Cloud Run always sets it) → the
+ *   process can scale out, so in-memory enforce is unsafe → `throw` (unless
+ *   explicitly allowed).
+ * - Otherwise (no hosted signal — stdio / self-host) → `warn`: in-memory is
+ *   the correct store there.
+ *
+ * `GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE=true` downgrades a `throw` to a
+ * `warn` for a deployment that has deliberately pinned itself to a single
+ * instance and accepts the per-instance limitation.
+ */
+export function evaluateJtiStoreEnforcementSafety(params: {
+  anyEnforce: boolean;
+  storeInjected: boolean;
+  env: Record<string, string | undefined>;
+}): { action: "ok" | "warn" | "throw"; reason?: string } {
+  const { anyEnforce, storeInjected, env } = params;
+  if (!anyEnforce || storeInjected) return { action: "ok" };
+
+  const allowInMemory =
+    (env.GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE ?? "").trim().toLowerCase() === "true";
+  const declaredFirestore = env.GOVERNANCE_JTI_STORE === "firestore";
+  const hosted = typeof env.K_SERVICE === "string" && env.K_SERVICE.length > 0;
+
+  if (declaredFirestore) {
+    const reason =
+      "GOVERNANCE_JTI_STORE=firestore is set but the in-memory fallback store is in use — " +
+      "the distributed store was never wired into registerToolsFromDefinitions (inject " +
+      "selectJtiStore's result as `jtiStore`). Enforce-mode replay protection is not active.";
+    return { action: allowInMemory ? "warn" : "throw", reason };
+  }
+
+  if (hosted) {
+    const reason =
+      "Decision-token enforcement is active on a hosted (Cloud Run) deployment with the " +
+      "in-memory jti store — replay protection does not hold across instances. Set " +
+      "GOVERNANCE_JTI_STORE=firestore and inject selectJtiStore's result as `jtiStore`.";
+    return { action: allowInMemory ? "warn" : "throw", reason };
+  }
+
+  return {
+    action: "warn",
+    reason:
+      "Decision-token enforcement is enabled with the in-memory fallback jti store — replay " +
+      "protection does not hold across multiple instances. Inject a distributed JtiStore " +
+      "(selectJtiStore + GOVERNANCE_JTI_STORE=firestore) before scaling out.",
+  };
+}
+
+/**
  * Default maximum character length for text content blocks in tool responses.
  * Prevents context window overflow for AI agents processing large responses.
  * Can be overridden per-server via RegisterToolsOptions.responseCharacterLimit.
@@ -405,11 +467,14 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   const jtiStore = opts.jtiStore ?? getFallbackJtiStore();
   const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
 
-  // Deployment footgun guard: if any governed write resolves to `enforce` but no
-  // distributed jti store was injected, replay protection is only per-instance.
-  // Warn once at registration so this surfaces before the first enforce flip,
-  // not as a silent multi-instance gap.
-  if (!opts.jtiStore) {
+  // Deployment footgun guard (review P3): if any governed write resolves to
+  // `enforce` but the factory fell back to the in-memory jti store, per-instance
+  // replay protection silently fails to hold across Cloud Run instances. On a
+  // hosted deployment (or when the env declares firestore but it was never
+  // wired) this is a fail-closed BOOT error — an in-memory enforce posture that
+  // could double-execute a money-moving write must not start. Stdio / self-host
+  // keeps the warn (in-memory is correct there).
+  {
     const anyEnforce = tools.some((t) => {
       const c = (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral;
       return (
@@ -417,13 +482,16 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
         resolveTokenMode({ contractId: c.contractId, env: governanceEnv }) === "enforce"
       );
     });
-    if (anyEnforce) {
-      logger.warn(
-        { component: "governance", jtiStore: "in-memory" },
-        "Decision-token enforcement is enabled with the in-memory fallback jti store — " +
-          "replay protection does not hold across multiple instances. Inject a distributed " +
-          "JtiStore (selectJtiStore + GOVERNANCE_JTI_STORE=firestore)."
-      );
+    const safety = evaluateJtiStoreEnforcementSafety({
+      anyEnforce,
+      storeInjected: Boolean(opts.jtiStore),
+      env: governanceEnv,
+    });
+    if (safety.action === "throw") {
+      throw new Error(`Governance jti-store misconfiguration: ${safety.reason}`);
+    }
+    if (safety.action === "warn") {
+      logger.warn({ component: "governance", jtiStore: "in-memory" }, safety.reason);
     }
   }
 
