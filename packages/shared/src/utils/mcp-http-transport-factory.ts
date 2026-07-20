@@ -41,6 +41,7 @@ import {
 } from "./mcp-transport-helpers.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../auth/auth-strategy.js";
 import type { SessionServiceStoreLike } from "./mcp-transport-helpers.js";
+import { buildDeploymentIdentity } from "./deployment-identity.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -267,9 +268,14 @@ export function createMcpHttpTransport(
   });
 
   // SEP-2127 MCP Server Card (HTTP discovery)
-  app.get("/.well-known/mcp/server-card.json", (c) => {
+  app.get("/.well-known/mcp/server-card.json", async (c) => {
     const extras = platformConfig.serverCard;
     const caps = extras?.capabilities ?? {};
+    // C2 / #742 (S1): advertise this Cloud Run deployment's Google-signed
+    // identity so the governance layer can bind `attested` execution to the
+    // running artifact. Null off Cloud Run / when unconfigured — best-effort,
+    // never fails the card.
+    const deployment = await buildDeploymentIdentity();
     const body: Record<string, unknown> = {
       schema_version: "2026-04-27-draft",
       name: config.serviceName,
@@ -294,6 +300,7 @@ export function createMcpHttpTransport(
         resources: caps.resources ?? true,
         elicitation: caps.elicitation ?? true,
       },
+      ...(deployment ? { deployment } : {}),
     };
     return c.json(body, 200);
   });

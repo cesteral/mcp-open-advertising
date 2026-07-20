@@ -27,6 +27,7 @@ export * from "./pagination.js";
 export * from "./http-request-recorder.js";
 export * from "./mcp-http-transport-factory.js";
 export * from "./server-card-builder.js";
+export * from "./deployment-identity.js";
 export * from "./conformance-echo-tool.js";
 export * from "./conformance-env.js";
 export * from "./tool-examples-resource.js";
