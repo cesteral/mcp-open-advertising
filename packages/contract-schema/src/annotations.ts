@@ -9,21 +9,27 @@
  * to admit, govern, and reconcile external write operations without maintaining
  * an out-of-band registry.
  *
- * Two faces, deliberately different strictness, kept in one file so they cannot
- * drift:
+ * Two faces, kept in one file so they cannot drift:
  *
  * - **Authoring types** (`CesteralToolAnnotations` and friends) are the STRICT
  *   contract MCP-server authors write against via `satisfies`. An entity write
  *   MUST declare `requiresValidation: true` / `requiresSimulation: true` /
- *   `supportsBeforeAfterSnapshot: true` and a `readPartner`.
+ *   `supportsBeforeAfterSnapshot: true` / `supportsDryRun: true` and a
+ *   `readPartner`; an effect write MUST declare honest `requiresValidation` /
+ *   `requiresSimulation` booleans and `supportsBeforeAfterSnapshot: false`.
  * - **Validation schema** (`cesteralAnnotationSchema`, `parseCesteralAnnotation`)
- *   is the LOOSE shape governance parses untrusted tool lists with. It does not
- *   require the contract-promise literals — governance applies those as separate
- *   admission checks so it can emit specific reason codes
- *   (`missingRequiresValidation`, etc.) rather than a generic parse failure.
+ *   is the runtime shape governance parses untrusted tool lists with. It now
+ *   enforces those SAME write-promise fields (review Finding C5), so a released
+ *   or admitted write cannot omit the validation / simulation / snapshot / dry-run
+ *   promises the authoring contract requires. The identity fields (`platform`,
+ *   slugs, `contractId`, `operation`) and refinements (contractId consistency,
+ *   non-create `entityIdArgs`) are unchanged. Read annotations are unaffected.
  *
- * A value satisfying an authoring type always parses under the schema; the
- * package's type-tests pin that relationship.
+ * One schema at both release (`scripts/lib/manifest.mjs`) and admission means a
+ * promise-missing write fails the SAME parse in both repos rather than reaching
+ * `attested` through a gap between a strict author-time contract and a loose
+ * runtime one. A value satisfying an authoring type always parses under the
+ * schema; the package's type-tests pin that relationship.
  */
 
 import { z } from "zod";
@@ -308,8 +314,10 @@ const writeBaseFields = {
    * hashing so the connector and governance bind the same action identity.
    */
   executableArgsExclude: z.array(z.string()).optional(),
-  supportsDryRun: z.boolean().optional(),
-  supportsBeforeAfterSnapshot: z.boolean().optional(),
+  // `supportsDryRun` / `supportsBeforeAfterSnapshot` are NOT shared here: each
+  // write arm pins them to arm-specific values (entity → `true`/`true`; effect →
+  // optional/`false`) so the schema enforces the authoring contract's promise
+  // shape rather than accepting any boolean (review Finding C5).
 };
 
 /**
@@ -328,6 +336,14 @@ const entityWriteShape = z.object({
     toolName: z.string().min(1),
     argMap: z.record(z.string(), z.string()),
   }),
+  // Entity-write contract promises (mirror CesteralEntityWriteToolAnnotations):
+  // an entity write always validates, simulates, produces before/after snapshots,
+  // and honors dry-run. Pinned to the `true` literal so a released/admitted entity
+  // write cannot omit or disable them (review Finding C5).
+  supportsBeforeAfterSnapshot: z.literal(true),
+  requiresValidation: z.literal(true),
+  requiresSimulation: z.literal(true),
+  supportsDryRun: z.literal(true),
 });
 
 /**
@@ -341,6 +357,15 @@ const effectWriteShape = z.object({
   writeClass: z.literal("effect"),
   entityKinds: z.array(canonicalEntityKindSchema),
   entityIdArgs: z.array(z.string().min(1)),
+  // Effect-write contract promises (mirror CesteralEffectWriteToolAnnotations):
+  // no canonical snapshot (`false` literal), but the validation/simulation
+  // promises must be present honest booleans — an effect write cannot omit the
+  // declaration of whether it validates/simulates (review Finding C5).
+  // `supportsDryRun` stays optional (effect writes may be fire-and-forget).
+  supportsBeforeAfterSnapshot: z.literal(false),
+  requiresValidation: z.boolean(),
+  requiresSimulation: z.boolean(),
+  supportsDryRun: z.boolean().optional(),
 });
 
 const writeAnnotationShape = z.discriminatedUnion("writeClass", [
@@ -378,8 +403,9 @@ interface CesteralParsedWriteAnnotationBase extends CesteralParsedAnnotationBase
   kind: "write";
   operation: CesteralWriteOperation[];
   executableArgsExclude?: string[];
-  supportsDryRun?: boolean;
-  supportsBeforeAfterSnapshot?: boolean;
+  // `supportsDryRun` / `supportsBeforeAfterSnapshot` live on each arm below with
+  // arm-specific values — kept in exact lockstep with the schema shapes (the
+  // `z.ZodType<CesteralAnnotation>` export assignments fail to typecheck on drift).
 }
 
 export interface CesteralEntityWriteAnnotation extends CesteralParsedWriteAnnotationBase {
@@ -387,12 +413,20 @@ export interface CesteralEntityWriteAnnotation extends CesteralParsedWriteAnnota
   entityKinds: CanonicalEntityKind[];
   entityIdArgs: string[];
   readPartner: { toolName: string; argMap: Record<string, string> };
+  supportsBeforeAfterSnapshot: true;
+  requiresValidation: true;
+  requiresSimulation: true;
+  supportsDryRun: true;
 }
 
 export interface CesteralEffectWriteAnnotation extends CesteralParsedWriteAnnotationBase {
   writeClass: "effect";
   entityKinds: CanonicalEntityKind[];
   entityIdArgs: string[];
+  supportsBeforeAfterSnapshot: false;
+  requiresValidation: boolean;
+  requiresSimulation: boolean;
+  supportsDryRun?: boolean;
 }
 
 export type CesteralWriteAnnotation = CesteralEntityWriteAnnotation | CesteralEffectWriteAnnotation;
