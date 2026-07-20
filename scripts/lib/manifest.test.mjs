@@ -16,6 +16,10 @@ const writeCesteral = {
   entityIdArgs: ["campaignId"],
   executableArgsExclude: ["dry_run"],
   readPartner: { toolName: "meta_get_entity", argMap: { campaignId: "campaignId" } },
+  supportsBeforeAfterSnapshot: true,
+  requiresValidation: true,
+  requiresSimulation: true,
+  supportsDryRun: true,
 };
 
 const writeTool = {
@@ -145,6 +149,9 @@ describe("toManifestEntry", () => {
           operation: ["upload"],
           entityKinds: [],
           entityIdArgs: [],
+          supportsBeforeAfterSnapshot: false,
+          requiresValidation: false,
+          requiresSimulation: false,
         },
       },
     };

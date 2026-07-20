@@ -173,6 +173,41 @@ describe("parseCesteralAnnotation — rejections", () => {
     expect(parseCesteralAnnotation(bad).success).toBe(false);
   });
 
+  it("C5: rejects an entity write missing requiresValidation", () => {
+    // A missing field on a discriminatedUnion arm collapses to a top-level
+    // invalid_union (same as the missing-readPartner case above), so assert the
+    // rejection itself rather than a stable field-path.
+    const { requiresValidation: _omit, ...bad } = entityWrite;
+    expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("C5: rejects an entity write that disables requiresSimulation", () => {
+    const bad = { ...entityWrite, requiresSimulation: false };
+    expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("C5: rejects an entity write that disables supportsDryRun (contradicts simulation)", () => {
+    const bad = { ...entityWrite, supportsDryRun: false };
+    expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("C5: rejects an effect write missing the requiresValidation/requiresSimulation declarations", () => {
+    const { requiresValidation: _v, requiresSimulation: _s, ...bad } = effectWrite;
+    expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("C5: rejects an effect write that claims a before/after snapshot", () => {
+    // Effect writes have no canonical snapshot — the schema pins the `false` literal.
+    const bad = { ...effectWrite, supportsBeforeAfterSnapshot: true };
+    expect(parseCesteralAnnotation(bad).success).toBe(false);
+  });
+
+  it("C5: still accepts an effect write with honest false validation/simulation promises", () => {
+    // The requirement is that the fields are DECLARED, not that they are true —
+    // a fire-and-forget upload legitimately declares both false.
+    expect(parseCesteralAnnotation(effectWrite).success).toBe(true);
+  });
+
   it("rejects a non-create entity-write with empty entityIdArgs", () => {
     // update/pause/delete/… reference an existing entity, so identity is required.
     const bad = { ...entityWrite, entityIdArgs: [] };
@@ -203,6 +238,8 @@ describe("entityIdArgs create exemption", () => {
     readPartner: { toolName: "ttd_get_entity", argMap: { entityType: "entityType" } },
     supportsDryRun: true,
     supportsBeforeAfterSnapshot: true,
+    requiresValidation: true,
+    requiresSimulation: true,
   };
 
   it("accepts a create entity-write with empty entityIdArgs", () => {
