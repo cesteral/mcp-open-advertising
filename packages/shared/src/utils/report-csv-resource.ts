@@ -34,7 +34,10 @@ export interface ResourceTemplateLike {
   new (
     uriTemplate: string,
     options: {
-      list: () => Promise<{
+      // The SDK invokes this with the request's `RequestHandlerExtra`, which
+      // carries `sessionId` — the same value it passes to the read handler.
+      // We take it so the listing can be scoped to the calling session.
+      list: (extra?: { sessionId?: string }) => Promise<{
         resources: Array<{
           uri: string;
           name: string;
@@ -79,17 +82,29 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
   const { server, ResourceTemplate, store, platform, downloadToolName, logger } = opts;
 
   const template = new ResourceTemplate(`${REPORT_CSV_RESOURCE_SCHEME}://{id}`, {
-    list: async () => ({
-      resources: store.list().map((entry) => ({
-        uri: buildReportCsvUri(entry.resourceId),
-        name: `${platform} report CSV ${entry.resourceId}`,
-        description:
-          `Stored ${platform} report CSV (${entry.byteLength} bytes` +
-          `${entry.truncated ? ", truncated" : ""}). ` +
-          `Expires at ${new Date(entry.expiresAt).toISOString()}.`,
-        mimeType: entry.mimeType,
-      })),
-    }),
+    list: async (extra?: { sessionId?: string }) => {
+      const callerSessionId = extra?.sessionId;
+      return {
+        // Tenant isolation — the same rule the read handler enforces. The store
+        // is per-process and shared across every session on this instance, so an
+        // unscoped `store.list()` would leak every other session's report URIs
+        // and metadata (byte size, platform, timing) to any caller. Surface only
+        // entries the caller owns, plus unscoped (stdio / single-tenant) entries
+        // that have no session to isolate them from.
+        resources: store
+          .list()
+          .filter((entry) => entry.sessionId === undefined || entry.sessionId === callerSessionId)
+          .map((entry) => ({
+            uri: buildReportCsvUri(entry.resourceId),
+            name: `${platform} report CSV ${entry.resourceId}`,
+            description:
+              `Stored ${platform} report CSV (${entry.byteLength} bytes` +
+              `${entry.truncated ? ", truncated" : ""}). ` +
+              `Expires at ${new Date(entry.expiresAt).toISOString()}.`,
+            mimeType: entry.mimeType,
+          })),
+      };
+    },
   });
 
   server.registerResource(
