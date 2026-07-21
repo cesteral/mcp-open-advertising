@@ -320,12 +320,16 @@ export class LinkedInService {
   // ─── Targeting Search ────────────────────────────────────────────
 
   /**
-   * Search targeting facets (interests, locations, etc.)
+   * Search targeting facets (interests, locations, etc.).
+   *
+   * `/v2/adTargetingFacets` is a Rest.li collection finder and supports
+   * offset-based pagination via `start`/`count`, returning a `paging` block.
    */
   async searchTargeting(
     facetType: string,
     query?: string,
     limit?: number,
+    start?: number,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
@@ -333,6 +337,7 @@ export class LinkedInService {
     const params: Record<string, string> = {
       q: "type",
       facetType,
+      start: String(start ?? 0),
       count: String(Math.min(limit ?? 20, 100)),
     };
 

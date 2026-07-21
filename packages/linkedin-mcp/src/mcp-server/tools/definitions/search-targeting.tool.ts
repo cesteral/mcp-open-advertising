@@ -3,12 +3,17 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_search_targeting";
 const TOOL_TITLE = "Search LinkedIn Ads Targeting Facets";
-const TOOL_DESCRIPTION = `Search LinkedIn audience targeting facets.
+const TOOL_DESCRIPTION = `Search LinkedIn audience targeting facets with offset-based pagination.
 
 **Supported facet types:**
 - MEMBER_INTERESTS: Professional interests
@@ -21,7 +26,7 @@ const TOOL_DESCRIPTION = `Search LinkedIn audience targeting facets.
 - GEO: Geographic locations
 - MEMBER_SCHOOLS: Educational institutions
 
-Returns matching facet options with their LinkedIn URNs for use in targeting criteria.`;
+Returns matching facet options with their LinkedIn URNs for use in targeting criteria. Large facet types (e.g. GEO, MEMBER_INDUSTRY) page — use the \`start\` offset returned in \`pagination.nextCursor\` for subsequent pages.`;
 
 export const SearchTargetingInputSchema = z
   .object({
@@ -33,7 +38,8 @@ export const SearchTargetingInputSchema = z
       .min(1)
       .max(100)
       .optional()
-      .describe("Maximum number of results (default 20)"),
+      .describe("Maximum number of results per page (default 20, max 100)"),
+    start: z.number().int().min(0).optional().describe("Offset for pagination (default 0)"),
   })
   .describe("Parameters for searching LinkedIn targeting facets");
 
@@ -41,13 +47,19 @@ export const SearchTargetingOutputSchema = z
   .object({
     facetType: z.string(),
     results: z.array(z.record(z.any())),
-    count: z.number(),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Targeting search result");
 
 type SearchTargetingInput = z.infer<typeof SearchTargetingInputSchema>;
 type SearchTargetingOutput = z.infer<typeof SearchTargetingOutputSchema>;
+
+interface LinkedInPagingLike {
+  start?: number;
+  count?: number;
+  total?: number;
+}
 
 export async function searchTargetingLogic(
   input: SearchTargetingInput,
@@ -60,24 +72,41 @@ export async function searchTargetingLogic(
     input.facetType,
     input.query,
     input.limit,
+    input.start,
     context
   )) as Record<string, unknown>;
 
   const elements = (result.elements as unknown[]) ?? [];
+  const paging = (result.paging as LinkedInPagingLike | undefined) ?? undefined;
+
+  const pageSize = elements.length;
+  const total = paging?.total;
+  const currentStart = paging?.start ?? input.start ?? 0;
+  const requestedLimit = input.limit ?? 20;
+  const hasMore =
+    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedLimit;
+  const nextStart = currentStart + pageSize;
 
   return {
     facetType: input.facetType,
     results: elements as Record<string, unknown>[],
-    count: elements.length,
+    pagination: buildPaginationOutput({
+      nextCursor: hasMore ? String(nextStart) : null,
+      pageSize,
+      totalCount: total,
+      nextPageInputKey: "start",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function searchTargetingResponseFormatter(result: SearchTargetingOutput): McpTextContent[] {
+  const { pageSize, totalCount } = result.pagination;
+  const totalInfo = totalCount !== undefined ? ` of ${totalCount}` : "";
   return [
     {
       type: "text" as const,
-      text: `Targeting search results for ${result.facetType}\nFound ${result.count} options\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Targeting search results for ${result.facetType}\nFound ${pageSize}${totalInfo} options\n\n${JSON.stringify(result.results, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -111,10 +140,11 @@ export const searchTargetingTool = {
       },
     },
     {
-      label: "List seniority levels",
+      label: "Paginate through industries (second page)",
       input: {
-        facetType: "MEMBER_SENIORITY",
+        facetType: "MEMBER_INDUSTRY",
         limit: 50,
+        start: 50,
       },
     },
   ],
