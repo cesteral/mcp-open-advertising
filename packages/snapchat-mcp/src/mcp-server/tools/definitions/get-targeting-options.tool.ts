@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -12,7 +17,9 @@ const TOOL_DESCRIPTION = `Browse available Snapchat targeting options from docum
 
 Use this to discover valid country support, geo, and interest values before creating or updating ad groups.
 
-**Supported targeting types:** country_support, geo_country, geo_region, geo_metro, geo_postal_code, interests_slc, interests_vac, interests_shp`;
+**Supported targeting types:** country_support, geo_country, geo_region, geo_metro, geo_postal_code, interests_slc, interests_vac, interests_shp
+
+Interest and postal-code endpoints page — pass the \`cursor\` from \`pagination.nextCursor\` to fetch the next page.`;
 
 export const GetTargetingOptionsInputSchema = z
   .object({
@@ -42,16 +49,19 @@ export const GetTargetingOptionsInputSchema = z
       .optional()
       .default(50)
       .describe("Maximum number of options to request where Snapchat supports limits"),
+    cursor: z
+      .string()
+      .optional()
+      .describe(
+        "Pagination cursor (the `next_link` URL from a prior page's pagination.nextCursor)"
+      ),
   })
   .describe("Parameters for browsing Snapchat targeting options");
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
     options: z.record(z.any()).describe("Available targeting options"),
-    nextCursor: z
-      .string()
-      .optional()
-      .describe("Next page URL when Snapchat pagination is available"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Targeting options result");
@@ -70,12 +80,17 @@ export async function getTargetingOptionsLogic(
     input.targetingType,
     input.countryCode,
     input.limit,
+    input.cursor,
     context
   )) as { results: Record<string, unknown>[]; nextCursor?: string };
 
   return {
     options: { results: options.results },
-    nextCursor: options.nextCursor,
+    pagination: buildPaginationOutput({
+      nextCursor: options.nextCursor ?? null,
+      pageSize: options.results.length,
+      nextPageInputKey: "cursor",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -86,7 +101,7 @@ export function getTargetingOptionsResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Snapchat targeting options:\n${JSON.stringify(result.options, null, 2)}${result.nextCursor ? `\n\nNext page: ${result.nextCursor}` : ""}\n\nTimestamp: ${result.timestamp}`,
+      text: `Snapchat targeting options:\n${JSON.stringify(result.options, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -117,6 +132,14 @@ export const getTargetingOptionsTool = {
         targetingType: "interests_slc",
         countryCode: "us",
         limit: 100,
+      },
+    },
+    {
+      label: "Fetch the next page of interests via cursor",
+      input: {
+        targetingType: "interests_slc",
+        countryCode: "us",
+        cursor: "https://adsapi.snapchat.com/v1/targeting/interests/slc?cursor=abc123",
       },
     },
   ],
