@@ -350,10 +350,17 @@ export class LinkedInService {
 
   /**
    * Browse targeting categories / facets for an ad account.
+   *
+   * Like `searchTargeting`, this hits the `/v2/adTargetingFacets` Rest.li
+   * collection finder, which supports offset-based pagination via `start`/
+   * `count` and returns a `paging` block. Large accounts can expose more
+   * facets than fit in one page, so the offset is threaded through.
    */
   async getTargetingOptions(
     adAccountUrn: string,
     facetType?: string,
+    start?: number,
+    limit?: number,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
@@ -361,6 +368,8 @@ export class LinkedInService {
     const params: Record<string, string> = {
       q: "account",
       account: adAccountUrn,
+      start: String(start ?? 0),
+      count: String(Math.min(limit ?? 20, 100)),
     };
 
     if (facetType) {

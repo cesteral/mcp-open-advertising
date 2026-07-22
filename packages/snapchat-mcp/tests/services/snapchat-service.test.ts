@@ -240,6 +240,40 @@ describe("SnapchatService", () => {
     expect(result.results).toEqual([{ id: "SLC_1", name: "Adventure Seekers" }]);
   });
 
+  it("returns the next_link cursor from a targeting page", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      targeting_dimensions: [
+        { sub_request_status: "SUCCESS", scls: { id: "SLC_1", name: "Adventure Seekers" } },
+      ],
+      paging: {
+        next_link: "https://adsapi.snapchat.com/v1/targeting/interests/scls?cursor=page2",
+      },
+    });
+
+    const result = await service.getTargetingOptions("interests_slc", "us", 100);
+
+    expect(result.nextCursor).toContain("cursor=page2");
+  });
+
+  it("follows an absolute next_link cursor verbatim for the next targeting page", async () => {
+    const cursorUrl = "https://adsapi.snapchat.com/v1/targeting/interests/scls?cursor=page2";
+    mockHttpClient.get.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      targeting_dimensions: [
+        { sub_request_status: "SUCCESS", scls: { id: "SLC_2", name: "Gaming Fans" } },
+      ],
+      paging: {},
+    });
+
+    const result = await service.getTargetingOptions("interests_slc", "us", 100, cursorUrl);
+
+    // The cursor URL already carries the query params, so we hit it verbatim.
+    expect(mockHttpClient.get).toHaveBeenCalledWith(cursorUrl, {}, undefined);
+    expect(result.results).toEqual([{ id: "SLC_2", name: "Gaming Fans" }]);
+    expect(result.nextCursor).toBeUndefined();
+  });
+
   it("filters targeting results client-side for search", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",

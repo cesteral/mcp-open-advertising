@@ -92,6 +92,22 @@ Four capabilities carry platform-vocabulary names that differ across servers. Co
 
 Each name follows its platform's own API vocabulary, so these are intentional — but they are **not** interchangeable by string, and the [server matrix in README.md](../README.md) is the source of truth for which server exposes which.
 
+### Targeting-discovery pagination
+
+The targeting-discovery reads (`get_targeting_options` / `list_targeting_options`) paginate **only where the underlying platform endpoint actually pages** — pagination is never shimmed onto a non-paging endpoint. Where a tool pages it uses the canonical shared pagination contract (`pagination: PaginationOutputSchema` in the output; caller feeds `pagination.nextCursor` back via the `nextPageInputKey`). The `{prefix}_search_targeting` sibling reads (linkedin, meta, msads, pinterest, tiktok) follow the same rule.
+
+| Tool                              | Pages? | Input key   | Mechanism                                                                                                                                                                                                                                   |
+| --------------------------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cm360_list_targeting_options`    | ✅     | `pageToken` | CM360 `*targeting*` list `nextPageToken` / `maxResults`.                                                                                                                                                                                    |
+| `linkedin_get_targeting_options`  | ✅     | `start`     | `/v2/adTargetingFacets` is a Rest.li collection finder that pages via `start`/`count` and returns a `paging` block — the same endpoint `linkedin_search_targeting` pages.                                                                   |
+| `snapchat_get_targeting_options`  | ✅     | `cursor`    | Snapchat returns an absolute `paging.next_link` URL; the tool follows it verbatim (same pattern as `snapchat_list_ad_accounts`). Only the interest / postal-code endpoints emit a `next_link`; the geo/country catalogs return in one shot. |
+| `meta_get_targeting_options`      | ❌     | —           | `/{account}/targetingbrowse` returns the full targeting-category set in one response.                                                                                                                                                       |
+| `pinterest_get_targeting_options` | ❌     | —           | `/v5/targeting_options/{type}` returns the full option set for a type in one response (no `bookmark`).                                                                                                                                      |
+| `tiktok_get_targeting_options`    | ❌     | —           | The `/tool/*` catalog endpoints return the full list per option type in one response.                                                                                                                                                       |
+| `msads_get_targeting_options`     | ❌     | —           | Served from a static local enum map; the tool makes no upstream call.                                                                                                                                                                       |
+
+The three non-paging platform reads (meta, pinterest, tiktok) are documented as single-shot rather than shimmed: their catalogs are returned whole. If a future live-doc verification shows one of those endpoints genuinely pages, thread its native cursor through and switch the tool to the canonical `pagination` output — do not fabricate a cursor over a non-paging response.
+
 ## Media / creative-asset upload coverage
 
 `{prefix}_upload_image` / `{prefix}_upload_video` are **effect-class** convenience tools that create a reusable media/creative asset (they return an asset handle referenced by ads, not a canonical entity). Coverage is **not uniform**, and the remaining gaps are API limitations, not omissions — a platform only gets an upload tool where its API actually accepts one. Enumeration code must not assume fleet-wide coverage.

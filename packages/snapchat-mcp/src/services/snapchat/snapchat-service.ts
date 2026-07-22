@@ -584,7 +584,13 @@ export class SnapchatService {
     limit = 20,
     context?: RequestContext
   ): Promise<{ results: Record<string, unknown>[]; nextCursor?: string }> {
-    const response = await this.getTargetingOptions(targetingType, countryCode, limit, context);
+    const response = await this.getTargetingOptions(
+      targetingType,
+      countryCode,
+      limit,
+      undefined,
+      context
+    );
     const normalizedQuery = query?.trim().toLowerCase();
     const filteredResults = normalizedQuery
       ? response.results.filter((item) =>
@@ -602,6 +608,7 @@ export class SnapchatService {
     targetingType = "country_support",
     countryCode?: string,
     limit = 50,
+    cursor?: string,
     context?: RequestContext
   ): Promise<{ results: Record<string, unknown>[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
@@ -633,7 +640,12 @@ export class SnapchatService {
       params.limit = String(Math.max(10, Math.min(limit, 10000)));
     }
 
-    const response = await this.httpClient.get(path, params, context);
+    // Snapchat returns an absolute `next_link` URL as its cursor; follow it
+    // verbatim when supplied (query params are already baked into that URL),
+    // otherwise hit the base endpoint with the derived params.
+    const response = cursor?.startsWith("http")
+      ? await this.httpClient.get(cursor, {}, context)
+      : await this.httpClient.get(path, params, context);
 
     if (targetingType === "country_support") {
       return {
