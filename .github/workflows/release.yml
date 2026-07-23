@@ -48,6 +48,16 @@ jobs:
       - name: Test repo scripts
         run: pnpm run test:scripts
 
+      # Attestation review 2026-07-23, F7: the workspace contract-hash (which
+      # generate-manifests.mjs hashes with) must canonicalize identically to the
+      # PUBLISHED package of the same version (which the governance repo
+      # exact-pins). An in-place canonicalization edit without a version bump
+      # would otherwise ship manifests the downstream can never match —
+      # silently de-attesting the fleet. Not-yet-published versions pass (this
+      # release publishes them; governance bumps its pin in lockstep).
+      - name: Contract-hash published parity
+        run: node scripts/check-contract-hash-published-parity.mjs
+
       - name: Install mcp-publisher
         run: |
           set -eo pipefail
