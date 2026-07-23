@@ -37,7 +37,8 @@ export type DecisionTokenReason =
   | "CONTRACT_MISMATCH"
   | "DEFINITION_HASH_MISMATCH"
   | "ACTION_HASH_MISMATCH"
-  | "REPLAYED_JTI";
+  | "REPLAYED_JTI"
+  | "JTI_STORE_ERROR";
 
 export interface DecisionTokenVerdict {
   ok: boolean;
@@ -216,7 +217,24 @@ export async function verifyDecisionToken(
   // un-expired token replay after the store entry lapses.
   const tokenRemainingMs = ((claims.exp as number) + tolerance) * 1000 - nowMs;
   const consumeTtlMs = Math.max(jtiTtlMs, tokenRemainingMs);
-  const consumed = await jtiStore.consumeOnce(claims.jti as string, consumeTtlMs);
+  let consumed: "fresh" | "replayed";
+  try {
+    consumed = await jtiStore.consumeOnce(claims.jti as string, consumeTtlMs);
+  } catch (err) {
+    // The jti store is unreachable (e.g. FirestoreJtiStore propagating an
+    // UNAVAILABLE / PERMISSION_DENIED). This function's contract is that it
+    // NEVER throws — surface the failure as a distinct verdict so the caller's
+    // mode logic still applies: `warn` logs + proceeds (never blocks a
+    // legitimate write on a transient store outage), `enforce` blocks (fails
+    // closed — replay protection could not be established). Letting the error
+    // escape would silently turn warn-mode verification into a hard block with
+    // no decision-token audit record or metric.
+    return verdict("JTI_STORE_ERROR", {
+      claims,
+      detail: err instanceof Error ? err.message : undefined,
+      definitionHashVerified,
+    });
+  }
   if (consumed === "replayed") return verdict("REPLAYED_JTI", { claims, definitionHashVerified });
 
   return verdict("OK", { claims, definitionHashVerified });

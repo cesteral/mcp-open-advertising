@@ -313,6 +313,55 @@ describe("tool-handler-factory governance verification", () => {
     expect(writeTool.logic).not.toHaveBeenCalled();
   });
 
+  it("warn mode: a throwing jti store does NOT block the write (JTI_STORE_ERROR surfaced, not thrown)", async () => {
+    // Regression: verifyDecisionToken must never let a jti-store outage escape.
+    // Under warn, the write proceeds; a bad verdict is logged, not enforced.
+    const jtiStore = {
+      consumeOnce: vi.fn(async () => {
+        const err = new Error("UNAVAILABLE") as Error & { code: number };
+        err.code = 14;
+        throw err;
+      }),
+    };
+    register({
+      env: { GOVERNANCE_TOKEN_MODE: "warn", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      jtiStore,
+      server,
+      logger,
+    });
+    const args = { entityId: "1", dry_run: false };
+    const token = await mintToken(args);
+    const res = (await callWithToken(server, args, token)) as { isError?: boolean };
+    expect(res.isError).toBeUndefined();
+    expect(writeTool.logic).toHaveBeenCalledOnce();
+    expect(jtiStore.consumeOnce).toHaveBeenCalledOnce();
+  });
+
+  it("enforce mode: a throwing jti store fails closed (JTI_STORE_ERROR blocks the write)", async () => {
+    const jtiStore = {
+      consumeOnce: vi.fn(async () => {
+        const err = new Error("UNAVAILABLE") as Error & { code: number };
+        err.code = 14;
+        throw err;
+      }),
+    };
+    register({
+      env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
+      jtiStore,
+      server,
+      logger,
+    });
+    const args = { entityId: "1", dry_run: false };
+    const token = await mintToken(args);
+    const res = (await callWithToken(server, args, token)) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("JTI_STORE_ERROR");
+    expect(writeTool.logic).not.toHaveBeenCalled();
+  });
+
   it("enforce mode: missing secret fails closed (SECRET_UNCONFIGURED)", async () => {
     // resolver present (default), but GOVERNANCE_DECISION_TOKEN_SECRET unset.
     register({ env: { GOVERNANCE_TOKEN_MODE: "enforce" }, server, logger });

@@ -746,7 +746,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 // verdict reports definitionHashVerified:false.
                 const executableArgs = canonicalizeExecutableArgs({
                   rawArgs: args,
-                  exclude: cesteralAnnotation.executableArgsExclude,
+                  // `executableArgsExclude` is required by the authoring type but
+                  // OPTIONAL in the (deliberately loose) release Zod schema, so a
+                  // tool minted before the field existed can reach here undefined.
+                  // `canonicalizeExecutableArgs` calls `exclude.includes(...)` and
+                  // would throw on undefined — defaulting to `[]` keeps a verify
+                  // (even under warn) from crashing the write instead of verifying.
+                  exclude: cesteralAnnotation.executableArgsExclude ?? [],
                 });
                 const verdict = await verifyDecisionToken({
                   token: getRequestContext()?.decisionToken,

@@ -46,6 +46,13 @@ function platformSlugOf(contractId: string): string {
  *
  * Invalid mode strings are ignored (fall through to the next tier), so a typo
  * fails safe toward `off` rather than silently enforcing.
+ *
+ * Within Tier 1 the lists are checked STRICTEST-FIRST (enforce > warn > off).
+ * If a contractId is mistakenly placed in more than one list, the stricter mode
+ * wins — a contradiction on a money-moving gate must never resolve toward
+ * disabling verification. (Checking `off` first would let a stray debugging
+ * entry silently un-govern a contract that a rollout had just moved to
+ * `enforce`.)
  */
 export function resolveTokenMode(opts: {
   contractId: string;
@@ -53,10 +60,11 @@ export function resolveTokenMode(opts: {
 }): TokenMode {
   const { contractId, env } = opts;
 
-  // Tier 1 — explicit per-contract lists (highest precedence).
-  if (listIncludes(env.GOVERNANCE_TOKEN_MODE_OFF_CONTRACTS, contractId)) return "off";
+  // Tier 1 — explicit per-contract lists (highest precedence), strictest-first
+  // so a contractId listed in multiple lists resolves to the safer mode.
   if (listIncludes(env.GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS, contractId)) return "enforce";
   if (listIncludes(env.GOVERNANCE_TOKEN_MODE_WARN_CONTRACTS, contractId)) return "warn";
+  if (listIncludes(env.GOVERNANCE_TOKEN_MODE_OFF_CONTRACTS, contractId)) return "off";
 
   // Tier 2 — per-server override keyed by platform slug.
   const slug = platformSlugOf(contractId).toUpperCase();
