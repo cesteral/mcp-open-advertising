@@ -34,7 +34,13 @@ export class InMemoryJtiStore implements JtiStore {
   async consumeOnce(jti: string, ttlMs: number): Promise<"fresh" | "replayed"> {
     const t = this.now();
     const existing = this.seen.get(jti);
-    if (existing !== undefined && existing > t) {
+    // Inclusive (`>=`): treat an entry expiring at exactly `t` as still present.
+    // With `consumeTtlMs = max(jtiTtlMs, tokenRemainingMs)` the stored expiry can
+    // land exactly on the token's own acceptance boundary `(exp+tolerance)*1000`;
+    // a strict `>` there would let a replay arriving on that precise millisecond
+    // pass both the expiry check and the store check. Erring toward `"replayed"`
+    // at the boundary closes that one-ms window and never admits a fresh replay.
+    if (existing !== undefined && existing >= t) {
       return "replayed";
     }
     this.seen.set(jti, t + ttlMs);
@@ -42,11 +48,16 @@ export class InMemoryJtiStore implements JtiStore {
     return "fresh";
   }
 
-  /** Drop expired entries opportunistically so the map does not grow unbounded. */
+  /**
+   * Drop expired entries opportunistically so the map does not grow unbounded.
+   * Uses strict `< t` (not `<= t`) to stay consistent with `consumeOnce`'s
+   * inclusive `>= t` boundary check: an entry expiring at exactly `t` is still
+   * treated as present by a consume this same tick, so it must not be swept yet.
+   */
   private sweep(t: number): void {
     if (this.seen.size < 1024) return;
     for (const [jti, expiry] of this.seen) {
-      if (expiry <= t) this.seen.delete(jti);
+      if (expiry < t) this.seen.delete(jti);
     }
   }
 }
@@ -70,9 +81,12 @@ const FIRESTORE_ALREADY_EXISTS = 6;
  * ALREADY_EXISTS → `"replayed"`. Any other error propagates — we never swallow
  * an upstream failure into a silent `"fresh"`.
  *
- * TTL: the `expiresAt` field is written for a Firestore TTL policy to reclaim
- * (provisioned in Terraform). The policy is the storage-cost control, not the
- * correctness mechanism — correctness is the atomic create.
+ * TTL: the `expiresAt` field is written as a Firestore **Timestamp** (a `Date`,
+ * which the SDK stores as a Timestamp) so a Firestore TTL policy can reclaim it.
+ * A TTL policy only acts on Timestamp-typed fields — writing an ISO string here
+ * would be silently ignored and the collection would grow unbounded. The policy
+ * is the storage-cost control, not the correctness mechanism — correctness is
+ * the atomic create.
  */
 export class FirestoreJtiStore implements JtiStore {
   constructor(
@@ -86,7 +100,7 @@ export class FirestoreJtiStore implements JtiStore {
       await this.db
         .collection(this.collectionName)
         .doc(jti)
-        .create({ expiresAt: new Date(this.now() + ttlMs).toISOString() });
+        .create({ expiresAt: new Date(this.now() + ttlMs) });
       return "fresh";
     } catch (error: unknown) {
       if ((error as { code?: number } | null)?.code === FIRESTORE_ALREADY_EXISTS) {

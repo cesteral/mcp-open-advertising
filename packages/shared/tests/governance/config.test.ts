@@ -71,6 +71,33 @@ describe("resolveTokenMode", () => {
     ).toBe("off");
   });
 
+  it("resolves a contract listed in BOTH off and enforce to the stricter mode (enforce)", () => {
+    // A contradiction on a money-moving gate must fail toward the safer mode —
+    // a stray OFF entry must not silently un-govern a contract a rollout put on
+    // the ENFORCE list.
+    expect(
+      resolveTokenMode({
+        contractId: C,
+        env: {
+          GOVERNANCE_TOKEN_MODE_OFF_CONTRACTS: C,
+          GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS: C,
+        },
+      })
+    ).toBe("enforce");
+  });
+
+  it("resolves a contract listed in BOTH off and warn to warn (stricter than off)", () => {
+    expect(
+      resolveTokenMode({
+        contractId: C,
+        env: {
+          GOVERNANCE_TOKEN_MODE_OFF_CONTRACTS: C,
+          GOVERNANCE_TOKEN_MODE_WARN_CONTRACTS: C,
+        },
+      })
+    ).toBe("warn");
+  });
+
   it("trims whitespace in the contract lists", () => {
     expect(
       resolveTokenMode({

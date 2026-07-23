@@ -196,6 +196,36 @@ describe("verifyDecisionToken", () => {
     expect((await verify(token, {}, store)).reasonCode).toBe("REPLAYED_JTI");
   });
 
+  it("JTI_STORE_ERROR (not a throw) when the store rejects — caller decides warn vs enforce", async () => {
+    // FirestoreJtiStore propagates non-ALREADY_EXISTS errors (UNAVAILABLE etc.).
+    // verifyDecisionToken must surface that as a verdict, never let it escape —
+    // otherwise a warn-mode verification silently hard-blocks a legitimate write.
+    const store: JtiStore = {
+      consumeOnce: vi.fn(async () => {
+        const err = new Error("UNAVAILABLE") as Error & { code: number };
+        err.code = 14;
+        throw err;
+      }),
+    };
+    const v = await verify(await sign(basePayload()), {}, store);
+    expect(v.ok).toBe(false);
+    expect(v.reasonCode).toBe("JTI_STORE_ERROR");
+    expect(v.detail).toContain("UNAVAILABLE");
+    // The store WAS reached (this is the last step), so the jti attempt happened.
+    expect(store.consumeOnce).toHaveBeenCalledOnce();
+  });
+
+  it("does not reach the jti store (no error) when an earlier binding check fails", async () => {
+    const store: JtiStore = {
+      consumeOnce: vi.fn(async () => {
+        throw new Error("should not be called");
+      }),
+    };
+    const v = await verify(await sign({ ...basePayload(), actionHash: "wrong" }), {}, store);
+    expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+    expect(store.consumeOnce).not.toHaveBeenCalled();
+  });
+
   it("does not consume jti when a binding check fails", async () => {
     const spy = { consumeOnce: vi.fn(async () => "fresh" as const) };
     const v = await verify(await sign({ ...basePayload(), actionHash: "wrong" }), {}, spy);
