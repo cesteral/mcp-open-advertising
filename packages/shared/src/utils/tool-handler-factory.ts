@@ -766,6 +766,34 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 // undefined so the OTHER bindings — signature, claims, expiry,
                 // issuer/audience, actionHash, replay — all still run, and the
                 // verdict reports definitionHashVerified:false.
+                // KNOWN DIVERGENCE (sweep 2026-07-25, 10-F2 — confirmed, not
+                // yet fixed). `canonicalizeExecutableArgs` is contracted to
+                // operate on the RAW wire shape, and the minter honours that.
+                // `args` here are POST-Zod-parse: the MCP SDK validates against
+                // the tool's `inputSchema` before invoking this handler, so any
+                // key with a `.default()` is materialized before the hash sees
+                // it. The two sides then hash different objects and the call is
+                // rejected as `action_hash_mismatch` under `enforce`.
+                //
+                // Affects governed writes with a non-`dry_run` default —
+                // notably sa360's `insert_conversions` / `update_conversions`
+                // (`segmentationType`), which per CLAUDE.md are sa360's ONLY
+                // governed writes. `dry_run` defaults are unaffected because
+                // `executableArgsExclude` drops them, which is why most tools
+                // are fine and why this went unnoticed.
+                //
+                // Not fixed here: the correction belongs in the canonicalization
+                // contract that BOTH repos consume as a pinned published
+                // `@cesteral/contract-hash`, which is blocked on the same
+                // publication issue as C3 / 03-F1. Stripping defaulted keys in
+                // this repo alone was rejected — a client explicitly sending a
+                // value equal to the default is indistinguishable from one
+                // omitting it, so that would drop a real argument from a
+                // security binding.
+                //
+                // Pinned by `tests/governance/action-hash-parsed-args.test.ts`,
+                // which drives a real McpServer (the governance suite's mock
+                // server calls handlers with raw args and so cannot see this).
                 const executableArgs = canonicalizeExecutableArgs({
                   rawArgs: args,
                   // `executableArgsExclude` is required by the authoring type but
