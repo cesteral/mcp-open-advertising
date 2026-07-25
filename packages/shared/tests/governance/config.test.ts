@@ -7,7 +7,7 @@ import { resolveTokenMode } from "../../src/index.js";
 const C = "meta.update_entity.v1";
 
 describe("resolveTokenMode", () => {
-  it("defaults to off with no env", () => {
+  it("defaults to off with no env off a hosted deployment", () => {
     expect(resolveTokenMode({ contractId: C, env: {} })).toBe("off");
   });
 
@@ -105,5 +105,50 @@ describe("resolveTokenMode", () => {
         env: { GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS: " a.b.v1 , meta.update_entity.v1 " },
       })
     ).toBe("enforce");
+  });
+});
+
+// Sweep 2026-07-25, 05-F2. The Tier 3 default was unconditionally `off`, so a
+// default-deployed server ran every governed write with no token verification at
+// all while its manifest advertised the tools as governed.
+describe("resolveTokenMode — hosted default", () => {
+  it("defaults to warn on a hosted deployment (K_SERVICE set)", () => {
+    expect(resolveTokenMode({ contractId: C, env: { K_SERVICE: "dv360-mcp" } })).toBe("warn");
+  });
+
+  it("stays off for stdio / self-host, where nothing mints tokens", () => {
+    expect(resolveTokenMode({ contractId: C, env: {} })).toBe("off");
+  });
+
+  it("does NOT default to enforce — that posture has to be chosen", () => {
+    // enforce rejects any write without a valid token, so inheriting it would
+    // break every deployment that has not wired the governance layer yet.
+    expect(resolveTokenMode({ contractId: C, env: { K_SERVICE: "dv360-mcp" } })).not.toBe(
+      "enforce"
+    );
+  });
+
+  it("lets an explicit global off win over the hosted default", () => {
+    expect(
+      resolveTokenMode({
+        contractId: C,
+        env: { K_SERVICE: "dv360-mcp", GOVERNANCE_TOKEN_MODE: "off" },
+      })
+    ).toBe("off");
+  });
+
+  it("lets per-server and per-contract tiers win over the hosted default", () => {
+    expect(
+      resolveTokenMode({
+        contractId: C,
+        env: { K_SERVICE: "dv360-mcp", GOVERNANCE_TOKEN_MODE_META: "enforce" },
+      })
+    ).toBe("enforce");
+    expect(
+      resolveTokenMode({
+        contractId: C,
+        env: { K_SERVICE: "dv360-mcp", GOVERNANCE_TOKEN_MODE_OFF_CONTRACTS: C },
+      })
+    ).toBe("off");
   });
 });

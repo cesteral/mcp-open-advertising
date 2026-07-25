@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 
 const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
@@ -65,6 +65,23 @@ import {
 } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
 import { validateEntityLogic } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
 import { validateEntityResponseFormatter } from "@cesteral/shared";
+
+// These cases exercise service wiring and the governance snapshot contract on
+// destructive paths, driving them with no elicitation-capable client. Since
+// sweep 2026-07-25 (05-F2) the shared confirmation helper DENIES an
+// irreversible delete/archive when the client advertises no elicitation
+// capability, instead of allowing it unconfirmed — so they take the documented
+// operator opt-out to reach the service call. The gate itself is covered by
+// `@cesteral/shared`'s elicitation-helpers tests.
+const __priorElicitEnv = process.env.MCP_ELICIT_DESTRUCTIVE;
+beforeAll(() => {
+  process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
+});
+afterAll(() => {
+  if (__priorElicitEnv === undefined) delete process.env.MCP_ELICIT_DESTRUCTIVE;
+  else process.env.MCP_ELICIT_DESTRUCTIVE = __priorElicitEnv;
+});
+
 import {
   downloadReportLogic,
   downloadReportResponseFormatter,

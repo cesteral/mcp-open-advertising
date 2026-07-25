@@ -45,7 +45,22 @@ function platformSlugOf(contractId: string): string {
  *   `_OFF_CONTRACTS` — comma-separated contractId lists, highest precedence.
  *
  * Invalid mode strings are ignored (fall through to the next tier), so a typo
- * fails safe toward `off` rather than silently enforcing.
+ * falls through to the tier default rather than silently enforcing.
+ *
+ * **Tier 3 default is `warn` on a hosted deployment** (`K_SERVICE` set) and
+ * `off` otherwise. It was unconditionally `off`, which meant a
+ * default-deployed server ran every governed write with no token verification
+ * at all while its manifest advertised the tools as governed (sweep
+ * 2026-07-25, 05-F2). `warn` is non-breaking — only `enforce` rejects, so a
+ * caller with no token still succeeds — but it runs the full verification and
+ * logs a per-call verdict, turning an invisible fail-open into a visible one.
+ * Staged rollout is unaffected: every explicit tier, including
+ * `GOVERNANCE_TOKEN_MODE=off`, still wins.
+ *
+ * Not defaulted to `enforce` on purpose. `enforce` rejects any write without a
+ * valid token, so making it the default would break every deployment that has
+ * not yet wired the governance layer — a posture that has to be chosen, not
+ * inherited.
  *
  * Within Tier 1 the lists are checked STRICTEST-FIRST (enforce > warn > off).
  * If a contractId is mistakenly placed in more than one list, the stricter mode
@@ -71,6 +86,10 @@ export function resolveTokenMode(opts: {
   const perServer = asMode(env[`GOVERNANCE_TOKEN_MODE_${slug}`]);
   if (perServer) return perServer;
 
-  // Tier 3 — global base, defaulting to off.
-  return asMode(env.GOVERNANCE_TOKEN_MODE) ?? "off";
+  // Tier 3 — global base. Defaults to `warn` on a hosted deployment so an
+  // unconfigured server is at least verifying and reporting, `off` on
+  // stdio/self-host where there is no governance layer to mint tokens.
+  const global = asMode(env.GOVERNANCE_TOKEN_MODE);
+  if (global) return global;
+  return env.K_SERVICE ? "warn" : "off";
 }
