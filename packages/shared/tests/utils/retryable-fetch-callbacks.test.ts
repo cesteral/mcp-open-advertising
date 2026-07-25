@@ -363,7 +363,37 @@ describe("executeWithRetry — method-aware default 5xx retry (review C3)", () =
     expect(calls()).toBe(2);
   });
 
-  it("a custom isRetryable override still opts a POST back into 5xx retry (GraphQL reads etc.)", async () => {
+  // Sweep 2026-07-25, 05-F3. This previously asserted that a method-agnostic
+  // `isRetryable` override opts a POST back into 5xx retry, and treated that as
+  // the intended escape hatch for GraphQL reads. It is also exactly how three
+  // clients (amazon-dsp, meta, pinterest) silently defeated the POST exclusion
+  // for CREATES — a 502/504 seen by the client can arrive after the platform
+  // committed the write, so up to four identical live orders. An override
+  // decides the error CLASS; it must not be able to decide re-send safety by
+  // omission.
+  it("a custom isRetryable override does NOT opt a POST back into 5xx retry", async () => {
+    const { fetchFn, calls } = countingFetch(503);
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 1 },
+        {
+          url: "https://api.example.com/graphql",
+          fetchOptions: { method: "POST", body: JSON.stringify({ query: "{ __typename }" }) },
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          isRetryable: (status) => status === 429 || status >= 500,
+        }
+      )
+    ).rejects.toThrow();
+
+    expect(calls()).toBe(1);
+  });
+
+  it("retryNonIdempotent is the explicit opt-in for a POST that is safe to re-send", async () => {
+    // The replacement escape hatch: it names what it is doing, so a create can
+    // no longer inherit it from a rate-limit-code helper.
     const { fetchFn, calls } = countingFetch(503);
 
     const result = await executeWithRetry(
@@ -375,10 +405,73 @@ describe("executeWithRetry — method-aware default 5xx retry (review C3)", () =
         getHeaders: async () => ({}),
         fetchFn,
         isRetryable: (status) => status === 429 || status >= 500,
+        retryNonIdempotent: true,
       }
     );
 
     expect(result).toEqual({ success: true });
     expect(calls()).toBe(2);
+  });
+
+  it("an override still cannot make a NON-retryable status retryable for a POST", async () => {
+    // Both questions must pass: transient AND safe to re-send.
+    const { fetchFn, calls } = countingFetch(500);
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 2 },
+        {
+          url: "https://api.example.com/campaigns",
+          fetchOptions: { method: "POST", body: "{}" },
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          isRetryable: () => true,
+        }
+      )
+    ).rejects.toThrow();
+
+    expect(calls()).toBe(1);
+  });
+
+  it("429 still retries a POST under an override — nothing was committed", async () => {
+    const { fetchFn, calls } = countingFetch(429);
+
+    const result = await executeWithRetry(
+      { ...baseConfig, maxRetries: 1 },
+      {
+        url: "https://api.example.com/campaigns",
+        fetchOptions: { method: "POST", body: "{}" },
+        logger,
+        getHeaders: async () => ({}),
+        fetchFn,
+        isRetryable: (status) => status === 429 || status >= 500,
+      }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(calls()).toBe(2);
+  });
+
+  it("an override can still SUPPRESS a retry the default would allow", async () => {
+    // Composition is an AND, so the override retains full veto power — it just
+    // cannot grant re-send safety it does not have.
+    const { fetchFn, calls } = countingFetch(503);
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 2 },
+        {
+          url: "https://api.example.com/campaigns/1",
+          fetchOptions: { method: "PUT", body: "{}" },
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          isRetryable: () => false,
+        }
+      )
+    ).rejects.toThrow();
+
+    expect(calls()).toBe(1);
   });
 });

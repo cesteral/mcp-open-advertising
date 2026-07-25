@@ -1,6 +1,6 @@
 /**
  * Auto-generated Zod schemas from OpenAPI specification
- * Generated at: 2026-07-25T21:47:03.227Z
+ * Generated at: 2026-07-25T21:59:35.452Z
  * DO NOT EDIT MANUALLY
  */
 
