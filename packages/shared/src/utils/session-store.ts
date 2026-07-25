@@ -99,10 +99,35 @@ export class SessionServiceStore<T> {
     return constantTimeEqual(stored, credentialFingerprint);
   }
 
+  /**
+   * Remove a session and fire its delete hooks.
+   *
+   * Hooks fire ONLY for a session this store actually held. They used to fire
+   * unconditionally, which made a delete for an unknown id destructive: on a
+   * scaled-out deployment the receiving instance holds almost no sessions, so
+   * `deleteSpilledObjectsForSession` ran a GCS bulk delete of report CSVs under
+   * an id the instance had never seen — driven by a caller who only needed to
+   * know the id (session ids are exposed to browsers by design, via
+   * `exposeHeaders: ["Mcp-Session-Id"]`). Sweep 2026-07-25, 02-F1.
+   *
+   * Consequence, accepted and documented: when a session's services live on
+   * another instance, the DELETE that reaches THIS instance no longer sweeps its
+   * spilled objects early. The 24-hour GCS lifecycle rule on the `report_spill`
+   * bucket is the primary control (see CLAUDE.md); the hook has always been
+   * belt-and-braces on top of it.
+   */
   delete(sessionId: string): void {
+    const wasHeld =
+      this.store.has(sessionId) ||
+      this.fingerprints.has(sessionId) ||
+      this.authContexts.has(sessionId);
+
     this.store.delete(sessionId);
     this.fingerprints.delete(sessionId);
     this.authContexts.delete(sessionId);
+
+    if (!wasHeld) return;
+
     // Fire hooks fire-and-forget. Swallow all errors — session cleanup must
     // never throw. Hook authors should handle their own error logging.
     for (const hook of this.deleteHooks) {

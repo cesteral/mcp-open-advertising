@@ -159,13 +159,46 @@ describe("SessionServiceStore", () => {
       expect(badHook).toHaveBeenCalled();
     });
 
+    // This test's NAME was always right and its ASSERTION was the opposite:
+    // it pinned "fires hooks unconditionally" as intended behaviour, which is
+    // what made the unauthenticated `DELETE /mcp` destructive (sweep
+    // 2026-07-25, 02-F1). On a scaled-out deployment the receiving instance
+    // holds almost no sessions, so a delete for an unknown id ran
+    // `deleteSpilledObjectsForSession` against a victim's report CSVs.
     it("does not fire hooks when delete() is called for an unknown session", () => {
-      // The current implementation fires hooks unconditionally on delete;
-      // pin this behavior so callers know to be defensive.
       const hook = vi.fn();
       store.onDelete(hook);
       store.delete("never-existed");
-      expect(hook).toHaveBeenCalledWith("never-existed");
+      expect(hook).not.toHaveBeenCalled();
+    });
+
+    it("fires hooks for a session this store actually held", () => {
+      const hook = vi.fn();
+      store.onDelete(hook);
+      store.set("s1", { serviceA: "a", serviceB: 1 });
+      store.delete("s1");
+      expect(hook).toHaveBeenCalledWith("s1");
+    });
+
+    it("does not re-fire hooks on a repeated delete of the same session", () => {
+      // DELETE is idempotent and clients retry it; a second call must not
+      // re-run a destructive sweep.
+      const hook = vi.fn();
+      store.onDelete(hook);
+      store.set("s1", { serviceA: "a", serviceB: 1 });
+      store.delete("s1");
+      store.delete("s1");
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires hooks for a session known only by its auth context", () => {
+      // Defensive: a session recorded via setAuthContext but whose services
+      // were never stored is still this instance's to clean up.
+      const hook = vi.fn();
+      store.onDelete(hook);
+      store.setAuthContext("s2", { authInfo: { clientId: "c", authType: "none" } } as never);
+      store.delete("s2");
+      expect(hook).toHaveBeenCalledWith("s2");
     });
   });
 });

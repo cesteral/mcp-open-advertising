@@ -180,6 +180,8 @@ Large report CSVs (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS) can be s
 
 **Object path:** `{server}/{sessionId?}/{reportId}-{timestamp}.{csv\|json}`. Sessioned prefixes enable per-session cleanup sweeps via `SessionServiceStore.onDelete` hooks (wired in each server's `session-services.ts`). A 24-hour GCS lifecycle rule on the `report_spill` bucket (provisioned in `terraform/main.tf`) is the primary cost control; the session hook is a belt-and-braces deletion that runs earlier when possible. Terraform variables `enable_report_spill` + `report_spill_bucket_name` gate the bucket provisioning.
 
+**The delete hooks fire only for a session the receiving instance actually held.** They used to fire on every `delete()`, including for an id the instance had never seen — which is the normal case once scaled out, and made `DELETE /mcp` a way to sweep another tenant's spilled CSVs by id alone (sweep 2026-07-25, 02-F1). The trade is that a DELETE landing on an instance that does not hold the session no longer sweeps early; the 24-hour lifecycle rule covers it, which is why that rule and not the hook is the primary control.
+
 **Failure modes never break the response.** If spill is enabled but the GCS write fails (permissions, quota, network), the download tool returns `{ spill: { error } }` plus a bounded-view warning, not an error — callers always get their summary/rows.
 
 ## TypeScript Build Issues
