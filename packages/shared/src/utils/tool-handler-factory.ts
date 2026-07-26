@@ -233,10 +233,35 @@ export interface ToolSdkContext {
     data?: unknown;
   }) => Promise<void>;
   /**
-   * Idempotency key for governed writes — the verified decision token's `jti`
-   * (falls back to the actionHash). Tool logic forwards it to the platform API
-   * where an idempotency key is supported. Present only on verified governed
-   * write calls.
+   * Idempotency key for governed writes — the verified decision token's `jti`.
+   * Present only on verified governed write calls; populated and covered by
+   * `tool-handler-factory-governance.test.ts`.
+   *
+   * NO TOOL CURRENTLY READS IT. This docstring used to claim "tool logic
+   * forwards it to the platform API where an idempotency key is supported",
+   * which described behaviour that does not exist anywhere in the fleet (sweep
+   * 2026-07-25, 05-F4; documented-claim #9). It is corrected rather than
+   * implemented, because the missing piece is not wiring:
+   *
+   * No platform client in this repo has a client-supplied idempotency mechanism
+   * to forward it TO. The `request_id` fields on the Snapchat and TikTok clients
+   * are response correlation ids, not request keys. Adding a reader would mean
+   * inventing a header the platform ignores, which is worse than the honest gap
+   * — it would read as protection that isn't there, which is the exact failure
+   * mode this comment had.
+   *
+   * What actually protects a money-moving write from duplication today is the
+   * METHOD-level retry exclusion in `retryable-fetch.ts`: a POST is not retried
+   * on an ambiguous 5xx, so no ambiguous re-send happens for a key to
+   * deduplicate. That is a narrower guarantee than an idempotency key — it does
+   * nothing about a duplicate initiated ABOVE the HTTP client (an Inngest step
+   * retry, a re-delivered execute trigger) — and the governance layer's own
+   * consume-once `jti` store is what covers that rail.
+   *
+   * Residual, unfixed and worth naming: `bulk-executor.ts` has no per-item key
+   * and no checkpoint, so a partially-completed bulk write cannot be resumed
+   * without re-issuing the items that already succeeded. Keep this field when a
+   * platform does gain an idempotency header — the value is the right one.
    */
   idempotencyKey?: string;
   [key: string]: unknown;
