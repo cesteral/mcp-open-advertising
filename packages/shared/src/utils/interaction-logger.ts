@@ -21,6 +21,7 @@ import { homedir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
 import type { Logger } from "pino";
 import type { UpstreamHttpRecord } from "./http-request-recorder.js";
+import { redactSecretsInText } from "./secret-redaction.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -285,7 +286,23 @@ export class InteractionLogger {
       upstream?: UpstreamHttpRecord[];
     }
   ): void {
-    this.append({ ...entry, type: "tool_failure", success: false });
+    // `errorData` reaches this method already sanitized, but `errorMessage` did
+    // not — and it routinely carries the same bytes, because upstream clients
+    // build messages by interpolating the failing URL or the response body. The
+    // same secret was therefore redacted in one field of the record and written
+    // verbatim in the next (sweep 2026-07-25, 02-F5).
+    //
+    // Redacted HERE rather than at the call site: this is the single funnel every
+    // failure record passes through, and a per-caller obligation is exactly the
+    // kind that lapses when the next call site is added.
+    this.append({
+      ...entry,
+      ...(entry.errorMessage !== undefined
+        ? { errorMessage: redactSecretsInText(entry.errorMessage) }
+        : {}),
+      type: "tool_failure",
+      success: false,
+    });
   }
 
   /**

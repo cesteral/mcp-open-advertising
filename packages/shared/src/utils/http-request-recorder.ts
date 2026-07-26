@@ -17,6 +17,7 @@
  */
 
 import { requestContextStorage } from "./request-context.js";
+import { redactSecretsInString, redactUrl } from "./secret-redaction.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,84 +123,22 @@ export function truncateBody(
   if (text.length === 0) return undefined;
 
   const byteLen = Buffer.byteLength(text, "utf-8");
-  if (byteLen <= maxBytes) return redactBodyString(text);
+  if (byteLen <= maxBytes) return redactSecretsInString(text);
 
   // Truncate on character boundary approximating byte budget
   const approxChars = Math.max(0, maxBytes - 64);
   return (
-    redactBodyString(text.slice(0, approxChars)) +
+    redactSecretsInString(text.slice(0, approxChars)) +
     `...[TRUNCATED ${byteLen - approxChars} bytes of ${byteLen}]`
   );
 }
 
-// Redact secret-bearing fields in request/response bodies. The first pattern
-// covers both JSON (`"key":"value"`) and form-urlencoded / query (`key=value`)
-// shapes — the OAuth2 token-exchange and refresh bodies are
-// `application/x-www-form-urlencoded` (e.g. `client_secret=…&refresh_token=…`),
-// which a JSON-only (`":"`-anchored) pattern would miss entirely. Optional
-// quotes are tolerated on both key and value; the value runs until the next
-// quote, comma, ampersand, or whitespace. `developer[_-]?token` matches the
-// snake_case and hyphenated spellings.
-const BODY_SECRET_PATTERNS: Array<[RegExp, string]> = [
-  [
-    /("?(?:access_token|refresh_token|client_secret|api_secret|developer[_-]?token|password|assertion|id_token)"?\s*[:=]\s*"?)[^"&,\s]+/gi,
-    "$1[REDACTED]",
-  ],
-  [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
-];
-
-function redactBodyString(text: string): string {
-  let out = text;
-  for (const [pattern, replacement] of BODY_SECRET_PATTERNS) {
-    out = out.replace(pattern, replacement);
-  }
-  return out;
-}
-
-// Query-param names whose values are stripped from recorded URLs. Matches by
-// substring, case-insensitive — narrower than the header patterns to avoid
-// redacting benign params (header "key" patterns would clobber `?key=primary`).
-const SENSITIVE_URL_PARAM_PATTERNS = [
-  "token",
-  "secret",
-  "password",
-  "credential",
-  "signature",
-  "authorization",
-  "api_key",
-  "apikey",
-  "api-key",
-];
-
-function isSensitiveUrlParam(name: string): boolean {
-  const lower = name.toLowerCase();
-  return SENSITIVE_URL_PARAM_PATTERNS.some((p) => lower.includes(p));
-}
-
-/**
- * Strip values of known-sensitive query parameters from a URL string. Used
- * before persisting URLs to the upstream-request log so credentials accidentally
- * placed in query strings (e.g. Meta Graph API `access_token=…`) don't leak.
- *
- * Unparseable inputs are returned unchanged.
- */
-export function redactUrl(url: string): string {
-  if (!url) return url;
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return url;
-  }
-  let mutated = false;
-  for (const [name] of [...parsed.searchParams.entries()]) {
-    if (isSensitiveUrlParam(name)) {
-      parsed.searchParams.set(name, "[REDACTED]");
-      mutated = true;
-    }
-  }
-  return mutated ? parsed.toString() : url;
-}
+// Body and URL redaction live in `secret-redaction.ts`, shared with
+// `mcp-errors.ts`. They used to be two copies that drifted: the error path's
+// copy was JSON-quoted-keys-only and caught one of the four shapes these see
+// (sweep 2026-07-25, 02-F5/F6/F7). Re-exported so this module's public API is
+// unchanged for existing importers.
+export { redactUrl };
 
 // ---------------------------------------------------------------------------
 // Recording API

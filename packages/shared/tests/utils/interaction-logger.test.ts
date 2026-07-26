@@ -183,6 +183,49 @@ describe("InteractionLogger", () => {
     expect(entry.errorCode).toBe(-32001);
   });
 
+  it("logFailure redacts secrets from errorMessage (sweep 02-F5)", async () => {
+    // `errorData` was sanitized by the caller; `errorMessage` was not — and it
+    // carries the same bytes, because clients build messages by interpolating
+    // the failing URL or the response body. The same secret was redacted in one
+    // field of the record and written verbatim in the next.
+    const dataDir = createTempDir();
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const interactionLogger = new InteractionLogger({
+      dataDir,
+      serverName: "test-server",
+      logger,
+    });
+
+    interactionLogger.logFailure({
+      ts: "2026-02-19T21:00:00.000Z",
+      sessionId: "session-1",
+      tool: "meta_update_entity",
+      params: {},
+      durationMs: 5,
+      errorCode: -32001,
+      errorMessage:
+        "Request to https://graph.facebook.com/v21.0/act_1?access_token=EAAG_SECRET_1 failed",
+    });
+    await interactionLogger.close();
+
+    const files = readdirSync(dataDir);
+    const raw = readFileSync(join(dataDir, files[0]), "utf-8").trim();
+
+    expect(raw).not.toContain("EAAG_SECRET_1");
+    // Still diagnosable: the endpoint that failed survives.
+    expect(raw).toContain("graph.facebook.com");
+  });
+
   it("stdout mode emits entries via the injected logger instead of writing files", () => {
     const dataDir = createTempDir();
     const logger = {
