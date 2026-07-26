@@ -1,4 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+
+// These cases exercise service wiring and the governance snapshot contract on
+// destructive paths, driving them with no elicitation-capable client. Since
+// sweep 2026-07-25 (05-F2) the shared confirmation helper DENIES an
+// irreversible delete/archive when the client advertises no elicitation
+// capability, instead of allowing it unconfirmed — so they take the documented
+// operator opt-out to reach the service call. The gate itself is covered by
+// `@cesteral/shared`'s elicitation-helpers tests.
+const __priorElicitEnv = process.env.MCP_ELICIT_DESTRUCTIVE;
+beforeAll(() => {
+  process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
+});
+afterAll(() => {
+  if (__priorElicitEnv === undefined) delete process.env.MCP_ELICIT_DESTRUCTIVE;
+  else process.env.MCP_ELICIT_DESTRUCTIVE = __priorElicitEnv;
+});
 
 // ---------------------------------------------------------------------------
 // Mocks — vi.hoisted() ensures these are available when vi.mock factories run
@@ -200,7 +216,10 @@ describe("deleteEntityLogic governance contract", () => {
   });
 
   it("dispatchedCapability is present even when the user declines", async () => {
-    // No elicitInput → confirmation auto-passes; force a decline via a stubbed sdk.
+    // This case is specifically about a USER decline, so it opts back IN to
+    // elicitation (the file-scope `skip` above would short-circuit before the
+    // stubbed sdk is consulted) and supplies a declining client.
+    delete process.env.MCP_ELICIT_DESTRUCTIVE;
     const declineSdk = {
       sessionId: "s",
       elicitInput: vi.fn().mockResolvedValue({ action: "decline" }),
@@ -214,6 +233,7 @@ describe("deleteEntityLogic governance contract", () => {
     expect(result.success).toBe(false);
     expect(svc.deleteEntity).not.toHaveBeenCalled();
     expect(result.dispatchedCapability.operation).toBe("delete");
+    process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
   });
 });
 

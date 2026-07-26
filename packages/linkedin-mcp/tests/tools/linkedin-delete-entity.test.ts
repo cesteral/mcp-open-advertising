@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: vi.fn(),
@@ -11,6 +11,22 @@ import { resolveSessionServices } from "../../src/mcp-server/tools/utils/resolve
 const mockResolveSessionServices = vi.mocked(resolveSessionServices);
 
 import { deleteEntityLogic } from "../../src/mcp-server/tools/definitions/delete-entity.tool.js";
+
+// These cases exercise service wiring and the governance snapshot contract on
+// destructive paths, driving them with no elicitation-capable client. Since
+// sweep 2026-07-25 (05-F2) the shared confirmation helper DENIES an
+// irreversible delete/archive when the client advertises no elicitation
+// capability, instead of allowing it unconfirmed — so they take the documented
+// operator opt-out to reach the service call. The gate itself is covered by
+// `@cesteral/shared`'s elicitation-helpers tests.
+const __priorElicitEnv = process.env.MCP_ELICIT_DESTRUCTIVE;
+beforeAll(() => {
+  process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
+});
+afterAll(() => {
+  if (__priorElicitEnv === undefined) delete process.env.MCP_ELICIT_DESTRUCTIVE;
+  else process.env.MCP_ELICIT_DESTRUCTIVE = __priorElicitEnv;
+});
 
 const campaign = {
   id: 123,

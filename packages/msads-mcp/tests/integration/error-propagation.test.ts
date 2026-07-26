@@ -155,6 +155,13 @@ describe("mcp transport error propagation (Microsoft Ads)", () => {
   });
 
   it("propagates NotFound McpError from delete_entity", async () => {
+    // This test drives the transport with a client that advertises no
+    // elicitation capability, so since sweep 2026-07-25 (05-F2) the shared
+    // destructive-confirmation helper DENIES the hard delete outright rather
+    // than allowing it unconfirmed. That is the point of the fix; this test is
+    // about error propagation, not the confirmation gate, so it takes the
+    // documented operator opt-out to reach the service call.
+    process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
     mockState.msadsService.deleteEntity.mockRejectedValueOnce(
       new McpError(JsonRpcErrorCode.NotFound, "Campaign with ID 999 not found")
     );
@@ -177,6 +184,7 @@ describe("mcp transport error propagation (Microsoft Ads)", () => {
     expect(mockState.msadsService.deleteEntity).toHaveBeenCalledOnce();
     const combinedOutput = `${result.text}\n${JSON.stringify(result.json ?? {})}`;
     expect(combinedOutput).toContain("not found");
+    delete process.env.MCP_ELICIT_DESTRUCTIVE;
   });
 
   it("propagates Forbidden McpError from create_entity", async () => {

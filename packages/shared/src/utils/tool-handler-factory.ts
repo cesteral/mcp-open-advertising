@@ -57,11 +57,21 @@ function getFallbackJtiStore(): JtiStore {
  * token routed to a second instance is accepted as fresh, so an at-most-once
  * guarantee the operator believes `enforce` gives them is silently absent.
  *
- * - Not enforcing, or a store was explicitly injected → `ok` (no concern).
- * - `GOVERNANCE_JTI_STORE=firestore` is set but the factory still got the
- *   in-memory fallback → the deployment INTENDED a distributed store but never
- *   wired `selectJtiStore` into the factory. That is a misconfiguration on a
- *   money-moving path → `throw` (unless explicitly allowed).
+ * The signal is the STORE'S OWN `distributed` declaration, not "was a store
+ * injected?" (sweep 2026-07-25, 10-F1). The old `storeInjected` short-circuit
+ * meant that following half of CLAUDE.md §6's remediation — wiring
+ * `selectJtiStore(...)` without setting `GOVERNANCE_JTI_STORE=firestore` — handed
+ * the factory an `InMemoryJtiStore` and returned `ok` before the hosted branch
+ * ran: an in-memory enforce posture on multi-instance Cloud Run with no throw
+ * and no warn, i.e. QUIETER than doing nothing, which correctly throws. A store
+ * that does not declare `distributed` is treated as not distributed.
+ *
+ * - Not enforcing, or the effective store declares itself distributed → `ok`.
+ * - `GOVERNANCE_JTI_STORE=firestore` is set but the effective store is not
+ *   distributed → the deployment INTENDED a distributed store and did not get
+ *   one (never wired `selectJtiStore` into the factory, or wired a store that
+ *   does not provide the guarantee). A misconfiguration on a money-moving path
+ *   → `throw` (unless explicitly allowed).
  * - A hosted signal is present (`K_SERVICE` — Cloud Run always sets it) → the
  *   process can scale out, so in-memory enforce is unsafe → `throw` (unless
  *   explicitly allowed).
@@ -74,11 +84,16 @@ function getFallbackJtiStore(): JtiStore {
  */
 export function evaluateJtiStoreEnforcementSafety(params: {
   anyEnforce: boolean;
-  storeInjected: boolean;
+  /**
+   * Whether the store that will actually be used declares a cross-process
+   * consume-once guarantee (`JtiStore.distributed === true`). Absent or false
+   * means it does not — including for a custom store that never declared one.
+   */
+  storeDistributed: boolean;
   env: Record<string, string | undefined>;
 }): { action: "ok" | "warn" | "throw"; reason?: string } {
-  const { anyEnforce, storeInjected, env } = params;
-  if (!anyEnforce || storeInjected) return { action: "ok" };
+  const { anyEnforce, storeDistributed, env } = params;
+  if (!anyEnforce || storeDistributed) return { action: "ok" };
 
   const allowInMemory =
     (env.GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE ?? "").trim().toLowerCase() === "true";
@@ -87,16 +102,17 @@ export function evaluateJtiStoreEnforcementSafety(params: {
 
   if (declaredFirestore) {
     const reason =
-      "GOVERNANCE_JTI_STORE=firestore is set but the in-memory fallback store is in use — " +
+      "GOVERNANCE_JTI_STORE=firestore is set but the jti store in use is not distributed — " +
       "the distributed store was never wired into registerToolsFromDefinitions (inject " +
-      "selectJtiStore's result as `jtiStore`). Enforce-mode replay protection is not active.";
+      "selectJtiStore's result as `jtiStore`), or the injected store does not declare " +
+      "`distributed = true`. Enforce-mode replay protection is not active.";
     return { action: allowInMemory ? "warn" : "throw", reason };
   }
 
   if (hosted) {
     const reason =
-      "Decision-token enforcement is active on a hosted (Cloud Run) deployment with the " +
-      "in-memory jti store — replay protection does not hold across instances. Set " +
+      "Decision-token enforcement is active on a hosted (Cloud Run) deployment with a " +
+      "non-distributed jti store — replay protection does not hold across instances. Set " +
       "GOVERNANCE_JTI_STORE=firestore and inject selectJtiStore's result as `jtiStore`.";
     return { action: allowInMemory ? "warn" : "throw", reason };
   }
@@ -104,7 +120,7 @@ export function evaluateJtiStoreEnforcementSafety(params: {
   return {
     action: "warn",
     reason:
-      "Decision-token enforcement is enabled with the in-memory fallback jti store — replay " +
+      "Decision-token enforcement is enabled with a non-distributed jti store — replay " +
       "protection does not hold across multiple instances. Inject a distributed JtiStore " +
       "(selectJtiStore + GOVERNANCE_JTI_STORE=firestore) before scaling out.",
   };
@@ -217,10 +233,35 @@ export interface ToolSdkContext {
     data?: unknown;
   }) => Promise<void>;
   /**
-   * Idempotency key for governed writes — the verified decision token's `jti`
-   * (falls back to the actionHash). Tool logic forwards it to the platform API
-   * where an idempotency key is supported. Present only on verified governed
-   * write calls.
+   * Idempotency key for governed writes — the verified decision token's `jti`.
+   * Present only on verified governed write calls; populated and covered by
+   * `tool-handler-factory-governance.test.ts`.
+   *
+   * NO TOOL CURRENTLY READS IT. This docstring used to claim "tool logic
+   * forwards it to the platform API where an idempotency key is supported",
+   * which described behaviour that does not exist anywhere in the fleet (sweep
+   * 2026-07-25, 05-F4; documented-claim #9). It is corrected rather than
+   * implemented, because the missing piece is not wiring:
+   *
+   * No platform client in this repo has a client-supplied idempotency mechanism
+   * to forward it TO. The `request_id` fields on the Snapchat and TikTok clients
+   * are response correlation ids, not request keys. Adding a reader would mean
+   * inventing a header the platform ignores, which is worse than the honest gap
+   * — it would read as protection that isn't there, which is the exact failure
+   * mode this comment had.
+   *
+   * What actually protects a money-moving write from duplication today is the
+   * METHOD-level retry exclusion in `retryable-fetch.ts`: a POST is not retried
+   * on an ambiguous 5xx, so no ambiguous re-send happens for a key to
+   * deduplicate. That is a narrower guarantee than an idempotency key — it does
+   * nothing about a duplicate initiated ABOVE the HTTP client (an Inngest step
+   * retry, a re-delivered execute trigger) — and the governance layer's own
+   * consume-once `jti` store is what covers that rail.
+   *
+   * Residual, unfixed and worth naming: `bulk-executor.ts` has no per-item key
+   * and no checkpoint, so a partially-completed bulk write cannot be resumed
+   * without re-issuing the items that already succeeded. Keep this field when a
+   * platform does gain an idempotency header — the value is the right one.
    */
   idempotencyKey?: string;
   [key: string]: unknown;
@@ -468,12 +509,18 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
 
   // Deployment footgun guard (review P3): if any governed write resolves to
-  // `enforce` but the factory fell back to the in-memory jti store, per-instance
-  // replay protection silently fails to hold across Cloud Run instances. On a
-  // hosted deployment (or when the env declares firestore but it was never
-  // wired) this is a fail-closed BOOT error — an in-memory enforce posture that
+  // `enforce` while the jti store in use gives no CROSS-PROCESS consume-once
+  // guarantee, replay protection silently fails to hold across Cloud Run
+  // instances. On a hosted deployment (or when the env declares firestore but it
+  // was never wired) this is a fail-closed BOOT error — an enforce posture that
   // could double-execute a money-moving write must not start. Stdio / self-host
   // keeps the warn (in-memory is correct there).
+  //
+  // The signal is the store's own `distributed` declaration, not whether one was
+  // injected. `Boolean(opts.jtiStore)` treated ANY injected store as safe, so
+  // wiring `selectJtiStore(...)` without `GOVERNANCE_JTI_STORE=firestore` — half
+  // of the documented remediation — produced silence instead of the throw the
+  // unwired case correctly gets (sweep 2026-07-25, 10-F1).
   {
     const anyEnforce = tools.some((t) => {
       const c = (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral;
@@ -484,14 +531,14 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     });
     const safety = evaluateJtiStoreEnforcementSafety({
       anyEnforce,
-      storeInjected: Boolean(opts.jtiStore),
+      storeDistributed: jtiStore.distributed === true,
       env: governanceEnv,
     });
     if (safety.action === "throw") {
       throw new Error(`Governance jti-store misconfiguration: ${safety.reason}`);
     }
     if (safety.action === "warn") {
-      logger.warn({ component: "governance", jtiStore: "in-memory" }, safety.reason);
+      logger.warn({ component: "governance", jtiStore: "non-distributed" }, safety.reason);
     }
   }
 
@@ -744,6 +791,34 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 // undefined so the OTHER bindings — signature, claims, expiry,
                 // issuer/audience, actionHash, replay — all still run, and the
                 // verdict reports definitionHashVerified:false.
+                // KNOWN DIVERGENCE (sweep 2026-07-25, 10-F2 — confirmed, not
+                // yet fixed). `canonicalizeExecutableArgs` is contracted to
+                // operate on the RAW wire shape, and the minter honours that.
+                // `args` here are POST-Zod-parse: the MCP SDK validates against
+                // the tool's `inputSchema` before invoking this handler, so any
+                // key with a `.default()` is materialized before the hash sees
+                // it. The two sides then hash different objects and the call is
+                // rejected as `action_hash_mismatch` under `enforce`.
+                //
+                // Affects governed writes with a non-`dry_run` default —
+                // notably sa360's `insert_conversions` / `update_conversions`
+                // (`segmentationType`), which per CLAUDE.md are sa360's ONLY
+                // governed writes. `dry_run` defaults are unaffected because
+                // `executableArgsExclude` drops them, which is why most tools
+                // are fine and why this went unnoticed.
+                //
+                // Not fixed here: the correction belongs in the canonicalization
+                // contract that BOTH repos consume as a pinned published
+                // `@cesteral/contract-hash`, which is blocked on the same
+                // publication issue as C3 / 03-F1. Stripping defaulted keys in
+                // this repo alone was rejected — a client explicitly sending a
+                // value equal to the default is indistinguishable from one
+                // omitting it, so that would drop a real argument from a
+                // security binding.
+                //
+                // Pinned by `tests/governance/action-hash-parsed-args.test.ts`,
+                // which drives a real McpServer (the governance suite's mock
+                // server calls handlers with raw args and so cannot see this).
                 const executableArgs = canonicalizeExecutableArgs({
                   rawArgs: args,
                   // `executableArgsExclude` is required by the authoring type but

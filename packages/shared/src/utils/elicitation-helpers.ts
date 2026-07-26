@@ -72,19 +72,54 @@ interface ConfirmDestructiveOpts {
   confirmTitle: string;
   confirmDescription: string;
   sdkContext?: ElicitContext;
+  /**
+   * Set for operations that cannot be undone (hard delete, archive). With no
+   * elicitation channel these DENY rather than allow — see `confirmDestructive`.
+   */
+  irreversible?: boolean;
 }
 
 const IMPACT_PREVIEW_CAP = 5;
 
 /**
- * Returns `true` (allow) when the SDK context has no `elicitInput` (stdio /
- * client lacks elicitation capability — gated by tool-handler-factory),
- * when `MCP_ELICIT_DESTRUCTIVE=skip` is set, or when the user accepts.
- * Returns `false` only when the user actively declines. SDK errors propagate.
+ * Returns `true` (allow) when `MCP_ELICIT_DESTRUCTIVE=skip` is set, when the
+ * user accepts, or — for reversible operations only — when there is no
+ * elicitation channel. Returns `false` when the user declines, and when an
+ * IRREVERSIBLE operation has no channel to confirm through.
+ *
+ * That last case is the change (sweep 2026-07-25, 05-F2). The no-channel branch
+ * returned `true` unconditionally, and `tool-handler-factory` leaves
+ * `elicitInput` undefined for any client that does not advertise the
+ * elicitation capability — every stdio and headless client. Combined with token
+ * mode defaulting to `off`, a default-deployed dv360-mcp hard-deleted a campaign
+ * on a single call with no token, no confirmation, and nothing to decline
+ * through. "The client cannot ask" is not consent.
+ *
+ * Reversible operations keep the permissive fallback: a bulk status change or
+ * bid adjustment can be put back, so failing those closed would break headless
+ * automation for no safety gain.
+ *
+ * The escape hatch is unchanged and now evaluated FIRST: an operator who sets
+ * `MCP_ELICIT_DESTRUCTIVE=skip` has explicitly opted out and keeps working
+ * headless, including for deletes.
+ *
+ * SDK errors propagate.
  */
 async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean> {
-  if (!opts.sdkContext?.elicitInput) return true;
+  // Explicit operator opt-out wins, so a headless deployment that has chosen
+  // this posture is unaffected by the fail-closed branch below.
   if (shouldSkipElicitation()) return true;
+
+  if (!opts.sdkContext?.elicitInput) {
+    if (!opts.irreversible) return true;
+    logger.warn(
+      { action: opts.action, env: ELICIT_ENV_VAR },
+      `Refusing an irreversible operation: the client advertises no elicitation ` +
+        `capability, so there is no way to confirm it. Use a client that supports ` +
+        `elicitation, or set ${ELICIT_ENV_VAR}=skip to accept these operations unconfirmed.`
+    );
+    return false;
+  }
 
   const previewLines =
     opts.impactPreview && opts.impactPreview.length > 0
@@ -132,6 +167,7 @@ export async function elicitArchiveConfirmation(opts: {
     confirmTitle: "Confirm archive",
     confirmDescription: `Archive ${opts.count} ${opts.entityLabel}(s) permanently`,
     sdkContext: opts.sdkContext,
+    irreversible: true,
   });
 }
 
@@ -149,6 +185,7 @@ export async function elicitDeleteConfirmation(opts: {
     confirmTitle: "Confirm delete",
     confirmDescription: `Permanently delete ${opts.entityLabel} ${opts.entityId}`,
     sdkContext: opts.sdkContext,
+    irreversible: true,
   });
 }
 
@@ -166,6 +203,7 @@ export async function elicitBulkDeleteConfirmation(opts: {
     confirmTitle: "Confirm bulk delete",
     confirmDescription: `Permanently delete ${opts.count} ${opts.entityLabel}(s)`,
     sdkContext: opts.sdkContext,
+    irreversible: true,
   });
 }
 

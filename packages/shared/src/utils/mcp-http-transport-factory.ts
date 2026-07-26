@@ -311,32 +311,54 @@ export function createMcpHttpTransport(
   });
 
   // DELETE /mcp — session termination
+  //
+  // Authentication is unconditional (sweep 2026-07-25, 02-F1). The credential
+  // check used to sit inside `if (storedFingerprint)`, which is `undefined` for
+  // any session THIS instance has not seen — the normal case once scaled out.
+  // So an unauthenticated caller who merely knew a session id (they are exposed
+  // to browsers by design, via `exposeHeaders: ["Mcp-Session-Id"]`) reached
+  // `cleanupSession`, which fired the store's delete hooks and with them a GCS
+  // bulk delete of the victim's spilled report CSVs. `isValidSessionId` was
+  // never applied here either, so any string was accepted.
   app.delete("/mcp", async (c) => {
     const sessionId = c.req.header("mcp-session-id");
     if (!sessionId) {
       return c.json({ error: "Mcp-Session-Id header required" }, 400);
     }
+    if (!isValidSessionId(sessionId)) {
+      return c.json({ error: "Invalid session ID format" }, 400);
+    }
+
+    const headers = extractHeadersMap(c.req.raw.headers);
+    let requestFingerprint: string | undefined;
+    try {
+      // `verify` first: a caller must present valid credentials to terminate
+      // anything, whether or not this instance holds the session. It throws on
+      // failure; `NoAuthStrategy` accepts everyone, which is the intended
+      // posture for `none`-mode / stdio deployments.
+      await authStrategy.verify(headers);
+      requestFingerprint = authStrategy.getCredentialFingerprint
+        ? await authStrategy.getCredentialFingerprint(headers)
+        : undefined;
+    } catch {
+      return c.json({ error: "Authentication required for session termination" }, 401);
+    }
 
     const storedFingerprint = sessionServiceStore.getFingerprint(sessionId);
-    if (storedFingerprint) {
-      try {
-        const headers = extractHeadersMap(c.req.raw.headers);
-        const requestFingerprint = authStrategy.getCredentialFingerprint
-          ? await authStrategy.getCredentialFingerprint(headers)
-          : undefined;
-        if (requestFingerprint && requestFingerprint !== storedFingerprint) {
-          logger.warn(
-            { sessionId, event: "unauthorized_session_termination" },
-            "Session termination rejected - credential mismatch"
-          );
-          return c.json({ error: "Session credential mismatch" }, 401);
-        }
-      } catch {
-        return c.json({ error: "Authentication required for session termination" }, 401);
-      }
+    if (storedFingerprint && requestFingerprint && requestFingerprint !== storedFingerprint) {
+      logger.warn(
+        { sessionId, event: "unauthorized_session_termination" },
+        "Session termination rejected - credential mismatch"
+      );
+      return c.json({ error: "Session credential mismatch" }, 401);
     }
 
     logger.info({ sessionId }, "Session termination requested");
+    // For a session this instance does not hold, `cleanupSession` is now a
+    // no-op with respect to the destructive delete hooks — the store only fires
+    // them for sessions it actually held (see `SessionServiceStore.delete`).
+    // The response stays 200 either way: DELETE is idempotent, and a 404 would
+    // turn this endpoint into a cross-instance session-existence oracle.
     await sessions.cleanupSession(sessionId);
     return c.json({ status: "terminated", sessionId }, 200);
   });
@@ -421,9 +443,22 @@ export function createMcpHttpTransport(
         sessions.touchSession(providedSessionId);
       }
 
-      // Check session capacity — only for new sessions
-      if (!providedSessionId && sessionServiceStore.isFull()) {
-        logger.warn({ activeSessions: sessionServiceStore.size }, "Max session capacity reached");
+      // Check session capacity for anything that ALLOCATES a session — a brand
+      // new one, or a rebuild of an id this instance does not hold.
+      //
+      // The check used to be `!providedSessionId`, which skipped it in exactly
+      // the case that allocates: the rebuild path (sweep 2026-07-25, 02-F3).
+      // One valid credential plus a stream of fresh random 64-hex ids therefore
+      // allocated sessions without bound, each holding an authenticated client
+      // for the full idle timeout and costing an upstream `validate()` call on
+      // the way in. A request that resolves to an already-held session is not an
+      // allocation and is still admitted at capacity, so an at-capacity instance
+      // keeps serving its existing clients.
+      if ((!providedSessionId || needsRebuild) && sessionServiceStore.isFull()) {
+        logger.warn(
+          { activeSessions: sessionServiceStore.size, rebuild: needsRebuild },
+          "Max session capacity reached"
+        );
         return c.json({ error: "Server at capacity. Please try again later." }, 503);
       }
 

@@ -43,6 +43,12 @@ function parseMetaCode(body: string): number {
   }
 }
 
+/**
+ * Meta error-class check, including Graph API body-level rate-limit codes.
+ * Decides ONLY whether the failure is transient — the shared layer independently
+ * decides whether the request is safe to re-send, so the `httpStatus >= 500` arm
+ * no longer opts a POST create back into retry (sweep 2026-07-25, 05-F3).
+ */
 function isRetryableMetaError(code: number, httpStatus: number): boolean {
   return httpStatus === 429 || httpStatus >= 500 || RATE_LIMIT_CODES.has(code);
 }

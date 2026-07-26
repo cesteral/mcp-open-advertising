@@ -142,6 +142,20 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
 }
 
 describe("mcp transport CRUD integration", () => {
+  // The `remove` leg drives the transport with a client advertising no
+  // elicitation capability, which since sweep 2026-07-25 (05-F2) DENIES an
+  // irreversible removal rather than allowing it unconfirmed. This test covers
+  // the CRUD wiring, not the confirmation gate, so it takes the documented
+  // operator opt-out.
+  const priorElicitEnv = process.env.MCP_ELICIT_DESTRUCTIVE;
+  beforeAll(() => {
+    process.env.MCP_ELICIT_DESTRUCTIVE = "skip";
+  });
+  afterAll(() => {
+    if (priorElicitEnv === undefined) delete process.env.MCP_ELICIT_DESTRUCTIVE;
+    else process.env.MCP_ELICIT_DESTRUCTIVE = priorElicitEnv;
+  });
+
   let app: any;
   let shutdown: () => Promise<void>;
 

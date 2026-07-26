@@ -57,18 +57,51 @@ afterEach(() => {
 });
 
 describe("confirmDestructive (via elicitArchiveConfirmation)", () => {
-  it("returns true when sdkContext has no elicitInput (stdio fallback)", async () => {
+  // Sweep 2026-07-25, 05-F2. Both of these previously asserted `true`: with no
+  // elicitation channel the helper allowed the operation. `tool-handler-factory`
+  // leaves `elicitInput` undefined for any client that does not advertise the
+  // elicitation capability — every stdio and headless client — so an
+  // irreversible archive or hard delete ran with nothing to decline through.
+  // "The client cannot ask" is not consent.
+  it("DENIES an irreversible op when sdkContext has no elicitInput (stdio)", async () => {
     const result = await elicitArchiveConfirmation({ count: 3, entityLabel: "campaign" });
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
-  it("returns true when sdkContext is provided but elicitInput is absent", async () => {
+  it("DENIES an irreversible op when sdkContext is provided but elicitInput is absent", async () => {
     const result = await elicitArchiveConfirmation({
       count: 3,
       entityLabel: "campaign",
       sdkContext: {},
     });
+    expect(result).toBe(false);
+  });
+
+  it("allows an irreversible op with no channel when the operator opted out", async () => {
+    // The documented escape hatch, now evaluated before the fail-closed branch,
+    // so a headless deployment that has chosen this posture is unaffected.
+    process.env[ENV_KEY] = "skip";
+    const result = await elicitArchiveConfirmation({ count: 3, entityLabel: "campaign" });
     expect(result).toBe(true);
+  });
+
+  it("still allows a REVERSIBLE op with no elicitation channel", async () => {
+    // A bulk status change can be put back, so failing it closed would break
+    // headless automation for no safety gain. Only the irreversible class
+    // changed.
+    const result = await elicitBulkStatusChangeConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      targetStatus: "PAUSED",
+    });
+    expect(result).toBe(true);
+  });
+
+  it("DENIES a hard delete with no elicitation channel", async () => {
+    const single = await elicitDeleteConfirmation({ entityLabel: "campaign", entityId: "123" });
+    const bulk = await elicitBulkDeleteConfirmation({ count: 4, entityLabel: "campaign" });
+    expect(single).toBe(false);
+    expect(bulk).toBe(false);
   });
 
   it("returns true when user accepts and confirms", async () => {

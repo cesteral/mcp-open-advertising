@@ -20,6 +20,15 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   tokenExpiryHint: "Amazon DSP token expired. Regenerate via Login with Amazon.",
 };
 
+/**
+ * Amazon DSP error-class check. Decides ONLY whether the failure is transient —
+ * the shared layer independently decides whether the request is safe to
+ * re-send, so this returning true for a 5xx no longer opts a POST create back
+ * into retry (sweep 2026-07-25, 05-F3; previously up to four identical live
+ * orders). To retry a POST here, set `retryNonIdempotent` explicitly.
+ *
+ * Note this deliberately omits 429, which predates the sweep and is unchanged.
+ */
 function isAmazonDspRetryable(status: number, _errorBody: string): boolean {
   return status >= 500;
 }

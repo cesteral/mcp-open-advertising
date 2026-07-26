@@ -16,6 +16,26 @@ export interface JtiStore {
    * first time within `ttlMs`, or `"replayed"` if already consumed.
    */
   consumeOnce(jti: string, ttlMs: number): Promise<"fresh" | "replayed">;
+
+  /**
+   * Whether this store's consume-once guarantee holds ACROSS PROCESSES.
+   *
+   * The enforce-mode boot guard keys on this rather than on "was a store
+   * injected?" (sweep 2026-07-25, 10-F1). Inferring safety from injection meant
+   * that following half of CLAUDE.md §6's remediation — wiring
+   * `selectJtiStore(...)` without setting `GOVERNANCE_JTI_STORE=firestore` —
+   * handed the factory an `InMemoryJtiStore` that the guard then treated as
+   * safe, producing an in-memory enforce posture on multi-instance Cloud Run
+   * with no throw and no warn: quieter than doing nothing, which correctly
+   * throws. A store is the only thing that knows what it guarantees, so it says
+   * so itself.
+   *
+   * Optional for source compatibility with existing implementations, and
+   * ABSENT IS TREATED AS NOT DISTRIBUTED — a custom store that does not declare
+   * the guarantee cannot be assumed to provide it. A distributed custom store
+   * declares `distributed = true`.
+   */
+  readonly distributed?: boolean;
 }
 
 /**
@@ -27,6 +47,9 @@ export interface JtiStore {
  * The clock is injectable for deterministic tests.
  */
 export class InMemoryJtiStore implements JtiStore {
+  /** Per-process only — see the enforce-mode boot guard in tool-handler-factory. */
+  readonly distributed = false;
+
   private readonly seen = new Map<string, number>(); // jti -> expiry epoch ms
 
   constructor(private readonly now: () => number = () => Date.now()) {}
@@ -89,6 +112,9 @@ const FIRESTORE_ALREADY_EXISTS = 6;
  * the atomic create.
  */
 export class FirestoreJtiStore implements JtiStore {
+  /** `doc(jti).create()` is atomic create-if-absent across every instance. */
+  readonly distributed = true;
+
   constructor(
     private readonly db: FirestoreLike,
     private readonly collectionName = "governance_jti",

@@ -9,6 +9,7 @@
  */
 
 import type { Logger } from "pino";
+import { redactSecretsInText } from "./secret-redaction.js";
 
 // ---------------------------------------------------------------------------
 // JSON-RPC 2.0 Error Codes
@@ -419,10 +420,14 @@ export class ErrorHandler {
       } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         sanitized[key] = this.sanitizeErrorData(value as Record<string, unknown>);
       } else if (typeof value === "string") {
-        // String values (e.g. `errorBody` copied from an upstream response)
-        // can still embed bearer-token or access_token substrings even when
-        // the key itself looks benign. Strip the common patterns.
-        sanitized[key] = redactSecretsInString(value);
+        // String values (e.g. `errorBody` copied from an upstream response, or
+        // a `url` carrying a credential in its query string) can still embed
+        // secrets even when the key itself looks benign. `redactSecretsInText`
+        // is the shared, maintained pattern set — this module previously kept a
+        // weaker JSON-quoted-keys-only copy that caught one of the four shapes
+        // these actually see, and never touched URLs at all (sweep 2026-07-25,
+        // 02-F6/F7).
+        sanitized[key] = redactSecretsInText(value);
       } else {
         sanitized[key] = value;
       }
@@ -444,20 +449,4 @@ function getHttpStatus(error: Error): number | undefined {
   if (hasStatusCodeProperty(error)) return error.statusCode;
   if (hasStatusProperty(error)) return error.status;
   return undefined;
-}
-
-const STRING_SECRET_PATTERNS: Array<[RegExp, string]> = [
-  [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
-  [
-    /("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
-    "$1[REDACTED]$2",
-  ],
-];
-
-function redactSecretsInString(text: string): string {
-  let out = text;
-  for (const [pattern, replacement] of STRING_SECRET_PATTERNS) {
-    out = out.replace(pattern, replacement);
-  }
-  return out;
 }

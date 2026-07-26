@@ -231,5 +231,98 @@ describe("createMcpHttpTransport — auth & session binding", () => {
       expect(res.status).toBe(200);
       expect(active.store.get(VICTIM_SID)).toBeUndefined(); // cleaned up
     });
+
+    // Sweep 2026-07-25, 02-F1. The credential check sat inside
+    // `if (storedFingerprint)`, which is undefined for any session THIS instance
+    // has not seen — the normal case once Cloud Run scales out. So an
+    // unauthenticated caller who merely knew a session id reached
+    // `cleanupSession`, firing the store's delete hooks and with them a GCS bulk
+    // delete of the victim's spilled report CSVs. Session ids are exposed to
+    // browsers by design (`exposeHeaders: ["Mcp-Session-Id"]`).
+    describe("unknown-session termination (02-F1)", () => {
+      it("rejects an UNAUTHENTICATED delete of a session this instance does not hold", async () => {
+        active = makeHarness();
+        const res = await active.app.request("/mcp", {
+          method: "DELETE",
+          headers: { "mcp-session-id": VICTIM_SID }, // no credentials at all
+        });
+        expect(res.status).toBe(401);
+      });
+
+      it("does not fire delete hooks for a session this instance does not hold", async () => {
+        // The destructive part: `deleteSpilledObjectsForSession` is registered
+        // as an onDelete hook on six servers.
+        active = makeHarness();
+        const hook = vi.fn();
+        active.store.onDelete(hook);
+
+        const res = await active.app.request("/mcp", {
+          method: "DELETE",
+          headers: { "mcp-session-id": VICTIM_SID, "x-fake-cred": "mallory" },
+        });
+
+        // Authenticated, so accepted and idempotent — but it must not sweep a
+        // session that is not this instance's to sweep.
+        expect(res.status).toBe(200);
+        expect(hook).not.toHaveBeenCalled();
+      });
+
+      it("still fires delete hooks for a session it does hold, with matching credentials", async () => {
+        active = makeHarness();
+        const hook = vi.fn();
+        active.store.onDelete(hook);
+        active.store.set(VICTIM_SID, { svc: "victim" }, "fp-victim");
+
+        const res = await active.app.request("/mcp", {
+          method: "DELETE",
+          headers: { "mcp-session-id": VICTIM_SID, "x-fake-cred": "victim" },
+        });
+
+        expect(res.status).toBe(200);
+        expect(hook).toHaveBeenCalledWith(VICTIM_SID);
+      });
+
+      it("rejects a malformed session id on DELETE", async () => {
+        // `isValidSessionId` was applied on POST but never here, so any string
+        // was accepted as a termination target.
+        active = makeHarness();
+        const res = await active.app.request("/mcp", {
+          method: "DELETE",
+          headers: { "mcp-session-id": "../../etc/passwd", "x-fake-cred": "mallory" },
+        });
+        expect(res.status).toBe(400);
+      });
+    });
+  });
+
+  // Sweep 2026-07-25, 02-F3. The capacity check was `!providedSessionId`, which
+  // skipped it in exactly the case that ALLOCATES: the scale-out rebuild path.
+  describe("session capacity on the rebuild path (02-F3)", () => {
+    it("refuses to rebuild an unknown session id when at capacity", async () => {
+      active = makeHarness({ maxSessions: 1 });
+      active.store.set(NEW_SID, { svc: "a" }, "fp-a"); // fill to capacity
+
+      const res = await post(active.app, {
+        "x-fake-cred": "mallory",
+        "mcp-session-id": VICTIM_SID, // unknown here → rebuild → allocation
+      });
+
+      expect(res.status).toBe(503);
+      expect(active.createSessionForAuth).not.toHaveBeenCalled();
+    });
+
+    it("still serves a session it already holds when at capacity", async () => {
+      // Reaching capacity must not evict existing clients — a request that
+      // resolves to a held session allocates nothing.
+      active = makeHarness({ maxSessions: 1 });
+      active.store.set(VICTIM_SID, { svc: "victim" }, "fp-victim");
+
+      const res = await post(active.app, {
+        "x-fake-cred": "victim",
+        "mcp-session-id": VICTIM_SID,
+      });
+
+      expect(res.status).not.toBe(503);
+    });
   });
 });

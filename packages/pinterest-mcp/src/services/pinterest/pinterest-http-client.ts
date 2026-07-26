@@ -176,13 +176,19 @@ export class PinterestHttpClient {
           };
         },
         buildNextAction: buildPinterestNextAction,
-        // Deliberate opt-in to 5xx retry for this POST: the shared default no
-        // longer retries non-idempotent methods on 5xx (a re-send after an
-        // ambiguous failure could duplicate a committed mutation). A media
-        // upload is safe to re-send — a duplicate registration is an inert
-        // orphan asset until a later create call references it, and Pinterest
-        // media uploads are transient/idempotent in effect.
-        isRetryable: (status) => status === 429 || status >= 500,
+        // Deliberate opt-in to 5xx retry for this POST: the shared default does
+        // not retry non-idempotent methods on 5xx (a re-send after an ambiguous
+        // failure could duplicate a committed mutation). A media upload is safe
+        // to re-send — a duplicate registration is an inert orphan asset until a
+        // later create call references it, and Pinterest media uploads are
+        // transient/idempotent in effect.
+        //
+        // Expressed as `retryNonIdempotent` rather than an `isRetryable`
+        // override: since sweep 2026-07-25 (05-F3) an override decides only the
+        // error CLASS and can no longer grant re-send safety by omission, which
+        // is how the same one-liner on a general request path silently opted
+        // CREATES back into retry on other servers.
+        retryNonIdempotent: true,
       });
       span.setAttribute("http.response.status_code", 200);
       return result;

@@ -375,7 +375,7 @@ describe("tool-handler-factory governance verification", () => {
     expect(writeTool.logic).not.toHaveBeenCalled();
   });
 
-  it("warns at registration when enforce resolves with no injected jti store", () => {
+  it("warns at registration when enforce resolves with the fallback jti store", () => {
     register({
       env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
       server,
@@ -383,12 +383,16 @@ describe("tool-handler-factory governance verification", () => {
     });
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
     const hit = warn.calls.some(
-      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
+      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "non-distributed"
     );
     expect(hit).toBe(true);
   });
 
-  it("does NOT warn at registration when a jti store is injected", () => {
+  // Previously "does NOT warn at registration when a jti store is injected" —
+  // injecting ANY store silenced the guard. Injection is not a safety signal
+  // (sweep 2026-07-25, 10-F1): off a hosted deployment in-memory is the correct
+  // store, so this stays a warn rather than a throw, but it must not go silent.
+  it("still warns when the injected store is non-distributed under enforce", () => {
     register({
       env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
       jtiStore: new InMemoryJtiStore(),
@@ -397,9 +401,9 @@ describe("tool-handler-factory governance verification", () => {
     });
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
     const hit = warn.calls.some(
-      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory"
+      ([obj]) => (obj as { jtiStore?: string })?.jtiStore === "non-distributed"
     );
-    expect(hit).toBe(false);
+    expect(hit).toBe(true);
   });
 
   // P3: enforce + in-memory fallback fails closed on a hosted deployment.
@@ -446,11 +450,17 @@ describe("tool-handler-factory governance verification", () => {
     ).not.toThrow();
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
     expect(
-      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "non-distributed")
     ).toBe(true);
   });
 
-  it("P3: hosted + injected distributed store is OK (no throw, no in-memory warn)", () => {
+  // Sweep 2026-07-25, 10-F1. This test was named "injected distributed store"
+  // and injected an `InMemoryJtiStore`, pinning the in-memory-under-enforce case
+  // as safe. That is the defect: the guard keyed on `Boolean(opts.jtiStore)`, so
+  // following half of CLAUDE.md §6's remediation — wiring `selectJtiStore(...)`
+  // without `GOVERNANCE_JTI_STORE=firestore` — produced silence instead of the
+  // throw the unwired case correctly gets.
+  it("P3: hosted + injected NON-distributed store still throws (10-F1)", () => {
     expect(() =>
       register({
         env: {
@@ -462,34 +472,76 @@ describe("tool-handler-factory governance verification", () => {
         server,
         logger,
       })
+    ).toThrow(/replay protection does not hold across instances/i);
+  });
+
+  it("P3: hosted + a genuinely distributed store is OK (no throw, no warn)", () => {
+    // A store is the only thing that knows what it guarantees, so it says so.
+    const distributedStore: JtiStore = {
+      distributed: true,
+      consumeOnce: async () => "fresh",
+    };
+    expect(() =>
+      register({
+        env: {
+          GOVERNANCE_TOKEN_MODE: "enforce",
+          GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+          K_SERVICE: "meta-mcp",
+        },
+        jtiStore: distributedStore,
+        server,
+        logger,
+      })
     ).not.toThrow();
     const warn = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock;
     expect(
-      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "in-memory")
+      warn.calls.some(([obj]) => (obj as { jtiStore?: string })?.jtiStore === "non-distributed")
     ).toBe(false);
   });
 
   describe("evaluateJtiStoreEnforcementSafety (pure)", () => {
     it("ok when not enforcing", () => {
       expect(
-        evaluateJtiStoreEnforcementSafety({ anyEnforce: false, storeInjected: false, env: {} })
+        evaluateJtiStoreEnforcementSafety({ anyEnforce: false, storeDistributed: false, env: {} })
       ).toEqual({
         action: "ok",
       });
     });
-    it("ok when a store was injected", () => {
+    it("ok when the store declares itself distributed", () => {
       expect(
         evaluateJtiStoreEnforcementSafety({
           anyEnforce: true,
-          storeInjected: true,
+          storeDistributed: true,
           env: { K_SERVICE: "x" },
         })
       ).toEqual({ action: "ok" });
     });
+    it("throws for an injected store that is NOT distributed (10-F1)", () => {
+      // Injection is not a safety signal; the guarantee is.
+      expect(
+        evaluateJtiStoreEnforcementSafety({
+          anyEnforce: true,
+          storeDistributed: false,
+          env: { K_SERVICE: "x" },
+        }).action
+      ).toBe("throw");
+    });
+    it("treats an undeclared `distributed` as not distributed", () => {
+      // A custom store that never declared the guarantee cannot be assumed to
+      // provide it — unknown resolves toward the safe side.
+      const undeclared: JtiStore = { consumeOnce: async () => "fresh" };
+      expect(
+        evaluateJtiStoreEnforcementSafety({
+          anyEnforce: true,
+          storeDistributed: undeclared.distributed === true,
+          env: { K_SERVICE: "x" },
+        }).action
+      ).toBe("throw");
+    });
     it("warn for stdio / self-host (no hosted signal, no firestore declared)", () => {
       const r = evaluateJtiStoreEnforcementSafety({
         anyEnforce: true,
-        storeInjected: false,
+        storeDistributed: false,
         env: {},
       });
       expect(r.action).toBe("warn");
@@ -497,7 +549,7 @@ describe("tool-handler-factory governance verification", () => {
     it("throw on hosted", () => {
       const r = evaluateJtiStoreEnforcementSafety({
         anyEnforce: true,
-        storeInjected: false,
+        storeDistributed: false,
         env: { K_SERVICE: "svc" },
       });
       expect(r.action).toBe("throw");
@@ -505,7 +557,7 @@ describe("tool-handler-factory governance verification", () => {
     it("throw when firestore declared but unwired", () => {
       const r = evaluateJtiStoreEnforcementSafety({
         anyEnforce: true,
-        storeInjected: false,
+        storeDistributed: false,
         env: { GOVERNANCE_JTI_STORE: "firestore" },
       });
       expect(r.action).toBe("throw");
@@ -513,7 +565,7 @@ describe("tool-handler-factory governance verification", () => {
     it("opt-out downgrades throw to warn", () => {
       const r = evaluateJtiStoreEnforcementSafety({
         anyEnforce: true,
-        storeInjected: false,
+        storeDistributed: false,
         env: { K_SERVICE: "svc", GOVERNANCE_ALLOW_INMEMORY_JTI_UNDER_ENFORCE: "true" },
       });
       expect(r.action).toBe("warn");

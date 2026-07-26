@@ -77,11 +77,31 @@ export interface RetryableRequestOptions {
    */
   validateResponseBody?: (body: unknown) => unknown;
   /**
-   * Override the default retryability check (429 + 5xx).
-   * Return true if the request should be retried for this status/body combo.
-   * Useful for platforms with body-level error codes (e.g., Meta rate limit codes).
+   * Override the default STATUS/BODY retryability check (429 + 5xx).
+   * Return true if this status/body combo represents a transient failure.
+   * Useful for platforms with body-level error codes (e.g. Meta rate-limit codes).
+   *
+   * This decides the ERROR CLASS only. It does NOT decide whether the request
+   * is safe to re-send — that stays with the shared method-idempotency guard,
+   * which is applied on top of whatever this returns. Before the 2026-07-25
+   * sweep (05-F3) an override REPLACED the whole decision, so three clients
+   * that returned `status >= 500` method-agnostically silently defeated the
+   * shared default's deliberate POST exclusion and could fire up to four
+   * identical money-moving creates (a 502/504 seen by the client can arrive
+   * after the platform committed the write).
+   *
+   * To retry a non-idempotent method anyway, set {@link retryNonIdempotent}.
    */
   isRetryable?: (status: number, errorBody: string) => boolean;
+  /**
+   * Allow retrying methods that are not idempotent by HTTP semantics (POST).
+   *
+   * Off by default. Set this ONLY for endpoints whose re-send cannot duplicate
+   * a resource — a POST used for a read (GraphQL query, report polling) or one
+   * carrying a server-honoured idempotency key. Setting it for a create is how
+   * you get duplicate live campaigns.
+   */
+  retryNonIdempotent?: boolean;
   /**
    * Called after every fetch response (success or error) for observability.
    * Use for logging rate-limit headers, usage metrics, etc.
@@ -136,15 +156,19 @@ function isRetryableStatus(status: number): boolean {
 const IDEMPOTENT_RETRY_METHODS = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE", "PATCH"]);
 
 /**
- * Default retry decision when the caller supplies no custom `isRetryable`:
- * 429 is always retryable (the platform rejected the request without
- * processing it); 5xx is retryable only for idempotent methods. Callers with
- * POST endpoints that are semantically safe to re-send (GraphQL reads, report
- * polling) keep full control via the existing `isRetryable` override.
+ * Is this method safe to re-send after an ambiguous failure?
+ *
+ * 429 is always safe: the platform rejected the request WITHOUT processing it,
+ * so nothing was committed. Every other retryable status (5xx) is ambiguous —
+ * the client cannot tell a rejected request from a committed one whose response
+ * was lost — so it is only safe for methods that cannot duplicate a resource.
+ *
+ * Applied on top of the status/body decision, whether that came from the
+ * default or from a caller's `isRetryable`. Callers with POST endpoints that are
+ * genuinely safe to re-send opt in with `retryNonIdempotent`.
  */
-function isRetryableStatusForMethod(status: number, method: string): boolean {
+function isMethodSafeToResend(status: number, method: string): boolean {
   if (status === 429) return true;
-  if (!isRetryableStatus(status)) return false;
   return IDEMPOTENT_RETRY_METHODS.has(method.toUpperCase());
 }
 
@@ -411,9 +435,17 @@ export async function executeWithRetry(
       ...platformExtras,
     });
 
-    const retryable = isRetryable
+    // Two independent questions, deliberately not collapsible into one hook:
+    //   1. is this failure transient?  (platform-specific — the override)
+    //   2. is this request safe to re-send?  (HTTP semantics — always ours)
+    // An override answering only (1) must never be able to answer (2) by
+    // omission; that is what let a 5xx on a create be retried four times.
+    const statusRetryable = isRetryable
       ? isRetryable(response.status, errorBody)
-      : isRetryableStatusForMethod(response.status, method);
+      : isRetryableStatus(response.status);
+    const retryable =
+      statusRetryable &&
+      (options.retryNonIdempotent === true || isMethodSafeToResend(response.status, method));
 
     if (!retryable || attempt >= maxRetries) {
       throw mcpError;
