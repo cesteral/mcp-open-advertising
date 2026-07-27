@@ -1,2 +1,21 @@
 # Live-test outputs — not source
 packages/*/tests/live/last-run.json
+
+# Generated code — style-gating it can only ever fail.
+#
+# These files are emitted by the per-package codegen (`src/generated/`, from the
+# vendored OpenAPI specs) and by the registry snapshot generator, and the
+# generators do not run their output through prettier. Committing them
+# prettier-formatted therefore only holds until the next regeneration: the
+# formatting is undone, and `format:check` fails on a diff no one authored.
+#
+# That is what happened on 2026-07-26 — #170 committed regenerated output and
+# turned `main` red on `build-and-test`, which is a `format:check` step, for
+# seven files nobody had hand-edited. Fixing it with `prettier --write` would
+# have lasted exactly until the next `pnpm run build`.
+#
+# If you want these formatted, pipe the generators through prettier at emit
+# time; do not re-add them here.
+packages/*/src/generated/
+packages/*/dist/
+**/*.generated.ts
