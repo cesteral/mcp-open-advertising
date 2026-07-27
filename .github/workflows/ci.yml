@@ -118,3 +118,30 @@ jobs:
           fetch-depth: 0
 
       - uses: gacts/gitleaks@v1
+
+  # Issues #165/#171: a contract library's source must not change without a
+  # version bump. npm versions are immutable, so an unbumped edit leaves the
+  # published package the governance repo exact-pins unable to ever contain the
+  # change. This has happened at least four times.
+  #
+  # Its own job, not a build-and-test step, for two reasons: it needs history
+  # (`fetch-depth: 0`) to find the merge base, and it needs neither a pnpm
+  # install nor a build, so it reports in seconds instead of waiting behind the
+  # full suite.
+  contract-version-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Invoked directly rather than via `pnpm run` so this job needs no pnpm
+      # setup and no dependency install — the script is plain node + git.
+      - name: Check contract libraries bump their version when src changes
+        run: node scripts/check-contract-version-bump.mjs

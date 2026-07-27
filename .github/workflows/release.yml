@@ -58,6 +58,15 @@ jobs:
       - name: Contract-hash published parity
         run: node scripts/check-contract-hash-published-parity.mjs
 
+      # Issue #171: the same seam on the other contract package. The release
+      # gate (scripts/lib/manifest.mjs) validates with the WORKSPACE annotation
+      # schema; governance admits with the PUBLISHED one. They are documented as
+      # the same schema, and that claim is what makes "nothing that fails release
+      # can reach `attested`" true. An in-place schema edit without a version
+      # bump makes it false in the dangerous direction — a looser admission side.
+      - name: Contract-schema published parity
+        run: node scripts/check-contract-schema-published-parity.mjs
+
       - name: Install mcp-publisher
         run: |
           set -eo pipefail

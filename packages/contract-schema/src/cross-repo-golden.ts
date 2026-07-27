@@ -94,3 +94,148 @@ export const CROSS_REPO_ANNOTATION_PARITY_GOLDEN: {
     expectedIssuePathIncludes: "contractId",
   },
 };
+
+/**
+ * Write-promise rejection vectors — the fixtures that can detect the `a5b0f96`
+ * drift, which {@link CROSS_REPO_ANNOTATION_PARITY_GOLDEN} structurally cannot.
+ *
+ * Why a second set (2026-07-27, issue #171): that golden's `rejected` fixture
+ * fails on `applyContractIdConsistency`, a refinement `a5b0f96` did not touch.
+ * The published `1.3.0` rejects it too, so comparing the two builds over that
+ * vector reports agreement no matter how far the write-promise fields have
+ * drifted. This is the same shape of blind spot the sibling package hit: its
+ * `definitionHash` goldens were all `__proto__`-free, so they could not see the
+ * one canonicalization change that ever happened.
+ *
+ * These fixtures are therefore chosen for exactly the property the golden lacks
+ * — **the workspace schema rejects each one, and the pre-`a5b0f96` published
+ * schema accepts it**. A parity guard built on them fails when the published
+ * schema is LOOSER than the workspace, which is the direction that actually
+ * matters here: the release gate and the admission gate are documented as the
+ * same schema, and a looser admission side means a write can reach `attested`
+ * carrying promises the release would have refused.
+ *
+ * Each fixture is otherwise a valid annotation; only the promise fields differ.
+ * If a fixture ever fails for an unrelated reason, this guard degrades to the
+ * useless "agrees with itself" check it was written to replace — so keep them
+ * minimal and keep the reason for rejection single.
+ */
+export const CROSS_REPO_WRITE_PROMISE_REJECTION_VECTORS: readonly {
+  label: string;
+  /** The field whose absence or wrong value is the sole reason for rejection. */
+  promiseField: string;
+  fixture: Record<string, unknown>;
+}[] = [
+  {
+    label: "entity write omitting requiresValidation",
+    promiseField: "requiresValidation",
+    fixture: {
+      kind: "write",
+      writeClass: "entity",
+      platform: "cross_repo",
+      contractPlatformSlug: "cross_repo",
+      contractToolSlug: "update_entity",
+      operation: ["update"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "cross_repo.update_entity.v1",
+      readPartner: {
+        toolName: "cross_repo_get_entity",
+        argMap: { advertiserId: "advertiserId" },
+      },
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresSimulation: true,
+    },
+  },
+  {
+    label: "entity write omitting requiresSimulation",
+    promiseField: "requiresSimulation",
+    fixture: {
+      kind: "write",
+      writeClass: "entity",
+      platform: "cross_repo",
+      contractPlatformSlug: "cross_repo",
+      contractToolSlug: "update_entity",
+      operation: ["update"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "cross_repo.update_entity.v1",
+      readPartner: {
+        toolName: "cross_repo_get_entity",
+        argMap: { advertiserId: "advertiserId" },
+      },
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+    },
+  },
+  {
+    label: "entity write omitting supportsDryRun",
+    promiseField: "supportsDryRun",
+    fixture: {
+      kind: "write",
+      writeClass: "entity",
+      platform: "cross_repo",
+      contractPlatformSlug: "cross_repo",
+      contractToolSlug: "update_entity",
+      operation: ["update"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "cross_repo.update_entity.v1",
+      readPartner: {
+        toolName: "cross_repo_get_entity",
+        argMap: { advertiserId: "advertiserId" },
+      },
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: true,
+    },
+  },
+  {
+    label: "entity write disabling supportsBeforeAfterSnapshot",
+    promiseField: "supportsBeforeAfterSnapshot",
+    fixture: {
+      kind: "write",
+      writeClass: "entity",
+      platform: "cross_repo",
+      contractPlatformSlug: "cross_repo",
+      contractToolSlug: "update_entity",
+      operation: ["update"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "cross_repo.update_entity.v1",
+      readPartner: {
+        toolName: "cross_repo_get_entity",
+        argMap: { advertiserId: "advertiserId" },
+      },
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    },
+  },
+  {
+    label: "effect write claiming a before/after snapshot it cannot produce",
+    promiseField: "supportsBeforeAfterSnapshot",
+    fixture: {
+      kind: "write",
+      writeClass: "effect",
+      platform: "cross_repo",
+      contractPlatformSlug: "cross_repo",
+      contractToolSlug: "upload_conversions",
+      operation: ["update"],
+      entityKinds: ["campaign"],
+      entityIdArgs: ["advertiserId"],
+      schemaVersion: 1,
+      contractId: "cross_repo.upload_conversions.v1",
+      supportsBeforeAfterSnapshot: true,
+      requiresValidation: true,
+      requiresSimulation: false,
+    },
+  },
+];
