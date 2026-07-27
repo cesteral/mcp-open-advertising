@@ -15,17 +15,25 @@ cd "$REPO_ROOT"
 DRY_RUN=false
 NPM_ONLY=false
 PROVENANCE=false
+CONTRACTS_ONLY=false
 
 for arg in "$@"; do
   case "$arg" in
     --dry-run)    DRY_RUN=true ;;
     --npm-only)   NPM_ONLY=true ;;
     --provenance) PROVENANCE=true ;;
+    --contracts-only) CONTRACTS_ONLY=true ;;
     --help|-h)
-      echo "Usage: $0 [--dry-run] [--npm-only] [--provenance]"
-      echo "  --dry-run     Show what would be published without doing it"
-      echo "  --npm-only    Skip MCP Registry publishing"
-      echo "  --provenance  Publish npm packages with build provenance attestation"
+      echo "Usage: $0 [--dry-run] [--npm-only] [--provenance] [--contracts-only]"
+      echo "  --dry-run         Show what would be published without doing it"
+      echo "  --npm-only        Skip MCP Registry publishing"
+      echo "  --provenance      Publish npm packages with build provenance attestation"
+      echo "  --contracts-only  Publish ONLY the two contract libraries, then stop."
+      echo "                    Used by the 'contract-v*' release lane so a"
+      echo "                    canonicalization or schema fix can ship without"
+      echo "                    waiting on a full fleet release. In this mode an"
+      echo "                    already-published version is a hard FAILURE, not a"
+      echo "                    tolerated no-op."
       exit 0
       ;;
     *)
@@ -60,7 +68,13 @@ log "Running pre-flight checks..."
 command -v pnpm >/dev/null 2>&1 || err "pnpm is not installed"
 command -v npm >/dev/null 2>&1 || err "npm is not installed (required for whoami check)"
 command -v node >/dev/null 2>&1 || err "node is not installed (required for tarball inspection)"
-npm whoami >/dev/null 2>&1 || err "Not logged in to npm. Run: npm login"
+# Auth is only needed for a real publish. Gating it on !DRY_RUN (matching the
+# mcp-publisher check below) is what makes `--dry-run` usable as the preview it
+# is documented to be — otherwise you cannot rehearse a release without first
+# holding credentials for it.
+if [ "$DRY_RUN" = false ]; then
+  npm whoami >/dev/null 2>&1 || err "Not logged in to npm. Run: npm login"
+fi
 
 if [ "$NPM_ONLY" = false ] && [ "$DRY_RUN" = false ]; then
   command -v mcp-publisher >/dev/null 2>&1 || err "mcp-publisher is not installed. Run: brew install mcp-publisher"
@@ -199,6 +213,21 @@ publish_to_npm() {
 
   # Here-string (not a pipe) so a fast grep cannot SIGPIPE the upstream echo.
   if grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT' <<<"$out"; then
+    # Tolerable on a FLEET release: most servers are unchanged and have nothing
+    # to publish, so a re-run must stay idempotent.
+    #
+    # NOT tolerable on a contracts-only release (issue #171). Publishing the two
+    # contract libraries is the entire purpose of a `contract-v*` tag, so "this
+    # version already exists" means the source changed without a version bump and
+    # the release is a no-op that LOOKS successful. That exact tolerance is how
+    # contract-hash's __proto__ fix (#165) and contract-schema's annotation
+    # tightening (#171) both appeared to ship while the published bytes never
+    # moved. Fail loudly instead.
+    if [ "$CONTRACTS_ONLY" = true ]; then
+      echo "  FAIL $pkg_label: version already published — bump the version before tagging." >&2
+      NPM_PUBLISH_FAILURES+=("$pkg_label (version already published)")
+      return 0
+    fi
     log "  Note: $pkg_label already published at this version — continuing."
     return 0
   fi
@@ -231,8 +260,28 @@ publish_to_npm "packages/contract-schema" "@cesteral/contract-schema"
 
 if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
   echo "" >&2
-  echo "A contract library publish failed; refusing to publish @cesteral/shared (and the servers that depend on it) against a missing dependency version." >&2
+  echo "A contract library publish failed:" >&2
+  for f in "${NPM_PUBLISH_FAILURES[@]}"; do echo "  - $f" >&2; done
+  if [ "$CONTRACTS_ONLY" = false ]; then
+    echo "Refusing to publish @cesteral/shared (and the servers that depend on it) against a missing dependency version." >&2
+  fi
   err "Fix the contract-library publish failure(s) above and re-run."
+fi
+
+# --- Contracts-only lane stops here ---
+# The two contract libraries are standalone libraries consumed directly by the
+# cesteral-intelligence governance layer; neither is an MCP server, so there is
+# nothing to publish to the MCP Registry and no reason to re-ship shared or the
+# 13 servers. Stopping here is what lets a security fix in the canonicalizer
+# reach governance without waiting for a fleet release (issues #165, #171, #94).
+if [ "$CONTRACTS_ONLY" = true ]; then
+  log ""
+  log "✅ Contract libraries published (contracts-only lane)."
+  log ""
+  log "NEXT: bump the exact pin in cesteral-intelligence / cesteral-governance-layer"
+  log "      in lockstep, refresh its lockfile, and re-run its cross-repo hash test."
+  log "      Until that lands, the two repos still compute against different bytes."
+  exit 0
 fi
 
 # --- Publish @cesteral/shared ---
