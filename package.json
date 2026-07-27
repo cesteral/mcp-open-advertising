@@ -30,7 +30,8 @@
     "sync:registry-data": "node scripts/sync-registry-data.mjs",
     "check:registry-runtime": "node scripts/check-registry-runtime.mjs",
     "check:doc-tool-counts": "node scripts/check-doc-tool-counts.mjs",
-    "check:account-scope": "node scripts/check-account-scope.mjs"
+    "check:account-scope": "node scripts/check-account-scope.mjs",
+    "check:contract-version-bump": "node scripts/check-contract-version-bump.mjs"
   },
   "devDependencies": {
     "@cesteral/contract-hash": "workspace:*",
