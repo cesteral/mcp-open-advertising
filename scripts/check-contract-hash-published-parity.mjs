@@ -44,6 +44,80 @@ const PKG_NAME = "@cesteral/contract-hash";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 /**
+ * Compare the two builds over the PROTOTYPE-KEY vectors specifically.
+ *
+ * Why this is separate from the golden vectors (2026-07-27): every fixture in
+ * `CROSS_REPO_DEFINITION_HASH_GOLDEN_VECTORS` is `__proto__`-free, and the C1
+ * collision fix (`640c33c`) deliberately left `__proto__`-free serialization
+ * byte-identical so existing blessed hashes survived. The consequence is that
+ * the golden-vector comparison above CANNOT see that fix: run against the
+ * published pre-fix 1.2.0 tarball it reports full agreement, and the release
+ * that shipped the changed canonicalization under an unchanged version would
+ * have passed the very guard written to stop it.
+ *
+ * These vectors are the only inputs whose hash the fix actually moved, so they
+ * are the only ones that can detect it. `JSON.parse` is required to obtain a
+ * real OWN `__proto__` data property — an object literal would set the
+ * prototype instead, which is the whole bug.
+ */
+export function compareProtoPollutionVectors(workspace, published) {
+  const mismatches = [];
+  const vectors = workspace.CROSS_REPO_PROTO_POLLUTION_VECTORS;
+
+  if (!vectors?.length) {
+    return ["workspace module exports no CROSS_REPO_PROTO_POLLUTION_VECTORS — cannot establish parity over prototype keys"];
+  }
+
+  // A published build that does not export these vectors predates the C1 fix.
+  // It therefore cannot share this canonicalization, whatever the goldens say.
+  if (!published.CROSS_REPO_PROTO_POLLUTION_VECTORS?.length) {
+    mismatches.push(
+      "published build exports no CROSS_REPO_PROTO_POLLUTION_VECTORS — it predates the " +
+        "__proto__ canonicalization fix (C1) and cannot be the same canonicalizer"
+    );
+  }
+
+  for (const vector of vectors) {
+    const hashOf = (mod, which, json) => {
+      try {
+        return mod.computeDefinitionHash(JSON.parse(json));
+      } catch (err) {
+        mismatches.push(`[${vector.label}] ${which} computeDefinitionHash threw: ${err.message}`);
+        return undefined;
+      }
+    };
+
+    const workspacePolluted = hashOf(workspace, "workspace", vector.pollutedJson);
+    const workspaceClean = hashOf(workspace, "workspace", vector.cleanJson);
+    const publishedPolluted = hashOf(published, "published", vector.pollutedJson);
+    if (workspacePolluted === undefined || publishedPolluted === undefined) continue;
+
+    if (workspacePolluted !== vector.expectedPollutedHash) {
+      mismatches.push(
+        `[${vector.label}] workspace polluted hash ${workspacePolluted} != pinned ` +
+          `${vector.expectedPollutedHash}`
+      );
+    }
+    // The property must be part of the canonical bytes: a polluted definition
+    // must NOT retain its clean twin's blessed hash.
+    if (workspacePolluted === workspaceClean) {
+      mismatches.push(
+        `[${vector.label}] workspace hashes the polluted and clean twins identically ` +
+          `(${workspacePolluted}) — the prototype key is being dropped again`
+      );
+    }
+    if (publishedPolluted !== workspacePolluted) {
+      mismatches.push(
+        `[${vector.label}] published polluted hash ${publishedPolluted} != workspace ` +
+          `${workspacePolluted}`
+      );
+    }
+  }
+
+  return mismatches;
+}
+
+/**
  * Compare two builds of the canonicalizer over the workspace's exported golden
  * surface. Pure — takes the already-imported module objects — so the decision
  * logic is unit-testable without npm or the network. Returns a list of
@@ -101,6 +175,8 @@ export function compareCanonicalizers(workspace, published) {
         `!= workspace golden (${workspaceGolden?.expectedDefinitionHash})`
     );
   }
+
+  mismatches.push(...compareProtoPollutionVectors(workspace, published));
 
   return mismatches;
 }
