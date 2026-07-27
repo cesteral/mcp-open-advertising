@@ -670,6 +670,45 @@ variable "report_spill_bucket_name" {
   }
 }
 
+variable "enable_governance_jti_store" {
+  description = <<-EOT
+    Provision the Firestore database + TTL policy backing decision-token replay
+    protection (issue #167). Required before any server can run
+    GOVERNANCE_TOKEN_MODE=enforce on multi-instance Cloud Run: without a
+    distributed jti store, a replayed decision token routed to a second instance
+    is accepted as fresh and the governed write executes twice.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "governance_jti_database_name" {
+  description = <<-EOT
+    Firestore database ID for the governance jti store. "(default)" uses the
+    project's default database — set an explicit name to keep replay-protection
+    bookkeeping isolated from any other Firestore use in the project.
+  EOT
+  type        = string
+  default     = "(default)"
+}
+
+variable "governance_jti_location" {
+  description = "Firestore location for the governance database (e.g. eur3, nam5, europe-west2). Immutable after creation."
+  type        = string
+  default     = "eur3"
+}
+
+variable "governance_jti_collection" {
+  description = <<-EOT
+    Firestore collection holding consumed jti documents. Must match
+    GOVERNANCE_JTI_COLLECTION on the service revisions (the code default is
+    "governance_jti"); a mismatch means the TTL policy targets a collection
+    nothing writes to, and the real one grows unbounded.
+  EOT
+  type        = string
+  default     = "governance_jti"
+}
+
 variable "monitoring_notification_channels" {
   description = "Notification channel IDs for monitoring alerts"
   type        = list(string)

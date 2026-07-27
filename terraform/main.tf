@@ -134,6 +134,59 @@ resource "google_storage_bucket" "report_spill" {
   }
 }
 
+# ---------------------------------------------------------------------------
+# Governance decision-token replay protection (jti store)
+# ---------------------------------------------------------------------------
+# Backing store for `FirestoreJtiStore` (packages/shared/src/governance/jti-store.ts).
+#
+# Why Firestore and not a bucket or memory (issue #167, sibling of #166): the
+# consume-once guarantee has to hold ACROSS Cloud Run instances. `doc(jti).create()`
+# is an atomic create-if-absent, so a replayed decision token routed to a second
+# instance rejects with ALREADY_EXISTS instead of being accepted as fresh and
+# double-executing a money-moving write. An in-memory store only blocks replays
+# that happen to land on the same instance.
+#
+# Enable together with GOVERNANCE_JTI_STORE=firestore on the service revisions; the
+# server refuses to boot under `enforce` if the env declares firestore and the
+# distributed store is not actually reachable.
+resource "google_firestore_database" "governance" {
+  count = var.enable_governance_jti_store ? 1 : 0
+
+  project     = var.project_id
+  name        = var.governance_jti_database_name
+  location_id = var.governance_jti_location
+  type        = "FIRESTORE_NATIVE"
+
+  # The jti collection is pure replay-protection bookkeeping — every document is
+  # reconstructible-by-absence and expires within minutes. Point-in-time recovery
+  # would bill for retention of data whose whole purpose is to be forgotten.
+  point_in_time_recovery_enablement = "POINT_IN_TIME_RECOVERY_DISABLED"
+  delete_protection_state           = var.environment == "prod" ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED"
+}
+
+# TTL policy — the storage-cost control, NOT the correctness mechanism.
+# Correctness is the atomic create above; this only reclaims consumed entries.
+#
+# It must target a Timestamp-typed field: Firestore TTL policies ignore fields of
+# any other type, silently. `FirestoreJtiStore` writes `expiresAt` as a `Date`
+# (stored as a Timestamp) precisely so this policy can act on it — it previously
+# wrote an ISO string, which would have left this collection growing forever with
+# a policy that appeared to be configured correctly.
+resource "google_firestore_field" "governance_jti_ttl" {
+  count = var.enable_governance_jti_store ? 1 : 0
+
+  project    = var.project_id
+  database   = google_firestore_database.governance[0].name
+  collection = var.governance_jti_collection
+  field      = "expiresAt"
+
+  ttl_config {}
+
+  # Leave indexing untouched: this field is only read by the TTL sweeper, never
+  # queried, so the default single-field indexes are unnecessary write cost.
+  index_config {}
+}
+
 module "networking" {
   source = "./modules/networking"
 
