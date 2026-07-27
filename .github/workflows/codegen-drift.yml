@@ -1,0 +1,40 @@
+# DV360 schema drift — early warning for upstream Discovery changes.
+#
+# Deliberately NOT part of CI. This job fetches a document Google controls, so
+# making it PR-blocking would let an upstream edit turn `main` red at a time of
+# their choosing. The PR path stays hermetic against the committed schemas;
+# this runs on a schedule so an upstream change surfaces as a dated, reviewable
+# signal instead of as a surprise mid-feature (cf. #79, where DV360 v4 removed
+# campaign and insertion-order assigned targeting with no warning).
+#
+# Replaces the dead `prebuild` hook in packages/dv360-mcp/package.json, which
+# never ran (pnpm defaults enable-pre-post-scripts to false since v7) and so
+# provided none of the drift detection it appeared to.
+name: Codegen drift
+
+on:
+  schedule:
+    # 06:00 UTC Mondays — early enough in the week that a break is actionable.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  dv360-schema-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check dv360 schemas against the live Discovery document
+        run: pnpm run check:dv360-codegen-drift

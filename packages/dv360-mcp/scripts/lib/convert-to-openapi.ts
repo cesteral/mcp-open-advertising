@@ -20,6 +20,20 @@ import {
 import type { SchemaExtractionConfig } from "../../config/schema-extraction.config.js";
 
 /**
+ * Iterate an object's entries in a stable, locale-independent key order.
+ *
+ * Every ordered emission in this pipeline goes through here so generated output
+ * depends only on the *content* of the Discovery document, never on the key
+ * order it happened to arrive in (issue #175). `localeCompare` is deliberately
+ * avoided — it is locale-sensitive, which would reintroduce machine-dependent
+ * output. Discovery keys are ASCII identifiers, so a plain codepoint sort is
+ * both total and reproducible.
+ */
+function sortedEntries<T>(record: Record<string, T>): Array<[string, T]> {
+  return Object.entries(record).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/**
  * Convert extracted Discovery schemas to OpenAPI 3.0 specification
  *
  * @param schemas - Extracted Discovery schemas
@@ -42,9 +56,17 @@ export async function convertToOpenAPI(
     newSchemas: [] as string[],
   };
 
-  // Convert each schema
+  // Convert each schema.
+  //
+  // Sorted, not Discovery order (issue #175): the upstream Discovery document's
+  // key order is not stable across fetches, and every downstream artifact — the
+  // YAML spec, `types.ts` via openapi-typescript, and `zod.ts` — inherits the
+  // order of this object. Emitting Discovery order made a re-fetch rewrite ~3.4k
+  // lines as a pure permutation, so any build dirtied the tree and a real spec
+  // change was unreadable inside the churn. Sorting here fixes all three
+  // artifacts from one place.
   const openApiSchemas: Record<string, OpenAPISchema> = {};
-  for (const [schemaName, discoverySchema] of Object.entries(schemas)) {
+  for (const [schemaName, discoverySchema] of sortedEntries(schemas)) {
     openApiSchemas[schemaName] = convertSchema(schemaName, discoverySchema, conversionContext);
   }
 
@@ -135,7 +157,7 @@ function convertSchema(
   // Convert properties
   if (discoverySchema.properties) {
     openApiSchema.properties = {};
-    for (const [propName, propSchema] of Object.entries(discoverySchema.properties)) {
+    for (const [propName, propSchema] of sortedEntries(discoverySchema.properties)) {
       openApiSchema.properties[propName] = convertProperty(
         schemaName,
         propName,
@@ -257,7 +279,7 @@ function convertProperty(
   // Convert properties (for nested objects)
   if (discoveryProp.properties) {
     openApiProp.properties = {};
-    for (const [nestedPropName, nestedProp] of Object.entries(discoveryProp.properties)) {
+    for (const [nestedPropName, nestedProp] of sortedEntries(discoveryProp.properties)) {
       openApiProp.properties[nestedPropName] = convertProperty(
         schemaName,
         `${propName}.${nestedPropName}`,
