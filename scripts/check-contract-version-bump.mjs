@@ -45,9 +45,10 @@ export const CONTRACT_PACKAGES = ["contract-hash", "contract-schema"];
 
 /**
  * Decide which packages violate the rule. Pure — takes already-resolved facts —
- * so the decision logic is unit-testable without a git repository.
+ * so the decision logic is unit-testable without a git repository or npm.
  *
- * @param {Array<{name: string, srcChanged: boolean, baseVersion: string|null, headVersion: string|null}>} packages
+ * @param {Array<{name: string, srcChanged: boolean, baseVersion: string|null,
+ *   headVersion: string|null, headVersionPublished: boolean}>} packages
  * @returns {Array<{name: string, reason: string}>}
  */
 export function evaluateContractVersionBump(packages) {
@@ -68,12 +69,22 @@ export function evaluateContractVersionBump(packages) {
       continue;
     }
 
-    if (pkg.headVersion === pkg.baseVersion) {
-      violations.push({
-        name: pkg.name,
-        reason: `src/ changed but version is still ${pkg.baseVersion}`,
-      });
-    }
+    if (pkg.headVersion !== pkg.baseVersion) continue;
+
+    // The rule is about IMMUTABILITY, not about bumping for its own sake. If
+    // the current version is not on npm yet, there is no published artifact
+    // this edit can diverge from — the pending release will publish whatever
+    // the source finally says. Both parity guards make the same carve-out.
+    //
+    // Without this, the guard fires on every follow-up commit to an
+    // already-bumped-but-unreleased version and demands a second, meaningless
+    // bump. It did exactly that on the PR that introduced it (#174).
+    if (!pkg.headVersionPublished) continue;
+
+    violations.push({
+      name: pkg.name,
+      reason: `src/ changed but version is still ${pkg.baseVersion}, which is already published`,
+    });
   }
 
   return violations;
@@ -96,6 +107,23 @@ function readJsonAtRef(ref, path) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Is `<pkg>@<version>` already on npm? Throws on any non-404 failure so a
+ * registry outage fails the check rather than silently waving an edit through
+ * — same fail-closed posture as the two parity guards.
+ */
+function isPublished(pkgName, version) {
+  const res = spawnSync("npm", ["view", `${pkgName}@${version}`, "version"], {
+    encoding: "utf8",
+  });
+  if (res.status === 0) return res.stdout.trim().length > 0;
+  const stderr = `${res.stderr ?? ""}`;
+  if (stderr.includes("E404") || stderr.includes("404 Not Found")) return false;
+  throw new Error(
+    `npm view ${pkgName}@${version} failed (not a 404 — refusing to skip the check): ${stderr}`
+  );
 }
 
 function resolveBaseRef() {
@@ -125,11 +153,20 @@ function main() {
     const basePkg = readJsonAtRef(mergeBase, `${dir}/package.json`);
     const headPkg = readJsonAtRef("HEAD", `${dir}/package.json`);
 
+    const srcChanged = changed.length > 0;
+    const headVersion = headPkg?.version ?? null;
+
     return {
       name,
-      srcChanged: changed.length > 0,
+      srcChanged,
       baseVersion: basePkg?.version ?? null,
-      headVersion: headPkg?.version ?? null,
+      headVersion,
+      // Only ask npm when the answer can change the outcome — keeps the job
+      // network-free on the overwhelmingly common no-contract-change PR.
+      headVersionPublished:
+        srcChanged && headVersion !== null
+          ? isPublished(`@cesteral/${name}`, headVersion)
+          : false,
       changedFiles: changed ? changed.split("\n") : [],
     };
   });
@@ -163,9 +200,11 @@ function main() {
     console.log("check:contract-version-bump: no contract-library source changes.");
   } else {
     for (const p of touched) {
-      console.log(
-        `check:contract-version-bump: @cesteral/${p.name} ${p.baseVersion} → ${p.headVersion} ✓`
-      );
+      const detail =
+        p.headVersion === p.baseVersion
+          ? `${p.headVersion} (not yet published — nothing to diverge from)`
+          : `${p.baseVersion} → ${p.headVersion}`;
+      console.log(`check:contract-version-bump: @cesteral/${p.name} ${detail} ✓`);
     }
   }
 }

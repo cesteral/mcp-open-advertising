@@ -17,16 +17,30 @@ function pkg(overrides = {}) {
     srcChanged: true,
     baseVersion: "1.2.0",
     headVersion: "1.2.0",
+    headVersionPublished: true,
     ...overrides,
   };
 }
 
 describe("evaluateContractVersionBump", () => {
-  it("flags a source change that left the version alone", () => {
+  it("flags a source change that left an already-published version alone", () => {
     const violations = evaluateContractVersionBump([pkg()]);
     expect(violations).toHaveLength(1);
     expect(violations[0].name).toBe("contract-hash");
     expect(violations[0].reason).toContain("still 1.2.0");
+  });
+
+  /**
+   * The rule is about immutability, not about bumping for its own sake. An
+   * unpublished version has no artifact to diverge from, so iterating on it is
+   * safe — and demanding a second bump would be noise.
+   *
+   * This is a regression test in the literal sense: the guard fired on the very
+   * PR that introduced it (#174), which edited contract-schema/src at the
+   * already-bumped-but-unreleased 2.0.0.
+   */
+  it("allows editing src at a version that is not published yet", () => {
+    expect(evaluateContractVersionBump([pkg({ headVersionPublished: false })])).toEqual([]);
   });
 
   it("passes when the version moved alongside the source", () => {
@@ -62,8 +76,20 @@ describe("evaluateContractVersionBump", () => {
    */
   it("would have failed on the two real unbumped commits", () => {
     const violations = evaluateContractVersionBump([
-      { name: "contract-hash", srcChanged: true, baseVersion: "1.2.0", headVersion: "1.2.0" },
-      { name: "contract-schema", srcChanged: true, baseVersion: "1.3.0", headVersion: "1.3.0" },
+      {
+        name: "contract-hash",
+        srcChanged: true,
+        baseVersion: "1.2.0",
+        headVersion: "1.2.0",
+        headVersionPublished: true,
+      },
+      {
+        name: "contract-schema",
+        srcChanged: true,
+        baseVersion: "1.3.0",
+        headVersion: "1.3.0",
+        headVersionPublished: true,
+      },
     ]);
     expect(violations.map((v) => v.name)).toEqual(["contract-hash", "contract-schema"]);
   });
