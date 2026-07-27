@@ -16,10 +16,15 @@ import { OpenAPISpec, OpenAPISchema, OpenAPIProperty } from "./types.js";
 export function generateZodSchemas(spec: OpenAPISpec): string {
   const lines: string[] = [];
 
-  // Header
+  // Header.
+  //
+  // Deliberately carries no generation timestamp (issue #175): an ISO instant
+  // here makes every regeneration a guaranteed diff even when the schemas are
+  // byte-identical, which is noise in review and defeats a codegen drift check.
+  // The API version the schemas came from is the useful provenance, and it
+  // already travels in the OpenAPI spec written alongside this file.
   lines.push(`/**`);
   lines.push(` * Auto-generated Zod schemas from OpenAPI specification`);
-  lines.push(` * Generated at: ${new Date().toISOString()}`);
   lines.push(` * DO NOT EDIT MANUALLY`);
   lines.push(` */`);
   lines.push("");
