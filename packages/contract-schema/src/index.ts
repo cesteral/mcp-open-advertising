@@ -89,4 +89,7 @@ export {
 
 // Cross-repo annotation-schema parity vector (single-sourced; mirrors
 // @cesteral/contract-hash's CROSS_REPO_DEFINITION_HASH_GOLDEN).
-export { CROSS_REPO_ANNOTATION_PARITY_GOLDEN } from "./cross-repo-golden.js";
+export {
+  CROSS_REPO_ANNOTATION_PARITY_GOLDEN,
+  CROSS_REPO_WRITE_PROMISE_REJECTION_VECTORS,
+} from "./cross-repo-golden.js";
