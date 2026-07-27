@@ -10,6 +10,7 @@ import { LinkedInAccessTokenAdapter } from "./auth/linkedin-auth-adapter.js";
 import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/platform.js";
+import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("linkedin-mcp", transportMode, otelLogMixin());
@@ -50,6 +51,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 }
 
 bootstrapMcpServer({
+  // Boot-time governance posture check + process-wide jti store (#166).
+  tools: allTools,
   serviceName: "linkedin-mcp",
   config: mcpConfig,
   logger,

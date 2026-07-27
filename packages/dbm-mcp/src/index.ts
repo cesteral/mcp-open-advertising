@@ -17,6 +17,7 @@ import {
 } from "@cesteral/shared";
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/platform.js";
+import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("dbm-mcp", transportMode, otelLogMixin());
@@ -61,6 +62,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 }
 
 bootstrapMcpServer({
+  // Boot-time governance posture check + process-wide jti store (#166).
+  tools: allTools,
   serviceName: "dbm-mcp",
   config: mcpConfig,
   logger,

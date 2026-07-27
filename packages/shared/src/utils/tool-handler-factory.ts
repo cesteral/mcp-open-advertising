@@ -37,15 +37,34 @@ import { resolveTokenMode } from "../governance/config.js";
 import { verifyDecisionToken } from "../governance/decision-token.js";
 import { logDecisionTokenVerdict } from "../governance/audit.js";
 import { InMemoryJtiStore, type JtiStore } from "../governance/jti-store.js";
+import { getGovernanceJtiStore } from "../governance/runtime.js";
 import type { CesteralToolAnnotations } from "../types/cesteral-annotations.js";
 
 /** Default decision-token jti TTL (10 min) — must be ≥ the token's own TTL. */
 const DEFAULT_JTI_TTL_MS = 600_000;
 
-/** Lazily-created in-memory jti store, used when no JtiStore is injected. */
+/**
+ * Lazily-created in-memory jti store — the last resort when neither an explicit
+ * `opts.jtiStore` nor a process-level store from `initializeGovernanceRuntime`
+ * is available (stdio one-offs, tests, direct callers).
+ */
 let fallbackJtiStore: JtiStore | undefined;
 function getFallbackJtiStore(): JtiStore {
   return (fallbackJtiStore ??= new InMemoryJtiStore());
+}
+
+/**
+ * Resolution order for the jti store, most explicit first:
+ *
+ *   1. `opts.jtiStore` — an explicit injection wins, always.
+ *   2. The process-level store resolved at boot by `initializeGovernanceRuntime`
+ *      (issue #166). This is what makes a distributed store reachable without
+ *      threading it through every `createMcpServer` signature: `bootstrapMcpServer`
+ *      resolves it once, and every per-session registration picks it up here.
+ *   3. A per-process in-memory store.
+ */
+function resolveJtiStore(explicit: JtiStore | undefined): JtiStore {
+  return explicit ?? getGovernanceJtiStore() ?? getFallbackJtiStore();
 }
 
 /**
@@ -505,7 +524,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
   const auditLogger = logger.child({ component: "audit" });
   const governanceEnv = opts.governanceEnv ?? process.env;
-  const jtiStore = opts.jtiStore ?? getFallbackJtiStore();
+  const jtiStore = resolveJtiStore(opts.jtiStore);
   const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
 
   // Deployment footgun guard (review P3): if any governed write resolves to
