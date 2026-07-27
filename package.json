@@ -33,7 +33,8 @@
     "check:account-scope": "node scripts/check-account-scope.mjs",
     "check:contract-version-bump": "node scripts/check-contract-version-bump.mjs",
     "check:contract-schema-parity": "node scripts/check-contract-schema-published-parity.mjs",
-    "check:contract-hash-parity": "node scripts/check-contract-hash-published-parity.mjs"
+    "check:contract-hash-parity": "node scripts/check-contract-hash-published-parity.mjs",
+    "check:dv360-codegen-drift": "node scripts/check-dv360-codegen-drift.mjs"
   },
   "devDependencies": {
     "@cesteral/contract-hash": "workspace:*",

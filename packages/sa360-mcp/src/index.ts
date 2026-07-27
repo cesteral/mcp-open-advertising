@@ -10,6 +10,7 @@ import { SA360RefreshTokenAuthAdapter } from "./auth/sa360-auth-adapter.js";
 import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/platform.js";
+import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("sa360-mcp", transportMode, otelLogMixin());
@@ -54,6 +55,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 }
 
 bootstrapMcpServer({
+  // Boot-time governance posture check + process-wide jti store (#166).
+  tools: allTools,
   serviceName: "sa360-mcp",
   config: mcpConfig,
   logger,

@@ -12,6 +12,7 @@ import pino from "pino";
 import type { Logger } from "pino";
 import { closeAllInteractionLoggers } from "./interaction-logger.js";
 import { shutdownOpenTelemetry } from "./telemetry.js";
+import { initializeGovernanceRuntime } from "../governance/runtime.js";
 
 // ---------------------------------------------------------------------------
 // Transport mode detection
@@ -111,6 +112,22 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
 
   /** Optional cleanup hook called during shutdown (e.g., destroy rate limiter) */
   onShutdown?: () => void;
+
+  /**
+   * The server's full tool list (`allTools`), used to resolve the decision-token
+   * jti store and validate the enforcement posture at BOOT (issue #166).
+   *
+   * Without it, the posture check only happens inside
+   * `registerToolsFromDefinitions` — which the streamable-HTTP transport calls
+   * once per session, so a misconfigured `enforce` deploy passes its health
+   * check and then fails every session instead of refusing to start. Passing the
+   * tools here is also what makes a distributed (Firestore) store reachable at
+   * all: the store resolved here is published process-wide for the tool factory.
+   *
+   * Optional so a server can bootstrap without governance; omitting it keeps the
+   * previous per-session-only behavior.
+   */
+  tools?: readonly { annotations?: unknown }[];
 }
 
 /**
@@ -124,6 +141,19 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
 
   // Initialize OpenTelemetry first
   opts.initOtel(opts.config, logger);
+
+  // Resolve the governance jti store and validate the enforcement posture BEFORE
+  // either transport starts (issue #166). A misconfigured `enforce` deployment
+  // must die here — while Cloud Run still treats it as a failed revision and
+  // holds traffic on the previous one — rather than starting healthy and then
+  // throwing on every session establishment.
+  //
+  // Deliberately outside the try/catch below: that block's handler logs and
+  // exits, but this failure needs to propagate as a rejected bootstrap so the
+  // caller's `.catch` reports it as a startup fault with the real reason.
+  if (opts.tools) {
+    await initializeGovernanceRuntime({ tools: opts.tools, logger });
+  }
 
   try {
     if (transportMode === "stdio") {
