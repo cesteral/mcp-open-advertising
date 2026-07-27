@@ -29,7 +29,7 @@ data "google_project" "project" {
 # and cloudresourcemanager.googleapis.com themselves cannot be self-enabled
 # here — they must already be on for terraform to talk to the project at all.
 locals {
-  required_apis = [
+  base_required_apis = [
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -41,6 +41,15 @@ locals {
     "storage-api.googleapis.com",
     "iam.googleapis.com",
   ]
+
+  # Firestore backs the governance jti store and is enabled only when that store
+  # is provisioned — it is not needed by the fleet otherwise. Conditional rather
+  # than unconditional so a deployment that never runs `enforce` does not carry
+  # an API (and its default database) it has no use for.
+  required_apis = concat(
+    local.base_required_apis,
+    var.enable_governance_jti_store ? ["firestore.googleapis.com"] : []
+  )
 }
 
 resource "google_project_service" "required" {
@@ -162,6 +171,14 @@ resource "google_firestore_database" "governance" {
   # would bill for retention of data whose whole purpose is to be forgotten.
   point_in_time_recovery_enablement = "POINT_IN_TIME_RECOVERY_DISABLED"
   delete_protection_state           = var.environment == "prod" ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED"
+
+  # `firestore.googleapis.com` is only in `required_apis` when this feature is
+  # enabled, and API enablement is not implicit in the resource graph. Without
+  # this edge, `terraform apply` races the enablement and fails with "Cloud
+  # Firestore API has not been used in project ... before or it is disabled" —
+  # which `terraform plan` cannot surface, because plan does not check API state.
+  # Verified against open-agentic-advertising-dev, where the API is currently off.
+  depends_on = [google_project_service.required]
 }
 
 # TTL policy — the storage-cost control, NOT the correctness mechanism.
