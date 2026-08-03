@@ -46,9 +46,16 @@ locals {
   # is provisioned — it is not needed by the fleet otherwise. Conditional rather
   # than unconditional so a deployment that never runs `enforce` does not carry
   # an API (and its default database) it has no use for.
+  # Workload Identity Federation for the scheduled drift check needs the STS
+  # token-exchange endpoint and the SA-impersonation API. Conditional for the
+  # same reason as firestore: a deployment that never federates should not carry
+  # them. Without sts.googleapis.com the pool and provider apply cleanly and
+  # then every token exchange fails at run time — a bootstrap that looks
+  # complete but is not.
   required_apis = concat(
     local.base_required_apis,
-    var.enable_governance_jti_store ? ["firestore.googleapis.com"] : []
+    var.enable_governance_jti_store ? ["firestore.googleapis.com"] : [],
+    var.enable_drift_check_reader ? ["sts.googleapis.com", "iamcredentials.googleapis.com"] : []
   )
 }
 
