@@ -248,6 +248,80 @@ describe("getJwtCredentialFingerprint", () => {
     expect(a).toBe(b);
     expect(a).not.toBe(c);
   });
+
+  // Security review H-4. The fingerprint gates session reuse, and the cached
+  // auth context (which carries allowedAdvertisers) is only refreshed when a
+  // session is created or rebuilt. So anything the fingerprint ignores cannot
+  // take effect while the session stays hot — and `touchSession` extends the
+  // idle timeout on every request, so an active session never ages out.
+  const base = { sub: "user-1", iss: "issuer-a", aud: "aud", exp: 1, iat: 1 };
+
+  it("changes when allowed_advertisers is narrowed (revocation takes effect)", () => {
+    const broad = getJwtCredentialFingerprint({
+      ...base,
+      allowed_advertisers: ["adv-1", "adv-2"],
+    });
+    const narrowed = getJwtCredentialFingerprint({
+      ...base,
+      allowed_advertisers: ["adv-1"],
+    });
+
+    expect(broad).not.toBe(narrowed);
+  });
+
+  it("changes when allowed_advertisers is removed entirely", () => {
+    const scoped = getJwtCredentialFingerprint({ ...base, allowed_advertisers: ["adv-1"] });
+    const unscoped = getJwtCredentialFingerprint(base);
+
+    expect(scoped).not.toBe(unscoped);
+  });
+
+  it("changes when the scope claim changes", () => {
+    const readOnly = getJwtCredentialFingerprint({ ...base, scope: "reports:read" });
+    const readWrite = getJwtCredentialFingerprint({
+      ...base,
+      scope: "reports:read reports:write",
+    });
+
+    expect(readOnly).not.toBe(readWrite);
+  });
+
+  it("is stable across a routine token refresh that keeps the same scope", () => {
+    // exp/iat are deliberately excluded: re-binding on every refresh would tear
+    // down and rebuild the session (an upstream validate() each time) for no
+    // security gain, since expiry and signature are verified on every reuse.
+    const before = getJwtCredentialFingerprint({
+      ...base,
+      exp: 1000,
+      iat: 900,
+      allowed_advertisers: ["adv-1"],
+    });
+    const after = getJwtCredentialFingerprint({
+      ...base,
+      exp: 5000,
+      iat: 4900,
+      allowed_advertisers: ["adv-1"],
+    });
+
+    expect(before).toBe(after);
+  });
+
+  it("ignores allowed_advertisers ordering so claim order cannot force a rebuild", () => {
+    const a = getJwtCredentialFingerprint({ ...base, allowed_advertisers: ["adv-2", "adv-1"] });
+    const b = getJwtCredentialFingerprint({ ...base, allowed_advertisers: ["adv-1", "adv-2"] });
+
+    expect(a).toBe(b);
+  });
+
+  it("does not let a delimiter inside a claim alias a different claim set", () => {
+    // The parts are JSON-encoded rather than joined with a separator, so an
+    // advertiser id containing the separator cannot collide with a genuinely
+    // different set. A naive `join(",")` would make these two equal.
+    const a = getJwtCredentialFingerprint({ ...base, allowed_advertisers: ["adv-1,adv-2"] });
+    const b = getJwtCredentialFingerprint({ ...base, allowed_advertisers: ["adv-1", "adv-2"] });
+
+    expect(a).not.toBe(b);
+  });
 });
 
 // ---------------------------------------------------------------------------
