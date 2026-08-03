@@ -37,6 +37,11 @@ beforeEach(() => {
       getCommitment: mockGetCommitment,
       updateCommitment: mockUpdateCommitment,
     },
+    // Matches the `profileId` every case below passes. The dry-run path now
+    // asserts the caller-supplied profile against the session-bound one — it
+    // reads current state through this service, so an unchecked mismatch would
+    // label profile A's data as profile B's in the preview.
+    boundProfileId: "1234567890",
   } as never);
 });
 

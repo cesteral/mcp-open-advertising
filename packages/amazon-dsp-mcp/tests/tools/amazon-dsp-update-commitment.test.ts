@@ -40,6 +40,10 @@ beforeEach(() => {
       getCommitment: mockGetCommitment,
       updateCommitment: mockUpdateCommitment,
     },
+    // Matches the `profileId` every case below passes. The tool now asserts the
+    // caller-supplied profile against the session-bound one, so the fixture has
+    // to model the binding rather than leave it undefined.
+    boundProfileId: "1234567890",
   } as never);
 });
 
@@ -213,5 +217,46 @@ describe("amazon_dsp_update_commitment — wet run", () => {
     expect(result.before).toBeUndefined();
     expect(result.after?.budget?.lifetime?.amountMinor).toBe(20000);
     expect(result.updated).toBe(true);
+  });
+  // Security review C-2 / account-scope false-green — same shape as the create
+  // tool: `input.profileId` never reaches Amazon, it only labels the before /
+  // after snapshots, so a mismatch used to update the SESSION's commitment while
+  // attributing it to the caller's profile.
+  it("refuses a profileId that does not match the session-bound profile", async () => {
+    await expect(
+      updateCommitmentLogic(
+        {
+          profileId: "9999999999",
+          commitmentId: "c-001",
+          data: { committedSpend: 150000 },
+          dry_run: false,
+        } as never,
+        baseContext,
+        baseSdkContext
+      )
+    ).rejects.toThrow(/does not match this session's account/);
+
+    expect(mockUpdateCommitment).not.toHaveBeenCalled();
+  });
+  it("refuses a mismatched profileId on the DRY-RUN path too", async () => {
+    // The reason this matters more here than for create: this dry-run calls
+    // service.getCommitment through the SESSION-BOUND service, then labels the
+    // projected snapshot with the caller's profileId. Gating only the wet path
+    // left profile A's data presented as profile B's in governance preview.
+    await expect(
+      updateCommitmentLogic(
+        {
+          profileId: "9999999999",
+          commitmentId: "c-001",
+          data: { committedSpend: 150000 },
+          dry_run: true,
+        } as never,
+        baseContext,
+        baseSdkContext
+      )
+    ).rejects.toThrow(/does not match this session's account/);
+
+    expect(mockGetCommitment).not.toHaveBeenCalled();
+    expect(mockUpdateCommitment).not.toHaveBeenCalled();
   });
 });

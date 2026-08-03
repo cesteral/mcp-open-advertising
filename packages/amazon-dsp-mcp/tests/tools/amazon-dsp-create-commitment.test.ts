@@ -34,6 +34,10 @@ beforeEach(() => {
   mockCreateCommitment.mockReset();
   mockResolveSession.mockReturnValue({
     amazonDspV1Service: { createCommitment: mockCreateCommitment },
+    // Matches the `profileId` every case below passes. The tool now asserts the
+    // caller-supplied profile against the session-bound one, so the fixture has
+    // to model the binding rather than leave it undefined.
+    boundProfileId: "1234567890",
   } as never);
 });
 
@@ -116,5 +120,46 @@ describe("amazon_dsp_create_commitment", () => {
       message: expect.stringContaining("Overlapping dates"),
       code: JsonRpcErrorCode.InvalidParams,
     });
+  });
+  // Security review C-2 / account-scope false-green. `input.profileId` is
+  // required by the schema but never sent to Amazon — the service already
+  // carries the session-bound profile — so before assertAccountScope was added
+  // here, naming another profile created the commitment against the SESSION's
+  // profile and returned an `after` snapshot labelled with the caller's.
+  it("refuses a profileId that does not match the session-bound profile", async () => {
+    await expect(
+      createCommitmentLogic({ ...validInput, profileId: "9999999999" }, baseContext, baseSdkContext)
+    ).rejects.toThrow(/does not match this session's account/);
+
+    expect(mockCreateCommitment).not.toHaveBeenCalled();
+  });
+
+  it("refuses a mismatched profileId on the DRY-RUN path too", async () => {
+    // Deliberately stricter than the other write tools, whose dry-run is purely
+    // symbolic. Here the id labels the projection, and update-commitment's
+    // dry-run additionally READS through the session-bound service — so a
+    // mismatch that is merely "not written" still yields governance preview
+    // data attributed to the wrong profile. Both commitment tools therefore
+    // gate before the dry-run branch, for consistent semantics.
+    await expect(
+      createCommitmentLogic(
+        { ...validInput, profileId: "9999999999", dry_run: true },
+        baseContext,
+        baseSdkContext
+      )
+    ).rejects.toThrow(/does not match this session's account/);
+
+    expect(mockCreateCommitment).not.toHaveBeenCalled();
+  });
+
+  it("still allows a dry run for the session's own profile", async () => {
+    const result = await createCommitmentLogic(
+      { ...validInput, dry_run: true },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.dryRun).toBeDefined();
+    expect(mockCreateCommitment).not.toHaveBeenCalled();
   });
 });
