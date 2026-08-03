@@ -76,7 +76,13 @@ if [ "$DRY_RUN" = false ]; then
   npm whoami >/dev/null 2>&1 || err "Not logged in to npm. Run: npm login"
 fi
 
-if [ "$NPM_ONLY" = false ] && [ "$DRY_RUN" = false ]; then
+# `--contracts-only` never reaches the MCP Registry step — neither contract
+# library is an MCP server — so it must not demand the publisher binary either.
+# Requiring a tool the lane provably never invokes turned the contracts-only
+# release into a hard failure in CI, where `release-contracts` deliberately does
+# not install mcp-publisher. The local `--dry-run --contracts-only` rehearsal
+# could not catch it: DRY_RUN=true already skipped this check.
+if [ "$NPM_ONLY" = false ] && [ "$DRY_RUN" = false ] && [ "$CONTRACTS_ONLY" = false ]; then
   command -v mcp-publisher >/dev/null 2>&1 || err "mcp-publisher is not installed. Run: brew install mcp-publisher"
 fi
 
