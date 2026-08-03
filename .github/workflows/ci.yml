@@ -96,9 +96,32 @@ jobs:
         with:
           terraform_version: "1.9"
 
+      # -lockfile=readonly so CI cannot silently repair an incomplete lock file
+      # in its ephemeral checkout and still report green. That is exactly what
+      # happened with the lock committed in #187: it carried a single darwin_arm64
+      # `h1:` hash, this job quietly added the linux_amd64 one and passed, and the
+      # gap only surfaced when the scheduled drift workflow — which already used
+      # the stricter flag — failed on the runner.
+      #
+      # Note where the failure actually lands. `init` still SUCCEEDS with an
+      # incomplete lock: it verifies the downloaded zip against the platform-
+      # agnostic `zh:` hashes and merely declines to record the new `h1:`. The
+      # next command to load the extracted plugin — `terraform validate` below —
+      # is what fails, with:
+      #
+      #   the cached package for registry.terraform.io/hashicorp/google <ver>
+      #   (in .terraform/providers) does not match any of the checksums recorded
+      #   in the dependency lock file
+      #
+      # If you see that, the lock is missing checksums for a platform rather than
+      # anything being wrong with this runner. Fix it at the source; do not drop
+      # the flag:
+      #   terraform providers lock \
+      #     -platform=linux_amd64 -platform=linux_arm64 \
+      #     -platform=darwin_amd64 -platform=darwin_arm64
       - name: Terraform init
         working-directory: terraform
-        run: terraform init -backend=false
+        run: terraform init -backend=false -lockfile=readonly -input=false
 
       - name: Terraform validate
         working-directory: terraform
