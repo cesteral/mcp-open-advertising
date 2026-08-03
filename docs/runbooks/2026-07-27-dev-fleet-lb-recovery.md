@@ -140,6 +140,68 @@ gone.
 - **Billing alerting.** The root cause was a closed billing account, and the first
   symptom anyone saw was `UserProjectAccountProblem` on the Terraform state bucket
   — days later, during unrelated work.
-- **Terraform state drift is not monitored.** State claimed 35 LB resources and 8
-  networking resources that no longer existed. A scheduled `terraform plan` that
-  alerts on unexpected drift would have caught this on day one.
+- ~~**Terraform state drift is not monitored.**~~ **Closed 2026-08-03.** State
+  claimed 35 LB resources and 8 networking resources that no longer existed.
+  `scripts/check-terraform-drift.mjs` + `.github/workflows/terraform-drift.yml`
+  now plan daily and alert on divergence. See the section below for what it does
+  and does not catch, and `docs/plans/2026-08-03-terraform-drift-check-design.md`
+  for the reasoning.
+
+## Drift detection (added 2026-08-03)
+
+`pnpm run check:terraform-drift <env>` runs a plan and classifies it. The
+scheduled workflow runs it daily against dev and tracks the result in a single
+GitHub issue that it opens, updates, and **closes again on a clean run** — a
+recovered environment must not leave a permanent warning sitting open.
+
+Exit codes: `0` clean, `1` drift, `2` could not check. The last one is not a
+lesser failure — it alerts identically, because an unchecked environment is
+exactly the state the fleet was in for the week of this outage.
+
+### What it alerts on
+
+`resource_changes` whose action array is `["create"]` or contains `"delete"` —
+anything Terraform would have to add, destroy or replace to make live GCP match
+state. This outage produced 68 creates. Each address is labelled by whether
+`resource_drift` corroborates it (an external change) or not (likely unapplied
+config), but that label is advisory: the alert never depends on it, because the
+plan JSON format does not guarantee remotely-deleted objects appear in
+`resource_drift`.
+
+### What it deliberately does NOT alert on
+
+**Remote mutations that reconcile to an in-place `["update"]`.** If someone
+widens a firewall rule by hand, the plan wants to update it back and this check
+stays silent. That is a real gap, accepted knowingly.
+
+The reason is the same one that caused this outage to hide. A plan against
+healthy dev state carries **49 `resource_drift` entries**, and every single one
+was verified to be provider normalization — `null → []`, `null → {}`, a
+server-computed certificate `expire_time`, alert-policy `conditions` reordering.
+Alerting on those would fire every day forever, which is precisely what the 13
+uptime checks were doing while asserting `200` against an IAM-locked fleet. A
+check that always fires is worthless. This one targets the signature that
+actually happened: resources vanishing.
+
+`["read"]` actions are tolerated explicitly — filtering on
+`actions != ["no-op"]` sweeps in data-source refreshes, which is what
+manufactured the phantom "13 duplicate secrets" blocker during recovery.
+
+### If it fires
+
+1. Read the issue — it lists resource addresses, not just a count.
+2. Reproduce: `cd terraform && terraform plan -var-file=dev.tfvars`.
+3. Addresses under "changed outside Terraform" mean something mutated GCP.
+   Addresses under "not seen by refresh" usually mean config merged but never
+   applied.
+4. Do not blind-apply. Re-read the `-target` trap above: a targeted apply is not
+   narrow, and Cloud NAT bills hourly.
+
+### Operational prerequisites
+
+The checker authenticates by Workload Identity Federation
+(`terraform/drift-check.tf`, gated behind `enable_drift_check_reader`). The
+tfvars supplied to CI **must set `enable_drift_check_reader = true`** to match
+the applied state — otherwise the checker plans deletion of its own service
+account on every run and alerts on itself forever. The workflow hard-fails with
+that message rather than letting it become a daily mystery.
