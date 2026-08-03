@@ -35,7 +35,28 @@ const BODY_SECRET_PATTERNS: Array<[RegExp, string]> = [
     /("?(?:access_token|refresh_token|client_secret|api_secret|developer[_-]?token|password|assertion|id_token)"?\s*[:=]\s*"?)[^"&,\s]+/gi,
     "$1[REDACTED]",
   ],
-  [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
+  // Requiring at least one non-alphabetic character is load-bearing, not
+  // cosmetic. Matching any `\S+` after "Bearer" also matches PROSE:
+  // "Authorization header must use Bearer scheme" became "…use Bearer
+  // [REDACTED]", mangling a diagnostic that holds no secret. That surfaced once
+  // redaction was applied to every McpError message (#741 H-2) rather than only
+  // to bodies, and two LinkedIn auth tests caught it.
+  //
+  // Shape, not length, is the right discriminator: real credentials carry a
+  // digit or `.`/`_`/`-` (`abc.def-123`, `ya29.a0Af…`), while the English words
+  // that follow "Bearer" in these messages — "scheme", "authentication",
+  // "authorization" — are purely alphabetic. A length bound was tried first and
+  // was wrong: it would have stopped redacting the short credentials the
+  // existing recorder and error tests legitimately expect to be caught.
+  //
+  // Over-redaction is not a safe default here: a control that garbles ordinary
+  // error messages is one an on-call engineer turns off.
+  //
+  // Known limit, unchanged by this edit: the character class excludes `/`, so a
+  // Google refresh token of the form `1//0e…` is only partially matched by THIS
+  // pattern. It is caught in practice by the named-field pattern above, which is
+  // how such a token actually appears (`"refresh_token":"1//0e…"`).
+  [/(Bearer\s+)(?=[A-Za-z0-9._\-]*[0-9._\-])[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
 ];
 
 /** Strip secret-bearing fields from a request/response body or error string. */
