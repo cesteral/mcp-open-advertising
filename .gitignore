@@ -102,3 +102,6 @@ packages/*/tests/live/last-run.json
 
 # Sibling worktrees created by Claude Code (each has its own branch)
 .claude/worktrees/
+
+# Local Claude Code auto-memory (persists across sessions; not project code)
+.claude/projects/
