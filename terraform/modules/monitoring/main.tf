@@ -5,6 +5,19 @@
 # UPTIME CHECKS
 # ============================================================================
 
+# The expected status depends on the fleet's AUTH POSTURE, not on health.
+#
+# An uptime checker is an anonymous caller. When `allow_unauthenticated = false`
+# — the production posture, and the current dev posture since the Phase D IAM
+# lock — Cloud Run answers anonymous requests with 403 before the request ever
+# reaches `/health`. Asserting 200 there does not test liveness; it asserts the
+# fleet is publicly callable, which is the opposite of the intended posture and
+# would fail permanently on a correctly-locked deployment.
+#
+# So 403 is the success condition under a locked posture: it proves TLS
+# terminated and a live backend applied IAM. A 200 would mean the lock is GONE
+# and the fleet is answering anonymous callers — which this check will then fail
+# on, deliberately, because that is a security regression worth paging about.
 resource "google_monitoring_uptime_check_config" "health" {
   for_each = { for s in var.services : s.name => s }
 
@@ -21,7 +34,7 @@ resource "google_monitoring_uptime_check_config" "health" {
     request_method = "GET"
 
     accepted_response_status_codes {
-      status_value = 200
+      status_value = var.expected_health_status
     }
   }
 
@@ -30,6 +43,55 @@ resource "google_monitoring_uptime_check_config" "health" {
     labels = {
       project_id = var.project_id
       host       = replace(each.value.url, "https://", "")
+    }
+  }
+
+  checker_type = "STATIC_IP_CHECKERS"
+}
+
+# ----------------------------------------------------------------------------
+# Fleet load balancer (mcp.cesteral.com)
+# ----------------------------------------------------------------------------
+# The check above targets each service's OWN Cloud Run URL, which stays healthy
+# whether or not the load balancer in front of it exists. That blind spot is not
+# hypothetical: on 2026-07-27 a billing lapse had GCP reclaim the entire fleet LB
+# — global address, forwarding rules, all 13 backend services, and the managed
+# certificate — leaving `mcp.cesteral.com` pointed at a dead IP and failing at
+# TLS connect. Every Cloud Run service stayed up, so nothing surfaced it. It was
+# found days later, by accident, in a Terraform plan run for an unrelated change.
+#
+# This check exercises the path callers actually use: DNS → LB → path routing →
+# backend → IAM. Per-service paths rather than one probe, so a single broken
+# backend or a dropped path rule is distinguishable from the LB being gone.
+#
+# Same posture logic as above — 403 is success, and a TLS error, 502, or 000 is
+# the LB failing.
+resource "google_monitoring_uptime_check_config" "fleet_lb" {
+  for_each = var.fleet_domain != "" ? { for s in var.services : s.name => s } : {}
+
+  display_name = "cesteral-lb-${each.key}-${var.environment}"
+  timeout      = "10s"
+  period       = var.uptime_check_period
+  project      = var.project_id
+
+  http_check {
+    # Path prefix routing on the shared LB: /{server}/health.
+    path           = "/${replace(each.key, "-mcp", "")}/health"
+    port           = 443
+    use_ssl        = true
+    validate_ssl   = true
+    request_method = "GET"
+
+    accepted_response_status_codes {
+      status_value = var.expected_health_status
+    }
+  }
+
+  monitored_resource {
+    type = "uptime_url"
+    labels = {
+      project_id = var.project_id
+      host       = var.fleet_domain
     }
   }
 
@@ -209,6 +271,68 @@ resource "google_monitoring_alert_policy" "instance_count" {
 # ============================================================================
 # ALERT: Uptime Check Failed
 # ============================================================================
+
+# Fleet-LB reachability. Separate from the per-service policy below because the
+# failure means something different: the per-service alert says "this backend is
+# unhealthy", this one says "callers cannot reach the fleet at all", which is the
+# outage that went undetected on 2026-07-27.
+resource "google_monitoring_alert_policy" "fleet_lb_failure" {
+  for_each = var.fleet_domain != "" ? { for s in var.services : s.name => s } : {}
+
+  display_name = "Cesteral LB ${each.key} Unreachable via ${var.fleet_domain} (${var.environment})"
+  project      = var.project_id
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Fleet LB uptime failure for ${each.key}"
+
+    condition_threshold {
+      filter = <<-EOT
+        resource.type = "uptime_url"
+        AND metric.type = "monitoring.googleapis.com/uptime_check/check_passed"
+        AND metric.labels.check_id = "${google_monitoring_uptime_check_config.fleet_lb[each.key].uptime_check_id}"
+      EOT
+
+      comparison      = "COMPARISON_GT"
+      threshold_value = 1
+      duration        = "300s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_NEXT_OLDER"
+        cross_series_reducer = "REDUCE_COUNT_FALSE"
+      }
+    }
+  }
+
+  notification_channels = local.effective_channels
+
+  documentation {
+    content   = <<-EOT
+      `${var.fleet_domain}${"/"}${replace(each.key, "-mcp", "")}/health` stopped answering.
+
+      This is the caller-facing path (DNS → LB → path routing → backend → IAM),
+      so it fails for reasons the per-service checks cannot see — most notably the
+      load balancer itself being gone, which happened on 2026-07-27 after a
+      billing lapse and stayed invisible for days because every Cloud Run service
+      remained healthy.
+
+      Triage:
+      1. Do the LB resources still exist?
+         `gcloud compute forwarding-rules list --global`
+         `gcloud compute addresses list --global`
+         If empty, follow docs/runbooks/2026-07-27-dev-fleet-lb-recovery.md —
+         recovery reallocates the IP and needs a DNS update plus certificate
+         re-provisioning.
+      2. Does DNS still resolve to the current LB address?
+      3. Is the managed certificate ACTIVE?
+      4. If the check began failing with 200 rather than a connection error, the
+         IAM lock has been REMOVED and the fleet is answering anonymous callers.
+         That is a security regression, not an availability one.
+    EOT
+    mime_type = "text/markdown"
+  }
+}
 
 resource "google_monitoring_alert_policy" "uptime_failure" {
   for_each = { for s in var.services : s.name => s }

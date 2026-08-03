@@ -735,6 +735,15 @@ module "monitoring" {
   error_rate_threshold     = var.monitoring_error_rate_threshold
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
   uptime_check_period      = var.monitoring_uptime_check_period
+
+  # Probe the caller-facing path too, not just each service's own Cloud Run URL.
+  # Empty when the shared LB is disabled, which drops those checks entirely.
+  fleet_domain = var.enable_fleet_lb ? var.fleet_domain : ""
+
+  # An uptime checker is anonymous, so it sees the auth posture rather than
+  # `/health`. Under the normal locked posture that is a 403, and asserting 200
+  # would fail permanently while testing the wrong property.
+  expected_health_status = var.allow_unauthenticated ? 200 : 403
 }
 
 # ── Fleet load balancer (custom domain) ──────────────────────────────────────
