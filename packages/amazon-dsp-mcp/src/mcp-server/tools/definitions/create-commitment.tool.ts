@@ -14,6 +14,7 @@ import {
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import {
   DSPCommitmentSchema,
   DSPCommitmentCreateSchema,
@@ -85,6 +86,30 @@ export async function createCommitmentLogic(
 ): Promise<CreateCommitmentOutput> {
   const dispatchedCapability = resolveCommitmentCreateDispatchedCapability();
 
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
+
+  // Fail fast on a mismatched account — BEFORE the dry-run branch, not only on
+  // the real-execution path.
+  //
+  // `input.profileId` is REQUIRED by the schema but is never sent to Amazon:
+  // `amazonDspV1Service` already carries the session-bound profile, and the id
+  // is used only to LABEL the dry-run projection and the before/after
+  // snapshots. So a caller naming profile B while the session is bound to
+  // profile A produced output attributed to B from data belonging to A.
+  //
+  // The other write tools deliberately allow a mismatched id on dry-run,
+  // because their dry-run is symbolic and touches no tenant data. These two are
+  // different: `runCommitmentUpdateDryRun` calls `service.getCommitment`
+  // through the session-bound service and then labels the projected snapshot
+  // with the caller's profileId, so the misattribution survives into governance
+  // PREVIEW data — which is exactly the data a reviewer approves from. Gating
+  // only the wet path would leave that intact.
+  //
+  // `create`'s dry-run is symbolic today, but it is gated at the same point for
+  // consistent semantics: for these tools, a profile mismatch is rejected
+  // outright rather than depending on whether a given preview happens to read.
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
+
   if (input.dry_run === true) {
     return {
       timestamp: new Date().toISOString(),
@@ -96,7 +121,6 @@ export async function createCommitmentLogic(
     };
   }
 
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const commitment = (await amazonDspV1Service.createCommitment(
     input.data as DSPCommitmentCreateT,
     context

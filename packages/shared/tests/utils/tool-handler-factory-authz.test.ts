@@ -496,4 +496,138 @@ describe("tool-handler-factory authorization", () => {
     expect((result as any).content[0].text).toContain("filters.advertiserId");
     expect(filteredTool.logic).not.toHaveBeenCalled();
   });
+  // ── accountId / accountIds (security review C-2) ───────────────────────────
+  //
+  // `accountId` is the Microsoft Advertising account, which IS the
+  // advertiser-equivalent id, and msads tools name it plainly (`get-entity`,
+  // `duplicate-entity`, `get-pacing-status`, `create-report-schedule`). Before
+  // this it was absent from SCOPED_ID_KEYS, so it yielded ZERO scoped
+  // identifiers and the deny-loop never ran — absence of a match was
+  // indistinguishable from authorisation.
+
+  function registerScoped(
+    tool: {
+      name: string;
+      description: string;
+      inputSchema: z.ZodTypeAny;
+      logic: ReturnType<typeof vi.fn>;
+    },
+    allowedAdvertisers: string[]
+  ) {
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "jwt" },
+      allowedAdvertisers,
+    };
+    registerToolsFromDefinitions({
+      server,
+      tools: [tool as never],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+  }
+
+  const msadsTool = () => ({
+    name: "msads_tool",
+    description: "MS Ads scoped tool",
+    inputSchema: z.object({ accountId: z.string() }),
+    logic: vi.fn().mockResolvedValue({ ok: true }),
+  });
+
+  it("blocks tool call when accountId is not in allowedAdvertisers", async () => {
+    const tool = msadsTool();
+    registerScoped(tool, ["111222333"]);
+
+    const result = await server.callTool("msads_tool", { accountId: "999888777" });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("Access denied");
+    expect(tool.logic).not.toHaveBeenCalled();
+  });
+
+  it("allows tool call when accountId is in allowedAdvertisers", async () => {
+    const tool = msadsTool();
+    registerScoped(tool, ["111222333"]);
+
+    const result = await server.callTool("msads_tool", { accountId: "111222333" });
+
+    expect((result as any).isError).toBeUndefined();
+    expect(tool.logic).toHaveBeenCalled();
+  });
+
+  it("blocks an accountIds array containing an unauthorized entry", async () => {
+    const tool = {
+      name: "msads_bulk_tool",
+      description: "MS Ads bulk tool",
+      inputSchema: z.object({ accountIds: z.array(z.string()) }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    registerScoped(tool, ["111222333"]);
+
+    const result = await server.callTool("msads_bulk_tool", {
+      accountIds: ["111222333", "999888777"],
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("Access denied");
+    expect(tool.logic).not.toHaveBeenCalled();
+  });
+
+  it("blocks an accountId nested inside an array of objects", async () => {
+    // The collector recurses through arrays and objects and reports a
+    // dotted/indexed path, so a scoped id buried in a batch payload is checked
+    // like a top-level one.
+    const tool = {
+      name: "msads_batch_tool",
+      description: "MS Ads batch tool",
+      inputSchema: z.object({
+        operations: z.array(z.object({ accountId: z.string(), entityId: z.string() })),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    registerScoped(tool, ["111222333"]);
+
+    const result = await server.callTool("msads_batch_tool", {
+      operations: [
+        { accountId: "111222333", entityId: "e1" },
+        { accountId: "999888777", entityId: "e2" },
+      ],
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("operations[1].accountId");
+    expect(tool.logic).not.toHaveBeenCalled();
+  });
+
+  it("does NOT treat profileId as an allowed_advertisers identifier", async () => {
+    // Deliberate, and load-bearing. An Amazon DSP `profileId` becomes the
+    // `Amazon-Advertising-API-Scope` header: it is a session-bound CREDENTIAL
+    // scope in a different id-space from the JWT advertiser scope, and Amazon
+    // tools carry `advertiserId` separately for the latter. Checking it here
+    // would compare a profile id against a list of advertiser ids and deny
+    // every Amazon call in jwt mode — a fail-closed outage, not a fix.
+    //
+    // Profile scoping is enforced by `assertAccountScope` instead, which
+    // compares the caller-supplied profile against the SESSION-BOUND one.
+    // If this test ever starts failing because profileId was added to
+    // SCOPED_ID_KEYS, read docs/AUTHORIZATION_MODELS.md before "fixing" it.
+    const tool = {
+      name: "amazon_tool",
+      description: "Amazon DSP scoped tool",
+      inputSchema: z.object({ profileId: z.string() }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    registerScoped(tool, ["111222333"]);
+
+    const result = await server.callTool("amazon_tool", { profileId: "999888777" });
+
+    expect((result as any).isError).toBeUndefined();
+    expect(tool.logic).toHaveBeenCalled();
+  });
 });

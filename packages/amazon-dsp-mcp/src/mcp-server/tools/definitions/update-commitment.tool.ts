@@ -12,6 +12,7 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
@@ -128,9 +129,26 @@ export async function updateCommitmentLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateCommitmentOutput> {
-  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  const { amazonDspV1Service, boundProfileId } = resolveSessionServices(sdkContext);
 
   const dispatchedCapability = resolveCommitmentDispatchedCapability();
+
+  // Fail fast on a mismatched account — BEFORE the dry-run branch, not only on
+  // the real-execution path.
+  //
+  // `input.profileId` is REQUIRED by the schema but is never sent to Amazon:
+  // `amazonDspV1Service` already carries the session-bound profile, and the id
+  // is used only to LABEL the dry-run projection and the before/after
+  // snapshots.
+  //
+  // The other write tools deliberately allow a mismatched id on dry-run,
+  // because their dry-run is symbolic and touches no tenant data. This one is
+  // different: `runCommitmentUpdateDryRun` calls `service.getCommitment`
+  // through the session-bound service — reading profile A's commitment — and
+  // then labels the projected snapshot with the caller's profileId. Gating only
+  // the wet path left that misattribution live in governance PREVIEW data,
+  // which is exactly what a reviewer approves from.
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   if (input.dry_run === true) {
     const dryRun = await runCommitmentUpdateDryRun(

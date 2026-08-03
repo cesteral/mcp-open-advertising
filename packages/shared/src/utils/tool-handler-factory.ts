@@ -152,17 +152,44 @@ export function evaluateJtiStoreEnforcementSafety(params: {
  */
 export const RESPONSE_CHARACTER_LIMIT = 25_000;
 
+/**
+ * Input keys that carry an identifier in the SAME id-space as the JWT
+ * `allowed_advertisers` claim, and are therefore checked against it.
+ *
+ * Membership is a statement about id-space, not about naming. Two rules:
+ *
+ * 1. A key belongs here only if its value is an advertiser-equivalent account
+ *    id. `accountId` qualifies — in Microsoft Advertising the *account* is the
+ *    advertiser-equivalent, and msads tools name it plainly (`get-entity`,
+ *    `duplicate-entity`, `get-pacing-status`, `create-report-schedule`).
+ *
+ * 2. `profileId` deliberately does NOT belong here, even though Amazon DSP
+ *    tools take it and it looks scope-shaped. An Amazon `profileId` becomes the
+ *    `Amazon-Advertising-API-Scope` header — it is a session-bound CREDENTIAL
+ *    scope, a different id-space from the JWT advertiser scope, and Amazon
+ *    tools carry `advertiserId` separately for the latter. Adding it here would
+ *    test a profile id against a list of advertiser ids and deny every Amazon
+ *    call in jwt mode — converting a fail-open into a fail-closed outage.
+ *    Profile scoping is enforced instead by `assertAccountScope`, which
+ *    compares the caller-supplied profile against the session-bound one.
+ *
+ * Anything not listed here contributes no scoped identifiers, so it is NOT
+ * denied — absence of a match is indistinguishable from authorisation, which
+ * is why the set must be kept complete rather than convenient (C-2).
+ */
 const SCOPED_ID_KEYS = new Set<string>([
   "advertiserId",
   "customerId",
   "partnerId",
   "adAccountId",
   "adAccountUrn",
+  "accountId",
 ] as const);
 const SCOPED_ID_ARRAY_KEYS = new Set<string>([
   "advertiserIds",
   "customerIds",
   "adAccountIds",
+  "accountIds",
 ] as const);
 
 /**
