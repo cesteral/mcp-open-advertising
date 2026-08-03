@@ -1,0 +1,237 @@
+# Terraform state drift — early warning that live GCP no longer matches state.
+#
+# Why (docs/runbooks/2026-07-27-dev-fleet-lb-recovery.md): a closed billing
+# account had GCP reclaim 43 resources — the load balancer, VPC, serverless
+# subnet, Cloud Router, Cloud NAT and 3 firewall rules. Terraform state still
+# listed every one of them as existing. Nothing detected it for a week; it
+# surfaced by accident during a plan for unrelated work, and mcp.cesteral.com
+# was dead the whole time. The 13 Cloud Run services were never affected, which
+# is exactly why nothing looked wrong from the inside.
+#
+# Deliberately NOT part of CI. This job depends on external state, so making it
+# PR-blocking would hand an outside system a switch that turns `main` red at a
+# time of its choosing. The PR path stays hermetic (ci.yml runs `terraform
+# validate` with `-backend=false`); this runs on a schedule so divergence
+# surfaces as a dated, reviewable signal rather than a surprise mid-feature.
+#
+# Daily, not weekly: the outage ran for seven days. A weekly check could have
+# reproduced almost the entire window.
+name: Terraform drift
+
+on:
+  schedule:
+    # 07:00 UTC daily — after the Monday codegen-drift job, so the two do not
+    # land in the same notification batch.
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+# Scheduled runs and a manual dispatch must not plan the same environment
+# concurrently — they would fight over the tracking issue. Not cancel-in-progress:
+# a half-finished drift check that gets cancelled reports nothing at all.
+concurrency:
+  group: terraform-drift
+  cancel-in-progress: false
+
+# contents: read  — checkout only; this workflow never pushes.
+# id-token: write — required to mint the OIDC token for keyless GCP federation.
+# issues: write   — required to create, update, comment on and close the
+#                   tracking issue (and to ensure its label exists).
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # `open-agentic-advertising-prod` exists but holds no Terraform state
+        # yet, so there is nothing there to drift. Adding prod is one entry here
+        # plus its four secrets.
+        include:
+          - environment: dev
+            vars_secret: TF_VARS_DEV
+            backend_secret: TF_BACKEND_CONFIG_DEV
+            wif_provider_secret: DRIFT_CHECK_WIF_PROVIDER_DEV
+            service_account_secret: DRIFT_CHECK_SERVICE_ACCOUNT_DEV
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pinned exactly, not to a minor range. Provider and CLI upgrades change
+      # resource normalization and refresh behaviour — which is precisely the
+      # signal being classified — so the version that runs here is the version
+      # the classifier was verified against (plan JSON format_version 1.2).
+      # terraform_wrapper is disabled because the wrapper intercepts stdout, and
+      # the checker reads `terraform show -json` output directly.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+          terraform_wrapper: false
+
+      # Keyless federation. The provider's attribute condition pins this
+      # repository by numeric ID and the ref to refs/heads/main; scheduled runs
+      # always use the default branch, so a workflow_dispatch from a feature
+      # branch will correctly fail here — and that failure is reported as
+      # "could not check", not silently swallowed.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets[matrix.wif_provider_secret] }}
+          service_account: ${{ secrets[matrix.service_account_secret] }}
+
+      # terraform/{env}.tfvars and terraform/backend-{env}.conf are gitignored,
+      # so CI reconstructs them from secrets.
+      - name: Materialize gitignored Terraform config
+        env:
+          TF_VARS: ${{ secrets[matrix.vars_secret] }}
+          TF_BACKEND: ${{ secrets[matrix.backend_secret] }}
+          ENVIRONMENT: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          fail_setup() {
+            echo "$1" | tee "$RUNNER_TEMP/setup-failure.txt" >&2
+            exit 1
+          }
+
+          [ -n "$TF_VARS" ] || fail_setup "Secret ${{ matrix.vars_secret }} is empty or unset."
+          [ -n "$TF_BACKEND" ] || fail_setup "Secret ${{ matrix.backend_secret }} is empty or unset."
+
+          printf '%s\n' "$TF_VARS" > "terraform/${ENVIRONMENT}.tfvars"
+          printf '%s\n' "$TF_BACKEND" > "terraform/backend-${ENVIRONMENT}.conf"
+          chmod 600 "terraform/${ENVIRONMENT}.tfvars" "terraform/backend-${ENVIRONMENT}.conf"
+
+          # The checker's own identity is provisioned by terraform/drift-check.tf
+          # behind enable_drift_check_reader. If the tfvars given to CI omit it
+          # while the applied state has it, every run plans the destruction of
+          # the service account it is authenticating as — a permanently-red
+          # check that is indistinguishable from real drift. Catch it here with
+          # a message, rather than as a mystery alert every morning.
+          grep -Eq '^[[:space:]]*enable_drift_check_reader[[:space:]]*=[[:space:]]*true' \
+            "terraform/${ENVIRONMENT}.tfvars" \
+            || fail_setup "Secret ${{ matrix.vars_secret }} must set enable_drift_check_reader = true to match the applied state, or this check will plan deletion of its own identity on every run."
+
+      - name: Check for Terraform state drift
+        id: drift
+        # The script's exit code is the payload, not a pass/fail: 1 (drift) and
+        # 2 (could not check) are both reported through the tracking issue
+        # below, then re-raised by the final step.
+        continue-on-error: true
+        env:
+          DRIFT_REPORT_FILE: ${{ runner.temp }}/drift-report.md
+        run: |
+          set +e
+          node scripts/check-terraform-drift.mjs "${{ matrix.environment }}"
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      # Runs even when an earlier step failed, so a broken WIF auth or a bad
+      # secret is classified as exit 2 ("could not check") rather than vanishing
+      # as a skipped job with no issue and no alert.
+      - name: Resolve status
+        id: status
+        if: always()
+        env:
+          REPORT: ${{ runner.temp }}/drift-report.md
+          ENVIRONMENT: ${{ matrix.environment }}
+          DRIFT_EXIT_CODE: ${{ steps.drift.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          code="${DRIFT_EXIT_CODE:-}"
+          if [ -z "$code" ]; then
+            # The checker never ran — setup, auth or config materialization
+            # failed. That is "could not check", never "clean".
+            code=2
+            reason="$(cat "$RUNNER_TEMP/setup-failure.txt" 2>/dev/null || echo 'Workflow setup or GCP authentication failed before the check could run.')"
+            {
+              echo "<!-- terraform-drift:${ENVIRONMENT} -->"
+              echo
+              echo "## \`${ENVIRONMENT}\` — could not check"
+              echo
+              echo "**${reason}**"
+              echo
+              echo "This is not a clean result. An unchecked environment is exactly the state"
+              echo "the fleet was in for the week of the 2026-07-27 outage."
+            } > "$REPORT"
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+      # Full lifecycle, deduplicated on the HTML marker in the body rather than
+      # on the title — the title changes between "drift detected" and "could not
+      # check", and matching on it would orphan the open issue and pile up
+      # duplicates. A clean run CLOSES the issue: a recovered environment must
+      # not leave a permanently open warning, which is the same crying-wolf
+      # failure this whole check exists to avoid.
+      - name: Sync tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONMENT: ${{ matrix.environment }}
+          CODE: ${{ steps.status.outputs.code }}
+          REPORT: ${{ runner.temp }}/drift-report.md
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          marker="<!-- terraform-drift:${ENVIRONMENT} -->"
+
+          gh label create terraform-drift \
+            --description "Live GCP has diverged from Terraform state" \
+            --color B60205 2>/dev/null || true
+
+          existing="$(gh issue list --state open --label terraform-drift --limit 100 \
+            --json number,body \
+            | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].number // empty')"
+
+          if [ "$CODE" = "0" ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body \
+                "✅ Clean run — live GCP matches Terraform state for \`${ENVIRONMENT}\`. Closing. ([run]($RUN_URL))"
+              gh issue close "$existing"
+              echo "Closed tracking issue #$existing after a clean run."
+            else
+              echo "Clean, and no open tracking issue. Nothing to do."
+            fi
+            exit 0
+          fi
+
+          if [ "$CODE" = "1" ]; then
+            title="Terraform drift detected — ${ENVIRONMENT}"
+          else
+            title="Terraform drift check failed — ${ENVIRONMENT} (could not check)"
+          fi
+
+          { cat "$REPORT"; echo; echo "[Workflow run]($RUN_URL)"; } > "$RUNNER_TEMP/issue-body.md"
+
+          if [ -n "$existing" ]; then
+            # Retitle as well as re-body, so an issue that opened as "could not
+            # check" and is now real drift (or vice versa) reads correctly.
+            gh issue edit "$existing" --title "$title" --body-file "$RUNNER_TEMP/issue-body.md"
+            gh issue comment "$existing" --body "🔁 Still failing (exit $CODE). ([run]($RUN_URL))"
+            echo "Updated tracking issue #$existing."
+          else
+            gh issue create --title "$title" --label terraform-drift \
+              --body-file "$RUNNER_TEMP/issue-body.md"
+            echo "Opened a new tracking issue."
+          fi
+
+      # The drift step swallowed its exit code so the issue could be synced
+      # first. Re-raise it here, otherwise a drifted fleet reports a green job.
+      - name: Restore job result
+        if: always()
+        run: |
+          code="${{ steps.status.outputs.code }}"
+          case "$code" in
+            0) echo "✓ No unexpected drift." ;;
+            1) echo "✖ Drift detected — see the tracking issue."; exit 1 ;;
+            *) echo "✖ Could not check for drift — see the tracking issue."; exit 2 ;;
+          esac

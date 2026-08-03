@@ -53,7 +53,14 @@ service-account-key.json
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
+# NOT .terraform.lock.hcl — the provider lock file is committed on purpose.
+# A bare pattern here matches at any depth, so it silently overrode both
+# terraform/.gitignore (which deliberately leaves the lock file tracked) and
+# terraform/README.md (which claims it is committed). The result was an
+# untracked lock file and unpinned provider versions for everyone.
+# That matters beyond reproducibility: provider upgrades change resource
+# normalization and refresh behaviour, which is exactly the signal
+# scripts/check-terraform-drift.mjs classifies.
 
 # Worktrees
 .worktrees/
@@ -95,3 +102,6 @@ packages/*/tests/live/last-run.json
 
 # Sibling worktrees created by Claude Code (each has its own branch)
 .claude/worktrees/
+
+# Local Claude Code auto-memory (persists across sessions; not project code)
+.claude/projects/
