@@ -43,6 +43,9 @@ jobs:
       - name: Check account-scope coverage (session-bound tools assert caller-supplied scope)
         run: pnpm run check:account-scope
 
+      - name: Check authorization-model classification (every tool/resource states its scope model)
+        run: pnpm run check:authorization-model
+
       - name: Build
         run: pnpm run build
 

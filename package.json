@@ -31,6 +31,7 @@
     "check:registry-runtime": "node scripts/check-registry-runtime.mjs",
     "check:doc-tool-counts": "node scripts/check-doc-tool-counts.mjs",
     "check:account-scope": "node scripts/check-account-scope.mjs",
+    "check:authorization-model": "node scripts/check-authorization-model.mjs",
     "check:contract-version-bump": "node scripts/check-contract-version-bump.mjs",
     "check:contract-schema-parity": "node scripts/check-contract-schema-published-parity.mjs",
     "check:contract-hash-parity": "node scripts/check-contract-hash-published-parity.mjs",

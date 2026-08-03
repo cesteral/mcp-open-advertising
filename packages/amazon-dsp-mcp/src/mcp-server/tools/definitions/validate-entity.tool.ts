@@ -6,6 +6,12 @@
  *
  * Amazon DSP API does not have a dry-run mode, so this tool validates payloads
  * against known required-field rules before hitting the API. Purely local.
+ *
+ * account-scope-audit-exempt: this tool never calls `resolveSessionServices`
+ * and never reaches Amazon — it evaluates the payload against local contract
+ * rules only. Its optional `profileId` is descriptive input, not an execution
+ * scope, so there is no session-bound account to check it against. Nothing here
+ * can execute against the wrong account because nothing here executes at all.
  */
 
 import { z } from "zod";

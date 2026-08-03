@@ -1,6 +1,14 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+/**
+ * authorization-model: session-bound
+ *
+ * Executes against the account bound into the session's resolved services;
+ * the caller-supplied account/profile arg is checked with assertAccountScope.
+ * See docs/AUTHORIZATION_MODELS.md.
+ */
+
 import { z } from "zod";
 import type {
   RequestContext,
@@ -168,6 +176,19 @@ export async function updateCommitmentLogic(
       dispatchedCapability,
     };
   }
+
+  // Fail fast on a mismatched account, on the real-execution path only (a
+  // dry-run preview with a different id is allowed, matching the other write
+  // tools).
+  //
+  // Load-bearing in a way the schema hides: `input.profileId` is REQUIRED but
+  // is never sent to Amazon — `amazonDspV1Service` already carries the
+  // session-bound profile, and the id is used only for the dry-run payload and
+  // the before/after snapshot labels. Without this assertion a caller naming
+  // profile B while the session is bound to profile A had the commitment
+  // updated on A and received snapshots labelled B, so the audit trail actively
+  // misattributed the write.
+  assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   // Best-effort pre-state capture. A read failure leaves `before` undefined
   // (mirrors update_entity behavior); the write still proceeds because a
