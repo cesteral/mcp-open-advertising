@@ -1,6 +1,6 @@
 # Runbook: recover the dev fleet load balancer (mcp.cesteral.com)
 
-**Status:** recovery applied 2026-08-03 — **awaiting a DNS change** (see [Remaining](#remaining))
+**Status:** ✅ **resolved 2026-08-03** — fleet serving, all 13 paths verified
 **Outage window:** ~2026-07-27 → 2026-08-03
 **Project:** `open-agentic-advertising-dev`
 
@@ -15,7 +15,7 @@ showed the blast radius was **wider than the LB**:
 | Global address + forwarding rules | yes  | yes (new IP)        |
 | 13 backend services + 13 NEGs     | yes  | yes                 |
 | URL maps, proxies, SSL policy     | yes  | yes                 |
-| Managed SSL certificate           | yes  | provisioning        |
+| Managed SSL certificate           | yes  | yes (ACTIVE)        |
 | **VPC + serverless subnet**       | yes  | yes                 |
 | **Cloud Router + Cloud NAT**      | yes  | yes                 |
 | **3 firewall rules**              | yes  | yes                 |
@@ -103,18 +103,24 @@ this recovery that briefly made 13 refreshing `google_secret_manager_secret` dat
 sources look like 13 creates of the same secret ID — an apparent
 ALREADY_EXISTS blocker that did not exist. Filter on `actions == ["create"]`.
 
-## Remaining
+## Cutover as performed — DNS and certificate
 
-**1. Point DNS at the new IP.** The address was recreated, so the old one is gone
-for good:
+**1. DNS repointed.** The address was recreated, so the old one never came back:
 
 ```
 old (dead) 34.149.102.189
 new        34.120.250.208
 ```
 
-**2. Wait for the certificate.** It cannot provision until DNS resolves to the new
-IP — Google validates ownership by resolving the record to the LB.
+`cesteral.com` is on **Cloudflare**, not Cloud DNS — there is no managed zone in
+any GCP project here, so this step cannot be done with `gcloud`/Terraform. The
+record must be **DNS-only (grey cloud)**: an orange-clouded record makes Cloudflare
+terminate TLS, and Google's managed certificate then never validates because it
+cannot see the domain reaching this LB.
+
+**2. Certificate.** Expect `managed.domainStatus` to read `FAILED_NOT_VISIBLE`
+immediately after the DNS change — that records validation attempts made _before_
+the record moved, and is not terminal. Google retries automatically.
 
 ```bash
 gcloud compute ssl-certificates describe mcp-fleet-cert \
@@ -122,16 +128,36 @@ gcloud compute ssl-certificates describe mcp-fleet-cert \
   --format='value(managed.status,managed.domainStatus)'
 ```
 
-`PROVISIONING` → `ACTIVE` typically takes 15–60 minutes after DNS resolves.
+Here it cleared on its own **~10 minutes** after DNS propagated. If it is still
+failing after ~90 minutes, force fresh validation with a single-resource replace —
+this touches nothing else:
 
-**3. Verify.** Expect **403**, not 200:
+```bash
+terraform apply -var-file=dev.tfvars \
+  -replace=module.fleet_lb[0].google_compute_managed_ssl_certificate.fleet
+```
+
+**3. Verified.** Expect **403**, not 200:
 
 ```bash
 curl -sS -o /dev/null -w '%{http_code}\n' https://mcp.cesteral.com/dv360/health
 ```
 
+Final result — all 13 paths, 2026-08-03:
+
+```
+13/13 correctly rejecting (403) · 0 unreachable · 0 publicly open
+```
+
 A TLS error or 502 means the recovery is incomplete. A 200 means the IAM lock is
-gone.
+gone — a security regression, not a successful recovery.
+
+> Verifying the LB **before** the DNS cutover is worth doing: force-resolve the
+> domain to the new address and check the HTTP listener, which needs no
+> certificate. `curl --resolve mcp.cesteral.com:80:<new-ip> http://mcp.cesteral.com/dv360/health`
+> returning **301** (the HTTP→HTTPS redirect) proves the forwarding rule, target
+> proxy and URL map are all correct, leaving DNS and certificate timing as the
+> only unknowns.
 
 ## Follow-ups this exposed
 
