@@ -78,7 +78,19 @@ describe("SA360 Auth Adapter", () => {
       expect(fingerprint).toMatch(/^[0-9a-f]+$/);
     });
 
-    it("should produce same fingerprint for same client ID", () => {
+    // This assertion used to require the OPPOSITE — that two different secrets
+    // sharing one public client id produce the SAME fingerprint. That is the
+    // cross-tenant collision itself, codified as a requirement.
+    //
+    // The fingerprint is the entire proof on the session-reuse path:
+    // `validateSessionReuse` prefers it precisely to skip the upstream auth
+    // call, so the secret is never re-verified there. With the fingerprint
+    // derived from `clientId` alone — a public OAuth client id the caller
+    // supplies in `X-SA360-Client-Id` — any two tenants of one OAuth app (an
+    // agency's single app across many advertisers, say) compare equal, and a
+    // caller holding a victim's session id rides the victim's authenticated
+    // upstream client.
+    it("produces a different fingerprint for the same client id with a different secret", () => {
       const creds = {
         clientId: "same-id",
         clientSecret: "secret-1",
@@ -90,7 +102,31 @@ describe("SA360 Auth Adapter", () => {
         refreshToken: "token-2",
       };
 
-      expect(getSA360CredentialFingerprint(creds)).toBe(getSA360CredentialFingerprint(creds2));
+      expect(getSA360CredentialFingerprint(creds)).not.toBe(getSA360CredentialFingerprint(creds2));
+    });
+
+    it("produces a different fingerprint when only the client secret differs", () => {
+      const base = { clientId: "id", clientSecret: "secret-1", refreshToken: "token" };
+
+      expect(getSA360CredentialFingerprint(base)).not.toBe(
+        getSA360CredentialFingerprint({ ...base, clientSecret: "secret-2" })
+      );
+    });
+
+    it("produces a different fingerprint when only the refresh token differs", () => {
+      const base = { clientId: "id", clientSecret: "secret", refreshToken: "token-1" };
+
+      expect(getSA360CredentialFingerprint(base)).not.toBe(
+        getSA360CredentialFingerprint({ ...base, refreshToken: "token-2" })
+      );
+    });
+
+    it("produces the same fingerprint for identical credentials", () => {
+      const creds = { clientId: "id", clientSecret: "secret", refreshToken: "token" };
+
+      expect(getSA360CredentialFingerprint(creds)).toBe(
+        getSA360CredentialFingerprint({ ...creds })
+      );
     });
 
     it("should produce different fingerprint for different client IDs", () => {

@@ -291,4 +291,45 @@ describe("getGAdsCredentialFingerprint", () => {
     });
     expect(fp1).not.toBe(fp2);
   });
+
+  // The fingerprint must require proof-of-possession of the SECRET, not just
+  // knowledge of the public client id. `validateSessionReuse` prefers the
+  // fingerprint specifically to avoid the upstream auth call, so on the
+  // session-reuse path it is the only credential proof there is. A fingerprint
+  // over `clientId` alone is reproducible by anyone who knows that id — every
+  // tenant of a shared OAuth app collides, and a caller holding a victim's
+  // session id inherits the victim's authenticated upstream client.
+  it("produces different fingerprints when only the client secret differs", () => {
+    const fp1 = getGAdsCredentialFingerprint(VALID_CREDENTIALS);
+    const fp2 = getGAdsCredentialFingerprint({
+      ...VALID_CREDENTIALS,
+      clientSecret: "different-client-secret",
+    });
+    expect(fp1).not.toBe(fp2);
+  });
+
+  it("produces different fingerprints when only the refresh token differs", () => {
+    const fp1 = getGAdsCredentialFingerprint(VALID_CREDENTIALS);
+    const fp2 = getGAdsCredentialFingerprint({
+      ...VALID_CREDENTIALS,
+      refreshToken: "different-refresh-token",
+    });
+    expect(fp1).not.toBe(fp2);
+  });
+
+  it("produces different fingerprints for two tenants of one shared OAuth app", () => {
+    // Same public app identity, different credential holders — the exact
+    // cross-tenant shape this binding exists to separate.
+    const tenantA = getGAdsCredentialFingerprint({
+      ...VALID_CREDENTIALS,
+      clientSecret: "tenant-a-secret",
+      refreshToken: "tenant-a-refresh",
+    });
+    const tenantB = getGAdsCredentialFingerprint({
+      ...VALID_CREDENTIALS,
+      clientSecret: "tenant-b-secret",
+      refreshToken: "tenant-b-refresh",
+    });
+    expect(tenantA).not.toBe(tenantB);
+  });
 });
