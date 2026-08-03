@@ -144,6 +144,43 @@ resource "google_storage_bucket_iam_member" "drift_check_state_reader" {
   member = "serviceAccount:${google_service_account.drift_check_reader[0].email}"
 }
 
+# Reading the state OBJECT is not enough. `terraform plan` also refreshes the
+# bucket IAM bindings above — the resources that grant the checker its own
+# access — and reading a bucket's IAM policy needs storage.buckets.getIamPolicy.
+#
+# That permission is in none of roles/viewer, roles/storage.objectViewer or
+# roles/storage.legacyBucketReader (verified against the live role definitions).
+# The only predefined roles carrying it grant getIamPolicy across every resource
+# in the project (roles/iam.securityReviewer) or add write access
+# (roles/storage.admin, roles/storage.legacyBucketOwner) — both far wider than a
+# read-only checker warrants.
+#
+# So: a two-permission custom role, granted on the state bucket alone. Found by
+# the first real dispatch, which failed with
+#   403: does not have storage.buckets.getIamPolicy access
+# after the provider-lock fix let the plan get as far as refreshing.
+resource "google_project_iam_custom_role" "drift_check_bucket_policy_reader" {
+  count = local.drift_check_enabled
+
+  project     = var.project_id
+  role_id     = "driftCheckBucketPolicyReader"
+  title       = "Terraform drift check — bucket policy reader"
+  description = "Read a bucket's metadata and IAM policy. Granted only on the Terraform state bucket, so the drift check can refresh its own IAM bindings. No object or write access."
+
+  permissions = [
+    "storage.buckets.get",
+    "storage.buckets.getIamPolicy",
+  ]
+}
+
+resource "google_storage_bucket_iam_member" "drift_check_state_policy_reader" {
+  count = local.drift_check_enabled
+
+  bucket = local.terraform_state_bucket
+  role   = google_project_iam_custom_role.drift_check_bucket_policy_reader[0].id
+  member = "serviceAccount:${google_service_account.drift_check_reader[0].email}"
+}
+
 output "drift_check_workload_identity_provider" {
   description = "Value for the workflow's google-github-actions/auth `workload_identity_provider` input"
   value       = var.enable_drift_check_reader ? google_iam_workload_identity_pool_provider.github[0].name : null
