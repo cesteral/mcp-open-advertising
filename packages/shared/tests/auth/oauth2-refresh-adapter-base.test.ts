@@ -26,7 +26,13 @@ class TestAdapter extends OAuth2RefreshAdapterBase<OAuth2RefreshTokenCredentials
     expiryBufferMs?: number,
     onRefreshTokenRotated?: OAuth2RefreshAdapterOptions<OAuth2RefreshTokenCredentials>["onRefreshTokenRotated"]
   ) {
-    super({ platformName: "Test", credentials, requestToken, expiryBufferMs, onRefreshTokenRotated });
+    super({
+      platformName: "Test",
+      credentials,
+      requestToken,
+      expiryBufferMs,
+      onRefreshTokenRotated,
+    });
   }
 }
 
@@ -227,18 +233,27 @@ describe("classifyOAuth2RefreshFailure", () => {
 
   it("maps invalid_client and unauthorized_client to Unauthorized", () => {
     for (const code of ["invalid_client", "unauthorized_client"]) {
-      const err = classifyOAuth2RefreshFailure("Test", 401, "Unauthorized", JSON.stringify({ error: code }));
+      const err = classifyOAuth2RefreshFailure(
+        "Test",
+        401,
+        "Unauthorized",
+        JSON.stringify({ error: code })
+      );
       expect(err.code).toBe(JsonRpcErrorCode.Unauthorized);
     }
   });
 
   it("keeps 5xx and non-terminal OAuth errors as InternalError", () => {
-    expect(classifyOAuth2RefreshFailure("Test", 503, "Service Unavailable", "upstream down").code).toBe(
-      JsonRpcErrorCode.InternalError
-    );
     expect(
-      classifyOAuth2RefreshFailure("Test", 400, "Bad Request", JSON.stringify({ error: "temporarily_unavailable" }))
-        .code
+      classifyOAuth2RefreshFailure("Test", 503, "Service Unavailable", "upstream down").code
+    ).toBe(JsonRpcErrorCode.InternalError);
+    expect(
+      classifyOAuth2RefreshFailure(
+        "Test",
+        400,
+        "Bad Request",
+        JSON.stringify({ error: "temporarily_unavailable" })
+      ).code
     ).toBe(JsonRpcErrorCode.InternalError);
   });
 
