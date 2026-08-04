@@ -39,6 +39,14 @@ const ConfigSchema = BaseConfigSchema.extend({
   amazonDspAppId: z.string().optional(),
   amazonDspAppSecret: z.string().optional(),
   amazonDspRefreshToken: z.string().optional(),
+  // Opt-in age tracking for the env-configured refresh token. Amazon expires
+  // refresh tokens 365 days after issuance for consent granted on/after
+  // 2026-07-30 (campaign_management + audiences scopes). Set the ISO date the
+  // token was issued to get a startup warning and /health exposure once the
+  // token needs re-authorization. Only meaningful for the env token — HTTP
+  // sessions bring their own refresh tokens whose age the server cannot know.
+  amazonDspRefreshTokenIssuedAt: z.string().optional(),
+  amazonDspRefreshTokenWarnAgeDays: z.number().int().min(1).default(335),
 
   // Reporting poll configuration
   amazonDspReportPollIntervalMs: z.number().default(2_000),
@@ -74,6 +82,10 @@ export function parseConfig(): AppConfig {
     amazonDspAppId: process.env.AMAZON_DSP_APP_ID,
     amazonDspAppSecret: process.env.AMAZON_DSP_APP_SECRET,
     amazonDspRefreshToken: process.env.AMAZON_DSP_REFRESH_TOKEN,
+    amazonDspRefreshTokenIssuedAt: process.env.AMAZON_DSP_REFRESH_TOKEN_ISSUED_AT,
+    amazonDspRefreshTokenWarnAgeDays: process.env.AMAZON_DSP_REFRESH_TOKEN_WARN_AGE_DAYS
+      ? Number(process.env.AMAZON_DSP_REFRESH_TOKEN_WARN_AGE_DAYS)
+      : undefined,
 
     // Reporting poll configuration
     amazonDspReportPollIntervalMs: process.env.AMAZON_DSP_REPORT_POLL_INTERVAL_MS

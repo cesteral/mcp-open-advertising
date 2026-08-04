@@ -15,6 +15,7 @@ import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@ce
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
+import { evaluateRefreshTokenAge } from "./utils/refresh-token-age.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("amazon-dsp-mcp", transportMode, otelLogMixin());
@@ -92,6 +93,27 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   sessionServiceStore.set(sessionId, services);
   logger.info("Stdio session services created successfully");
   return true;
+}
+
+// Opt-in age warning for the env-configured refresh token. Amazon expires
+// refresh tokens 365 days after issuance (consent granted on/after 2026-07-30,
+// campaign_management + audiences scopes); an expired token fails every
+// refresh with invalid_grant until the advertiser re-authorizes the app.
+const tokenAge = evaluateRefreshTokenAge(
+  mcpConfig.amazonDspRefreshTokenIssuedAt,
+  new Date(),
+  mcpConfig.amazonDspRefreshTokenWarnAgeDays
+);
+if (tokenAge?.expired) {
+  logger.error(
+    { ageDays: tokenAge.ageDays },
+    "AMAZON_DSP_REFRESH_TOKEN is past Amazon's 365-day lifetime — refresh calls will fail with invalid_grant until the advertiser re-authorizes the app"
+  );
+} else if (tokenAge?.warn) {
+  logger.warn(
+    { ageDays: tokenAge.ageDays, daysUntilExpiry: tokenAge.daysUntilExpiry },
+    "AMAZON_DSP_REFRESH_TOKEN is approaching Amazon's 365-day lifetime — ask the advertiser to re-authorize before it expires"
+  );
 }
 
 bootstrapMcpServer({
