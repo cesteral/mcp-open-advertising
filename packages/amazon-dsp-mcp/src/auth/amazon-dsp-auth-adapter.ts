@@ -16,6 +16,7 @@
  */
 
 import {
+  classifyOAuth2RefreshFailure,
   extractHeader,
   fetchWithTimeout,
   fingerprintCredentials,
@@ -169,9 +170,15 @@ export class AmazonDspRefreshTokenAdapter
         );
         if (!response.ok) {
           const errorBody = await response.text().catch(() => "");
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `AmazonDsp token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          // LwA returns 400 {"error":"invalid_grant"} for an expired or revoked
+          // refresh token — notably once a token passes Amazon's 365-day
+          // lifetime (consent granted after 2026-07-30). That is Unauthorized
+          // (the advertiser must re-consent), not InternalError.
+          throw classifyOAuth2RefreshFailure(
+            "AmazonDsp",
+            response.status,
+            response.statusText,
+            errorBody
           );
         }
         return (await response.json()) as {

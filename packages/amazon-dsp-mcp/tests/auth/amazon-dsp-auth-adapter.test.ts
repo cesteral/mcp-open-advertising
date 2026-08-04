@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
 import {
   AmazonDspAccessTokenAdapter,
   AmazonDspRefreshTokenAdapter,
@@ -165,5 +166,41 @@ describe("AmazonDspRefreshTokenAdapter", () => {
     const validationHeaders = mockFetch.mock.calls[1][3].headers;
     expect(validationHeaders["Amazon-Advertising-API-ClientId"]).toBe("my_client");
     expect(validationHeaders["Amazon-Advertising-API-Scope"]).toBe("profile_456");
+  });
+
+  it("classifies invalid_grant (expired/revoked refresh token) as Unauthorized", async () => {
+    // LwA returns 400 {"error":"invalid_grant"} once a refresh token passes
+    // Amazon's 365-day lifetime (consent granted on/after 2026-07-30).
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      text: async () =>
+        JSON.stringify({ error: "invalid_grant", error_description: "refresh token expired" }),
+    });
+    const adapter = new AmazonDspRefreshTokenAdapter(
+      { appId: "a", appSecret: "b", refreshToken: "expired" },
+      "profile_123"
+    );
+    const err = await adapter.getAccessToken().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(McpError);
+    expect((err as McpError).code).toBe(JsonRpcErrorCode.Unauthorized);
+    expect((err as McpError).message).toContain("Re-authorization");
+  });
+
+  it("keeps transient token-endpoint failures (5xx) as InternalError", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      text: async () => "upstream down",
+    });
+    const adapter = new AmazonDspRefreshTokenAdapter(
+      { appId: "a", appSecret: "b", refreshToken: "fine" },
+      "profile_123"
+    );
+    const err = await adapter.getAccessToken().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(McpError);
+    expect((err as McpError).code).toBe(JsonRpcErrorCode.InternalError);
   });
 });

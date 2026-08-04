@@ -113,6 +113,18 @@ export async function createMcpServer(
     authContextResolver: sessionId
       ? () => sessionServiceStore.getAuthContext(sessionId)
       : undefined,
+    // Drop the session when a tool call fails Unauthorized (e.g. LwA rejected
+    // the refresh token with invalid_grant — expired after Amazon's 365-day
+    // lifetime, or revoked). The next request then re-authenticates at the
+    // transport and gets a clean HTTP 401 + authErrorHint instead of retrying
+    // into the same in-band error forever.
+    onAuthError: (staleSessionId) => {
+      logger.warn(
+        { sessionId: staleSessionId },
+        "Dropping session after Unauthorized tool failure — credentials are no longer valid"
+      );
+      sessionServiceStore.delete(staleSessionId);
+    },
   });
 
   // Register all resources via shared factory

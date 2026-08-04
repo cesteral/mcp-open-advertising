@@ -3,10 +3,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  classifyOAuth2RefreshFailure,
   OAuth2RefreshAdapterBase,
+  type OAuth2RefreshAdapterOptions,
   type OAuth2RefreshTokenCredentials,
   type OAuth2TokenResponse,
 } from "../../src/auth/oauth2-refresh-adapter-base.js";
+import { JsonRpcErrorCode } from "../../src/utils/mcp-errors.js";
 
 /**
  * Minimal concrete subclass for testing the base directly. The real adapters
@@ -20,9 +23,16 @@ class TestAdapter extends OAuth2RefreshAdapterBase<OAuth2RefreshTokenCredentials
   constructor(
     credentials: OAuth2RefreshTokenCredentials,
     requestToken: (refreshToken: string) => Promise<OAuth2TokenResponse>,
-    expiryBufferMs?: number
+    expiryBufferMs?: number,
+    onRefreshTokenRotated?: OAuth2RefreshAdapterOptions<OAuth2RefreshTokenCredentials>["onRefreshTokenRotated"]
   ) {
-    super({ platformName: "Test", credentials, requestToken, expiryBufferMs });
+    super({
+      platformName: "Test",
+      credentials,
+      requestToken,
+      expiryBufferMs,
+      onRefreshTokenRotated,
+    });
   }
 }
 
@@ -163,5 +173,93 @@ describe("OAuth2RefreshAdapterBase", () => {
     vi.setSystemTime(Date.now() + 200_000);
     await adapter.getAccessToken();
     expect(requestToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("notifies onRefreshTokenRotated when the response rotates the refresh token", async () => {
+    const requestToken = vi
+      .fn<[string], Promise<OAuth2TokenResponse>>()
+      .mockResolvedValue({ access_token: "tok", expires_in: 60, refresh_token: "rt-2" });
+    const onRotated = vi.fn();
+    const adapter = new TestAdapter(baseCreds, requestToken, undefined, onRotated);
+
+    await adapter.getAccessToken();
+    expect(onRotated).toHaveBeenCalledTimes(1);
+    expect(onRotated).toHaveBeenCalledWith("rt-2");
+  });
+
+  it("does not notify onRefreshTokenRotated when the token is unchanged or absent", async () => {
+    const requestToken = vi
+      .fn<[string], Promise<OAuth2TokenResponse>>()
+      .mockResolvedValueOnce({ access_token: "tok-1", expires_in: 60, refresh_token: "rt-1" })
+      .mockResolvedValueOnce({ access_token: "tok-2", expires_in: 60 });
+    const onRotated = vi.fn();
+    const adapter = new TestAdapter(baseCreds, requestToken, 0, onRotated);
+
+    await adapter.getAccessToken(); // refresh_token === current — no rotation
+    vi.setSystemTime(Date.now() + 61_000);
+    await adapter.getAccessToken(); // no refresh_token in response
+    expect(onRotated).not.toHaveBeenCalled();
+  });
+
+  it("does not fail the refresh when onRefreshTokenRotated throws or rejects", async () => {
+    const requestToken = vi
+      .fn<[string], Promise<OAuth2TokenResponse>>()
+      .mockResolvedValue({ access_token: "tok", expires_in: 60, refresh_token: "rt-2" });
+    const adapter = new TestAdapter(baseCreds, requestToken, undefined, () => {
+      throw new Error("persist failed");
+    });
+
+    await expect(adapter.getAccessToken()).resolves.toBe("tok");
+
+    const rejecting = new TestAdapter(baseCreds, requestToken, undefined, () =>
+      Promise.reject(new Error("persist failed"))
+    );
+    await expect(rejecting.getAccessToken()).resolves.toBe("tok");
+  });
+});
+
+describe("classifyOAuth2RefreshFailure", () => {
+  it("maps invalid_grant to Unauthorized with a re-authorization message", () => {
+    const err = classifyOAuth2RefreshFailure(
+      "AmazonDsp",
+      400,
+      "Bad Request",
+      JSON.stringify({ error: "invalid_grant", error_description: "refresh token expired" })
+    );
+    expect(err.code).toBe(JsonRpcErrorCode.Unauthorized);
+    expect(err.message).toContain("invalid_grant");
+    expect(err.message).toContain("Re-authorization");
+  });
+
+  it("maps invalid_client and unauthorized_client to Unauthorized", () => {
+    for (const code of ["invalid_client", "unauthorized_client"]) {
+      const err = classifyOAuth2RefreshFailure(
+        "Test",
+        401,
+        "Unauthorized",
+        JSON.stringify({ error: code })
+      );
+      expect(err.code).toBe(JsonRpcErrorCode.Unauthorized);
+    }
+  });
+
+  it("keeps 5xx and non-terminal OAuth errors as InternalError", () => {
+    expect(
+      classifyOAuth2RefreshFailure("Test", 503, "Service Unavailable", "upstream down").code
+    ).toBe(JsonRpcErrorCode.InternalError);
+    expect(
+      classifyOAuth2RefreshFailure(
+        "Test",
+        400,
+        "Bad Request",
+        JSON.stringify({ error: "temporarily_unavailable" })
+      ).code
+    ).toBe(JsonRpcErrorCode.InternalError);
+  });
+
+  it("treats a non-JSON body as InternalError and truncates it into the message", () => {
+    const err = classifyOAuth2RefreshFailure("Test", 400, "Bad Request", "x".repeat(500));
+    expect(err.code).toBe(JsonRpcErrorCode.InternalError);
+    expect(err.message.length).toBeLessThan(400);
   });
 });
