@@ -49,9 +49,11 @@ function createMockServer() {
   const handlers = new Map<string, (args: unknown) => Promise<unknown>>();
   const sendLoggingMessage = vi.fn().mockResolvedValue(undefined);
   return {
-    registerTool: vi.fn((name: string, _cfg: unknown, handler: (a: unknown) => Promise<unknown>) => {
-      handlers.set(name, handler);
-    }),
+    registerTool: vi.fn(
+      (name: string, _cfg: unknown, handler: (a: unknown) => Promise<unknown>) => {
+        handlers.set(name, handler);
+      }
+    ),
     server: { sendLoggingMessage },
     sendLoggingMessage,
     getHandler: (name: string) => handlers.get(name),
