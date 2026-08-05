@@ -204,7 +204,19 @@ export class McpError extends Error {
     data?: McpErrorData,
     options?: { cause?: unknown }
   ) {
-    super(message || "An error occurred");
+    // Redact HERE, not at each sink (#741 H-2). `sanitizeErrorData` covers
+    // `data`, and callers do apply it — but the MESSAGE is where the raw
+    // upstream body actually lands: `retryable-fetch` interpolates the
+    // platform's response body straight into it, and platform `parseErrorBody`
+    // hooks do the same. Three sinks then emitted it unredacted (Pino via
+    // `ErrorHandler.handleError`, the MCP logging notification, and the MCP
+    // error response), because each would have had to remember separately.
+    //
+    // The constructor is the one place every McpError passes through —
+    // including ones built by platform adapters this package does not own, so a
+    // new adapter is covered without being told. Redacting a message that holds
+    // no secret is a no-op, which is what makes this safe unconditionally.
+    super(redactSecretsInText(message || "An error occurred"));
     this.name = "McpError";
     this.code = code;
     this.data = data;
@@ -261,12 +273,17 @@ export interface ErrorContext {
 
 export class ErrorHandler {
   static handleError(error: unknown, errorContext: ErrorContext, logger?: Logger): McpError {
+    // `data` is sanitized on the way to Pino as well as at the response sinks
+    // (#741 H-2). It carries `errorBody` — a slice of the raw upstream response
+    // — and this log call previously wrote it verbatim, so the canary reached
+    // the server logs even once the client-facing payload was clean. The
+    // message is already redacted by the McpError constructor.
     if (error instanceof McpError) {
       logger?.error(
         {
           error: error.message,
           code: error.code,
-          data: error.data,
+          data: ErrorHandler.sanitizeErrorData(error.data),
           ...errorContext,
         },
         `Error in ${errorContext.operation}`
@@ -280,8 +297,13 @@ export class ErrorHandler {
       {
         error: mcpError.message,
         code: mcpError.code,
-        data: mcpError.data,
-        originalError: error instanceof Error ? error.stack : String(error),
+        data: ErrorHandler.sanitizeErrorData(mcpError.data),
+        // Stack traces stay server-side only and are deliberately NOT sent to
+        // the client; a stack can still quote an interpolated message, so it is
+        // redacted rather than trusted.
+        originalError: redactSecretsInText(
+          error instanceof Error ? (error.stack ?? "") : String(error)
+        ),
         ...errorContext,
       },
       `Error in ${errorContext.operation}`

@@ -1137,7 +1137,14 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               .sendLoggingMessage({
                 level: "error",
                 logger: tool.name,
-                data: `Tool ${tool.name} failed: ${(error as Error).message}`,
+                // `mcpError.message`, not `(error as Error).message` (#741 H-2).
+                // The raw error is whatever was thrown — for an upstream failure
+                // its message embeds the platform's response body — and this
+                // notification goes to the connected client. `mcpError` has been
+                // through the McpError constructor's redaction; the original has
+                // not. The error payload below already used `mcpError`; this was
+                // the one sink still reading around it.
+                data: `Tool ${tool.name} failed: ${mcpError.message}`,
               })
               .catch(() => {
                 /* ignore if no client connected */

@@ -15,6 +15,7 @@ import { fetchWithTimeout } from "./fetch-with-timeout.js";
 import type { RequestContext } from "./request-context.js";
 import { setSpanAttribute } from "./telemetry.js";
 import { recordUpstreamRequest, redactHeaders, truncateBody } from "./http-request-recorder.js";
+import { redactSecretsInText, redactUrl } from "./secret-redaction.js";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -424,9 +425,13 @@ export async function executeWithRetry(
     const mcpError = new McpError(errorCode, errorMessage, {
       requestId: context?.requestId,
       httpStatus: response.status,
-      url,
+      // Redacted at the source rather than relying on every reader of `data` to
+      // call `sanitizeErrorData` (#741 H-2). `errorBody` is a slice of the raw
+      // upstream response — the field most likely to hold a `refresh_token` on
+      // a 401 — and `url` can carry a credential in a query param.
+      url: redactUrl(url),
       method: fetchOptions?.method ?? "GET",
-      errorBody: errorBody.substring(0, 500),
+      errorBody: redactSecretsInText(errorBody.substring(0, 500)),
       attempt,
       ...(response.status === 401 && config.tokenExpiryHint
         ? { tokenExpiryHint: config.tokenExpiryHint }
