@@ -260,6 +260,34 @@ describe("ReportCsvStore — cross-instance mirroring", () => {
     expect(result?.csv).toBe("rows");
   });
 
+  // Security review H-1. The mirror object path is `csv-index/{resourceId}.json`
+  // — resource UUID only, no tenant component — so the object path is NOT the
+  // isolation boundary. The boundary is `sessionId` carried INSIDE the entry,
+  // which the resource handler checks after `getRemoteByUri` resolves.
+  //
+  // Today that survives only because `startMirrorWrite` happens to serialize the
+  // whole entry (`JSON.stringify(entry)`). Mirroring a projection instead — a
+  // natural optimization, since the CSV body can be large — would drop
+  // `sessionId`, and the hydrated entry would read as unscoped, which the
+  // handler deliberately treats as world-readable. Pin the round-trip so that
+  // change cannot land silently.
+  it("preserves sessionId across the GCS round-trip (tenant binding survives scale-out)", async () => {
+    const { instanceA, instanceB, bucket } = makeMirrorPair();
+    const entry = instanceA.store({
+      csv: "secret,spend\nacme,9999\n",
+      sessionId: "victim-session",
+    });
+    await instanceA.flushMirror();
+
+    // The persisted object itself must carry the owner.
+    const persisted = JSON.parse(bucket.get(`csv-index/${entry.resourceId}.json`)!);
+    expect(persisted.sessionId).toBe("victim-session");
+
+    // And it must still be there after a cold instance hydrates it.
+    const hydrated = await instanceB.getRemote(entry.resourceId);
+    expect(hydrated?.sessionId).toBe("victim-session");
+  });
+
   it("getRemote() returns the in-memory entry without hitting GCS on a hit", async () => {
     let getCalls = 0;
     const bucketFactory = (_n: string) => ({

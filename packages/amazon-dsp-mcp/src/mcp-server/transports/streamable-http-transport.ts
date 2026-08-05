@@ -22,6 +22,7 @@ import { AmazonDspBearerAuthStrategy } from "../../auth/amazon-dsp-auth-strategy
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/platform.js";
+import { buildRefreshTokenAgeHealth } from "../../utils/refresh-token-age.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
@@ -46,10 +47,21 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     ],
     authErrorHint:
       config.mcpAuthMode === "amazon-dsp-bearer"
-        ? "Provide an Amazon access token via Authorization: Bearer <token>, profile ID via Amazon-Advertising-API-Scope, and client ID via Amazon-Advertising-API-ClientId."
+        ? "Provide an Amazon access token via Authorization: Bearer <token>, profile ID via Amazon-Advertising-API-Scope, and client ID via Amazon-Advertising-API-ClientId. " +
+          "If the error mentions invalid_grant, the refresh token is expired or revoked (Amazon expires refresh tokens 365 days after consent granted on/after 2026-07-30) — the advertiser must re-authorize the app to obtain a new one."
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
+    // Age of the env-configured refresh token (opt-in via
+    // AMAZON_DSP_REFRESH_TOKEN_ISSUED_AT) so alerting can scrape /health and
+    // page before Amazon's 365-day lifetime expires it. Per-session tokens
+    // supplied via headers are the caller's to track.
+    healthExtras: () =>
+      buildRefreshTokenAgeHealth(
+        config.amazonDspRefreshTokenIssuedAt,
+        new Date(),
+        config.amazonDspRefreshTokenWarnAgeDays
+      ) ?? {},
     async createSessionForAuth(authResult, sessionId, appConfig, log) {
       // For amazon-dsp-bearer mode, the adapter is returned via platformAuthAdapter
       const adapter = authResult.platformAuthAdapter as AmazonDspAuthAdapter | undefined;

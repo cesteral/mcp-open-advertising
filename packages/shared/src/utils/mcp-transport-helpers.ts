@@ -306,17 +306,30 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
       });
     }
 
+    await this.detachSession(sessionId);
+    this.sessionServiceStore.delete(sessionId);
+  }
+
+  /**
+   * Remove transport-side session state (cached MCP server, timestamps)
+   * WITHOUT touching the service store. This is the half of cleanup that a
+   * store-initiated delete needs: when something deletes a session directly
+   * from the SessionServiceStore (e.g. a tool handler dropping a session whose
+   * refresh token was rejected upstream), the transport must forget the id too
+   * — `needsRebuild` requires the id to be unknown to BOTH the store and this
+   * manager before the next request re-authenticates. Idempotent.
+   */
+  async detachSession(sessionId: string): Promise<void> {
     const cachedServer = this.sessionServers.get(sessionId);
     if (cachedServer) {
+      this.sessionServers.delete(sessionId);
       await cachedServer.close().catch((err) => {
         this.options?.logger?.warn(
           { err, sessionId },
           "MCP server close failed during session cleanup (continuing)"
         );
       });
-      this.sessionServers.delete(sessionId);
     }
-    this.sessionServiceStore.delete(sessionId);
     this.sessionCreatedAt.delete(sessionId);
     this.sessionLastActivity.delete(sessionId);
   }

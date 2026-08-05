@@ -76,6 +76,8 @@ export interface TransportSessionStore extends SessionServiceStoreLike {
   getFingerprint(sessionId: string): string | undefined;
   validateFingerprint(sessionId: string, fingerprint: string): boolean;
   isFull(): boolean;
+  /** Present on the real SessionServiceStore; optional so test fakes stay small. */
+  onDelete?(hook: (sessionId: string) => void | Promise<void>): () => void;
 }
 
 /**
@@ -155,6 +157,13 @@ export interface TransportFactoryConfig {
   ) => Promise<McpServerLike>;
   /** Absolute path to the server's package.json (for version in /health). */
   packageJsonPath: string;
+  /**
+   * Extra fields merged into the /health payload on every request. Use for
+   * operator-facing signals that alerting can scrape — e.g. the age of an
+   * env-configured refresh token approaching a platform-imposed lifetime.
+   * Must be cheap and must not throw.
+   */
+  healthExtras?: () => Record<string, unknown>;
   /** Server-card metadata served at `/.well-known/mcp/server-card.json`. */
   serverCard?: ServerCardExtras;
 }
@@ -221,6 +230,21 @@ export function createMcpHttpTransport(
 
   registerActiveSessionsGauge(() => sessionServiceStore.size);
 
+  // A store-initiated delete (e.g. registerToolsFromDefinitions' onAuthError
+  // dropping a session after an upstream credential rejection) must also
+  // detach the transport-side state. Without this, `needsRebuild` below stays
+  // false — the id is still in the SessionManager — and the dead session keeps
+  // serving in-band Unauthorized tool errors instead of forcing re-auth.
+  // Idempotent against cleanupSession(), which drives store.delete itself.
+  sessionServiceStore.onDelete?.((sessionId) => {
+    const transport = sessionTransports.get(sessionId);
+    if (transport) {
+      sessionTransports.delete(sessionId);
+      void transport.close?.().catch(() => {});
+    }
+    void sessions.detachSession(sessionId);
+  });
+
   // CORS
   const allowedOrigin = buildAllowedOrigins(config.mcpAllowedOrigins, config.nodeEnv, logger);
   app.use(
@@ -258,6 +282,7 @@ export function createMcpHttpTransport(
       version: pkg.version,
       mode: "streamable-http",
       activeSessions: sessionServiceStore.size,
+      ...(platformConfig.healthExtras?.() ?? {}),
     });
   });
 

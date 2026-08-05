@@ -256,6 +256,77 @@ describe("registerReportCsvResource", () => {
     expect(readResult.contents[0]!.text).toBe("col\n7\n");
   });
 
+  // Security review H-1, end to end. The other isolation tests here all resolve
+  // from the LOCAL store. This one goes through the GCS mirror fallback, which
+  // is the path that actually matters on Cloud Run: the attacker's request
+  // lands on an instance that never saw the victim's `store()` call, so the
+  // entry is hydrated from an object whose path is the resource UUID alone.
+  // If tenant binding did not survive that hydration, the cold instance would
+  // serve the victim's report to anyone holding the id.
+  it("denies a cross-session read of an entry hydrated from the GCS mirror", async () => {
+    const bucket = new Map<string, string>();
+    const bucketFactory = (_name: string) => ({
+      file: (path: string) => ({
+        download: async () => {
+          const v = bucket.get(path);
+          if (v === undefined) {
+            const err: any = new Error("Not Found");
+            err.code = 404;
+            throw err;
+          }
+          return [Buffer.from(v)];
+        },
+        save: async (content: string) => {
+          bucket.set(path, content);
+        },
+      }),
+    });
+    const mirror = {
+      bucketResolver: () => "test-bucket",
+      bucketFactory,
+      pathPrefix: "csv-index",
+    };
+
+    // Instance A produces the entry; instance B is a cold instance that never
+    // saw it and can only reach it through the mirror.
+    const producing = new ReportCsvStore({ mirror });
+    const entry = producing.store({
+      csv: "secret,spend\nacme,9999\n",
+      sessionId: "victim-session",
+    });
+    await producing.flushMirror();
+
+    const coldInstance = new ReportCsvStore({ mirror });
+    expect(coldInstance.get(entry.resourceId)).toBeUndefined(); // genuinely cold
+
+    const { server, registered } = createFakeServer();
+    registerReportCsvResource({
+      server,
+      ResourceTemplate: FakeResourceTemplate as any,
+      store: coldInstance,
+      platform: "TTD",
+      downloadToolName: "ttd_download_report",
+      logger,
+    });
+
+    await expect(
+      registered[0]!.handler(
+        { href: `report-csv://${entry.resourceId}` },
+        {},
+        { sessionId: "attacker-session" }
+      )
+    ).rejects.toThrow(/not found or expired/);
+
+    // ...and the rightful owner still gets it from the same cold instance, so
+    // the denial is tenant isolation rather than the fallback being broken.
+    const ownerResult = (await registered[0]!.handler(
+      { href: `report-csv://${entry.resourceId}` },
+      {},
+      { sessionId: "victim-session" }
+    )) as { contents: Array<{ text: string }> };
+    expect(ownerResult.contents[0]!.text).toBe("secret,spend\nacme,9999\n");
+  });
+
   it("throws a not-found error for unknown or expired URIs", async () => {
     const store = new ReportCsvStore();
     const { server, registered } = createFakeServer();

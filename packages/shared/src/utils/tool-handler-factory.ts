@@ -472,6 +472,15 @@ export interface RegisterToolsOptions {
    */
   resolveDefinitionHash?: (toolName: string) => string | undefined;
   /**
+   * Called when a tool invocation fails with `JsonRpcErrorCode.Unauthorized`
+   * (e.g. a mid-session refresh-token rejection). HTTP servers wire this to
+   * drop the session from their SessionServiceStore so the client's next
+   * request re-authenticates and gets a clean HTTP 401 + authErrorHint,
+   * instead of retrying forever against a session whose credentials are dead.
+   * Only invoked when the registration is session-scoped (sessionId present).
+   */
+  onAuthError?: (sessionId: string, error: McpError) => void;
+  /**
    * Env source for decision-token mode + secrets. Defaults to `process.env`;
    * injectable for tests.
    */
@@ -541,6 +550,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     authContextResolver,
     responseCharacterLimit = RESPONSE_CHARACTER_LIMIT,
     resolveDefinitionHash,
+    onAuthError,
   } = opts;
 
   if (!Number.isFinite(responseCharacterLimit) || responseCharacterLimit < 1) {
@@ -1084,6 +1094,21 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               { operation: `tool:${tool.name}`, input: args },
               logger
             );
+
+            // A dead credential (expired/revoked refresh token, invalidated
+            // access token) makes every later call on this session fail the
+            // same way. Let the server drop the session so the next request
+            // re-authenticates at the transport and surfaces HTTP 401.
+            if (onAuthError && sessionId && mcpError.code === JsonRpcErrorCode.Unauthorized) {
+              try {
+                onAuthError(sessionId, mcpError);
+              } catch (hookError) {
+                logger.warn(
+                  { err: hookError, sessionId, tool: tool.name },
+                  "onAuthError hook failed (continuing with error response)"
+                );
+              }
+            }
 
             // Log structured failure: params + error + captured upstream
             // HTTP trail so analysts can diagnose why the platform rejected
