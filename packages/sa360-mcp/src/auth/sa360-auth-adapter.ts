@@ -161,7 +161,31 @@ export function parseSA360CredentialsFromHeaders(
 
 /**
  * Generate a fingerprint for SA360 credentials (for session binding).
+ *
+ * The fingerprint MUST require proof-of-possession of the credential secret,
+ * not merely knowledge of the public identifier — the same rule
+ * `getCredentialFingerprint` in `@cesteral/shared` documents for Google
+ * credentials generally.
+ *
+ * `clientId` arrives from the caller-supplied `X-SA360-Client-Id` header and is
+ * a public OAuth client id by design. Hashing it alone made the fingerprint
+ * reproducible by anyone who knows that id, so every tenant of one OAuth
+ * application collided. That matters because `validateSessionReuse` prefers the
+ * fingerprint precisely to skip the upstream auth call: on the session-reuse
+ * path it is the ONLY credential proof, and the secret is never re-verified.
+ * A caller who learned a victim's session id and shared the app therefore
+ * passed the check and rode the victim's authenticated upstream client.
+ *
+ * Binding to `clientSecret` + `refreshToken` closes it: a caller without the
+ * secret produces a different fingerprint and is rejected as a mismatch. The
+ * public `clientId` is retained so the same secret under a different identity
+ * still differs. All three are required by `parseSA360CredentialsFromHeaders`,
+ * so none of these can be undefined here.
  */
 export function getSA360CredentialFingerprint(credentials: SA360Credentials): string {
-  return fingerprintCredentials(credentials.clientId);
+  return fingerprintCredentials(
+    credentials.clientId,
+    credentials.clientSecret,
+    credentials.refreshToken
+  );
 }
