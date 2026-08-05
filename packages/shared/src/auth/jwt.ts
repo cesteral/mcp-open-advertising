@@ -72,10 +72,50 @@ export function decodeJwtPayload(token: string): JwtPayload {
 }
 
 /**
- * Create a stable credential fingerprint from JWT identity claims.
+ * Create a stable credential fingerprint from a JWT's identity AND authorization
+ * claims.
+ *
+ * The fingerprint is what `validateSessionReuse` compares on the hot path, and a
+ * match means the existing session — including its cached auth context — is
+ * reused as-is. `allowedAdvertisers` is captured into that context only when a
+ * session is created or rebuilt (`setAuthContext` in the transport factory), so
+ * whatever the fingerprint ignores cannot take effect until the session goes.
+ *
+ * Fingerprinting `iss:sub` alone therefore made authorization changes inert: a
+ * validly signed, unexpired token reissued for the same subject with NARROWED
+ * `allowed_advertisers` produced an identical fingerprint, passed reuse, and the
+ * session kept enforcing the original, broader scope at the `allowedAdvertisers`
+ * check in `tool-handler-factory`. Because `touchSession` extends the idle
+ * timeout on every request, an actively-used session never ages out — so the
+ * stale scope persisted indefinitely, not for some bounded window.
+ * (Security review H-4.)
+ *
+ * Including the authorization-bearing claims makes a scope change produce a
+ * different fingerprint, which fails reuse with 401 and forces a rebuild that
+ * re-reads the scope. Fail-closed and self-healing: the next request
+ * re-authenticates and picks up the new scope.
+ *
+ * Deliberately NOT included: `exp` / `iat`. A routine token refresh that keeps
+ * the same scope should keep reusing its session — binding to those would tear
+ * down and rebuild on every refresh (an upstream `validate()` each time) for no
+ * security gain. Expiry and signature are enforced separately and on every
+ * reuse: `JwtBearerAuthStrategy.getCredentialFingerprint` calls `verifyJwt`,
+ * not `decodeJwtPayload`, so an expired or forged token is rejected before the
+ * fingerprint is ever compared.
+ *
+ * `allowed_advertisers` is sorted so claim ordering alone cannot force a
+ * spurious rebuild, and the parts are JSON-encoded rather than joined with a
+ * delimiter so no advertiser id or scope string containing the separator can
+ * alias a different claim set into the same fingerprint.
  */
 export function getJwtCredentialFingerprint(payload: JwtPayload): string {
-  return createHash("sha256").update(`${payload.iss}:${payload.sub}`).digest("hex");
+  const material = JSON.stringify([
+    payload.iss,
+    payload.sub,
+    payload.scope ?? null,
+    payload.allowed_advertisers ? [...payload.allowed_advertisers].sort() : null,
+  ]);
+  return createHash("sha256").update(material).digest("hex");
 }
 
 /**
