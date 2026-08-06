@@ -1,6 +1,14 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+/**
+ * authorization-model: session-bound
+ *
+ * Executes against the account bound into the session's resolved services;
+ * the caller-supplied account/profile arg is checked with assertAccountScope.
+ * See docs/AUTHORIZATION_MODELS.md.
+ */
+
 import { z } from "zod";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";

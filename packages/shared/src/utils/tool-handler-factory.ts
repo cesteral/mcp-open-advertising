@@ -173,9 +173,10 @@ export const RESPONSE_CHARACTER_LIMIT = 25_000;
  *    Profile scoping is enforced instead by `assertAccountScope`, which
  *    compares the caller-supplied profile against the session-bound one.
  *
- * Anything not listed here contributes no scoped identifiers, so it is NOT
- * denied — absence of a match is indistinguishable from authorisation, which
- * is why the set must be kept complete rather than convenient (C-2).
+ * See `docs/AUTHORIZATION_MODELS.md` for the full taxonomy. Anything not listed
+ * here contributes no scoped identifiers, so it is NOT denied — absence of a
+ * match is indistinguishable from authorisation, which is why the set must be
+ * kept complete rather than convenient (security review C-2).
  */
 const SCOPED_ID_KEYS = new Set<string>([
   "advertiserId",
