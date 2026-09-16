@@ -76,7 +76,11 @@ export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly baseUrl: string = "https://api.linkedin.com",
-    private readonly apiVersion: string = "202409"
+    // Deliberately NOT defaulted. A default here silently outlived
+    // LINKEDIN_API_VERSION for a year (#206): the env var was honoured by
+    // config, while any construction that omitted the argument kept sending a
+    // sunset version. A missing version is now a type error.
+    private readonly apiVersion: string
   ) {}
 
   get personId(): string {
@@ -120,7 +124,8 @@ export class LinkedInRefreshTokenAdapter
   constructor(
     credentials: LinkedInRefreshCredentials,
     private readonly baseUrl: string = "https://api.linkedin.com",
-    private readonly apiVersion: string = "202409"
+    /** Required — see the note on LinkedInAccessTokenAdapter's constructor. */
+    private readonly apiVersion: string
   ) {
     super({
       platformName: "LinkedIn",

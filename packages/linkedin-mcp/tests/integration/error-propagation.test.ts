@@ -77,6 +77,7 @@ vi.mock("../../src/services/session-services.js", async () => {
 
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 const logger: any = {
   info: vi.fn(),
@@ -103,7 +104,7 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   linkedinApiBaseUrl: "https://api.linkedin.com",
-  linkedinApiVersion: "202409",
+  linkedinApiVersion: TEST_LINKEDIN_API_VERSION,
   linkedinRateLimitPerMinute: 100,
 };
 

@@ -16,6 +16,7 @@ import {
   parseLinkedInRefreshCredentialsFromHeaders,
   getLinkedInCredentialFingerprint,
 } from "../../src/auth/linkedin-auth-adapter.js";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 describe("LinkedInAccessTokenAdapter", () => {
   beforeEach(() => {
@@ -32,7 +33,7 @@ describe("LinkedInAccessTokenAdapter", () => {
       const adapter = new LinkedInAccessTokenAdapter(
         "test-access-token",
         "https://api.linkedin.com",
-        "202409"
+        TEST_LINKEDIN_API_VERSION
       );
 
       await adapter.validate();
@@ -46,7 +47,11 @@ describe("LinkedInAccessTokenAdapter", () => {
         json: async () => ({ id: "person-cached", vanityName: "test" }),
       } as unknown as Response);
 
-      const adapter = new LinkedInAccessTokenAdapter("test-token", "https://api.linkedin.com");
+      const adapter = new LinkedInAccessTokenAdapter(
+        "test-token",
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       await adapter.validate();
       await adapter.validate();
@@ -62,7 +67,11 @@ describe("LinkedInAccessTokenAdapter", () => {
         text: async () => "Invalid access token",
       } as unknown as Response);
 
-      const adapter = new LinkedInAccessTokenAdapter("bad-token");
+      const adapter = new LinkedInAccessTokenAdapter(
+        "bad-token",
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       await expect(adapter.validate()).rejects.toThrow("LinkedIn token validation failed");
     });
@@ -76,7 +85,7 @@ describe("LinkedInAccessTokenAdapter", () => {
       const adapter = new LinkedInAccessTokenAdapter(
         "my-token",
         "https://api.linkedin.com",
-        "202409"
+        TEST_LINKEDIN_API_VERSION
       );
 
       await adapter.validate();
@@ -84,14 +93,18 @@ describe("LinkedInAccessTokenAdapter", () => {
       const callOptions = mockFetchWithTimeout.mock.calls[0][3];
       const headers = callOptions?.headers as Record<string, string> | undefined;
       expect(headers?.["Authorization"]).toBe("Bearer my-token");
-      expect(headers?.["LinkedIn-Version"]).toBe("202409");
+      expect(headers?.["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
       expect(headers?.["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
   });
 
   describe("getAccessToken()", () => {
     it("returns the access token", async () => {
-      const adapter = new LinkedInAccessTokenAdapter("my-access-token");
+      const adapter = new LinkedInAccessTokenAdapter(
+        "my-access-token",
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
       const token = await adapter.getAccessToken();
       expect(token).toBe("my-access-token");
     });
@@ -197,7 +210,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
 
   describe("getAccessToken", () => {
     it("fetches new token when no cache", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
       mockTokenExchange();
 
       const token = await adapter.getAccessToken();
@@ -223,7 +240,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
       mockTokenExchange();
 
       const first = await adapter.getAccessToken();
@@ -242,7 +263,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     it("fetches new token when expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
       mockTokenExchange();
 
       const first = await adapter.getAccessToken();
@@ -264,7 +289,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     });
 
     it("concurrent calls share pending auth (mutex)", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       let resolveToken!: (value: unknown) => void;
       mockFetchWithTimeout.mockReturnValueOnce(
@@ -293,7 +322,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     });
 
     it("clears pending on failure (retry works)", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -312,7 +345,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     });
 
     it("throws error on non-ok HTTP response", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -327,7 +364,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     });
 
     it("throws error on missing access_token in response", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
@@ -342,7 +383,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
 
   describe("validate", () => {
     it("validates token and sets personId", async () => {
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       // First call: token exchange (getAccessToken inside validate)
       mockTokenExchange();
@@ -359,7 +404,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
       expect(meCall[0]).toContain("/v2/me");
       const meOptions = meCall[3] as { headers: Record<string, string> };
       expect(meOptions.headers["Authorization"]).toBe("Bearer li-new-token");
-      expect(meOptions.headers["LinkedIn-Version"]).toBe("202409");
+      expect(meOptions.headers["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
       expect(meOptions.headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
   });
@@ -368,7 +413,11 @@ describe("LinkedInRefreshTokenAdapter", () => {
     it("uses new refresh token from response on subsequent exchanges", async () => {
       vi.useFakeTimers();
 
-      const adapter = new LinkedInRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS);
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
 
       // First exchange returns a new refresh_token
       mockTokenExchange({

@@ -11,9 +11,30 @@ import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@ce
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
+import {
+  classifyLinkedInApiVersion,
+  describeLinkedInApiVersionStatus,
+} from "./config/api-version.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("linkedin-mcp", transportMode, otelLogMixin());
+
+// Surface a stale LinkedIn-Version at boot. A sunset moniker makes LinkedIn
+// ERROR on every request (#206), so an operator seeing auth or tool failures
+// should find the cause in the first lines of the log rather than inferring it
+// from a wall of 4xx. Not fatal: the version is operator-overridable, and
+// refusing to boot on a date-derived judgement would be worse than serving a
+// server whose logs say exactly what is wrong.
+{
+  const version = mcpConfig.linkedinApiVersion;
+  const message = describeLinkedInApiVersionStatus(version);
+  if (message) {
+    const status = classifyLinkedInApiVersion(version);
+    const entry = { linkedinApiVersion: version, status };
+    if (status === "sunset") logger.error(entry, message);
+    else logger.warn(entry, message);
+  }
+}
 
 /**
  * Set up credentials for stdio mode from environment variables.

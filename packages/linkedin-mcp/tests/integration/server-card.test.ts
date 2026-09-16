@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 import { describe, expect, it, vi } from "vitest";
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const registry = JSON.parse(
@@ -41,7 +42,7 @@ const config: any = {
   mcpAuthMode: entry.auth.modes[0],
   mcpAllowedOrigins: "*",
   linkedinApiBaseUrl: "https://api.linkedin.com",
-  linkedinApiVersion: "202409",
+  linkedinApiVersion: TEST_LINKEDIN_API_VERSION,
 };
 
 describe("/.well-known/mcp/server-card.json (linkedin-mcp)", () => {
