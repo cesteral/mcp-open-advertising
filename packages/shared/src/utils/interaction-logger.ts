@@ -176,6 +176,31 @@ export async function closeAllInteractionLoggers(): Promise<void> {
 // InteractionLogger
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve where interaction records are written.
+ *
+ * Precedence: explicit `mode` option > INTERACTION_LOG_MODE env var > implicit
+ * (gcs if a bucket is set, else file). This keeps self-hosters one env var away
+ * from stdout routing without touching per-server construction.
+ *
+ * Extracted from the constructor so the server card can publish the destination
+ * it will ACTUALLY use (#201) by calling the same function the logger does. The
+ * precedence chain has three inputs and an implicit fallback; a second copy in
+ * the card would have been a plausible-looking guess at the answer.
+ */
+export function resolveInteractionLogMode(options: {
+  explicitMode?: InteractionLogMode;
+  gcsBucket?: string;
+  env?: NodeJS.ProcessEnv;
+}): InteractionLogMode {
+  const envMode = (options.env ?? process.env).INTERACTION_LOG_MODE as
+    | InteractionLogMode
+    | undefined;
+  const validEnvMode =
+    envMode === "file" || envMode === "gcs" || envMode === "stdout" ? envMode : undefined;
+  return options.explicitMode ?? validEnvMode ?? (options.gcsBucket ? "gcs" : "file");
+}
+
 export class InteractionLogger {
   private readonly dataDir: string;
   private readonly serverName: string;
@@ -206,13 +231,10 @@ export class InteractionLogger {
     this.gcsBucket = options.gcsBucket;
     this.gcsPrefix = options.gcsPrefix ?? options.serverName;
     this.instanceId = randomBytes(4).toString("hex");
-    // Precedence: explicit `mode` option > INTERACTION_LOG_MODE env var >
-    // implicit (gcs if bucket is set, else file). This keeps self-hosters one
-    // env var away from stdout routing without touching per-server construction.
-    const envMode = process.env.INTERACTION_LOG_MODE as InteractionLogMode | undefined;
-    const validEnvMode =
-      envMode === "file" || envMode === "gcs" || envMode === "stdout" ? envMode : undefined;
-    this.mode = options.mode ?? validEnvMode ?? (this.gcsBucket ? "gcs" : "file");
+    this.mode = resolveInteractionLogMode({
+      explicitMode: options.mode,
+      gcsBucket: this.gcsBucket,
+    });
 
     if (this.mode === "gcs" && !this.gcsBucket) {
       throw new Error("InteractionLogger: mode=gcs requires gcsBucket");

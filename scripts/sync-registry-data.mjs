@@ -33,6 +33,11 @@ const slim = {
     platform_display_name: s.platform_display_name,
     documentation_url: s.documentation_url,
     auth: { modes: s.auth.modes },
+    // #201: the server card publishes which operations cannot be undone. This
+    // is the one hand-authored value in the operational block, so it travels
+    // through the same registry -> generated-module path as the rest of the
+    // card's metadata rather than being restated per transport.
+    operational: { terminalOperations: s.operational?.terminalOperations ?? [] },
   })),
 };
 
@@ -49,6 +54,13 @@ const body = `export interface RegistryServerEntry {
   readonly platform_display_name: string;
   readonly documentation_url: string;
   readonly auth: { readonly modes: readonly string[] };
+  readonly operational: {
+    readonly terminalOperations: readonly {
+      readonly tool: string;
+      readonly operations: readonly string[];
+      readonly note: string;
+    }[];
+  };
 }
 
 export interface RegistryData {

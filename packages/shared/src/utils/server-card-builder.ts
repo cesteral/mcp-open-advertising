@@ -46,6 +46,14 @@ export function buildServerCardExtras(
     platform: overrides.platform ?? entry.platform,
     supportedAuthModes: [...entry.auth.modes],
     documentationUrl: overrides.documentationUrl ?? entry.documentation_url,
+    // #201. Registry-sourced so every transport publishes the same list, and so
+    // a new destructive tool is caught by the registry ratchet rather than by
+    // whichever transport happened to remember to declare it.
+    terminalOperations: entry.operational.terminalOperations.map((t) => ({
+      tool: t.tool,
+      operations: [...t.operations],
+      note: t.note,
+    })),
     ...(overrides.vendor ? { vendor: overrides.vendor } : {}),
     ...(overrides.capabilities ? { capabilities: overrides.capabilities } : {}),
   };

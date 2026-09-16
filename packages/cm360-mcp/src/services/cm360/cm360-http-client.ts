@@ -7,7 +7,7 @@ import { fetchWithTimeout, executeWithRetry, type RetryConfig } from "@cesteral/
 import type { RequestContext } from "@cesteral/shared";
 import { withCM360ApiSpan } from "../../utils/platform.js";
 
-const RETRY_CONFIG: RetryConfig = {
+export const RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,

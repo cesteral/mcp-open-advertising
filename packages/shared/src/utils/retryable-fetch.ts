@@ -135,7 +135,15 @@ export interface RetryableRequestOptions {
 // Defaults
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MAX_RETRIES = 3;
+/**
+ * Default retry budget. This is a count of RETRIES, not attempts: the loop is
+ * `for (attempt = 0; attempt <= maxRetries; attempt++)`, so the budget below
+ * permits up to `maxRetries + 1` total requests. Exported because the server
+ * card publishes the attempt count a client should expect us to place on their
+ * account's quota, and that number has to be derived from this one rather than
+ * transcribed beside it (#201).
+ */
+export const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF_MS = 1_000;
 const DEFAULT_MAX_BACKOFF_MS = 10_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -154,7 +162,14 @@ function isRetryableStatus(status: number): boolean {
  * blind re-send then duplicates the entity — real budget/spend on an ad
  * platform (external-write-rail review C3).
  */
-const IDEMPOTENT_RETRY_METHODS = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE", "PATCH"]);
+export const IDEMPOTENT_RETRY_METHODS: ReadonlySet<string> = new Set([
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "PUT",
+  "DELETE",
+  "PATCH",
+]);
 
 /**
  * Is this method safe to re-send after an ambiguous failure?
@@ -171,6 +186,64 @@ const IDEMPOTENT_RETRY_METHODS = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELE
 function isMethodSafeToResend(status: number, method: string): boolean {
   if (status === 429) return true;
   return IDEMPOTENT_RETRY_METHODS.has(method.toUpperCase());
+}
+
+/**
+ * Representative statuses probed by {@link describeRetryPolicy}. One per class
+ * a platform predicate is known to discriminate on, not an exhaustive sweep:
+ * the point is to report the policy's SHAPE, not to enumerate every code.
+ */
+const PROBE_STATUSES = [400, 401, 403, 404, 408, 409, 429, 500, 502, 503, 504] as const;
+
+/** The retry policy actually in force, as observed by probing the real predicate. */
+export interface ObservedRetryPolicy {
+  /** Statuses this client treats as transient, in ascending order. */
+  retryOnStatus: number[];
+  /**
+   * Methods whose re-send after an ambiguous (5xx) failure cannot duplicate a
+   * resource. Read from the live {@link IDEMPOTENT_RETRY_METHODS} set.
+   */
+  resendSafeMethodsOn5xx: string[];
+  /**
+   * Statuses that are safe to re-send for ANY method, including POST, because
+   * the platform rejected the request without processing it.
+   */
+  resendSafeForAllMethods: number[];
+  /** Total requests a client should expect, including the first. */
+  maxTotalAttempts: number;
+}
+
+/**
+ * Describe the retry policy a client will actually experience, by EXECUTING the
+ * same predicate and method set the retry loop branches on.
+ *
+ * This exists because the server card publishes these values (#201) and a
+ * transcribed copy would be wrong the day a platform tunes its predicate. Two
+ * fleet facts made that concrete: `amazon-dsp` deliberately omits 429 from its
+ * `isRetryable`, and its budget is `maxRetries: 2` where the rest of the fleet
+ * is 3 — so neither `[429, "5xx"]` nor `maxTotalAttempts: 4` is a fleet-wide
+ * truth, and publishing them as one would understate the load on one account's
+ * quota while overstating it on another.
+ *
+ * @param isRetryable The client's error-class override, if it has one. Omit to
+ *   describe the shared default.
+ * @param maxRetries The client's retry budget. Omit for {@link DEFAULT_MAX_RETRIES}.
+ */
+export function describeRetryPolicy(
+  isRetryable?: (status: number, errorBody: string) => boolean,
+  maxRetries: number = DEFAULT_MAX_RETRIES
+): ObservedRetryPolicy {
+  const decide = isRetryable ?? ((status: number) => isRetryableStatus(status));
+  const retryOnStatus = PROBE_STATUSES.filter((status) => decide(status, ""));
+  return {
+    retryOnStatus: [...retryOnStatus],
+    resendSafeMethodsOn5xx: [...IDEMPOTENT_RETRY_METHODS].sort(),
+    // Derived from the live guard, not restated: `isMethodSafeToResend` returns
+    // true for these regardless of method, which is precisely why "POST is never
+    // retried" is not an accurate description of this fleet.
+    resendSafeForAllMethods: retryOnStatus.filter((status) => isMethodSafeToResend(status, "POST")),
+    maxTotalAttempts: maxRetries + 1,
+  };
 }
 
 /**
