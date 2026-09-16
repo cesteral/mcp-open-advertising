@@ -61,6 +61,14 @@ describe("/.well-known/mcp/server-card.json (linkedin-mcp)", () => {
       expect(body.documentation_url).toBe(entry.documentation_url);
       expect(body.mcp_protocol_versions).toContain(registry.protocol_version);
       expect(body.transports).toEqual([{ type: "streamable_http", endpoint: "/mcp" }]);
+
+      // #204 Tier 1 — the untrusted-content boundary is declared on every card.
+      expect(body.untrusted_content.returns_third_party_content).toBe(true);
+      expect(body.untrusted_content.client_obligations.length).toBeGreaterThan(0);
+      // Load-bearing: "we do not report which paths" must stay distinguishable
+      // from "there is no untrusted content here". A client that conflates the
+      // two reads silence as safety.
+      expect(body.untrusted_content.path_reporting).toBe("unsupported");
     } finally {
       await shutdown();
     }
