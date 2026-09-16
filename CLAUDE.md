@@ -157,6 +157,29 @@ gcloud run services logs tail <server-name> --region=europe-west2
 
    **Both halves are required**: set `GOVERNANCE_JTI_STORE=firestore` **and** inject `selectJtiStore(...)`'s result as `jtiStore`. Doing only the second used to be worse than doing neither — the guard keyed on whether a store had been injected, so `selectJtiStore` returning an `InMemoryJtiStore` (which is what it returns without the env var) was accepted as safe and produced an in-memory enforce posture on multi-instance Cloud Run with no throw and no warn, quieter than the unwired case, which correctly throws. The guard now keys on the store's own `JtiStore.distributed` declaration, so the half-done configuration fails closed like every other. A custom store must declare `distributed = true` to be accepted under hosted enforce; an undeclared store is treated as non-distributed.
 
+## Platform-Facts Ledger
+
+`platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 19 facts: the versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, and the behavioural constraints in Server-Specific Notes above. Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).
+
+Two of these have already rotted. `linkedin-mcp` pinned `LinkedIn-Version: 202409` for roughly a year past sunset with every call erroring and nothing detecting it (#206/#209); Google's v4 Discovery rev 20260608 removed campaign + insertion-order assigned targeting and broke all CI (PR #79). One was caught loudly, the other was silent for a year, and the difference was luck about which fact happened to be fetched at build time.
+
+**Two modes, because they have different failure politics:**
+
+| Mode                                  | Where                                                           | What it does                                                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm check:platform-facts`           | **CI, PR-blocking**                                             | Hermetic. Ledger shape, plus every `codeRef` still existing _and still containing the value the ledger claims_. Can only fail because of something in the commit under review. |
+| `pnpm check:platform-facts:freshness` | **Scheduled** (`.github/workflows/platform-facts.yml`, Mondays) | Time-dependent. Reports expired facts and opens/updates a tracking issue.                                                                                                      |
+
+The freshness half is deliberately **not** PR-blocking, for the same reason as `check-terraform-drift.mjs`: it would turn `main` red by the passage of the calendar, on a commit that changed nothing.
+
+**The hermetic half is the one with teeth today.** Bumping a pinned version without updating the ledger fails CI with the file, line, and both values — verified by actually editing `gads-mcp`'s config from `v23` to `v24` and watching it fail.
+
+**Every fact currently ships `status: "unverified"` with `verifiedAt: null` and a `verifyBy` deadline.** This is the honest state, not an oversight: the vendor doc hosts (`learn.microsoft.com` among them) are unreachable from this repo's egress policy, so nobody has read a supported-version table. **An expired fact is not current, and being unable to check it does not make it fresh** — so `unverified` is reported, never silently passed. `verified` requires a `verifiedAt`, and `unverified` forbids one, so the two can never disagree.
+
+**`verifiedAt` must be the date someone actually re-checked.** Never backdate it to when the code was written — that reproduces exactly the false confidence this removes.
+
+**Related: `LINKEDIN_API_VERSION_VERIFICATION_BASIS`.** #209 shipped `LINKEDIN_API_VERSION_VERIFIED_AT = "2026-09-16"` under a docstring reading "when a human last confirmed... against LinkedIn's published list". No such confirmation happened — the list is behind the blocked host, and the `202608` pin was inferred from LinkedIn's documented monthly cadence and one-year window. The basis is now explicit and set to `inferred`, the ledger carries the fact as `unverified`, and a test asserts the two agree. A date with no basis beside it reads as a confirmation that never happened.
+
 ## Tool Failure Logging
 
 Every tool invocation is captured by `InteractionLogger` (`packages/shared/src/utils/interaction-logger.ts`). On failure, the entry adds the upstream HTTP trail (method, URL, status, redacted request/response bodies, per-attempt durations) recorded by `executeWithRetry` via `http-request-recorder.ts`.

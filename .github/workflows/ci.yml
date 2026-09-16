@@ -43,6 +43,13 @@ jobs:
       - name: Check account-scope coverage (session-bound tools assert caller-supplied scope)
         run: pnpm run check:account-scope
 
+      # HERMETIC half of #202 only: ledger shape, plus every codeRef still
+      # containing the value the ledger claims for it. The time-dependent
+      # freshness half runs on a schedule (platform-facts.yml) so the calendar
+      # cannot turn `main` red on a commit that changed nothing.
+      - name: Check platform-facts ledger matches the code it describes
+        run: pnpm run check:platform-facts
+
       - name: Build
         run: pnpm run build
 
