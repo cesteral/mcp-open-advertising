@@ -6,7 +6,7 @@ import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withMsAdsApiSpan } from "../../utils/platform.js";
 
-const MSADS_RETRY_CONFIG: RetryConfig = {
+export const MSADS_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,

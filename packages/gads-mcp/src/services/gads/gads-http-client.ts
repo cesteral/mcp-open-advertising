@@ -7,7 +7,7 @@ import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withGAdsApiSpan } from "../../utils/platform.js";
 
-const GADS_RETRY_CONFIG: RetryConfig = {
+export const GADS_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,

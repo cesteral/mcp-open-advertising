@@ -1,0 +1,4 @@
+{
+  "$comment": "Tools that match the destructive-candidate heuristic in terminal-operations.test.mjs but whose effect CAN be undone through this server. Adding an entry is a claim that a later call restores the prior state — state which call. Empty is the expected steady state: every genuinely destructive tool belongs in registry.servers[].operational.terminalOperations instead.",
+  "reversible": []
+}

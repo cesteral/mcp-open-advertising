@@ -84,7 +84,7 @@ On-demand workflow guidance for complex multi-step operations. Located in `src/m
 Each server has its own `MCP_AUTH_MODE` enum; the canonical list is in each package's `src/config/index.ts`. Common rules:
 
 - `jwt` mode requires `MCP_AUTH_SECRET_KEY` and exposes the RFC 9728 endpoint at `/.well-known/oauth-protected-resource`
-- SEP-2127 endpoint at `/.well-known/mcp/server-card.json` returns server discovery metadata (name, version, transports, auth modes, capabilities) on every server in every auth mode
+- SEP-2127 endpoint at `/.well-known/mcp/server-card.json` returns server discovery metadata (name, version, transports, auth modes, capabilities, the `untrusted_content` boundary, and the `operational` envelope — see [Server Card Operational Envelope](#server-card-operational-envelope)) on every server in every auth mode
 - All platform auth adapters' `validate()` hit a cheap upstream endpoint (e.g. TTD's `{ __typename }` GraphQL ping, Meta's `/me`, MSAds' `User/Query`) on first session creation and memoize the result, so invalid tokens fail fast at session establishment rather than on first tool call. Auth failures throw `McpError(JsonRpcErrorCode.Unauthorized)` so the transport factory maps them to HTTP 401 with the right `authErrorHint`.
 
 Platform-specific auth adapters live **inside each server package** (not in shared) so adding a new platform never requires touching `@cesteral/shared`.
@@ -156,6 +156,26 @@ gcloud run services logs tail <server-name> --region=europe-west2
    **Hosted enforce also needs the Firestore backing store provisioned** (#167): set `enable_governance_jti_store = true` in Terraform (creates the database plus a `google_firestore_field` TTL policy on `governance_jti.expiresAt`) and set `GOVERNANCE_JTI_STORE=firestore` on the revision. The TTL policy is storage-cost control only — correctness is the atomic `doc(jti).create()`. The policy targets a **Timestamp** field, and `FirestoreJtiStore` writes `expiresAt` as a `Date` for exactly that reason; an ISO string there would be silently ignored and the collection would grow forever behind a policy that looked correctly configured.
 
    **Both halves are required**: set `GOVERNANCE_JTI_STORE=firestore` **and** inject `selectJtiStore(...)`'s result as `jtiStore`. Doing only the second used to be worse than doing neither — the guard keyed on whether a store had been injected, so `selectJtiStore` returning an `InMemoryJtiStore` (which is what it returns without the env var) was accepted as safe and produced an in-memory enforce posture on multi-instance Cloud Run with no throw and no warn, quieter than the unwired case, which correctly throws. The guard now keys on the store's own `JtiStore.distributed` declaration, so the half-done configuration fails closed like every other. A custom store must declare `distributed = true` to be accepted under hosted enforce; an undeclared store is treated as non-distributed.
+
+## Server Card Operational Envelope
+
+The card's `operational` block (#201) answers what a client needs before pointing a server at a live ad account: rate limit, retry semantics, which duplicate-write rails are covered, what is recorded, and what cannot be undone. `packages/shared/src/utils/operational-envelope.ts` builds it.
+
+**Everything mechanical is derived, not declared.** The rate limit is read off the live `RateLimiter` the transport was handed (`describeLimits()`); the retry policy comes from `describeRetryPolicy()`, which _executes_ the server's own `isRetryable` predicate over representative statuses and reads the live `IDEMPOTENT_RETRY_METHODS` set. A declared copy in `registry.json` was rejected for exactly the drift it would introduce — the fleet is not uniform here:
+
+| Server           | Divergence                                                         | Why a fleet-wide declaration would lie                                                                               |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `amazon-dsp-mcp` | `maxRetries: 2`, and `isAmazonDspRetryable` deliberately omits 429 | Publishes 3 total attempts, and `resendSafeForAllMethods: []` — with 429 not retryable, no status is POST-safe there |
+| `dbm-mcp`        | Drives its own report-polling loop, never `executeWithRetry`       | Publishes `retry: null` rather than defaults describing code it does not run                                         |
+| `pinterest-mcp`  | One media-upload POST opts into 5xx retry via `retryNonIdempotent` | The method rule has a documented per-endpoint exception                                                              |
+
+**"POST is never retried" is false and must not be reinstated.** `isMethodSafeToResend` returns `true` for 429 regardless of method — a 429 means the platform rejected the request _without processing it_, so re-sending is safe. The exclusion is for the ambiguous 5xx, which can arrive after the platform committed the write. `operational-envelope.test.ts` asserts the note never makes the flat claim.
+
+**Two fields exist to state an ABSENT protection.** `idempotency.clientRetryDeduplicated: false` — a caller that loses the response, re-authorizes and re-issues `tools/call` carries a new `jti`, so `consumeOnce` returns `"fresh"` and the write can duplicate; that is the normal recovery path and nothing here prevents it. `rollback.supported: false` — there is no undo. A block publishing only the protections would read as "duplicate writes are handled". They are not.
+
+**`rollback.terminalOperations` is the one hand-authored value**, because irreversibility is a per-platform fact no local code states. It lives in `registry.json` per server and reaches the card via `registry-data.generated.ts` → `buildServerCardExtras`. It is ratcheted by `scripts/lib/terminal-operations.test.mjs`, which boots each server and requires every destructive tool to be declared terminal or listed in `reversible-operations-allowlist.json` with a reason.
+
+**The ratchet keys on tool NAME _and_ annotation**, deliberately. Seven of the fleet's sixteen destructive tools declare `operation: ["bulk_job"]` or `["manage"]` rather than `delete` — `tiktok`/`pinterest`/`snapchat`/`msads`/`amazon_dsp` `_delete_entity` are `writeClass: "effect"` bulk deletes governed as one batch effect, which is correct for governance and useless for identifying destructiveness. An annotation-only rule would have silently exempted the tools that delete the most at once; the mutation test for this pairing is in the #201 PR.
 
 ## Tool Failure Logging
 
