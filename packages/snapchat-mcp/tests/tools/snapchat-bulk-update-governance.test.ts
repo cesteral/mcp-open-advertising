@@ -47,7 +47,9 @@ describe("snapchat_bulk_update_entities governance contract (effect class)", () 
       }),
     };
     mockResolveSessionServices.mockReturnValue({
-      boundAdAccountId: "1234567890", snapchatService: svc });
+      boundAdAccountId: "1234567890",
+      snapchatService: svc,
+    });
     mockElicit.mockResolvedValue(true);
   });
 

@@ -42,7 +42,9 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
       }),
     };
     mockResolveSessionServices.mockReturnValue({
-      boundAdAccountId: "1234567890", pinterestService: svc });
+      boundAdAccountId: "1234567890",
+      pinterestService: svc,
+    });
     mockElicit.mockResolvedValue(true);
   });
 

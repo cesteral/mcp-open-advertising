@@ -183,7 +183,7 @@ describe("snapchat_create_entity governance contract", () => {
       .mockReset()
       .mockResolvedValue({ id: "c-999", name: "New Campaign", status: "PAUSED" });
     mockResolveSession.mockReturnValue({
-    boundAdAccountId: "1234567890",
+      boundAdAccountId: "1234567890",
       snapchatService: { createEntity: mockCreateEntity },
     } as any);
   });

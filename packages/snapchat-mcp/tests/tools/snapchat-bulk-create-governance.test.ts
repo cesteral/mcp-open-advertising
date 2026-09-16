@@ -35,7 +35,9 @@ describe("snapchat_bulk_create_entities governance contract (effect class)", () 
         .mockResolvedValue({ results: [{ success: true }, { success: false, error: "x" }] }),
     };
     mockResolveSessionServices.mockReturnValue({
-      boundAdAccountId: "1234567890", snapchatService: svc });
+      boundAdAccountId: "1234567890",
+      snapchatService: svc,
+    });
   });
 
   it("dry_run returns a symbolic effect preview, no API call", async () => {

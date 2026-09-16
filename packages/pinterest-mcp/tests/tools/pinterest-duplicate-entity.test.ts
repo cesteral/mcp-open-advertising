@@ -46,7 +46,9 @@ describe("pinterest_duplicate_entity governance contract", () => {
       getEntity: vi.fn(),
     };
     mockResolveSession.mockReturnValue({
-    boundAdAccountId: "act-1", pinterestService: svc } as any);
+      boundAdAccountId: "act-1",
+      pinterestService: svc,
+    } as any);
   });
 
   it("dry_run clones the source (no forced pause) when no options given", async () => {

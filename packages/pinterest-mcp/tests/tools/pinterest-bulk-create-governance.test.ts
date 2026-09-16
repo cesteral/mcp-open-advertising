@@ -35,7 +35,9 @@ describe("pinterest_bulk_create_entities governance contract (effect class)", ()
         .mockResolvedValue({ results: [{ success: true }, { success: false, error: "x" }] }),
     };
     mockResolveSessionServices.mockReturnValue({
-      boundAdAccountId: "1234567890", pinterestService: svc });
+      boundAdAccountId: "1234567890",
+      pinterestService: svc,
+    });
   });
 
   it("dry_run returns a symbolic effect preview, no API call", async () => {
