@@ -17,6 +17,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import type { Logger } from "pino";
+import { UNTRUSTED_CONTENT_DECLARATION } from "./untrusted-content.js";
 
 import {
   createRequestContext,
@@ -326,6 +327,10 @@ export function createMcpHttpTransport(
         elicitation: caps.elicitation ?? true,
       },
       ...(deployment ? { deployment } : {}),
+      // #204 Tier 1. Declared unconditionally: every server in this fleet
+      // returns platform-authored free text, so a client must not have to
+      // infer the boundary from which tools it happens to call.
+      untrusted_content: UNTRUSTED_CONTENT_DECLARATION,
     };
     return c.json(body, 200);
   });
