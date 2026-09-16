@@ -25,16 +25,41 @@
 export const LINKEDIN_API_VERSION = "202608";
 
 /**
- * When a human last confirmed {@link LINKEDIN_API_VERSION} against LinkedIn's
- * published list of supported versions.
+ * When {@link LINKEDIN_API_VERSION} was last ASSESSED.
  *
- * This is the date of the CHECK, not the date the code was written. Backdating
- * it to the pin's release month reproduces exactly the false confidence this
- * guard removes.
+ * This is the date of the assessment, not the date the code was written.
+ * Backdating it to the pin's release month reproduces exactly the false
+ * confidence this guard removes.
+ *
+ * Read this together with {@link LINKEDIN_API_VERSION_VERIFICATION_BASIS} — on
+ * its own a date says an assessment happened, not that anyone saw the vendor's
+ * list.
  *
  * Source: https://learn.microsoft.com/en-us/linkedin/marketing/versioning
  */
 export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-09-16";
+
+/**
+ * How {@link LINKEDIN_API_VERSION} was established, and therefore how much the
+ * date above is worth.
+ *
+ * - `confirmed` — someone read LinkedIn's published list of supported versions.
+ * - `inferred`  — derived from LinkedIn's documented monthly-release cadence and
+ *                 one-year support window WITHOUT reading that list.
+ *
+ * Currently `inferred`, and that is not a formality. `learn.microsoft.com` is
+ * unreachable from this repo's agent/CI egress policy, so the pin was reasoned
+ * to rather than looked up. An `inferred` pin is a plausible guess with a real
+ * failure mode: if LinkedIn skipped a month, or shortened a window, the value is
+ * wrong and every call errors exactly as in #206 — the failure this file exists
+ * to prevent. `platform-facts.json` therefore carries `linkedin.api_version` as
+ * `unverified`, and it stays that way until someone with doc access flips this
+ * to `confirmed` and sets the date to the day they read it.
+ *
+ * Making this explicit is the point: #209 shipped the date alone, which reads as
+ * a confirmation that never happened.
+ */
+export const LINKEDIN_API_VERSION_VERIFICATION_BASIS: "confirmed" | "inferred" = "inferred";
 
 /**
  * LinkedIn's documented minimum support window, in months. Releases are
