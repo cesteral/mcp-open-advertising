@@ -39,6 +39,7 @@ import {
   createMcpHttpServer,
   startHttpServer,
 } from "../../src/mcp-server/transports/streamable-http-transport.js";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 describe("LinkedIn server + transport", () => {
   it("registers tools/resources/prompts and connects stdio", async () => {
@@ -60,7 +61,7 @@ describe("LinkedIn server + transport", () => {
       mcpAuthMode: "linkedin-bearer",
       mcpAuthSecretKey: "secret",
       linkedinApiBaseUrl: "https://api.linkedin.com",
-      linkedinApiVersion: "202409",
+      linkedinApiVersion: TEST_LINKEDIN_API_VERSION,
       linkedinAccessToken: "token",
     } as any;
 

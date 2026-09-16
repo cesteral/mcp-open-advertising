@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { LINKEDIN_API_VERSION, isValidLinkedInApiVersion } from "./api-version.js";
 import {
   loadDotEnv,
   BaseConfigSchema,
@@ -24,7 +25,14 @@ const ConfigSchema = BaseConfigSchema.extend({
 
   // LinkedIn API Configuration
   linkedinApiBaseUrl: z.string().url().default("https://api.linkedin.com"),
-  linkedinApiVersion: z.string().default("202409"),
+  // Pin lives in api-version.ts; the refine rejects a malformed override at boot
+  // rather than letting an unparseable header reach LinkedIn as a 4xx per call.
+  linkedinApiVersion: z
+    .string()
+    .refine(isValidLinkedInApiVersion, {
+      message: "LINKEDIN_API_VERSION must be a YYYYMM version moniker, e.g. 202608",
+    })
+    .default(LINKEDIN_API_VERSION),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via LINKEDIN_RATE_LIMIT_PER_MINUTE for different scaling profiles.

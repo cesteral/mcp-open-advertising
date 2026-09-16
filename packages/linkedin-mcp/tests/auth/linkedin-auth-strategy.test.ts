@@ -8,6 +8,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 import { fetchWithTimeout } from "@cesteral/shared";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 const mockLogger: any = {
@@ -37,7 +38,7 @@ describe("LinkedInBearerAuthStrategy", () => {
 
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const result = await strategy.verify({
@@ -65,7 +66,7 @@ describe("LinkedInBearerAuthStrategy", () => {
 
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       await expect(strategy.verify({ authorization: "Bearer bad-token" })).rejects.toThrow(
@@ -76,7 +77,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("throws when Authorization header is missing", async () => {
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       await expect(strategy.verify({})).rejects.toThrow("Missing required Authorization header");
@@ -85,7 +86,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("throws when Authorization header uses wrong scheme", async () => {
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       await expect(strategy.verify({ authorization: "Basic dXNlcjpwYXNz" })).rejects.toThrow(
@@ -113,7 +114,7 @@ describe("LinkedInBearerAuthStrategy", () => {
 
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const result = await strategy.verify({
@@ -150,7 +151,7 @@ describe("LinkedInBearerAuthStrategy", () => {
 
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const result = await strategy.verify({
@@ -179,7 +180,7 @@ describe("LinkedInBearerAuthStrategy", () => {
 
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const result = await strategy.verify({
@@ -198,7 +199,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("returns fingerprint without making a network call", async () => {
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const fingerprint = await strategy.getCredentialFingerprint({
@@ -216,7 +217,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("returns consistent fingerprint for same token", async () => {
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const fp1 = await strategy.getCredentialFingerprint({
@@ -231,7 +232,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("returns different fingerprints for different tokens", async () => {
       const strategy = new LinkedInBearerAuthStrategy(
         "https://api.linkedin.com",
-        "202409",
+        TEST_LINKEDIN_API_VERSION,
         mockLogger
       );
       const fp1 = await strategy.getCredentialFingerprint({

@@ -11,6 +11,7 @@ const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import { LinkedInHttpClient } from "../../src/services/linkedin/linkedin-http-client.js";
 import type { LinkedInAuthAdapter } from "../../src/auth/linkedin-auth-adapter.js";
+import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 const mockAuthAdapter: LinkedInAuthAdapter = {
   getAccessToken: vi.fn().mockResolvedValue("test-access-token"),
@@ -34,7 +35,7 @@ describe("LinkedInHttpClient", () => {
     client = new LinkedInHttpClient(
       mockAuthAdapter,
       "https://api.linkedin.com",
-      "202409",
+      TEST_LINKEDIN_API_VERSION,
       mockLogger
     );
     mockFetchWithTimeout.mockReset();
@@ -86,7 +87,7 @@ describe("LinkedInHttpClient", () => {
 
       const callOptions = mockFetchWithTimeout.mock.calls[0][3];
       const headers = callOptions?.headers as Record<string, string>;
-      expect(headers["LinkedIn-Version"]).toBe("202409");
+      expect(headers["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
     });
 
     it("injects X-Restli-Protocol-Version header", async () => {

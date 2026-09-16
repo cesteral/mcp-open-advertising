@@ -5,6 +5,7 @@
  * LinkedIn Entity Hierarchy Resource
  */
 import type { Resource } from "../types.js";
+import { LINKEDIN_API_VERSION } from "../../../config/api-version.js";
 
 let cachedContent: string | undefined;
 
@@ -83,7 +84,7 @@ The account scoping parameter varies by entity type:
 | Header | Value |
 |--------|-------|
 | Authorization | Bearer {access_token} |
-| LinkedIn-Version | 202409 (configurable via LINKEDIN_API_VERSION) |
+| LinkedIn-Version | ${LINKEDIN_API_VERSION} (configurable via LINKEDIN_API_VERSION) |
 | X-Restli-Protocol-Version | 2.0.0 |
 
 ## Available Tools Summary
