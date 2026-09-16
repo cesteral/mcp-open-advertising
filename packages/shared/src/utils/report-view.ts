@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { MetricContextSchema, type MetricContext } from "./metric-context.js";
 
 export const REPORT_SUMMARY_DEFAULT_ROWS = 10;
 export const REPORT_ROWS_DEFAULT_ROWS = 50;
@@ -80,6 +81,9 @@ export const ReportViewOutputSchema = z.object({
   warnings: z
     .array(z.string())
     .describe("Non-fatal warnings about projection, caps, or pagination"),
+  metricContext: MetricContextSchema.optional().describe(
+    "The basis these numbers were computed on — source, currency, timezone, resolved date range, attribution window. Optional so servers adopt incrementally; an ABSENT field means the server could not determine it, which is not the same as agreement."
+  ),
 });
 
 export type ReportViewInput = z.infer<typeof ReportViewInputSchema>;
@@ -130,6 +134,12 @@ export function createReportView(params: {
   totalRows?: number;
   input?: ReportViewInput;
   warnings?: string[];
+  /**
+   * Assembled by the caller, which is the only layer that knows the window and
+   * units. Build it with `buildMetricContext` so unknown fields are omitted
+   * rather than guessed.
+   */
+  metricContext?: MetricContext;
 }): ReportViewOutput {
   const mode = params.input?.mode ?? "summary";
   const requestedMaxRows =
@@ -199,6 +209,10 @@ export function createReportView(params: {
     mode,
     ...(mode === "summary" ? { previewRows: pageRows } : { rows: pageRows }),
     warnings,
+    // Spread-conditional rather than `metricContext: params.metricContext`, so a
+    // server that has not adopted this emits no key at all instead of an
+    // explicit `undefined` in the serialized response.
+    ...(params.metricContext ? { metricContext: params.metricContext } : {}),
   };
 }
 

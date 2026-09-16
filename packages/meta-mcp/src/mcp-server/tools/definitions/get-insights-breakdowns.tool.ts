@@ -12,6 +12,7 @@ import {
   getReportViewFetchLimit,
   ReportViewInputSchema,
   ReportViewOutputSchema,
+  buildMetricContext,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_insights_breakdowns";
@@ -139,6 +140,17 @@ export async function getInsightsBreakdownsLogic(
       warnings: result.nextCursor
         ? ["More rows are available. Call again with after set to nextCursor to continue."]
         : [],
+      // `datePreset` is NOT resolved here — Meta expands it server-side, so the
+      // concrete window is unknown to us and the field stays absent. The
+      // attribution window is only known when the caller named one; otherwise
+      // Meta applies an account default we cannot see.
+      metricContext: buildMetricContext({
+        source: "meta_ads",
+        dateRange: { start: input.timeRange?.since, end: input.timeRange?.until },
+        attributionWindow: input.actionAttributionWindows?.length
+          ? input.actionAttributionWindows.join(",")
+          : undefined,
+      }),
     }),
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
