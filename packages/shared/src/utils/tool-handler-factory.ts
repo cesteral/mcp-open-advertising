@@ -25,6 +25,7 @@ import {
   sanitizeParams,
 } from "./interaction-logger.js";
 import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
+import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
 import {
   runWithRequestContext,
   getRequestContext,
@@ -400,6 +401,10 @@ interface McpServerLike {
   server: {
     elicitInput: (params: any) => Promise<any>;
     getClientCapabilities?: () => { elicitation?: unknown } | undefined;
+    // NOTE: the SDK's `_requestHandlers` is deliberately NOT declared here.
+    // It is `private` on the real `Server`, so naming it in this structural type
+    // makes every concrete `McpServer` fail assignability.
+    // `installRawToolArgsCapture` takes `unknown` and feature-detects instead.
   };
   sendLoggingMessage(params: { level: string; logger?: string; data?: unknown }): Promise<void>;
   registerTool(
@@ -847,36 +852,28 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 // undefined so the OTHER bindings — signature, claims, expiry,
                 // issuer/audience, actionHash, replay — all still run, and the
                 // verdict reports definitionHashVerified:false.
-                // KNOWN DIVERGENCE (sweep 2026-07-25, 10-F2 — confirmed, not
-                // yet fixed). `canonicalizeExecutableArgs` is contracted to
-                // operate on the RAW wire shape, and the minter honours that.
-                // `args` here are POST-Zod-parse: the MCP SDK validates against
-                // the tool's `inputSchema` before invoking this handler, so any
-                // key with a `.default()` is materialized before the hash sees
-                // it. The two sides then hash different objects and the call is
-                // rejected as `action_hash_mismatch` under `enforce`.
+                // actionHash is computed over the RAW wire arguments, which is
+                // what `canonicalizeExecutableArgs` is contracted to receive and
+                // what the minter hashes when it dispatches the call.
                 //
-                // Affects governed writes with a non-`dry_run` default —
-                // notably sa360's `insert_conversions` / `update_conversions`
-                // (`segmentationType`), which per CLAUDE.md are sa360's ONLY
-                // governed writes. `dry_run` defaults are unaffected because
-                // `executableArgsExclude` drops them, which is why most tools
-                // are fine and why this went unnoticed.
+                // `args` here are POST-validation: the MCP SDK parses
+                // `params.arguments` against the tool's `inputSchema` before
+                // invoking this handler, so every `.default()` in the schema — at
+                // any depth — is already materialized. Hashing that object made
+                // the two sides disagree for any governed write carrying a
+                // non-excluded default, and the call was rejected as
+                // `action_hash_mismatch` under `enforce` (sweep 2026-07-25,
+                // 10-F2). `installRawToolArgsCapture` preserves the unparsed
+                // shape so the verifier hashes the same bytes the minter did.
                 //
-                // Not fixed here: the correction belongs in the canonicalization
-                // contract that BOTH repos consume as a pinned published
-                // `@cesteral/contract-hash`, which is blocked on the same
-                // publication issue as C3 / 03-F1. Stripping defaulted keys in
-                // this repo alone was rejected — a client explicitly sending a
-                // value equal to the default is indistinguishable from one
-                // omitting it, so that would drop a real argument from a
-                // security binding.
-                //
-                // Pinned by `tests/governance/action-hash-parsed-args.test.ts`,
-                // which drives a real McpServer (the governance suite's mock
-                // server calls handlers with raw args and so cannot see this).
+                // The fallback to `args` is the pre-fix behaviour, used only when
+                // capture could not be installed (logged once at registration).
+                // It cannot admit a forged call — materializing a default can only
+                // ADD a key the client did not send, never change one it did — so
+                // the fallback risks a false rejection, not a bypass.
+                const rawToolArgs = getRawToolArgs();
                 const executableArgs = canonicalizeExecutableArgs({
-                  rawArgs: args,
+                  rawArgs: rawToolArgs !== undefined ? rawToolArgs : args,
                   // `executableArgsExclude` is required by the authoring type but
                   // OPTIONAL in the (deliberately loose) release Zod schema, so a
                   // tool minted before the field existed can reach here undefined.
@@ -1173,6 +1170,28 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
         }); // end runWithRequestContext(toolAlsContext)
       });
     });
+  }
+
+  // Preserve the unparsed `tools/call` arguments for governance actionHash
+  // verification. Installed after the loop because `McpServer` only creates its
+  // `tools/call` handler on the first `registerTool`.
+  const rawArgsCaptureInstalled = installRawToolArgsCapture(server.server);
+  const hasGovernedWrite = tools.some(
+    (t) =>
+      (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral?.kind ===
+      "write"
+  );
+  if (!rawArgsCaptureInstalled && hasGovernedWrite) {
+    // Not fatal, and deliberately not fail-closed: without capture the verifier
+    // hashes the parsed args, which is exactly the pre-fix behaviour. That
+    // cannot admit a forged call (the bypass direction was always closed) but it
+    // can reject a legitimate one whose schema carries a default, so it is worth
+    // alerting on rather than swallowing.
+    logger.warn(
+      { component: "governance-audit", event: "raw_tool_args_capture_unavailable" },
+      "governance: raw tools/call arguments unavailable — actionHash falls back to " +
+        "post-validation args and may spuriously mismatch for tools with schema defaults"
+    );
   }
 
   logger.info({ toolCount: tools.length }, "Registered MCP tools");
