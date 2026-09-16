@@ -1,0 +1,31 @@
+{
+  "$comment": "Verification ledger (#203). See packages/ttd-mcp/verification.json for the full contract. A tool absent from this file ships as `declared`.",
+  "package": "amazon-dsp-mcp",
+  "$backfill": "Everything starts at `declared`. The 2026-05-15 live run (7 PASS / 2 FAIL / 13 SKIP) recorded no definitionHash, so none of its results can be bound to a definition. It also flags one of its own passes as false, which is why a green row in a live-test report is not by itself promotable evidence.",
+  "tools": {
+    "amazon_dsp_submit_report": {
+      "status": "declared",
+      "note": "Exercised live 2026-05-15 end-to-end (submit -> poll SUCCESS -> download) per docs/plans/2026-05-15-amazon-dsp-live-test-findings.md. Unbound: no definitionHash recorded."
+    },
+    "amazon_dsp_check_report_status": {
+      "status": "declared",
+      "note": "Exercised live 2026-05-15, polled to SUCCESS. Unbound: no definitionHash recorded."
+    },
+    "amazon_dsp_download_report": {
+      "status": "declared",
+      "note": "Exercised live 2026-05-15 against real campaign performance data. Unbound: no definitionHash recorded."
+    },
+    "amazon_dsp_validate_entity": {
+      "status": "declared",
+      "note": "Exercised live 2026-05-15. Unbound: no definitionHash recorded."
+    },
+    "amazon_dsp_bulk_create_entities": {
+      "status": "declared",
+      "note": "The 2026-05-15 report records this PASS and then contradicts it: the inner item POST failed with a 403, and the envelope was 200 only because the bulk wrapper did not crash. Explicitly NOT evidence of a working write."
+    },
+    "amazon_dsp_create_entity": {
+      "status": "declared",
+      "note": "FAIL on 2026-05-15 (#4, Amazon LwA enrollment). Governed write, not verified."
+    }
+  }
+}

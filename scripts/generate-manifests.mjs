@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { ROOT, withServerClient, listRawTools } from "./lib/boot-server.mjs";
 import { toManifestEntry, validateManifest } from "./lib/manifest.mjs";
 import { assertManifestCoverage } from "./lib/governed-packages.mjs";
+import { loadLedger, assertVerificationBinding } from "./lib/verification-ledger.mjs";
 
 const REGISTRY = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf-8"));
 
@@ -27,7 +28,8 @@ async function generateForPackage(packageDir) {
   const manifestPath = join(ROOT, "packages", packageDir, "dist", "cesteral-manifest.json");
 
   const tools = await withServerClient(packageDir, listRawTools);
-  const entries = tools.map(toManifestEntry).filter((entry) => entry !== null);
+  const ledger = loadLedger(packageDir);
+  const entries = tools.map((tool) => toManifestEntry(tool, ledger)).filter((e) => e !== null);
 
   if (entries.length === 0) {
     // No governed tools — make sure no stale manifest ships in the tarball.
@@ -47,8 +49,25 @@ async function generateForPackage(packageDir) {
     tools: entries,
   };
   validateManifest(manifest);
+  // Release gate (#203): no shipped entry may claim a verified status bound to
+  // a hash other than the one beside it. Unreachable by construction, asserted
+  // because it is the invariant the feature rests on.
+  assertVerificationBinding(manifest);
+
+  const byStatus = entries.reduce((acc, e) => {
+    const s = e.verification?.status ?? "declared";
+    acc[s] = (acc[s] ?? 0) + 1;
+    return acc;
+  }, {});
+  const demoted = entries.filter((e) => e.verification?.demotedFrom).length;
+  const summary =
+    Object.entries(byStatus)
+      .sort()
+      .map(([s, n]) => `${n} ${s}`)
+      .join(", ") + (demoted > 0 ? `; ${demoted} DEMOTED on definition change` : "");
+
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
-  console.log(`  ${pkg.name}: wrote manifest with ${entries.length} governed tool(s)`);
+  console.log(`  ${pkg.name}: wrote manifest with ${entries.length} governed tool(s) (${summary})`);
   return entries.length;
 }
 

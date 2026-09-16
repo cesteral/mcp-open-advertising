@@ -8,6 +8,7 @@
 
 import { computeDefinitionHash } from "@cesteral/contract-hash";
 import { cesteralManifestSchema, parseCesteralAnnotation } from "@cesteral/contract-schema";
+import { resolveVerification } from "./verification-ledger.mjs";
 
 // contractId is `<platformSlug>.<toolSlug>.v<schemaVersion>` — see
 // @cesteral/contract-schema CesteralToolAnnotations. Both slugs match the
@@ -21,8 +22,13 @@ const CONTRACT_ID_RE = /^([a-z0-9_]+)\.(.+)\.v(\d+)$/;
  * tool is not governed (no `annotations.cesteral`). Throws on a malformed or
  * inconsistent cesteral block — a hard failure so a release never ships a
  * silently-wrong manifest.
+ *
+ * `ledger` is the package's verification ledger (#203), keyed by tool name.
+ * Deliberately a SECOND argument rather than something read off the annotation:
+ * a tool must not be able to promote itself. Omit it and every tool ships
+ * `declared`, which is the safe direction.
  */
-export function toManifestEntry(tool) {
+export function toManifestEntry(tool, ledger = {}) {
   const cesteral = tool?.annotations?.cesteral;
   if (!cesteral) return null;
 
@@ -98,12 +104,17 @@ export function toManifestEntry(tool) {
   // record's schemaVersion — so the 1 vs "1" duality is cosmetic and safe.
   // Do NOT start joining/matching on `schemaVersion` across the manifest and a
   // live annotation without coercing both sides: `1 === "1"` is false.
+  const definitionHash = computeDefinitionHash(tool);
+
   return {
     toolName: tool.name,
     contractPlatformSlug: platformSlug,
     contractToolSlug: toolSlug,
     schemaVersion: String(cesteral.schemaVersion),
-    definitionHash: computeDefinitionHash(tool),
+    definitionHash,
+    // Demotion happens HERE, at the moment the hash is known, so a stale claim
+    // can never reach the artifact. See resolveVerification.
+    verification: resolveVerification(ledger[tool.name], definitionHash),
   };
 }
 
