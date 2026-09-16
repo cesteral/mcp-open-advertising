@@ -31,6 +31,7 @@ const mockCreateEntity = vi.fn();
 beforeEach(() => {
   mockCreateEntity.mockReset();
   mockResolveSession.mockReturnValue({
+    boundAdAccountId: "1234567890",
     snapchatService: {
       createEntity: mockCreateEntity,
     },
@@ -182,6 +183,7 @@ describe("snapchat_create_entity governance contract", () => {
       .mockReset()
       .mockResolvedValue({ id: "c-999", name: "New Campaign", status: "PAUSED" });
     mockResolveSession.mockReturnValue({
+      boundAdAccountId: "1234567890",
       snapchatService: { createEntity: mockCreateEntity },
     } as any);
   });
@@ -190,7 +192,7 @@ describe("snapchat_create_entity governance contract", () => {
     const result = await createEntityLogic(
       {
         entityType: "campaign",
-        adAccountId: "1",
+        adAccountId: "1234567890",
         data: { name: "New Campaign", status: "PAUSED", daily_budget_micro: 100_000_000 },
         dry_run: true,
       } as any,
@@ -209,7 +211,7 @@ describe("snapchat_create_entity governance contract", () => {
     const result = await createEntityLogic(
       {
         entityType: "campaign",
-        adAccountId: "1",
+        adAccountId: "1234567890",
         data: { name: "New Campaign", status: "PAUSED" },
       } as any,
       ctx,
@@ -223,7 +225,7 @@ describe("snapchat_create_entity governance contract", () => {
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     mockCreateEntity.mockResolvedValue({ id: "x" });
     const result = await createEntityLogic(
-      { entityType: "creative", adAccountId: "1", data: { name: "Test" } } as any,
+      { entityType: "creative", adAccountId: "1234567890", data: { name: "Test" } } as any,
       ctx,
       sdk
     );
@@ -234,7 +236,7 @@ describe("snapchat_create_entity governance contract", () => {
   it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
     mockCreateEntity.mockClear();
     const result = await createEntityLogic(
-      { entityType: "creative", adAccountId: "1", data: {}, dry_run: true } as any,
+      { entityType: "creative", adAccountId: "1234567890", data: {}, dry_run: true } as any,
       ctx,
       sdk
     );

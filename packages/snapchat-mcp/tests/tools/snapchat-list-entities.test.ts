@@ -32,6 +32,7 @@ const mockListEntities = vi.fn();
 beforeEach(() => {
   mockListEntities.mockReset();
   mockResolveSession.mockReturnValue({
+    boundAdAccountId: "acct_123456",
     snapchatService: {
       listEntities: mockListEntities,
     },

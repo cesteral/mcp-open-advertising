@@ -35,7 +35,10 @@ describe("pinterest_adjust_bids governance contract (effect class)", () => {
         results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ pinterestService: svc });
+    mockResolveSessionServices.mockReturnValue({
+      boundAdAccountId: "1",
+      pinterestService: svc,
+    });
     mockElicit.mockResolvedValue(true);
   });
 

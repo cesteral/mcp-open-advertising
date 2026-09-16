@@ -44,7 +44,10 @@ describe("snapchat_upload_image", () => {
       postMultipart: vi.fn().mockResolvedValue({}),
       get: vi.fn(),
     };
-    mockResolveSessionServices.mockReturnValue({ snapchatService: { client } } as any);
+    mockResolveSessionServices.mockReturnValue({
+      boundAdAccountId: "acct_123",
+      snapchatService: { client },
+    } as any);
     mockPollUntilComplete.mockRejectedValue(new ReportTimeoutError(3));
 
     await expect(

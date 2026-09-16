@@ -50,7 +50,10 @@ describe("snapchat uploads governance contract (effect class)", () => {
       postMultipart: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue({ media: [{ media: { media_status: "READY" } }] }),
     };
-    mockResolveSessionServices.mockReturnValue({ snapchatService: { client } });
+    mockResolveSessionServices.mockReturnValue({
+      boundAdAccountId: "1",
+      snapchatService: { client },
+    });
   });
 
   const cases = [

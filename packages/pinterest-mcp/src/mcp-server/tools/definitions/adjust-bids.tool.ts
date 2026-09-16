@@ -9,6 +9,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -136,7 +137,8 @@ export async function adjustBidsLogic(
     };
   }
 
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await pinterestService.adjustBids(
     { adAccountId: input.adAccountId },

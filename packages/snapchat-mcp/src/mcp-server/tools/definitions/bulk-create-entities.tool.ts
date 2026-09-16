@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, assertAccountScope } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
 import {
@@ -124,7 +124,8 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const filters: Record<string, string> = { adAccountId: input.adAccountId };
   if (input.campaignId) filters.campaignId = input.campaignId;

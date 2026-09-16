@@ -19,6 +19,7 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
@@ -80,7 +81,8 @@ export async function updateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.

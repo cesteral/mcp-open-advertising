@@ -59,7 +59,7 @@ describe("snapchat_submit_report governance contract (effect class)", () => {
   it("dry_run defaults report_type to account-level and flags an inverted range", async () => {
     const result = await submitReportLogic(
       {
-        adAccountId: "1",
+        adAccountId: "1234567890",
         fields: ["impressions"],
         startTime: "2026-03-10T00:00:00Z",
         endTime: "2026-03-01T00:00:00Z",

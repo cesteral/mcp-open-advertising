@@ -32,6 +32,7 @@ const mockListEntities = vi.fn();
 beforeEach(() => {
   mockListEntities.mockReset();
   mockResolveSession.mockReturnValue({
+    boundAdAccountId: "1234567890",
     pinterestService: {
       listEntities: mockListEntities,
     },

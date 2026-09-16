@@ -13,6 +13,7 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -74,7 +75,8 @@ export async function duplicateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
   const dispatchedCapability = resolveSnapchatDuplicateCapability(input.entityType);
 
   if (input.dry_run === true) {

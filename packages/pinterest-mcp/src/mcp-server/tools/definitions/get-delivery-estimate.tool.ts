@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -47,7 +48,8 @@ export async function getDeliveryEstimateLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetDeliveryEstimateOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const estimate = await pinterestService.getAudienceEstimate(
     { adAccountId: input.adAccountId },
