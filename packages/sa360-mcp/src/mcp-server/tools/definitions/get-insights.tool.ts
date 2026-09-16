@@ -18,6 +18,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { buildMetricContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -208,6 +209,12 @@ export async function getInsightsLogic(
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
       input,
+      // `input.dateRange` is an unresolved preset string, so the concrete
+      // window is only known when the caller supplied both dates.
+      metricContext: buildMetricContext({
+        source: "search_ads_360",
+        dateRange: { start: input.startDate, end: input.endDate },
+      }),
       warnings: result.nextPageToken
         ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
         : [],

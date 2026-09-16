@@ -12,6 +12,7 @@ import {
   DATE_PRESET_VALUES,
   ReportViewInputSchema,
   ReportViewOutputSchema,
+  buildMetricContext,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
@@ -101,6 +102,12 @@ export async function getReportLogic(
       rows: arrayRowsToRecords(result.headers, result.rows),
       totalRows: result.totalRows,
       input,
+      // `resolveDatePreset` above turns a preset into concrete dates, so the
+      // window is known either way.
+      metricContext: buildMetricContext({
+        source: "microsoft_ads",
+        dateRange: { start: resolvedStartDate, end: resolvedEndDate },
+      }),
     }),
     timestamp: new Date().toISOString(),
   };

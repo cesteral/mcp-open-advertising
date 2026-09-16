@@ -12,6 +12,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
   resolveDatePreset,
+  buildMetricContext,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -141,6 +142,12 @@ export async function getAnalyticsLogic(
     totalRows: augmented.length,
     input,
     warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
+    // Preset already resolved to concrete dates above, so the window is known
+    // even when the caller passed a preset.
+    metricContext: buildMetricContext({
+      source: "linkedin_ads",
+      dateRange: { start: resolvedStartDate, end: resolvedEndDate },
+    }),
   });
 
   return {

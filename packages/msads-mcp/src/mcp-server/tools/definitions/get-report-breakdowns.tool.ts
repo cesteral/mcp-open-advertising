@@ -13,6 +13,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { buildMetricContext } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_report_breakdowns";
@@ -120,6 +121,11 @@ export async function getReportBreakdownsLogic(
       rows: arrayRowsToRecords(result.headers, result.rows),
       totalRows: result.totalRows,
       input: { ...input, columns: allColumns },
+      // `resolveDatePreset` above turns a preset into concrete dates.
+      metricContext: buildMetricContext({
+        source: "microsoft_ads",
+        dateRange: { start: resolvedStartDate, end: resolvedEndDate },
+      }),
     }),
     appliedColumns: allColumns,
     timestamp: new Date().toISOString(),

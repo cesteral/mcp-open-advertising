@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import { buildMetricContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
   computeMetrics,
@@ -155,6 +156,11 @@ export async function getInsightsLogic(
       warnings: result.nextCursor
         ? ["More rows are available. Call again with after set to nextCursor to continue."]
         : [],
+      // `datePreset` is expanded by Meta server-side, so it yields no window here.
+      metricContext: buildMetricContext({
+        source: "meta_ads",
+        dateRange: { start: input.timeRange?.since, end: input.timeRange?.until },
+      }),
     }),
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
