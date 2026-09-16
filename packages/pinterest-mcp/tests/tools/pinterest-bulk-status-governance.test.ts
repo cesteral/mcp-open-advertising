@@ -44,7 +44,8 @@ describe("pinterest_bulk_update_status governance contract (effect class)", () =
         ],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ pinterestService: svc });
+    mockResolveSessionServices.mockReturnValue({
+      boundAdAccountId: "1234567890", pinterestService: svc });
     mockElicit.mockResolvedValue(true);
   });
 

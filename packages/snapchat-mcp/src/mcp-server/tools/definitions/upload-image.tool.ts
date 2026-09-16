@@ -14,6 +14,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -110,7 +111,8 @@ export async function uploadImageLogic(
     };
   }
 
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,

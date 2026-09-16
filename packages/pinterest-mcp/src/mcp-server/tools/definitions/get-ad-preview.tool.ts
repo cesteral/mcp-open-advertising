@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -39,7 +40,8 @@ export async function getAdPreviewLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetAdPreviewOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const preview = await pinterestService.getAdPreviews(
     { adAccountId: input.adAccountId },

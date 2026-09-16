@@ -62,3 +62,81 @@ export function auditAccountScopeFile(file) {
 export function auditAccountScopeCoverage(files) {
   return files.map((f) => auditAccountScopeFile(f)).filter((v) => v !== null);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session-contract rule (#211 Gap 1)
+//
+// The rule above keys on a `bound<Account>Id` LOCAL in the handler. That is
+// sound when present, but a handler can execute against the session's account
+// without ever destructuring one — the binding lives in the resolved SERVICE.
+// `auditAccountScopeFile` then sees no `bound*`, concludes "input-scoped", and
+// returns null. That is how the two Amazon commitment tools reached production
+// with a REQUIRED `profileId` the handler ignored (fixed by hand in #195); the
+// class stayed undetectable until this rule.
+//
+// This rule keys on the PACKAGE'S SESSION CONTRACT instead: if `SessionServices`
+// declares a bound account id, every tool in that package that also lets the
+// caller name that account must reconcile the two. A handler cannot opt out by
+// declining to destructure.
+//
+// Deliberately NOT a dataflow analysis. Whether the caller's id is forwarded
+// upstream or silently dropped is not statically decidable in this codebase —
+// it reaches service calls through intermediate objects (`const filters = {...}`)
+// and nested clients (`service.client.post(...)`). Requiring an explicit
+// assert-or-exempt sidesteps that question and fails loud rather than open.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A handler that resolves session services can execute against the bound account. */
+const RESOLVES_SESSION_RE = /\bresolveSessionServices\s*\(/;
+
+/**
+ * The caller-supplied scope keys a package's session binds, read from its
+ * `SessionServices` interface: `boundProfileId` → `profileId`.
+ *
+ * @param {string} source contents of `src/services/session-services.ts`
+ * @returns {string[] | null} keys, or `null` when the interface cannot be found
+ *   — the caller MUST treat null as an error rather than "no binding", or a
+ *   rename silently disables this rule.
+ */
+export function extractSessionBoundKeys(source) {
+  const block = source.match(/export interface SessionServices\s*\{([\s\S]*?)\n\}/);
+  if (!block) return null;
+  return [
+    ...new Set(
+      [...block[1].matchAll(/\bbound([A-Z][A-Za-z0-9]*(?:Id|Ids|Urn))\b\s*[?:]/g)].map(
+        (m) => m[1][0].toLowerCase() + m[1].slice(1)
+      )
+    ),
+  ];
+}
+
+/**
+ * Audit one tool file against its package's session binding.
+ *
+ * @param {{ path: string, source: string, boundKeys: string[] }} file
+ * @returns {{ path: string, keys: string[] } | null}
+ */
+export function auditSessionBoundScopeFile({ path, source, boundKeys }) {
+  if (!boundKeys?.length) return null;
+
+  // Declared in the Zod input schema. Matching the declaration (`key: z.`)
+  // rather than any mention avoids counting examples, annotations and argMaps.
+  const declared = boundKeys.filter((k) => new RegExp(`\\b${k}\\s*:\\s*z\\s*\\.`).test(source));
+  if (!declared.length) return null;
+
+  // A tool that never resolves session services cannot execute against the
+  // bound account at all — symbolic validators and pure projections. Excluding
+  // them needs no dataflow, only the absence of the call.
+  if (!RESOLVES_SESSION_RE.test(source)) return null;
+
+  if (ASSERT_RE.test(source) || EXEMPT_RE.test(source)) return null;
+  return { path, keys: declared };
+}
+
+/**
+ * @param {Array<{ path: string, source: string, boundKeys: string[] }>} files
+ * @returns {Array<{ path: string, keys: string[] }>}
+ */
+export function auditSessionBoundScopeCoverage(files) {
+  return files.map((f) => auditSessionBoundScopeFile(f)).filter((v) => v !== null);
+}

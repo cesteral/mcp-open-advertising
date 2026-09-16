@@ -9,7 +9,7 @@ import {
   resolvePinterestCreateCapability,
   symbolicValidate,
 } from "../utils/dry-run.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, assertAccountScope } from "@cesteral/shared";
 import { snapshotFromPinterestEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -81,7 +81,8 @@ export async function createEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
   const dispatchedCapability = resolvePinterestCreateCapability(input.entityType);
 
   if (input.dry_run === true) {

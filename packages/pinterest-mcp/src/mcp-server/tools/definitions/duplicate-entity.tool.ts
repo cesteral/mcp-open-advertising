@@ -13,6 +13,7 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -77,7 +78,8 @@ export async function duplicateEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
   const dispatchedCapability = resolvePinterestDuplicateCapability(input.entityType);
 
   if (input.dry_run === true) {

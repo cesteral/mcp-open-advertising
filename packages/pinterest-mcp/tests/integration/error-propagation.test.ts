@@ -18,6 +18,10 @@ const mockState = vi.hoisted(() => ({
 const mockServices = {
   pinterestService: mockState.pinterestService,
   pinterestReportingService: mockState.pinterestReportingService,
+  // Handlers assert the caller-supplied adAccountId against the session binding,
+  // so the mocked session must carry one — these cases exercise error
+  // propagation from the service, not scope rejection.
+  boundAdAccountId: "1234567890",
 };
 
 vi.mock("../../src/services/session-services.js", async () => {

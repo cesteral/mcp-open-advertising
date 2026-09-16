@@ -32,6 +32,7 @@ beforeEach(() => {
   mockDuplicateEntity.mockReset();
   mockGetEntity.mockReset();
   mockResolveSession.mockReturnValue({
+    boundAdAccountId: "acct-1",
     snapchatService: {
       duplicateEntity: mockDuplicateEntity,
       getEntity: mockGetEntity,
@@ -95,14 +96,14 @@ describe("snapchat_duplicate_entity", () => {
     expect(
       DuplicateEntityInputSchema.safeParse({
         entityType: "campaign",
-        adAccountId: "a",
+        adAccountId: "acct-1",
         entityId: "e",
       }).success
     ).toBe(true);
     expect(
       DuplicateEntityInputSchema.safeParse({
         entityType: "ad",
-        adAccountId: "a",
+        adAccountId: "acct-1",
         entityId: "e",
       }).success
     ).toBe(false);

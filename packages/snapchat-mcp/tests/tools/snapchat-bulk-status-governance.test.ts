@@ -44,7 +44,8 @@ describe("snapchat_bulk_update_status governance contract (effect class)", () =>
         ],
       }),
     };
-    mockResolveSessionServices.mockReturnValue({ snapchatService: svc });
+    mockResolveSessionServices.mockReturnValue({
+      boundAdAccountId: "1234567890", snapchatService: svc });
     mockElicit.mockResolvedValue(true);
   });
 

@@ -8,6 +8,7 @@ import {
   PaginationOutputSchema,
   buildPaginationOutput,
   formatPaginationHint,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -62,7 +63,8 @@ export async function listEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
-  const { pinterestService } = resolveSessionServices(sdkContext);
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await pinterestService.listEntities(
     input.entityType as PinterestEntityType,

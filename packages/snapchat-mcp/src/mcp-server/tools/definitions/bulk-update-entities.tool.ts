@@ -12,6 +12,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -158,7 +159,8 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const bulkResult = await snapchatService.bulkUpdateEntities(
     input.entityType as SnapchatEntityType,

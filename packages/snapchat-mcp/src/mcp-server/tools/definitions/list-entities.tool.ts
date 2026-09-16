@@ -8,6 +8,7 @@ import {
   PaginationOutputSchema,
   buildPaginationOutput,
   formatPaginationHint,
+  assertAccountScope,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -48,7 +49,8 @@ export async function listEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
-  const { snapchatService } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const filters: Record<string, string> = { adAccountId: input.adAccountId };
   if (input.campaignId) filters.campaignId = input.campaignId;

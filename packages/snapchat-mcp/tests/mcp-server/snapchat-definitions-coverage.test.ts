@@ -83,11 +83,22 @@ const snapchatReportingService = {
   })),
 };
 
+/**
+ * The account this mocked session is bound to. Each tool is driven with its OWN
+ * example input, and the handlers now assert the caller-supplied `adAccountId`
+ * against the session binding — so a single fixed literal here would fail every
+ * tool whose example uses a realistic Snapchat UUID account id. The loop points
+ * this at the example it is about to run.
+ */
+const sessionBinding = { adAccountId: "1234567890" };
+
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: () => ({
     snapchatService,
     snapchatReportingService,
-    boundAdAccountId: "1234567890",
+    get boundAdAccountId() {
+      return sessionBinding.adAccountId;
+    },
   }),
 }));
 
@@ -127,6 +138,11 @@ describe("Snapchat MCP definitions coverage", () => {
       expect(example, `${tool.name} should have at least one input example`).toBeDefined();
 
       const parsedInput = tool.inputSchema.parse(example);
+      // Bind the session to this example's account so the scope assertion passes
+      // for the legitimate case; mismatch rejection is covered by its own tests.
+      const exampleAccount = (parsedInput as Record<string, unknown>).adAccountId;
+      sessionBinding.adAccountId =
+        typeof exampleAccount === "string" ? exampleAccount : "1234567890";
       // Run logic concurrently with timer advancement to handle any sleep() calls in upload polling
       const [result] = await Promise.all([
         tool.logic(parsedInput as never, requestContext, sdkContext),
