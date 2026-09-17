@@ -37,7 +37,9 @@
     "check:dv360-codegen-drift": "node scripts/check-dv360-codegen-drift.mjs",
     "check:terraform-drift": "node scripts/check-terraform-drift.mjs",
     "check:platform-facts": "node scripts/check-platform-facts.mjs",
-    "check:platform-facts:freshness": "node scripts/check-platform-facts.mjs --freshness"
+    "check:platform-facts:freshness": "node scripts/check-platform-facts.mjs --freshness",
+    "eval:routing": "node evals/run-cross-server-routing.mjs --router=lexical",
+    "eval:routing:model": "node evals/run-cross-server-routing.mjs --router=anthropic"
   },
   "devDependencies": {
     "@cesteral/contract-hash": "workspace:*",
