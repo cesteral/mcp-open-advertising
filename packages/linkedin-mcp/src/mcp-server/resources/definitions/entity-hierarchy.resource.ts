@@ -26,11 +26,11 @@ Ad Account (urn:li:sponsoredAccount:XXXXXXXXX)
 
 | Entity Type | API Path | Display Name |
 |-------------|----------|--------------|
-| **adAccount** | \`/v2/adAccounts\` | Ad Account |
-| **campaignGroup** | \`/v2/adCampaignGroups\` | Campaign Group |
-| **campaign** | \`/v2/adCampaigns\` | Campaign |
-| **creative** | \`/v2/adCreatives\` | Creative |
-| **conversionRule** | \`/v2/conversions\` | Conversion Rule |
+| **adAccount** | \`/rest/adAccounts\` | Ad Account |
+| **campaignGroup** | \`/rest/adAccounts/{accountId}/adCampaignGroups\` | Campaign Group |
+| **campaign** | \`/rest/adAccounts/{accountId}/adCampaigns\` | Campaign |
+| **creative** | \`/v2/adCreatives\` *(not yet migrated — schema rewrite, #210)* | Creative |
+| **conversionRule** | \`/v2/conversions\` *(not yet migrated, #210)* | Conversion Rule |
 
 ## Key Concepts
 
@@ -60,24 +60,26 @@ URNs must be URL-encoded when used in API paths:
 
 ## LinkedIn API Patterns
 
-### Create: POST /v2/{entityPath}
+### Create: POST /rest/adAccounts/{accountId}/{entityPath}
 Body is JSON. Response contains the new entity URN.
 
-### Read: GET /v2/{entityPath}/{encodedUrn}
+### Read: GET /v2/{entityPath}/{encodedUrn} *(still legacy — #210)*
 URN must be URL-encoded in path.
 
-### Update: POST /v2/{entityPath}/{encodedUrn} with X-Restli-Method: PARTIAL_UPDATE
+### Update: POST /v2/{entityPath}/{encodedUrn} *(still legacy — #210)* with X-Restli-Method: PARTIAL_UPDATE
 Body: \`{ "patch": { "$set": { ...fields } } }\`
 
-### Delete: DELETE /v2/{entityPath}/{encodedUrn}
+### Delete: DELETE /v2/{entityPath}/{encodedUrn} *(still legacy — #210)*
 
-### List: GET /v2/{entityPath}?q=search&{scopingParam}={accountUrn}&start={n}&count={n}
+### List: GET /rest/adAccounts/{accountId}/{entityPath}?q=search&start={n}&count={n}
 Offset-based pagination via \`start\` and \`count\` parameters.
 Response contains \`elements\` array and \`paging\` object.
 
-The account scoping parameter varies by entity type:
-- \`accounts[0]\` — campaigns (\`/v2/adCampaigns\`) and creatives (\`/v2/adCreatives\`)
-- \`account\` — campaign groups (\`/v2/adCampaignGroups\`) and conversion rules (\`/v2/conversions\`)
+Entities not yet migrated still scope by query parameter:
+- \`accounts[0]\` — creatives (\`/v2/adCreatives\`)
+- \`account\` — conversion rules (\`/v2/conversions\`)
+
+Campaigns and campaign groups no longer use a scoping parameter: the account is part of their path.
 
 ## Required Headers (All Requests)
 

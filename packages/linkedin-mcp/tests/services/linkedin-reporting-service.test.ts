@@ -34,7 +34,7 @@ describe("LinkedInReportingService", () => {
 
     expect(result.elements).toHaveLength(1);
     const [path, params] = mockHttpClient.get.mock.calls[0];
-    expect(path).toBe("/v2/adAnalytics");
+    expect(path).toBe("/rest/adAnalytics");
     expect(params.pivot).toBe("CAMPAIGN");
     expect(params.timeGranularity).toBe("DAILY");
     expect(params.fields).toContain("impressions");

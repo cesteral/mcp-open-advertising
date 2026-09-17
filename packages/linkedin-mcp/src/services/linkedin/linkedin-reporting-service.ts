@@ -9,7 +9,7 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 /**
  * LinkedIn Reporting Service — Queries the adAnalytics API for performance data.
  *
- * LinkedIn Analytics uses an offset-based API at /v2/adAnalytics with:
+ * LinkedIn Analytics uses an offset-based API at /rest/adAnalytics with:
  * - dateRange.start.year/month/day and dateRange.end.year/month/day
  * - pivot: CAMPAIGN, CAMPAIGN_GROUP, CREATIVE, MEMBER_COMPANY_SIZE, etc.
  * - timeGranularity: DAILY, MONTHLY, YEARLY, ALL
@@ -67,7 +67,7 @@ export class LinkedInReportingService {
       fields: (metrics ?? defaultMetrics).join(","),
     };
 
-    const result = (await this.httpClient.get("/v2/adAnalytics", params, context)) as Record<
+    const result = (await this.httpClient.get("/rest/adAnalytics", params, context)) as Record<
       string,
       unknown
     >;

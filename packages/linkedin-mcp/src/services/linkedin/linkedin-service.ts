@@ -8,6 +8,7 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
   type LinkedInEntityType,
+  adAccountIdFromUrn,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type {
   LinkedInAdAccount,
@@ -92,16 +93,19 @@ export class LinkedInService {
       count: String(Math.min(count ?? 25, 100)),
     };
 
+    // Under /rest/ the ad account lives in the PATH; under the legacy /v2/
+    // surface it is a query parameter. entity-mapping.ts owns which is which.
     if (adAccountUrn && config.listScopingParam) {
-      // Each entity type declares its own scoping parameter name
       params[config.listScopingParam] = adAccountUrn;
     }
 
-    const result = (await this.httpClient.get(
-      config.apiPath,
-      params,
-      context
-    )) as LinkedInElementsResponse<LinkedInEntityMap[T]>;
+    const path = config.collectionPath(
+      config.accountScoped && adAccountUrn ? adAccountIdFromUrn(adAccountUrn) : undefined
+    );
+
+    const result = (await this.httpClient.get(path, params, context)) as LinkedInElementsResponse<
+      LinkedInEntityMap[T]
+    >;
 
     return {
       entities: result.elements ?? [],
@@ -115,14 +119,14 @@ export class LinkedInService {
     entityUrn: string,
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
-    const config = getEntityConfig(entityType);
-
     await this.rateLimiter.consume(`linkedin:default`);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context) as Promise<
-      LinkedInEntityMap[T]
-    >;
+    return this.httpClient.get(
+      this.entityItemPath(entityType, encodedUrn),
+      undefined,
+      context
+    ) as Promise<LinkedInEntityMap[T]>;
   }
 
   async createEntity<T extends LinkedInEntityType>(
@@ -135,11 +139,16 @@ export class LinkedInService {
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
-    return this.httpClient.post(
-      config.apiPath,
-      data as unknown as Record<string, unknown>,
-      context
-    ) as Promise<LinkedInEntityMap[T]>;
+    // A create payload for an account-scoped entity carries the owning account,
+    // so the path can be built without adding a parameter to the tool schema.
+    const payload = data as unknown as Record<string, unknown>;
+    const path = config.collectionPath(
+      config.accountScoped
+        ? adAccountIdFromUrn(requireAccountInPayload(payload, entityType))
+        : undefined
+    );
+
+    return this.httpClient.post(path, payload, context) as Promise<LinkedInEntityMap[T]>;
   }
 
   async updateEntity<T extends LinkedInEntityType>(
@@ -148,14 +157,12 @@ export class LinkedInService {
     data: LinkedInUpdateEntityInputMap[T],
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
-    const config = getEntityConfig(entityType);
-
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
     return this.httpClient.patch(
-      `${config.apiPath}/${encodedUrn}`,
+      this.entityItemPath(entityType, encodedUrn),
       data as unknown as Record<string, unknown>,
       context
     ) as Promise<LinkedInEntityMap[T]>;
@@ -166,12 +173,10 @@ export class LinkedInService {
     entityUrn: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const config = getEntityConfig(entityType);
-
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.delete(`${config.apiPath}/${encodedUrn}`, context);
+    return this.httpClient.delete(this.entityItemPath(entityType, encodedUrn), context);
   }
 
   // ─── Ad Accounts ───────────────────────────────────────────────────
@@ -193,7 +198,7 @@ export class LinkedInService {
     };
 
     const result = (await this.httpClient.get(
-      "/v2/adAccounts",
+      "/rest/adAccounts",
       params,
       context
     )) as LinkedInElementsResponse<LinkedInAdAccount>;
@@ -322,7 +327,7 @@ export class LinkedInService {
   /**
    * Search targeting facets (interests, locations, etc.).
    *
-   * `/v2/adTargetingFacets` is a Rest.li collection finder and supports
+   * `/rest/adTargetingFacets` is a Rest.li collection finder and supports
    * offset-based pagination via `start`/`count`, returning a `paging` block.
    */
   async searchTargeting(
@@ -345,13 +350,13 @@ export class LinkedInService {
       params.query = query;
     }
 
-    return this.httpClient.get("/v2/adTargetingFacets", params, context);
+    return this.httpClient.get("/rest/adTargetingFacets", params, context);
   }
 
   /**
    * Browse targeting categories / facets for an ad account.
    *
-   * Like `searchTargeting`, this hits the `/v2/adTargetingFacets` Rest.li
+   * Like `searchTargeting`, this hits the `/rest/adTargetingFacets` Rest.li
    * collection finder, which supports offset-based pagination via `start`/
    * `count` and returns a `paging` block. Large accounts can expose more
    * facets than fit in one page, so the offset is threaded through.
@@ -376,7 +381,7 @@ export class LinkedInService {
       params.facetType = facetType;
     }
 
-    return this.httpClient.get("/v2/adTargetingFacets", params, context);
+    return this.httpClient.get("/rest/adTargetingFacets", params, context);
   }
 
   // ─── Duplicate Entity ────────────────────────────────────────────
@@ -439,6 +444,9 @@ export class LinkedInService {
       requestBody.optimizationTargetType = optimizationTargetType;
     }
 
+    // NOT migrated. #210 guesses /rest/adForecasts, but the versioned surface is
+    // the Media Planning API and neither the resource name nor the request shape
+    // is corroborated. A renamed guess that 404s is worse than a known-legacy path.
     return this.httpClient.post("/v2/adForecastsV2", requestBody, context);
   }
 
@@ -461,8 +469,60 @@ export class LinkedInService {
       params.adFormat = adFormat;
     }
 
+    // NOT migrated, and #210's guess is wrong: the versioned equivalent is
+    // /rest/adPreviews with `action=livePreviewForCreative`/accurate-preview
+    // semantics — an action POST, not a GET on a URN, so it is a call-shape
+    // change rather than a re-path. Held for the same reason as creatives.
     return this.httpClient.get(`/v2/adCreativePreviews/${encodedUrn}`, params, context);
   }
 
   // ─── Internal Helpers ────────────────────────────────────────────
+
+  /**
+   * Path for a single entity.
+   *
+   * Under `/rest/` an account-scoped entity's item path is
+   * `/rest/adAccounts/{accountId}/adCampaigns/{campaignId}` — the account is
+   * required for GET/PATCH/DELETE too, not just for listing. A LinkedIn URN
+   * (`urn:li:sponsoredCampaign:123`) does not carry its owning account, and this
+   * server binds no session-level account, so there is nothing to derive it
+   * from. Supplying it means a new parameter on `get`/`update`/`delete_entity`,
+   * which changes their inputSchema and therefore every governed
+   * `definitionHash` in this package — deliberately staged separately (#210).
+   *
+   * Until then these keep the legacy `/v2/` item path. They are NOT converted
+   * into refusals: that `/v2/` is fully dead for these products is #210's claim
+   * and it is unverified from here, so refusing would risk breaking a call that
+   * still works, on our own say-so.
+   */
+  private entityItemPath(entityType: LinkedInEntityType, encodedUrn: string): string {
+    const config = getEntityConfig(entityType);
+    const collection = config.accountScoped
+      ? (config.legacyCollectionPath ?? config.collectionPath())
+      : config.collectionPath();
+    return `${collection}/${encodedUrn}`;
+  }
+}
+
+/**
+ * The ad account URN carried by a create payload.
+ *
+ * Under `/rest/` a create posts to `/rest/adAccounts/{accountId}/adCampaigns`,
+ * so the account has to be known before the request is built. Campaign and
+ * campaign-group payloads already carry it as `account`, which is why `create`
+ * could be migrated without adding a tool parameter — unlike get/update/delete,
+ * where nothing in the call supplies one.
+ */
+function requireAccountInPayload(
+  payload: Record<string, unknown>,
+  entityType: LinkedInEntityType
+): string {
+  const account = payload.account;
+  if (typeof account === "string" && account.length > 0) return account;
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `Creating a ${entityType} requires an "account" URN in the payload — LinkedIn's versioned ` +
+      `API posts to /rest/adAccounts/{accountId}/…, so the owning account must be known ` +
+      `before the request is built. See #210.`
+  );
 }
