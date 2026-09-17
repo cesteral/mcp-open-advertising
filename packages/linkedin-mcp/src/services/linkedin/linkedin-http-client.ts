@@ -182,7 +182,8 @@ export class LinkedInHttpClient {
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
-    // LinkedIn uses full paths like /v2/adAccounts
+    // Callers supply the whole path (/rest/... or legacy /v2/...), so this
+    // helper needs no surface knowledge of its own.
     const baseUrlNoTrailing = this.baseUrl.replace(/\/$/, "");
     const url = new URL(`${baseUrlNoTrailing}${path}`);
     if (params) {

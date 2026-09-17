@@ -13,7 +13,7 @@ function formatAnalyticsReferenceMarkdown(): string {
   return `# LinkedIn Ads Analytics Reference
 
 ## Endpoint
-\`GET /v2/adAnalytics\`
+\`GET /rest/adAnalytics\`
 
 ## Required Parameters
 
@@ -120,7 +120,7 @@ dateRange.end.day=31
 ## Example: Get Daily Campaign Metrics
 
 \`\`\`
-GET /v2/adAnalytics?
+GET /rest/adAnalytics?
   q=analytics&
   pivot=CAMPAIGN&
   timeGranularity=DAILY&

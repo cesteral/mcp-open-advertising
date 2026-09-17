@@ -21,7 +21,7 @@ const TOOL_NAME = "linkedin_get_analytics";
 const TOOL_TITLE = "Get LinkedIn Ads Analytics";
 const TOOL_DESCRIPTION = `Get analytics metrics for a LinkedIn Ads account.
 
-Uses the LinkedIn /v2/adAnalytics endpoint with offset-based date ranges.
+Uses the LinkedIn /rest/adAnalytics endpoint with offset-based date ranges.
 
 **Available pivots:** CAMPAIGN, CAMPAIGN_GROUP, CREATIVE, MEMBER_COMPANY_SIZE,
 MEMBER_INDUSTRY, MEMBER_SENIORITY, MEMBER_JOB_TITLE, MEMBER_JOB_FUNCTION,

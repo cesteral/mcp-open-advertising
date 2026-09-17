@@ -59,7 +59,7 @@ Fetch these resources for detailed schema information:
 - \`linkedin_delete_entity\` — Delete entity
 
 ### Analytics
-- \`linkedin_get_analytics\` — Delivery metrics via /v2/adAnalytics
+- \`linkedin_get_analytics\` — Delivery metrics via /rest/adAnalytics
 - \`linkedin_get_analytics_breakdowns\` — Metrics with dimensional breakdowns
 
 ### Bulk Operations

@@ -48,10 +48,13 @@ describe("LinkedInService", () => {
       expect(result.total).toBe(2);
 
       const [path, params] = mockHttpClient.get.mock.calls[0];
-      expect(path).toBe("/v2/adCampaigns");
+      // THE structural change (#210): the ad account moves out of the query
+      // string and into the path, and the numeric id — not the URN — is what
+      // goes there.
+      expect(path).toBe("/rest/adAccounts/123456789/adCampaigns");
+      expect(params).not.toHaveProperty("accounts[0]");
       expect(params).toMatchObject({
         q: "search",
-        "accounts[0]": "urn:li:sponsoredAccount:123456789",
       });
     });
 
@@ -86,7 +89,7 @@ describe("LinkedInService", () => {
       await service.listEntities("adAccount");
 
       const [path, params] = mockHttpClient.get.mock.calls[0];
-      expect(path).toBe("/v2/adAccounts");
+      expect(path).toBe("/rest/adAccounts");
       expect(params).not.toHaveProperty("accounts[0]");
     });
   });
@@ -118,7 +121,10 @@ describe("LinkedInService", () => {
 
       expect(result).toEqual({ id: 987654321 });
       const [path, body] = mockHttpClient.post.mock.calls[0];
-      expect(path).toBe("/v2/adCampaignGroups");
+      // The account moves from the payload into the path under /rest/. The
+      // payload still carries it, which is why create could migrate without a
+      // new tool parameter.
+      expect(path).toBe("/rest/adAccounts/123456789/adCampaignGroups");
       expect(body).toMatchObject(data);
     });
   });
@@ -159,7 +165,7 @@ describe("LinkedInService", () => {
 
       expect(result.accounts).toHaveLength(1);
       const [path] = mockHttpClient.get.mock.calls[0];
-      expect(path).toBe("/v2/adAccounts");
+      expect(path).toBe("/rest/adAccounts");
     });
   });
 

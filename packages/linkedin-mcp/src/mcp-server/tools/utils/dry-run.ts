@@ -5,7 +5,7 @@
  * Dry-run helpers for the LinkedIn `update_entity` tool. R3-U3 wiring.
  *
  * LinkedIn exposes NO native validate / preview / draft mode for entity
- * mutations — `/v2/adCampaigns/{urn}` is a plain partial-update endpoint. So
+ * mutations — the campaign item endpoint is a plain partial-update endpoint. So
  * both axes here are SYMBOLIC:
  *
  * - **Validation** runs a small set of business rules (status enum, budget
