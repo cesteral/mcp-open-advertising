@@ -37,6 +37,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { isDestructiveCandidate } from "./destructive-tools.mjs";
 
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
 
@@ -47,27 +48,6 @@ const reversible = JSON.parse(
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
   .sort();
-
-/**
- * Canonical write operations whose effect cannot be undone by a later call.
- * `archive` is here because archival is irreversible on the platforms that
- * expose it (DV360 has no unarchive), which is the trap the original issue
- * flagged: a client reaching for "the reversible one" finds both are terminal.
- */
-const TERMINAL_OPERATIONS = new Set(["delete", "archive", "delete_schedule"]);
-
-/**
- * Whole-token removal verbs. Underscore-anchored so `undelete` (were one ever
- * added) and `deleted_at` do not match, mirroring the write-coverage ratchet's
- * MUTATION_NAME construction.
- */
-const TERMINAL_NAME = /(^|_)(delete|remove|archive|destroy|purge)(_|$)/;
-
-function isDestructiveCandidate(tool) {
-  if (TERMINAL_NAME.test(tool.name)) return true;
-  const ops = tool.annotations?.cesteral?.operation;
-  return Array.isArray(ops) && ops.some((op) => TERMINAL_OPERATIONS.has(op));
-}
 
 function declaredFor(pkg) {
   const entry = registry.servers.find((s) => s.package === pkg);
