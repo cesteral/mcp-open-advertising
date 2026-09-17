@@ -219,6 +219,30 @@ The freshness half is deliberately **not** PR-blocking, for the same reason as `
 
 **Related: `LINKEDIN_API_VERSION_VERIFICATION_BASIS`.** #209 shipped `LINKEDIN_API_VERSION_VERIFIED_AT = "2026-09-16"` under a docstring reading "when a human last confirmed... against LinkedIn's published list". No such confirmation happened — the list is behind the blocked host, and the `202608` pin was inferred from LinkedIn's documented monthly cadence and one-year window. The basis is now explicit and set to `inferred`, the ledger carries the fact as `unverified`, and a test asserts the two agree. A date with no basis beside it reads as a confirmation that never happened.
 
+## Tool-Search Ranking Evals
+
+`evals/tool-search-ranking.json` pins how each server's `{platform}_search_tools` tool ranks its own registry (#205, Part 1). The ranking is a pure function of tool **name, title and description** — text edited in nearly every feature PR — and nothing asserted its outcome before this.
+
+`evals/tool-search-ranking.test.mjs` boots each built server and calls the real search tool **over the MCP wire**, reading `structuredContent`. It does not import the scorer and re-run it, and does not reimplement the weights: the thing under test is exactly what a client gets. Run via `pnpm test:scripts` (the root suite now includes `evals/**/*.test.mjs`).
+
+**Layer 1 only.** `tool-search.ts` searches ONE server's own registry, so cross-server confusion is unreachable here and needs a model-based harness (#205 Part 2 — costs model calls, belongs on a schedule, must not be added to the PR-path include).
+
+**`cases` vs `gaps`.** `cases` pin rankings worth protecting. `gaps` pin rankings that are currently _wrong for a user_, asserted so the defect is auditable and so **improving** the ranker fails loudly — a failing gap means "promote this to a case", the opposite of a regression.
+
+### Ranker facts worth knowing before editing a tool description
+
+| Fact                                                                       | Consequence                                                                                                             |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Weights: name **5**, title **3**, description **1**                        | Name dominates; a description edit moves things by single points                                                        |
+| `tokenize` splits on `/[^a-z0-9_]+/` — **`_` is a word character**         | A whole tool name is **ONE token**, not `["ttd","download","report"]`                                                   |
+| Name match is substring **either direction**, over that single token       | Query `ad` matches `meta_download_report` (inside "downlo**ad**") and `ttd_upload_video`. Far wider than `ad`→`adgroup` |
+| The `break` in the name loop                                               | **Dead code** — there is never a second name token to reach                                                             |
+| Name weight accumulates per **query** token, not per name token            | A 2-word query matching the name twice scores 10                                                                        |
+| Title/description matches accumulate; description capped at **400 tokens** | Long descriptions have their tails silently ignored                                                                     |
+| Ties resolve by **registry order** (stable sort)                           | Reordering `allTools` silently reorders results with no scoring change                                                  |
+
+**Margins are thin.** `cm360_delete_entity` beats `cm360_delete_report_schedule` for "delete a campaign" by **one point**; on `msads-mcp` the same pair is the wrong way round. Adding two sentences to a neighbouring tool's description is enough to invert it — verified by mutation.
+
 ## Tool Failure Logging
 
 Every tool invocation is captured by `InteractionLogger` (`packages/shared/src/utils/interaction-logger.ts`). On failure, the entry adds the upstream HTTP trail (method, URL, status, redacted request/response bodies, per-attempt durations) recorded by `executeWithRetry` via `http-request-recorder.ts`.

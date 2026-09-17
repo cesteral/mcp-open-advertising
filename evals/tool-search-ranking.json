@@ -1,0 +1,273 @@
+{
+  "$comment": "Deterministic per-server ranker regression cases (#205, Part 1). Every expectation here was OBSERVED against the shipped ranker, never guessed: each case was run through the real {platform}_search_tools tool over the MCP wire before being written down. See evals/tool-search-ranking.test.mjs for how they are driven, and the README section in that file for what this does and does not prove.",
+  "schemaVersion": 1,
+
+  "$layer": "This covers Layer 1 only — packages/shared/src/utils/tool-search.ts, which searches ONE server's own registry and is a pure deterministic function of text we hand-edit. Layer 2 (a client's model choosing across the merged tools/list of several servers) is where genuine cross-server confusion lives, is not reachable from here, and needs a model-based harness on a schedule. Part 1 does not block on it.",
+
+  "cases": [
+    {
+      "server": "ttd-mcp",
+      "platform": "ttd",
+      "query": "download the finished report as a CSV",
+      "expectTop": "ttd_download_report",
+      "outranks": ["ttd_create_report_schedule", "ttd_get_report_executions"],
+      "note": "The issue's own flagship example. ttd_download_report scores 23; the next four tools tie at 14, so only the top slot is meaningfully pinned here."
+    },
+    {
+      "server": "amazon-dsp-mcp",
+      "platform": "amazon_dsp",
+      "query": "download a finished report",
+      "expectTop": "amazon_dsp_download_report",
+      "outranks": ["amazon_dsp_submit_report", "amazon_dsp_get_report"]
+    },
+    {
+      "server": "cm360-mcp",
+      "platform": "cm360",
+      "query": "download a finished report",
+      "expectTop": "cm360_download_report",
+      "outranks": ["cm360_get_report", "cm360_get_report_breakdowns"]
+    },
+    {
+      "server": "meta-mcp",
+      "platform": "meta",
+      "query": "download a finished report",
+      "expectTop": "meta_download_report",
+      "outranks": ["meta_submit_report", "meta_check_report_status"]
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "download a finished report",
+      "expectTop": "msads_download_report",
+      "outranks": ["msads_get_report", "msads_check_report_status"]
+    },
+    {
+      "server": "pinterest-mcp",
+      "platform": "pinterest",
+      "query": "download a finished report",
+      "expectTop": "pinterest_download_report",
+      "outranks": ["pinterest_get_report", "pinterest_check_report_status"]
+    },
+    {
+      "server": "snapchat-mcp",
+      "platform": "snapchat",
+      "query": "download a finished report",
+      "expectTop": "snapchat_download_report",
+      "outranks": ["snapchat_get_report", "snapchat_get_report_breakdowns"]
+    },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "download a finished report",
+      "expectTop": "tiktok_download_report",
+      "outranks": ["tiktok_get_report", "tiktok_get_report_breakdowns"]
+    },
+
+    {
+      "server": "cm360-mcp",
+      "platform": "cm360",
+      "query": "delete a campaign",
+      "expectTop": "cm360_delete_entity",
+      "outranks": ["cm360_delete_report_schedule"],
+      "note": "Deleting the entity must outrank deleting a report schedule — the two are one token apart and msads gets this backwards (see gaps)."
+    },
+    {
+      "server": "dv360-mcp",
+      "platform": "dv360",
+      "query": "delete a campaign",
+      "expectTop": "dv360_delete_entity",
+      "outranks": ["dv360_delete_assigned_targeting"]
+    },
+    {
+      "server": "linkedin-mcp",
+      "platform": "linkedin",
+      "query": "delete a campaign",
+      "expectTop": "linkedin_delete_entity"
+    },
+    {
+      "server": "meta-mcp",
+      "platform": "meta",
+      "query": "delete a campaign",
+      "expectTop": "meta_delete_entity",
+      "outranks": ["meta_duplicate_entity", "meta_create_entity"]
+    },
+    {
+      "server": "pinterest-mcp",
+      "platform": "pinterest",
+      "query": "delete a campaign",
+      "expectTop": "pinterest_delete_entity"
+    },
+    {
+      "server": "snapchat-mcp",
+      "platform": "snapchat",
+      "query": "delete a campaign",
+      "expectTop": "snapchat_delete_entity"
+    },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "delete a campaign",
+      "expectTop": "tiktok_delete_entity"
+    },
+    {
+      "server": "ttd-mcp",
+      "platform": "ttd",
+      "query": "delete a campaign",
+      "expectTop": "ttd_delete_entity",
+      "outranks": ["ttd_delete_report_schedule"]
+    },
+
+    {
+      "server": "cm360-mcp",
+      "platform": "cm360",
+      "query": "create a campaign",
+      "expectTop": "cm360_create_entity",
+      "outranks": ["cm360_bulk_create_entities"]
+    },
+    {
+      "server": "linkedin-mcp",
+      "platform": "linkedin",
+      "query": "create a campaign",
+      "expectTop": "linkedin_create_entity",
+      "outranks": ["linkedin_bulk_create_entities"]
+    },
+    {
+      "server": "meta-mcp",
+      "platform": "meta",
+      "query": "create a campaign",
+      "expectTop": "meta_create_entity",
+      "outranks": ["meta_bulk_create_entities"]
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "create a campaign",
+      "expectTop": "msads_create_entity",
+      "outranks": ["msads_bulk_create_entities"]
+    },
+    {
+      "server": "pinterest-mcp",
+      "platform": "pinterest",
+      "query": "create a campaign",
+      "expectTop": "pinterest_create_entity",
+      "outranks": ["pinterest_bulk_create_entities"]
+    },
+    {
+      "server": "snapchat-mcp",
+      "platform": "snapchat",
+      "query": "create a campaign",
+      "expectTop": "snapchat_create_entity",
+      "outranks": ["snapchat_bulk_create_entities"]
+    },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "create a campaign",
+      "expectTop": "tiktok_create_entity",
+      "outranks": ["tiktok_bulk_create_entities"]
+    },
+
+    {
+      "server": "dv360-mcp",
+      "platform": "dv360",
+      "query": "update campaign budget",
+      "expectTop": "dv360_update_entity",
+      "outranks": ["dv360_bulk_update_entities"]
+    },
+    {
+      "server": "linkedin-mcp",
+      "platform": "linkedin",
+      "query": "update campaign budget",
+      "expectTop": "linkedin_update_entity",
+      "outranks": ["linkedin_bulk_update_entities"]
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "update campaign budget",
+      "expectTop": "msads_update_entity",
+      "outranks": ["msads_bulk_update_entities"]
+    },
+    {
+      "server": "meta-mcp",
+      "platform": "meta",
+      "query": "update campaign budget",
+      "expectTop": "meta_manage_budget_schedule",
+      "outranks": ["meta_update_entity"],
+      "note": "Deliberately pinned even though the generic update tool loses. A dedicated budget-schedule tool IS the better answer for a budget query, so this ordering is the one worth protecting — not an accident to be corrected."
+    },
+
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "upload a video creative",
+      "expectTop": "tiktok_upload_video",
+      "outranks": ["tiktok_upload_image"],
+      "note": "Pins that video beats image for a video query — the two differ by one name token and share most of their description."
+    },
+    {
+      "server": "ttd-mcp",
+      "platform": "ttd",
+      "query": "archive a campaign",
+      "expectTop": "ttd_archive_entities",
+      "note": "TTD is the one server whose archive path has 'archive' in the tool name, so the lexical ranker finds it. Contrast dv360, whose archive path is bulk_update_status — see gaps."
+    }
+  ],
+
+  "gaps": [
+    {
+      "server": "dv360-mcp",
+      "platform": "dv360",
+      "query": "permanently remove a campaign",
+      "wanted": "dv360_delete_entity",
+      "actualTop": "dv360_get_pacing_status",
+      "wantedNotInTopN": 4,
+      "note": "SYNONYM GAP. The ranker is purely lexical: 'remove' shares no token with 'delete', so the delete tool collapses to score 1 while an unrelated read tool wins. Swap 'remove' for 'delete' and dv360_delete_entity is #1. Recorded so the gap is auditable, NOT endorsed."
+    },
+    {
+      "server": "ttd-mcp",
+      "platform": "ttd",
+      "query": "permanently remove a campaign",
+      "wanted": "ttd_delete_entity",
+      "actualTop": "ttd_get_pacing_status",
+      "wantedNotInTopN": 4,
+      "note": "Same synonym gap as dv360, on a second server — evidence it is a property of the ranker, not of one server's wording."
+    },
+    {
+      "server": "dv360-mcp",
+      "platform": "dv360",
+      "query": "remove this line item permanently",
+      "wanted": "dv360_delete_entity",
+      "actualTop": "dv360_adjust_line_item_bids",
+      "wantedNotInTopN": 6,
+      "note": "The safety case #205 asks about, and it is worse than the issue guessed. A bid-adjustment tool wins because 'line' and 'item' each hit its name for +5; the delete tool never surfaces. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201, and no single query puts them together near the top."
+    },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "delete an ad group",
+      "wanted": "tiktok_delete_entity",
+      "actualTop": "tiktok_adjust_bids",
+      "wantedNotInTopN": 1,
+      "note": "THE 2-CHARACTER SUBSTRING EDGE the issue predicted, demonstrated live. Name matching is substring-either-direction, so the query token 'ad' matches 'adjust' inside tiktok_adjust_bids and buys it the full +5 name weight. tiktok_delete_entity is #2."
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "delete a campaign",
+      "wanted": "msads_delete_entity",
+      "actualTop": "msads_delete_report_schedule",
+      "wantedNotInTopN": 1,
+      "note": "Deleting a report SCHEDULE outranks deleting the campaign, because the extra 'report'/'schedule' tokens pick up description hits. cm360 has the same two tools and gets it the right way round, so this is wording drift rather than an inevitability."
+    },
+    {
+      "server": "amazon-dsp-mcp",
+      "platform": "amazon_dsp",
+      "query": "delete a campaign",
+      "wanted": "amazon_dsp_delete_entity",
+      "actualTop": "amazon_dsp_get_campaign_forecast",
+      "wantedNotInTopN": 1,
+      "note": "A read-only forecasting tool outranks the delete tool for an explicit delete query, on the strength of 'campaign' appearing in its name. amazon_dsp_delete_entity is #2."
+    }
+  ]
+}
