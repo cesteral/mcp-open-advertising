@@ -22,6 +22,7 @@ import { LinkedInBearerAuthStrategy } from "../../auth/linkedin-auth-strategy.js
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/platform.js";
+import { LINKEDIN_RETRY_CONFIG } from "../../services/linkedin/linkedin-http-client.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
@@ -52,6 +53,13 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
+    // #201: the server card publishes the retry policy a caller will actually
+    // meet. Passing this server's own RetryConfig (rather than letting the card
+    // assume fleet defaults) is what keeps the published attempt count true —
+    // amazon-dsp's budget is 2, not 3, and its predicate omits 429.
+    retryDescriptor: {
+      maxRetries: LINKEDIN_RETRY_CONFIG.maxRetries,
+    },
     async createSessionForAuth(authResult, sessionId, appConfig, log) {
       // For linkedin-bearer mode, the adapter is returned via platformAuthAdapter
       const adapter = authResult.platformAuthAdapter as LinkedInAuthAdapter | undefined;

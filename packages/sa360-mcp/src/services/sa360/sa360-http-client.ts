@@ -7,7 +7,7 @@ import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withSA360ApiSpan } from "../../utils/platform.js";
 
-const SA360_RETRY_CONFIG: RetryConfig = {
+export const SA360_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,

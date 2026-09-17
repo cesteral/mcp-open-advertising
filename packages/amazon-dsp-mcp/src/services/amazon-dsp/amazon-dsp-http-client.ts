@@ -11,7 +11,7 @@ import { withAmazonDspApiSpan } from "../../utils/platform.js";
 // quota burn (observed: a single 429 → 3 retries at 2s/4s/8s pushed the
 // /dsp/orders endpoint into a multi-hour penalty window). Retry only on 5xx;
 // surface 429 to the caller so the LLM agent can space requests out.
-const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
+export const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   maxRetries: 2,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,
@@ -29,7 +29,7 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
  *
  * Note this deliberately omits 429, which predates the sweep and is unchanged.
  */
-function isAmazonDspRetryable(status: number, _errorBody: string): boolean {
+export function isAmazonDspRetryable(status: number, _errorBody: string): boolean {
   return status >= 500;
 }
 

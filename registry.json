@@ -44,7 +44,10 @@
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"]
+      "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"],
+      "operational": {
+        "terminalOperations": []
+      }
     },
     {
       "package": "dv360-mcp",
@@ -116,7 +119,31 @@
         "campaign-management",
         "programmatic",
         "self-hosted"
-      ]
+      ],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "dv360_delete_entity",
+            "operations": ["delete"],
+            "note": "HARD delete on most entity types — verified live for campaign, where a subsequent get_entity returns 404. No tool on this server restores it."
+          },
+          {
+            "tool": "dv360_delete_assigned_targeting",
+            "operations": ["manage"],
+            "note": "Removes assigned targeting options. No tool on this server restores it."
+          },
+          {
+            "tool": "dv360_update_entity",
+            "operations": ["update_status"],
+            "note": "Setting entityStatus=ENTITY_STATUS_ARCHIVED is irreversible — DV360 has no unarchive. Terminal only for that status value; other updates are not."
+          },
+          {
+            "tool": "dv360_bulk_update_status",
+            "operations": ["bulk_update_status"],
+            "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
+          }
+        ]
+      }
     },
     {
       "package": "ttd-mcp",
@@ -208,7 +235,26 @@
         "campaign-management",
         "programmatic",
         "graphql"
-      ]
+      ],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "ttd_delete_entity",
+            "operations": ["delete"],
+            "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "ttd_archive_entities",
+            "operations": ["archive"],
+            "note": "Archival is terminal through this server — there is no unarchive tool."
+          },
+          {
+            "tool": "ttd_delete_report_schedule",
+            "operations": ["delete_schedule"],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "gads-mcp",
@@ -266,7 +312,16 @@
       "auth": {
         "modes": ["gads-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"]
+      "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "gads_remove_entity",
+            "operations": ["delete"],
+            "note": "Google Ads REMOVED status is terminal — a removed entity cannot be re-enabled. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "meta-mcp",
@@ -341,7 +396,16 @@
         "campaign-management",
         "social",
         "self-hosted"
-      ]
+      ],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "meta_delete_entity",
+            "operations": ["delete"],
+            "note": "Entity removal. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "linkedin-mcp",
@@ -403,7 +467,16 @@
       "auth": {
         "modes": ["linkedin-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"]
+      "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "linkedin_delete_entity",
+            "operations": ["delete"],
+            "note": "Entity removal. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "tiktok-mcp",
@@ -468,7 +541,16 @@
       "auth": {
         "modes": ["tiktok-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "tiktok", "campaign-management", "social", "video"]
+      "tags": ["advertising", "tiktok", "campaign-management", "social", "video"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "tiktok_delete_entity",
+            "operations": ["bulk_job"],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "cm360-mcp",
@@ -529,7 +611,21 @@
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"]
+      "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "cm360_delete_entity",
+            "operations": ["manage"],
+            "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "cm360_delete_report_schedule",
+            "operations": ["delete_schedule"],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "snapchat-mcp",
@@ -592,7 +688,16 @@
       "auth": {
         "modes": ["snapchat-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "snapchat", "campaign-management", "social", "video"]
+      "tags": ["advertising", "snapchat", "campaign-management", "social", "video"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "snapchat_delete_entity",
+            "operations": ["bulk_job"],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "sa360-mcp",
@@ -646,7 +751,10 @@
       "auth": {
         "modes": ["sa360-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"]
+      "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"],
+      "operational": {
+        "terminalOperations": []
+      }
     },
     {
       "package": "pinterest-mcp",
@@ -709,7 +817,16 @@
       "auth": {
         "modes": ["pinterest-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"]
+      "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "pinterest_delete_entity",
+            "operations": ["bulk_job"],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "amazon-dsp-mcp",
@@ -776,7 +893,16 @@
       "auth": {
         "modes": ["amazon-dsp-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"]
+      "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "amazon_dsp_delete_entity",
+            "operations": ["bulk_job"],
+            "note": "Bulk removal of orders / line items. No tool on this server restores it."
+          }
+        ]
+      }
     },
     {
       "package": "msads-mcp",
@@ -836,7 +962,21 @@
       "auth": {
         "modes": ["msads-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"]
+      "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"],
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "msads_delete_entity",
+            "operations": ["bulk_job"],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "msads_delete_report_schedule",
+            "operations": ["delete_schedule"],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
+        ]
+      }
     }
   ]
 }

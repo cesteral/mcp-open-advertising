@@ -22,6 +22,7 @@ import { SnapchatBearerAuthStrategy } from "../../auth/snapchat-auth-strategy.js
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/platform.js";
+import { SNAPCHAT_RETRY_CONFIG } from "../../services/snapchat/snapchat-http-client.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
@@ -50,6 +51,13 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
+    // #201: the server card publishes the retry policy a caller will actually
+    // meet. Passing this server's own RetryConfig (rather than letting the card
+    // assume fleet defaults) is what keeps the published attempt count true —
+    // amazon-dsp's budget is 2, not 3, and its predicate omits 429.
+    retryDescriptor: {
+      maxRetries: SNAPCHAT_RETRY_CONFIG.maxRetries,
+    },
     async createSessionForAuth(authResult, sessionId, appConfig, log) {
       // For snapchat-bearer mode, the adapter is returned via platformAuthAdapter
       const adapter = authResult.platformAuthAdapter as SnapchatAuthAdapter | undefined;

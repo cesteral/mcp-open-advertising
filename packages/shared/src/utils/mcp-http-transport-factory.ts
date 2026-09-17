@@ -18,6 +18,9 @@ import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import type { Logger } from "pino";
 import { UNTRUSTED_CONTENT_DECLARATION } from "./untrusted-content.js";
+import { buildOperationalEnvelope, type TerminalOperation } from "./operational-envelope.js";
+import { resolveInteractionLogMode } from "./interaction-logger.js";
+import type { RateLimiter } from "./rate-limiter.js";
 
 import {
   createRequestContext,
@@ -120,6 +123,18 @@ export interface ServerCardExtras {
     resources?: boolean;
     elicitation?: boolean;
   };
+  /**
+   * Operations on this platform that cannot be undone through this server
+   * (#201). Sourced from `registry.json` via `buildServerCardExtras`, because
+   * irreversibility is a per-platform fact that no local code states: DV360's
+   * delete is a hard delete AND its archive is irreversible, while Amazon DSP
+   * has no hard delete at all.
+   *
+   * This is the only hand-authored value in the operational block, so it is the
+   * only one that can drift — `terminal-operations.test.ts` ratchets it against
+   * the `cesteral` annotations rather than trusting it.
+   */
+  terminalOperations?: TerminalOperation[];
 }
 
 /**
@@ -135,8 +150,26 @@ export interface TransportFactoryConfig {
   authErrorHint: string;
   /** The session service store for this server. */
   sessionServiceStore: TransportSessionStore;
-  /** Rate limiter instance (unused by the factory, but available for session creation). */
-  rateLimiter?: unknown;
+  /**
+   * Rate limiter instance. Available for session creation, and read by the
+   * server card so the published limit is the one actually enforced (#201).
+   */
+  rateLimiter?: RateLimiter;
+  /**
+   * This server's HTTP retry posture, for the server card's operational block.
+   *
+   * Pass the SAME values the platform HTTP client uses — its `RetryConfig.maxRetries`
+   * and its `isRetryable` override if it has one — so the card describes the
+   * client a caller will actually meet. The factory probes these rather than
+   * transcribing them; see `describeRetryPolicy`. Omit only for a server with no
+   * shared-retry HTTP client, which falls back to the documented defaults.
+   */
+  retryDescriptor?: {
+    maxRetries?: number;
+    isRetryable?: (status: number, errorBody: string) => boolean;
+    /** Set false for a server that does not route through `executeWithRetry`. */
+    usesSharedRetryLayer?: boolean;
+  };
   /**
    * Create session services from the auth result.
    * Called when a new session is created. Must call sessionServiceStore.set() internally.
@@ -331,6 +364,20 @@ export function createMcpHttpTransport(
       // returns platform-authored free text, so a client must not have to
       // infer the boundary from which tools it happens to call.
       untrusted_content: UNTRUSTED_CONTENT_DECLARATION,
+      // #201. The operational envelope a client needs BEFORE pointing this
+      // server at a live ad account: how hard we hit their quota, what we
+      // re-send after an ambiguous failure, which duplicate-write rails are
+      // and are NOT covered, what is recorded, and what cannot be undone.
+      // Derived from the live limiter and the real retry predicate, not
+      // declared beside them.
+      operational: buildOperationalEnvelope({
+        rateLimiter: platformConfig.rateLimiter,
+        isRetryable: platformConfig.retryDescriptor?.isRetryable,
+        maxRetries: platformConfig.retryDescriptor?.maxRetries,
+        usesSharedRetryLayer: platformConfig.retryDescriptor?.usesSharedRetryLayer,
+        interactionLogMode: resolveInteractionLogMode({ gcsBucket: config.gcsBucketName }),
+        terminalOperations: extras?.terminalOperations ?? [],
+      }),
     };
     return c.json(body, 200);
   });
