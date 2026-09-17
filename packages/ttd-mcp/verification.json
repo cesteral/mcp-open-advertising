@@ -1,0 +1,35 @@
+{
+  "$comment": "Verification ledger (#203). The source of truth for how far each governed tool has been verified — deliberately NOT the tool annotation, so a tool cannot promote itself. A tool absent from this file ships as `declared`. A `fixture-verified` or `live-verified` entry MUST carry the verifiedDefinitionHash it was verified against; generation demotes it to `declared` automatically the moment that hash stops matching the definition being shipped.",
+  "package": "ttd-mcp",
+  "$backfill": "Everything starts at `declared`, including the tools genuinely exercised live on 2026-04-01. That run predates hash binding and recorded no definitionHash, so its results cannot be bound to a definition — and an unbindable claim is exactly what this mechanism exists to refuse. The notes below preserve which tools have prior evidence, so a future live run knows what to re-exercise first. They are NOT a promotion queue: re-running the tool is what promotes it.",
+  "tools": {
+    "ttd_get_entity": {
+      "status": "declared",
+      "note": "Exercised live 2026-04-01 (advertiser + campaign) per docs/plans/2026-04-01-ttd-mcp-live-test-findings-and-fixes.md. Unbound: no definitionHash recorded."
+    },
+    "ttd_list_entities": {
+      "status": "declared",
+      "note": "Exercised live 2026-04-01 (advertiser, campaign, adGroup, creative) per the same report. Unbound: no definitionHash recorded."
+    },
+    "ttd_validate_entity": {
+      "status": "declared",
+      "note": "Exercised live 2026-04-01, valid and invalid payloads. Unbound: no definitionHash recorded."
+    },
+    "ttd_create_entity": {
+      "status": "declared",
+      "note": "The 2026-04-01 report marks this PASS (untested live) on the basis of 'code review clean'. That is not evidence of verification and must not be read as one — it is a governed write that has never been exercised."
+    },
+    "ttd_update_entity": {
+      "status": "declared",
+      "note": "As ttd_create_entity: PASS (untested live), code review only. Governed write, never exercised."
+    },
+    "ttd_graphql_mutation_bulk": {
+      "status": "declared",
+      "note": "PASS (untested live), 'no schema issues in code review'. Governed write, never exercised."
+    },
+    "ttd_delete_report_schedule": {
+      "status": "declared",
+      "note": "PASS (untested live), 'simple DELETE, no schema issues'. Never exercised, and terminal — see registry operational.terminalOperations."
+    }
+  }
+}
