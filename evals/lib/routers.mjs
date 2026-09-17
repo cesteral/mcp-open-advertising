@@ -79,15 +79,16 @@ export function lexicalRouter() {
  */
 export function anthropicRouter({
   apiKey,
+  authToken,
   model = DEFAULT_MODEL,
   fetchImpl = globalThis.fetch,
   baseUrl = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com",
   maxTokens = 1024,
 } = {}) {
-  if (!apiKey) {
+  if (!apiKey && !authToken) {
     throw new Error(
-      "anthropicRouter requires an explicit apiKey. It is never read from the ambient " +
-        "environment, so no PR-path test can start billing by accident."
+      "anthropicRouter requires an explicit apiKey or authToken. Neither is ever read from " +
+        "the ambient environment, so no PR-path test can start billing by accident."
     );
   }
   return {
@@ -99,8 +100,8 @@ export function anthropicRouter({
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
+          ...authHeaders({ apiKey, authToken }),
         },
         body: JSON.stringify(buildRequest(catalog, query, { model, maxTokens })),
       });
@@ -110,6 +111,29 @@ export function anthropicRouter({
       }
       return parseRouteResponse(await response.json());
     },
+  };
+}
+
+/**
+ * Auth headers for whichever credential was supplied.
+ *
+ * An API key and an OAuth token are not interchangeable header values. A key
+ * goes on `x-api-key`; a token from `ant auth login` goes on
+ * `Authorization: Bearer` AND needs `anthropic-beta: oauth-2025-04-20` —
+ * /v1/messages rejects an OAuth token without it, so converting between the two
+ * is a header change, not a value swap.
+ *
+ * Exactly one is ever sent. Sending both makes the API reject the request, and
+ * the two are easy to have set at once: `ant auth print-credentials --env`
+ * exports ANTHROPIC_AUTH_TOKEN while a stale ANTHROPIC_API_KEY is still in the
+ * shell. The API key wins, matching the `ant` CLI's own precedence, so the
+ * behaviour is the same whichever tool you reach for.
+ */
+export function authHeaders({ apiKey, authToken }) {
+  if (apiKey) return { "x-api-key": apiKey };
+  return {
+    authorization: `Bearer ${authToken}`,
+    "anthropic-beta": "oauth-2025-04-20",
   };
 }
 

@@ -1,30 +1,39 @@
 # Cross-server routing evals — does a model pick the right platform's tool out of
 # the merged tools/list? (#205 Part 2)
 #
-# Why this is scheduled and not part of CI:
+# Why this is MANUAL and not scheduled:
 #
 #   The PR path already runs everything that can be proved for free — the merged
 #   catalog's structural invariants, the corpus, the scoring rules, the model
 #   router's request/response handling through an injected fetch, and the
-#   deterministic control router end-to-end. See evals/cross-server-routing.test.mjs.
+#   deterministic control router end-to-end, compared against its recorded
+#   baseline. See evals/cross-server-routing.test.mjs.
 #
-#   What is left needs real model calls against a ~128k-token tool catalog. That
-#   costs money per run, and it is not a property of the commit under review: the
-#   same diff can score differently on two runs. Wiring it into the PR path would
-#   bill every push and make `main` red for reasons no author could act on — the
-#   same argument that keeps platform-facts' freshness half and
-#   check-terraform-drift.mjs off the PR path.
+#   What is left needs real model calls against a ~125k-token tool catalog, which
+#   costs money every run. It is also not a property of the commit under review:
+#   the same diff can score differently twice.
 #
-# Weekly rather than daily: the input only changes when tool names, titles or
-# descriptions change, and a daily run would re-report an unchanged number six
-# times before anyone could act on it.
+#   It used to run weekly. That was removed deliberately: the input only changes
+#   when tool names, titles or descriptions change, so a schedule mostly bills for
+#   re-measuring an unchanged catalog — and with no credential configured it would
+#   just file the same "could not be measured" issue every week. The model half is
+#   now run BY HAND when tool text changes:
+#
+#     ant auth login
+#     unset ANTHROPIC_API_KEY
+#     set -a; eval "$(ant auth print-credentials --env)"; set +a
+#     pnpm eval:routing:model
+#
+#   then record the numbers in evals/cross-server-routing.baseline.json.
+#
+#   This workflow is kept for the manual path — if an ANTHROPIC_API_KEY secret is
+#   ever added, `workflow_dispatch` runs the same thing on a runner. It costs
+#   nothing sitting here, and restoring the schedule is re-adding the `schedule:`
+#   key below.
+
 name: Cross-server routing evals
 
 on:
-  schedule:
-    # 09:00 UTC Wednesdays — away from terraform-drift (daily 07:00) and
-    # platform-facts (Mondays 08:00) so the three do not land together.
-    - cron: "0 9 * * 3"
   workflow_dispatch:
     inputs:
       model:
