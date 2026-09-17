@@ -1,0 +1,108 @@
+# Platform-facts freshness — early warning that a claim about an external
+# platform has gone stale.
+#
+# Why (#202): this repo carries load-bearing claims it does not own — sixteen
+# hardcoded API base URLs, a date-versioned LinkedIn header, and behavioural
+# constraints in CLAUDE.md that shape entire packages. Two have already rotted:
+#
+#   - linkedin-mcp pinned `LinkedIn-Version: 202409` for roughly a year past
+#     sunset. Every call errored. Nothing detected it (#206/#209).
+#   - Google's v4 Discovery rev 20260608 removed campaign + insertion-order
+#     assigned targeting and broke all CI (PR #79).
+#
+# One was caught loudly by CI, the other was silent for a year. The difference
+# was luck about which fact happened to be fetched at build time.
+#
+# Deliberately NOT part of CI, for the same reason as terraform-drift.yml. The
+# freshness half is time-dependent: wiring it into the PR path would turn `main`
+# red by the mere passage of the calendar, on a commit that changed nothing.
+# The PR path runs the HERMETIC half instead (`pnpm check:platform-facts`, which
+# validates the ledger's shape and asserts every codeRef still contains the value
+# the ledger claims for it) — that can only fail because of something in the
+# commit under review.
+#
+# Weekly, not daily: the cadences here are 90 and 180 days, so a daily job would
+# report the same facts ~13 times before anyone could reasonably act.
+name: Platform facts freshness
+
+on:
+  schedule:
+    # 08:00 UTC Mondays — an hour after the daily terraform-drift job, so the
+    # two do not land in the same notification batch.
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: platform-facts
+  cancel-in-progress: false
+
+# contents: read — checkout only; this workflow never pushes.
+# issues: write  — create, update, comment on and close the tracking issue.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The script's exit code is the payload, not a pass/fail: 1 (a fact needs
+      # attention) and 2 (could not check) are both reported through the
+      # tracking issue rather than as a bare red X, so the reason survives past
+      # log retention.
+      - name: Check platform-facts freshness
+        id: check
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/check-platform-facts.mjs --freshness 2>&1 | tee "$RUNNER_TEMP/facts.txt"
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      # A clean run CLOSES the issue: a fact that has been re-verified must not
+      # leave a stale alert open, or the next real one reads as already-known.
+      - name: Sync tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXIT_CODE: ${{ steps.check.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          body="$(cat "$RUNNER_TEMP/facts.txt")"
+
+          gh label create platform-facts --color D93F0B \
+            --description "An externally-owned claim has gone stale" 2>/dev/null || true
+
+          existing="$(gh issue list --state open --label platform-facts --limit 100 \
+            --json number --jq '.[0].number // empty')"
+
+          if [ "$EXIT_CODE" = "0" ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body \
+                "Platform facts are current again as of $(date -u +%Y-%m-%d). Closing."
+              gh issue close "$existing"
+              echo "Closed tracking issue #$existing after a clean run."
+            fi
+            exit 0
+          fi
+
+          title="Platform facts need re-verification"
+          [ "$EXIT_CODE" = "2" ] && title="Platform facts could not be checked"
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$(printf '### %s — %s\n\n```\n%s\n```\n' \
+              "$title" "$(date -u +%Y-%m-%d)" "$body")"
+          else
+            gh issue create --label platform-facts --title "$title" \
+              --body "$(printf '%s\n\n```\n%s\n```\n\nRe-verify each fact against its `sourceUrl`, then set `status: "verified"` and `verifiedAt` to **the day you actually checked** in `platform-facts.json`. Never backdate it — a backdated ledger reproduces exactly the false confidence this check removes. If a claim turns out to be wrong, demote it and record what changed.\n' \
+                "$title" "$body")"
+          fi
+
+          # Fail the job so the schedule surfaces in the Actions UI too.
+          exit 1
