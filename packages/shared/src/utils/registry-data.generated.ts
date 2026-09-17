@@ -10,6 +10,13 @@ export interface RegistryServerEntry {
   readonly platform_display_name: string;
   readonly documentation_url: string;
   readonly auth: { readonly modes: readonly string[] };
+  readonly operational: {
+    readonly terminalOperations: readonly {
+      readonly tool: string;
+      readonly operations: readonly string[];
+      readonly note: string;
+    }[];
+  };
 }
 
 export interface RegistryData {
@@ -34,6 +41,9 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": []
       }
     },
     {
@@ -49,6 +59,38 @@ export const REGISTRY_DATA: RegistryData = {
           "google-headers",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "dv360_delete_entity",
+            "operations": [
+              "delete"
+            ],
+            "note": "HARD delete on most entity types — verified live for campaign, where a subsequent get_entity returns 404. No tool on this server restores it."
+          },
+          {
+            "tool": "dv360_delete_assigned_targeting",
+            "operations": [
+              "manage"
+            ],
+            "note": "Removes assigned targeting options. No tool on this server restores it."
+          },
+          {
+            "tool": "dv360_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting entityStatus=ENTITY_STATUS_ARCHIVED is irreversible — DV360 has no unarchive. Terminal only for that status value; other updates are not."
+          },
+          {
+            "tool": "dv360_bulk_update_status",
+            "operations": [
+              "bulk_update_status"
+            ],
+            "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
+          }
         ]
       }
     },
@@ -66,6 +108,31 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "ttd_delete_entity",
+            "operations": [
+              "delete"
+            ],
+            "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "ttd_archive_entities",
+            "operations": [
+              "archive"
+            ],
+            "note": "Archival is terminal through this server — there is no unarchive tool."
+          },
+          {
+            "tool": "ttd_delete_report_schedule",
+            "operations": [
+              "delete_schedule"
+            ],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
+        ]
       }
     },
     {
@@ -81,6 +148,17 @@ export const REGISTRY_DATA: RegistryData = {
           "gads-headers",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "gads_remove_entity",
+            "operations": [
+              "delete"
+            ],
+            "note": "Google Ads REMOVED status is terminal — a removed entity cannot be re-enabled. No tool on this server restores it."
+          }
         ]
       }
     },
@@ -98,6 +176,17 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "meta_delete_entity",
+            "operations": [
+              "delete"
+            ],
+            "note": "Entity removal. No tool on this server restores it."
+          }
+        ]
       }
     },
     {
@@ -113,6 +202,17 @@ export const REGISTRY_DATA: RegistryData = {
           "linkedin-bearer",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "linkedin_delete_entity",
+            "operations": [
+              "delete"
+            ],
+            "note": "Entity removal. No tool on this server restores it."
+          }
         ]
       }
     },
@@ -130,6 +230,17 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "tiktok_delete_entity",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
+        ]
       }
     },
     {
@@ -145,6 +256,24 @@ export const REGISTRY_DATA: RegistryData = {
           "google-headers",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "cm360_delete_entity",
+            "operations": [
+              "manage"
+            ],
+            "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "cm360_delete_report_schedule",
+            "operations": [
+              "delete_schedule"
+            ],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
         ]
       }
     },
@@ -162,6 +291,17 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "snapchat_delete_entity",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
+        ]
       }
     },
     {
@@ -178,6 +318,9 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": []
       }
     },
     {
@@ -193,6 +336,17 @@ export const REGISTRY_DATA: RegistryData = {
           "pinterest-bearer",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "pinterest_delete_entity",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          }
         ]
       }
     },
@@ -210,6 +364,17 @@ export const REGISTRY_DATA: RegistryData = {
           "jwt",
           "none"
         ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "amazon_dsp_delete_entity",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Bulk removal of orders / line items. No tool on this server restores it."
+          }
+        ]
       }
     },
     {
@@ -225,6 +390,24 @@ export const REGISTRY_DATA: RegistryData = {
           "msads-bearer",
           "jwt",
           "none"
+        ]
+      },
+      "operational": {
+        "terminalOperations": [
+          {
+            "tool": "msads_delete_entity",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Bulk entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "msads_delete_report_schedule",
+            "operations": [
+              "delete_schedule"
+            ],
+            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          }
         ]
       }
     }

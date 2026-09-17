@@ -93,6 +93,26 @@ export class RateLimiter {
   }
 
   /**
+   * The limits this instance is configured with, as `{ pattern, limit, windowMs }`.
+   *
+   * Exists so the server card can publish the rate limit a client will actually
+   * hit (#201) by reading the LIVE limiter the transport was handed, rather than
+   * a second copy declared in metadata. A declared limit that drifts from the
+   * configured one is worse than publishing nothing, because a client will pace
+   * itself against a number we are not enforcing.
+   *
+   * Per-process, like the limiter itself — see {@link createPlatformRateLimiter}
+   * for the multi-instance caveat that makes this a floor, not a guarantee.
+   */
+  describeLimits(): Array<{ pattern: string; limit: number; windowMs: number }> {
+    return [...this.limits.entries()].map(([pattern, { limit, windowMs }]) => ({
+      pattern,
+      limit,
+      windowMs,
+    }));
+  }
+
+  /**
    * Get remaining tokens for a key
    */
   getRemainingTokens(key: string): number {

@@ -41,6 +41,9 @@ describe("toManifestEntry", () => {
       contractToolSlug: "update_entity",
       schemaVersion: "1",
       definitionHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+      // #203: every entry carries a verification block. A tool with no ledger
+      // entry is `declared` — absence must never read as "assume fine".
+      verification: { status: "declared" },
     });
   });
 
@@ -184,6 +187,9 @@ describe("toManifestEntry", () => {
       contractToolSlug: "get_entity",
       schemaVersion: "1",
       definitionHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+      // #203: every entry carries a verification block. A tool with no ledger
+      // entry is `declared` — absence must never read as "assume fine".
+      verification: { status: "declared" },
     });
   });
 

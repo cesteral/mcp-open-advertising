@@ -7,7 +7,7 @@ import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withDV360ApiSpan } from "../../utils/platform.js";
 
-const DV360_RETRY_CONFIG: RetryConfig = {
+export const DV360_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,

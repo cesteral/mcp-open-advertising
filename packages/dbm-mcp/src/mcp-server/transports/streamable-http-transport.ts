@@ -47,6 +47,10 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
+    // #201: dbm drives its own report-polling loop rather than the shared
+    // `executeWithRetry`, so no retry policy can be observed from it. The card
+    // publishes `retry: null` instead of the shared defaults it does not run.
+    retryDescriptor: { usesSharedRetryLayer: false },
     async createSessionForAuth(authResult, sessionId, appConfig, log) {
       const adapter = authResult.googleAuthAdapter as GoogleAuthAdapter | undefined;
       if (adapter) {

@@ -25,7 +25,7 @@ const RATE_LIMIT_CODES = new Set([4, 17, 32]);
 /** Warn when any rate-limit usage header reaches this percentage. */
 const RATE_LIMIT_WARNING_PERCENT = 80;
 
-const META_RETRY_CONFIG: RetryConfig = {
+export const META_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,

@@ -23,6 +23,10 @@ import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { buildRefreshTokenAgeHealth } from "../../utils/refresh-token-age.js";
+import {
+  AMAZON_DSP_RETRY_CONFIG,
+  isAmazonDspRetryable,
+} from "../../services/amazon-dsp/amazon-dsp-http-client.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
@@ -52,6 +56,14 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
+    // #201: the server card publishes the retry policy a caller will actually
+    // meet. Passing this server's own RetryConfig (rather than letting the card
+    // assume fleet defaults) is what keeps the published attempt count true —
+    // amazon-dsp's budget is 2, not 3, and its predicate omits 429.
+    retryDescriptor: {
+      maxRetries: AMAZON_DSP_RETRY_CONFIG.maxRetries,
+      isRetryable: isAmazonDspRetryable,
+    },
     // Age of the env-configured refresh token (opt-in via
     // AMAZON_DSP_REFRESH_TOKEN_ISSUED_AT) so alerting can scrape /health and
     // page before Amazon's 365-day lifetime expires it. Per-session tokens

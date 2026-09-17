@@ -7,7 +7,7 @@ import { executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withTtdApiSpan } from "../../utils/platform.js";
 
-const TTD_RETRY_CONFIG: RetryConfig = {
+export const TTD_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,

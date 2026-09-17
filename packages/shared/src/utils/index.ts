@@ -47,6 +47,7 @@ export * from "./date-presets.js";
 export * from "./report-view.js";
 export * from "./metric-context.js";
 export * from "./untrusted-content.js";
+export * from "./operational-envelope.js";
 export * from "./report-download-view.js";
 export * from "./report-csv-store.js";
 export * from "./report-csv-resource.js";

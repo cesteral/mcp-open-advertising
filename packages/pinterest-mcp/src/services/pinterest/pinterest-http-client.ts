@@ -13,7 +13,7 @@ import {
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withPinterestApiSpan } from "../../utils/platform.js";
 
-const PINTEREST_RETRY_CONFIG: RetryConfig = {
+export const PINTEREST_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,

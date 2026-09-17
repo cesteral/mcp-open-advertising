@@ -7,7 +7,7 @@ import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@ces
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withSnapchatApiSpan } from "../../utils/platform.js";
 
-const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
+export const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,
