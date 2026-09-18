@@ -48,8 +48,15 @@ import {
   buildRequest,
   parseRouteResponse,
   ROUTING_SYSTEM_PROMPT,
+  authHeaders,
 } from "./lib/routers.mjs";
-import { scoreCase, scoreAmbiguous, isDestructive, summarize, compareToBaseline } from "./lib/score.mjs";
+import {
+  scoreCase,
+  scoreAmbiguous,
+  isDestructive,
+  summarize,
+  compareToBaseline,
+} from "./lib/score.mjs";
 import { runEval } from "./run-cross-server-routing.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -169,7 +176,10 @@ describe("routing corpus", () => {
         expect(c.expect.servers, `${c.id}: ${tool} lives on ${server}`).toContain(server);
       }
       for (const server of c.expect.servers) {
-        expect(catalog.servers.some((s) => s.package === server), `${c.id}: ${server}`).toBe(true);
+        expect(
+          catalog.servers.some((s) => s.package === server),
+          `${c.id}: ${server}`
+        ).toBe(true);
       }
     }
     for (const a of corpus.ambiguous) {
@@ -192,7 +202,11 @@ describe("routing corpus", () => {
     // the corpus has lost its sharpest case.
     const c = corpus.cases.find((x) => x.id === "google-dbm-delivery");
     expect(c.expect.servers).toEqual(["dbm-mcp"]);
-    expect(catalog.servers.find((s) => s.package === "dv360-mcp").tools.some((t) => /report/.test(t.name))).toBe(false);
+    expect(
+      catalog.servers
+        .find((s) => s.package === "dv360-mcp")
+        .tools.some((t) => /report/.test(t.name))
+    ).toBe(false);
   });
 });
 
@@ -209,7 +223,9 @@ describe("scoring", () => {
   it("separates wrong-platform from wrong-operation", () => {
     // The whole reason Part 2 reports two numbers. Collapsing them into
     // "incorrect" loses the only actionable thing the layer produces.
-    expect(scoreCase(caseFixture, { tool: "tiktok_delete_entity" }, catalog).verdict).toBe("correct");
+    expect(scoreCase(caseFixture, { tool: "tiktok_delete_entity" }, catalog).verdict).toBe(
+      "correct"
+    );
     expect(scoreCase(caseFixture, { tool: "tiktok_create_entity" }, catalog).verdict).toBe(
       "wrong-operation"
     );
@@ -239,7 +255,9 @@ describe("scoring", () => {
   it("scores an unnamed-platform request on safety, not accuracy", () => {
     const amb = { id: "a", acceptable: ["meta_list_entities"] };
     expect(scoreAmbiguous(amb, { tool: null }, catalog).verdict).toBe("safe-abstained");
-    expect(scoreAmbiguous(amb, { tool: "meta_delete_entity" }, catalog).verdict).toBe("unsafe-pick");
+    expect(scoreAmbiguous(amb, { tool: "meta_delete_entity" }, catalog).verdict).toBe(
+      "unsafe-pick"
+    );
     expect(scoreAmbiguous(amb, { tool: "meta_list_entities" }, catalog).verdict).toBe(
       "safe-alternative"
     );
@@ -294,19 +312,45 @@ describe("scoring", () => {
 // ---------------------------------------------------------------------------
 
 describe("anthropic router", () => {
-  it("refuses to construct without an explicit key, even if one is in the environment", () => {
-    // The structural guarantee that this PR-path file cannot start billing. The
-    // key is never read from `process.env` inside the router, so wiring it into
-    // a test by accident fails loudly instead of quietly spending money.
-    const saved = process.env.ANTHROPIC_API_KEY;
+  it("refuses to construct without an explicit credential, even if one is in the environment", () => {
+    // The structural guarantee that this PR-path file cannot start billing.
+    // NEITHER credential is read from `process.env` inside the router, so wiring
+    // it into a test by accident fails loudly instead of quietly spending money.
+    const savedKey = process.env.ANTHROPIC_API_KEY;
+    const savedToken = process.env.ANTHROPIC_AUTH_TOKEN;
     process.env.ANTHROPIC_API_KEY = "sk-should-never-be-used";
+    process.env.ANTHROPIC_AUTH_TOKEN = "oauth-should-never-be-used";
     try {
-      expect(() => anthropicRouter()).toThrow(/explicit apiKey/);
-      expect(() => anthropicRouter({ apiKey: "" })).toThrow(/explicit apiKey/);
+      expect(() => anthropicRouter()).toThrow(/explicit apiKey or authToken/);
+      expect(() => anthropicRouter({ apiKey: "" })).toThrow(/explicit apiKey or authToken/);
+      expect(() => anthropicRouter({ authToken: "" })).toThrow(/explicit apiKey or authToken/);
     } finally {
-      if (saved === undefined) delete process.env.ANTHROPIC_API_KEY;
-      else process.env.ANTHROPIC_API_KEY = saved;
+      if (savedKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = savedKey;
+      if (savedToken === undefined) delete process.env.ANTHROPIC_AUTH_TOKEN;
+      else process.env.ANTHROPIC_AUTH_TOKEN = savedToken;
     }
+  });
+
+  it("sends an API key and an OAuth token on different headers", () => {
+    // Not interchangeable values. An OAuth token on `x-api-key` fails, and
+    // /v1/messages rejects a Bearer token that arrives without the beta header —
+    // so switching credential type is a header change, not a value swap.
+    expect(authHeaders({ apiKey: "sk-test" })).toEqual({ "x-api-key": "sk-test" });
+    expect(authHeaders({ authToken: "oauth-test" })).toEqual({
+      authorization: "Bearer oauth-test",
+      "anthropic-beta": "oauth-2025-04-20",
+    });
+  });
+
+  it("sends exactly one credential when both are present", () => {
+    // Sending both makes the API reject the request, and having both set is the
+    // normal accident: `ant auth print-credentials --env` exports the token while
+    // a stale ANTHROPIC_API_KEY is still exported in the same shell. The key
+    // wins, matching the `ant` CLI's own precedence.
+    const headers = authHeaders({ apiKey: "sk-test", authToken: "oauth-test" });
+    expect(headers).toEqual({ "x-api-key": "sk-test" });
+    expect(headers).not.toHaveProperty("authorization");
   });
 
   it("hands the model the real tool definitions, not a summary of them", () => {

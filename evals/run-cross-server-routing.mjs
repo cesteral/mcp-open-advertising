@@ -73,17 +73,37 @@ async function main() {
   if (routerId === "lexical") {
     router = lexicalRouter();
   } else if (routerId === "anthropic") {
+    // Either credential shape works. ANTHROPIC_AUTH_TOKEN is what
+    // `ant auth print-credentials --env` exports, so a local run needs no API
+    // key at all — which is the point: this eval is run by hand when tool text
+    // changes, not on a schedule that bills every week.
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
+    if (!apiKey && !authToken) {
       // Not a pass. An eval that cannot run has not measured anything, and
       // saying so is the whole point — see platform-facts' `unverified`.
       console.error(
-        "routing-evals: ANTHROPIC_API_KEY is not set, so the model router cannot run.\n" +
-          "  Nothing was measured. This is reported rather than passed quietly."
+        "routing-evals: no Anthropic credential, so the model router cannot run.\n" +
+          "  Nothing was measured. This is reported rather than passed quietly.\n\n" +
+          "  Locally, with the Anthropic CLI:\n" +
+          "    ant auth login\n" +
+          "    unset ANTHROPIC_API_KEY\n" +
+          '    set -a; eval "$(ant auth print-credentials --env)"; set +a\n' +
+          "    pnpm eval:routing:model\n\n" +
+          "  Or export ANTHROPIC_API_KEY instead."
       );
       process.exit(EXIT_CANNOT_RUN);
     }
-    router = anthropicRouter({ apiKey, model });
+    if (apiKey && authToken) {
+      // Sending both makes the API reject the request. The key wins, matching
+      // the `ant` CLI's precedence — but say so, because the usual cause is a
+      // stale exported key silently overriding the profile you just logged in to.
+      console.error(
+        "routing-evals: both ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are set; using the " +
+          "API key. Unset it to use your `ant auth login` profile."
+      );
+    }
+    router = anthropicRouter({ apiKey, authToken, model });
   } else {
     console.error(`routing-evals: unknown router ${JSON.stringify(routerId)}`);
     process.exit(EXIT_CANNOT_RUN);

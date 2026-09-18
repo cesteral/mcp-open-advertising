@@ -116,7 +116,12 @@ export function platformAliases() {
       aliases.add(value.toLowerCase());
       // "Google Bid Manager (DV360)" also identifies itself as "DV360".
       for (const inner of value.matchAll(/\(([^)]+)\)/g)) aliases.add(inner[1].toLowerCase());
-      aliases.add(value.toLowerCase().replace(/\s*\([^)]*\)\s*/g, "").trim());
+      aliases.add(
+        value
+          .toLowerCase()
+          .replace(/\s*\([^)]*\)\s*/g, "")
+          .trim()
+      );
     }
     out.set(server.package, [...aliases].filter(Boolean));
   }
@@ -142,7 +147,9 @@ export function assertPrefixInvariant(catalog) {
     }
     const owner = seenPrefix.get(server.prefix);
     if (owner) {
-      violations.push(`prefix "${server.prefix}" is claimed by both ${owner} and ${server.package}`);
+      violations.push(
+        `prefix "${server.prefix}" is claimed by both ${owner} and ${server.package}`
+      );
     }
     seenPrefix.set(server.prefix, server.package);
 
