@@ -269,7 +269,7 @@ export const submitReportTool = {
       input: {
         adAccountId: "1234567890",
         type: "CAMPAIGN",
-        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM"],
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM_IN_DOLLAR"],
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
       },

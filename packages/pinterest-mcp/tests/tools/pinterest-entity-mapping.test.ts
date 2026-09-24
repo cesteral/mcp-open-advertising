@@ -54,20 +54,20 @@ describe("Pinterest Entity Mapping", () => {
       expect(getEntityConfig("creative").idField).toBe("id");
     });
 
-    it("campaign deleteIdsParam is 'campaign_ids'", () => {
-      expect(getEntityConfig("campaign").deleteIdsParam).toBe("campaign_ids");
-    });
+    // Pinterest v5: campaigns/ad_groups/ads have GET/POST/PATCH only — no DELETE.
+    it.each(["campaign", "adGroup", "ad"] as const)(
+      "%s is removed by archiving (no DELETE path)",
+      (type) => {
+        const cfg = getEntityConfig(type);
+        expect(cfg.removal).toBe("archive");
+        expect(cfg.deletePath).toBeUndefined();
+      }
+    );
 
-    it("adGroup deleteIdsParam is 'ad_group_ids'", () => {
-      expect(getEntityConfig("adGroup").deleteIdsParam).toBe("ad_group_ids");
-    });
-
-    it("ad deleteIdsParam is 'ad_ids'", () => {
-      expect(getEntityConfig("ad").deleteIdsParam).toBe("ad_ids");
-    });
-
-    it("creative deleteIdsParam is 'pin_id'", () => {
-      expect(getEntityConfig("creative").deleteIdsParam).toBe("pin_id");
+    it("creative (Pin) is removed with DELETE /v5/pins/{entityId}", () => {
+      const cfg = getEntityConfig("creative");
+      expect(cfg.removal).toBe("delete");
+      expect(cfg.deletePath).toBe("/v5/pins/{entityId}");
     });
 
     it("campaign displayName is 'Campaign'", () => {
@@ -101,7 +101,7 @@ describe("Pinterest Entity Mapping", () => {
         expect(cfg.createPath).not.toContain("/open_api/v1.3/");
         expect(cfg.updatePath).not.toContain("/open_api/v1.3/");
         expect(cfg.statusUpdatePath).not.toContain("/open_api/v1.3/");
-        expect(cfg.deletePath).not.toContain("/open_api/v1.3/");
+        expect(cfg.deletePath ?? "").not.toContain("/open_api/v1.3/");
       }
     });
   });

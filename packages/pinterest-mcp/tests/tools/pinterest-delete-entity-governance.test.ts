@@ -16,6 +16,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 import {
   deleteEntityLogic,
+  deleteEntityResponseFormatter,
+  deleteEntityTool,
   DeleteEntityOutputSchema,
 } from "../../src/mcp-server/tools/definitions/delete-entity.tool.js";
 import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
@@ -35,6 +37,7 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     vi.clearAllMocks();
     svc = {
       deleteEntity: vi.fn().mockResolvedValue({
+        removal: "archived",
         results: [
           { entityId: "1800111", success: true },
           { entityId: "1800222", success: true },
@@ -53,9 +56,10 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     expect(mockElicit).not.toHaveBeenCalled();
     expect(svc.deleteEntity).not.toHaveBeenCalled();
     expect(result.deleted).toBe(false);
+    expect(result.removal).toBe("archived");
     expect(result.dryRun?.expectedEffect).toEqual({
       effectKind: "entities_deleted",
-      summary: { entity_kind: "campaign", requested: 2 },
+      summary: { entity_kind: "campaign", removal: "archived", requested: 2 },
     });
     expect(result.dispatchedCapability).toEqual({
       operation: "bulk_job",
@@ -85,6 +89,7 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
       effectKind: "entities_deleted",
       summary: {
         entity_kind: "campaign",
+        removal: "archived",
         requested: 2,
         succeeded: 2,
         failed: 0,
@@ -98,6 +103,7 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
 
   it("execute reports honest partial-failure counts (one id rejected)", async () => {
     svc.deleteEntity.mockResolvedValueOnce({
+      removal: "archived",
       results: [
         { entityId: "1800111", success: true },
         { entityId: "1800222", success: false, error: "404 not found" },
@@ -109,12 +115,47 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     expect(result.failedCount).toBe(1);
     expect(result.effect?.summary).toEqual({
       entity_kind: "campaign",
+      removal: "archived",
       requested: 2,
       succeeded: 1,
       failed: 1,
       partial_success: true,
     });
     expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
+  });
+
+  it("creative (Pin) removal is reported as a real delete", async () => {
+    svc.deleteEntity.mockResolvedValueOnce({
+      removal: "deleted",
+      results: [{ entityId: "900", success: true }],
+    });
+    const result = await deleteEntityLogic(
+      { ...baseInput, entityType: "creative", entityIds: ["900"] } as any,
+      ctx,
+      sdk
+    );
+    expect(result.removal).toBe("deleted");
+    expect(result.effect?.summary.removal).toBe("deleted");
+    const dry = await deleteEntityLogic(
+      { ...baseInput, entityType: "creative", entityIds: ["900"], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(dry.dryRun?.expectedEffect?.summary.removal).toBe("deleted");
+  });
+
+  it("formatter says campaigns were archived, not deleted", async () => {
+    const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
+    const text = deleteEntityResponseFormatter(result)[0].text;
+    expect(text).toContain("ARCHIVED");
+    expect(text).toContain("1800111: archived");
+    expect(text).not.toMatch(/: deleted/);
+  });
+
+  it("description states that campaign/adGroup/ad are archived, not deleted", () => {
+    expect(deleteEntityTool.description).toMatch(/ARCHIVES/);
+    expect(deleteEntityTool.description).toContain('status: "ARCHIVED"');
+    expect(deleteEntityTool.description).not.toMatch(/\/delete\/ endpoint/);
   });
 
   it("declined confirmation reports the capability, no effect", async () => {

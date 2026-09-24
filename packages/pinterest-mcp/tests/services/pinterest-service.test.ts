@@ -65,7 +65,7 @@ describe("PinterestService", () => {
       );
     });
 
-    it("passes campaignId and adGroupId filters as query params when provided", async () => {
+    it("sends campaignId / adGroupId as the v5 plural filters campaign_ids / ad_group_ids", async () => {
       mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
       await service.listEntities("ad", {
@@ -74,9 +74,13 @@ describe("PinterestService", () => {
         adGroupId: "222",
       });
 
+      const params = mockGet.mock.calls[0][1] as Record<string, string>;
+      // Singular campaign_id / ad_group_id are not v5 parameters and were ignored.
+      expect(params).not.toHaveProperty("campaign_id");
+      expect(params).not.toHaveProperty("ad_group_id");
       expect(mockGet).toHaveBeenCalledWith(
         "/v5/ad_accounts/549755813599/ads",
-        expect.objectContaining({ campaign_id: "111", ad_group_id: "222" }),
+        expect.objectContaining({ campaign_ids: "111", ad_group_ids: "222" }),
         undefined
       );
     });
@@ -161,6 +165,16 @@ describe("PinterestService", () => {
       const result = await service.createEntity("creative", filters, { title: "Pin" });
       expect(result).toEqual(pin);
     });
+
+    it("posts a single PinCreate object (not an array) to /v5/pins", async () => {
+      mockPost.mockResolvedValueOnce({ id: "900" });
+      const pinCreate = { board_id: "1", media_source: { source_type: "image_url", url: "u" } };
+
+      await service.createEntity("creative", filters, pinCreate);
+
+      expect(mockPost).toHaveBeenCalledWith("/v5/pins", pinCreate, undefined);
+      expect(Array.isArray(mockPost.mock.calls[0][1])).toBe(false);
+    });
   });
 
   describe("updateEntity()", () => {
@@ -200,28 +214,175 @@ describe("PinterestService", () => {
   });
 
   describe("deleteEntity()", () => {
-    it("calls DELETE with query params using deleteIdsParam", async () => {
-      mockDelete.mockResolvedValueOnce({});
+    // Pinterest v5 has no DELETE on campaigns/ad_groups/ads (GET/POST/PATCH only):
+    // removal is a PATCH to status ARCHIVED.
+    it.each([
+      ["campaign", "campaigns"],
+      ["adGroup", "ad_groups"],
+      ["ad", "ads"],
+    ] as const)("archives %s via PATCH status ARCHIVED, never DELETE", async (type, segment) => {
+      mockPatch
+        .mockResolvedValueOnce({ items: [{ data: { id: "111", status: "ARCHIVED" } }] })
+        .mockResolvedValueOnce({ items: [{ data: { id: "222", status: "ARCHIVED" } }] });
 
-      await service.deleteEntity("campaign", filters, ["111", "222"]);
+      const result = await service.deleteEntity(type, filters, ["111", "222"]);
 
-      expect(mockDelete).toHaveBeenCalledWith(
-        "/v5/ad_accounts/549755813599/campaigns",
-        { campaign_ids: "111,222" },
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockPatch).toHaveBeenCalledTimes(2);
+      expect(mockPatch).toHaveBeenCalledWith(
+        `/v5/ad_accounts/549755813599/${segment}`,
+        [{ id: "111", status: "ARCHIVED" }],
         undefined
       );
+      expect(mockPatch).toHaveBeenCalledWith(
+        `/v5/ad_accounts/549755813599/${segment}`,
+        [{ id: "222", status: "ARCHIVED" }],
+        undefined
+      );
+      expect(result).toEqual({
+        removal: "archived",
+        results: [
+          { entityId: "111", success: true },
+          { entityId: "222", success: true },
+        ],
+      });
     });
 
-    it("uses correct deleteIdsParam for ad groups", async () => {
-      mockDelete.mockResolvedValueOnce({});
+    it("reports an archive Pinterest rejected (HTTP 200 + exceptions) as a per-id failure", async () => {
+      mockPatch.mockResolvedValueOnce({ items: [{ data: { id: "111" } }] }).mockResolvedValueOnce({
+        items: [{ exceptions: [{ code: 2, message: "Campaign not found" }] }],
+      });
 
-      await service.deleteEntity("adGroup", filters, ["333"]);
+      const result = await service.deleteEntity("campaign", filters, ["111", "222"]);
 
-      expect(mockDelete).toHaveBeenCalledWith(
-        "/v5/ad_accounts/549755813599/ad_groups",
-        { ad_group_ids: "333" },
+      expect(result.removal).toBe("archived");
+      expect(result.results[0]).toEqual({ entityId: "111", success: true });
+      expect(result.results[1]).toMatchObject({ entityId: "222", success: false });
+      expect(result.results[1].error).toContain("Campaign not found");
+    });
+
+    it("deletes creatives (Pins) with DELETE /v5/pins/{pin_id}, one request per id", async () => {
+      mockDelete.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("404"));
+
+      const result = await service.deleteEntity("creative", filters, ["900", "901"]);
+
+      expect(mockPatch).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledWith("/v5/pins/900", {}, undefined);
+      expect(mockDelete).toHaveBeenCalledWith("/v5/pins/901", {}, undefined);
+      expect(result).toEqual({
+        removal: "deleted",
+        results: [
+          { entityId: "900", success: true },
+          { entityId: "901", success: false, error: "404" },
+        ],
+      });
+    });
+  });
+
+  describe("targeting", () => {
+    it("searchTargeting reads GET /v5/resources/targeting/{type} and filters/limits client-side", async () => {
+      mockGet.mockResolvedValueOnce([
+        { US: "United States", GB: "United Kingdom", "811": "U.S.: Reno", GR: "Greece" },
+      ]);
+
+      const result = await service.searchTargeting("LOCATION", "u.s", 1, filters);
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/v5/resources/targeting/LOCATION",
+        { ad_account_id: "549755813599" },
         undefined
       );
+      // No keyword/count query params exist on this endpoint.
+      const params = mockGet.mock.calls[0][1] as Record<string, string>;
+      expect(params).not.toHaveProperty("keyword");
+      expect(params).not.toHaveProperty("count");
+      expect(result).toEqual([{ id: "811", name: "U.S.: Reno" }]);
+    });
+
+    it("searchTargeting passes non-map option objects through", async () => {
+      mockGet.mockResolvedValueOnce([{ id: "935", name: "Gaming", level: 1 }]);
+
+      const result = await service.searchTargeting("INTEREST", "gam", 10, filters);
+      expect(result).toEqual([{ id: "935", name: "Gaming", level: 1 }]);
+    });
+
+    it("getTargetingOptions reads GET /v5/resources/targeting/{type}", async () => {
+      mockGet.mockResolvedValueOnce([{ "18-24": "18-24" }]);
+
+      const result = await service.getTargetingOptions("AGE_BUCKET", filters);
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/v5/resources/targeting/AGE_BUCKET",
+        { ad_account_id: "549755813599" },
+        undefined
+      );
+      expect(result).toEqual({ targeting_type: "AGE_BUCKET", options: [{ "18-24": "18-24" }] });
+    });
+
+    it("getTargetingOptions without a type returns the v5 PublicTargetingType list, no API call", async () => {
+      const result = await service.getTargetingOptions(undefined, filters);
+      expect(mockGet).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        targeting_types: [
+          "APPTYPE",
+          "GENDER",
+          "LOCALE",
+          "AGE_BUCKET",
+          "LOCATION",
+          "GEO",
+          "INTEREST",
+          "KEYWORD",
+          "AUDIENCE_INCLUDE",
+          "AUDIENCE_EXCLUDE",
+        ],
+      });
+    });
+  });
+
+  describe("getAudienceEstimate()", () => {
+    it("POSTs the spec as targeting_spec to /ad_groups/audience_sizing", async () => {
+      mockPost.mockResolvedValueOnce({
+        audience_size_lower_bound: 100,
+        audience_size_upper_bound: 200,
+      });
+      const spec = { GENDER: ["female"], LOCATION: ["US"] };
+
+      const result = await service.getAudienceEstimate(filters, spec);
+
+      expect(mockGet).not.toHaveBeenCalled();
+      expect(mockPost).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/ad_groups/audience_sizing",
+        { targeting_spec: spec },
+        undefined
+      );
+      expect(result).toEqual({ audience_size_lower_bound: 100, audience_size_upper_bound: 200 });
+    });
+  });
+
+  describe("getAdPreviews()", () => {
+    it("reads the ad's pin_id and POSTs it to /ad_previews", async () => {
+      mockGet.mockResolvedValueOnce({ id: "1600", pin_id: "7389" });
+      mockPost.mockResolvedValueOnce({ url: "https://ads.pinterest.com/ad-preview/abc/" });
+
+      const result = await service.getAdPreviews(filters, "1600", "MAX_VIDEO");
+
+      expect(mockGet).toHaveBeenCalledWith("/v5/ad_accounts/549755813599/ads/1600", {}, undefined);
+      expect(mockPost).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/ad_previews",
+        { pin_id: "7389", creative_type: "MAX_VIDEO" },
+        undefined
+      );
+      expect(result).toEqual({
+        pinId: "7389",
+        preview: { url: "https://ads.pinterest.com/ad-preview/abc/" },
+      });
+    });
+
+    it("fails clearly when the ad has no pin_id", async () => {
+      mockGet.mockResolvedValueOnce({ id: "1600" });
+
+      await expect(service.getAdPreviews(filters, "1600")).rejects.toThrow(/has no pin_id/);
+      expect(mockPost).not.toHaveBeenCalled();
     });
   });
 

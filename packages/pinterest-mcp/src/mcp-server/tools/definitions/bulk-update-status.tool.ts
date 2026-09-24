@@ -35,7 +35,7 @@ const TOOL_DESCRIPTION = `Batch update the status of Pinterest Ads entities.
 - **PAUSED** — Pause entities
 - **ARCHIVED** — Archive entities (soft-delete)
 
-Pinterest's status update API accepts an array of IDs in a single request.`;
+Each id is sent as its own PATCH (a one-item batch), so every id gets its own success or error; Pinterest answers a rejected item with HTTP 200 and per-item exceptions, which are reported as failures.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({

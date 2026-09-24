@@ -443,7 +443,7 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "bulk_job"
             ],
-            "note": "Bulk entity removal. No tool on this server restores it."
+            "note": "Deletes Pins (creative) and ARCHIVES campaigns, ad groups and ads — Pinterest v5 has no DELETE for those. No tool on this server restores either."
           },
           {
             "tool": "pinterest_update_entity",

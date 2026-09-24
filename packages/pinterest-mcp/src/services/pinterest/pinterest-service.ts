@@ -53,13 +53,18 @@ interface PinterestPageInfo {
  * Pinterest v5 patterns:
  * - ad_account_id is in the URL path (interpolated via interpolatePath)
  * - Pagination is cursor-based via `bookmark` query param
+ * - List filters: `campaign_ids` / `ad_group_ids` query params (plural, per the v5 spec)
  * - Get: GET `/v5/ad_accounts/{ad_account_id}/{campaigns|ad_groups|ads}/{id}` (or `/v5/pins/{id}`)
- * - Create: POST with array body `[entityObject]`, returns HTTP 200 with
- *   `{ items: [{ data, exceptions }] }` — a rejected item still arrives as a 200,
- *   so every item's `exceptions` must be checked (see `unwrapBatchWriteItem`)
+ * - Create: campaigns/ad groups/ads POST an array body `[entityObject]` (batch
+ *   endpoint, max 30 items; this service always sends exactly one) and get HTTP
+ *   200 with `{ items: [{ data, exceptions }] }` — a rejected item still arrives
+ *   as a 200, so every item's `exceptions` must be checked (see
+ *   `unwrapBatchWriteItem`). Pins POST a single `PinCreate` object to `/v5/pins`.
  * - Update: PATCH with array body `[{ id, ...fields }]`, same `{ items: [{ data, exceptions }] }` shape
- * - Delete: DELETE with query params `?campaign_ids=id1,id2`
  * - Status update: PATCH (status is just a field in the update body)
+ * - Removal: campaigns/ad groups/ads have NO DELETE method in v5 — they are
+ *   archived via PATCH `status: "ARCHIVED"`. Only Pins have a real
+ *   `DELETE /v5/pins/{pin_id}`.
  */
 export class PinterestService {
   constructor(
@@ -86,8 +91,11 @@ export class PinterestService {
     const path = interpolatePath(config.listPath, { adAccountId: filters.adAccountId });
     const params: Record<string, string> = { page_size: String(pageSize) };
     if (bookmark) params.bookmark = bookmark;
-    if (filters.campaignId) params.campaign_id = filters.campaignId;
-    if (filters.adGroupId) params.ad_group_id = filters.adGroupId;
+    // Pinterest v5 list filters are plural arrays (`campaign_ids`, `ad_group_ids`);
+    // the singular `campaign_id` / `ad_group_id` are not parameters and were
+    // ignored, returning every entity in the account.
+    if (filters.campaignId) params.campaign_ids = filters.campaignId;
+    if (filters.adGroupId) params.ad_group_ids = filters.adGroupId;
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
@@ -146,10 +154,12 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
-    const data = await this.httpClient.post(path, [body], context);
     if (!config.batchWrite) {
-      return data as PinterestEntityMap[T];
+      // `POST /v5/pins` takes a single `PinCreate` object and returns the Pin.
+      return (await this.httpClient.post(path, body, context)) as PinterestEntityMap[T];
     }
+    // Batch endpoints take an array (max 30 items); one item per request here.
+    const data = await this.httpClient.post(path, [body], context);
     return unwrapBatchWriteItem(data, config.displayName, "create") as PinterestEntityMap[T];
   }
 
@@ -185,49 +195,78 @@ export class PinterestService {
     ) as PinterestEntityMap[T];
   }
 
+  /**
+   * Remove entities the way Pinterest v5 supports for each type.
+   *
+   * - campaign / adGroup / ad: there is no DELETE method on these endpoints, so
+   *   removal is a PATCH setting `status: "ARCHIVED"` — one request per id so
+   *   each id's `exceptions` are attributed to it (batch responses carry no id
+   *   on a rejected item). The entity still exists afterwards, archived.
+   * - creative (Pin): `DELETE /v5/pins/{pin_id}`, one request per id.
+   *
+   * Per-id outcomes are reported; a failure after an earlier success never
+   * discards the work already done.
+   */
   async deleteEntity(
     entityType: PinterestEntityType,
     filters: { adAccountId: string },
     entityIds: string[],
     context?: RequestContext
-  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+  ): Promise<{
+    removal: "archived" | "deleted";
+    results: Array<{ entityId: string; success: boolean; error?: string }>;
+  }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
-
-    // Single-entity delete endpoints (e.g. /v5/pins/{entityId}) — delete each
-    // individually. Use allSettled so a failure after an earlier success is
-    // reported per-id rather than discarding the destructive work already done.
-    if (config.deletePath.includes("{entityId}")) {
-      const settled = await Promise.allSettled(
-        entityIds.map((id) => {
-          const path = interpolatePath(config.deletePath, {
-            adAccountId: filters.adAccountId,
-            entityId: id,
-          });
-          return this.httpClient.delete(path, {}, context);
-        })
+    if (config.removal === "archive") {
+      const bulkResults = await executeBulkConcurrent(
+        entityIds,
+        (entityId) =>
+          this.updateEntity(entityType, filters, entityId, { status: "ARCHIVED" }, context),
+        { logger: this.logger }
       );
       return {
-        results: settled.map((outcome, i) => ({
+        removal: "archived",
+        results: bulkResults.map((r, i) => ({
           entityId: entityIds[i],
-          success: outcome.status === "fulfilled",
-          ...(outcome.status === "rejected"
-            ? {
-                error:
-                  outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
-              }
-            : {}),
+          success: r.success,
+          ...(r.success ? {} : { error: r.error }),
         })),
       };
     }
 
-    // Bulk delete via query params (e.g. ?campaign_ids=id1,id2) — a single atomic
-    // request. A throw here propagates (whole-batch failure, nothing deleted);
-    // success means every id was accepted.
-    const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId });
-    await this.httpClient.delete(path, { [config.deleteIdsParam]: entityIds.join(",") }, context);
-    return { results: entityIds.map((entityId) => ({ entityId, success: true })) };
+    const deletePath = config.deletePath;
+    if (!deletePath) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `${config.displayName} is configured for DELETE removal but has no deletePath`
+      );
+    }
+
+    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
+
+    const settled = await Promise.allSettled(
+      entityIds.map((id) => {
+        const path = interpolatePath(deletePath, {
+          adAccountId: filters.adAccountId,
+          entityId: encodeURIComponent(id),
+        });
+        return this.httpClient.delete(path, {}, context);
+      })
+    );
+    return {
+      removal: "deleted",
+      results: settled.map((outcome, i) => ({
+        entityId: entityIds[i],
+        success: outcome.status === "fulfilled",
+        ...(outcome.status === "rejected"
+          ? {
+              error:
+                outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+            }
+          : {}),
+      })),
+    };
   }
 
   async updateEntityStatus(
@@ -460,86 +499,156 @@ export class PinterestService {
 
   // ─── Targeting ───────────────────────────────────────────────────
 
+  /**
+   * Search targeting options of one type.
+   *
+   * Pinterest v5's only targeting-options endpoint is
+   * `GET /v5/resources/targeting/{targeting_type}` (`targeting_options/get`),
+   * which takes no keyword or count parameter — so the keyword filter and the
+   * limit are applied here, client-side, over the full option list.
+   */
   async searchTargeting(
-    targetingType: string,
-    query?: string,
-    limit = 20,
+    targetingType: PinterestTargetingType,
+    query: string | undefined,
+    limit: number,
+    filters: { adAccountId: string },
     context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume("pinterest:default");
-
-    const params: Record<string, string> = {
-      count: String(limit),
-    };
-
-    if (query) {
-      params.keyword = query;
-    }
-
-    return this.httpClient.get(`/v5/targeting_options/${targetingType}`, params, context);
+  ): Promise<Array<Record<string, unknown>>> {
+    const options = await this.fetchTargetingOptions(targetingType, filters, context);
+    const flattened = flattenTargetingOptions(options);
+    const needle = query?.trim().toLowerCase();
+    const matched = needle
+      ? flattened.filter((option) => JSON.stringify(option).toLowerCase().includes(needle))
+      : flattened;
+    return matched.slice(0, limit);
   }
 
-  async getTargetingOptions(targetingType?: string, context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume("pinterest:default");
-
-    // If no type specified, return the list of supported targeting types
+  /**
+   * List targeting options. Without a type, returns the targeting types
+   * Pinterest v5 accepts (`PublicTargetingType`); with one, the options from
+   * `GET /v5/resources/targeting/{targeting_type}`.
+   */
+  async getTargetingOptions(
+    targetingType: PinterestTargetingType | undefined,
+    filters: { adAccountId: string },
+    context?: RequestContext
+  ): Promise<
+    { targeting_types: readonly string[] } | { targeting_type: string; options: unknown[] }
+  > {
     if (!targetingType) {
-      return {
-        targeting_types: [
-          "APPTYPE",
-          "GENDER",
-          "LOCALE",
-          "AGE_BUCKET",
-          "LOCATION",
-          "GEO",
-          "INTEREST",
-          "KEYWORD",
-          "AUDIENCE_INCLUDE",
-          "AUDIENCE_EXCLUDE",
-        ],
-      };
+      return { targeting_types: PINTEREST_TARGETING_TYPES };
     }
+    const options = await this.fetchTargetingOptions(targetingType, filters, context);
+    return { targeting_type: targetingType, options };
+  }
 
-    return this.httpClient.get(`/v5/targeting_options/${targetingType}`, {}, context);
+  private async fetchTargetingOptions(
+    targetingType: PinterestTargetingType,
+    filters: { adAccountId: string },
+    context?: RequestContext
+  ): Promise<unknown[]> {
+    await this.rateLimiter.consume("pinterest:default");
+    const data = await this.httpClient.get(
+      `/v5/resources/targeting/${encodeURIComponent(targetingType)}`,
+      { ad_account_id: filters.adAccountId },
+      context
+    );
+    if (Array.isArray(data)) return data;
+    return data && typeof data === "object" ? [data] : [];
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
 
+  /**
+   * Potential audience size for a targeting spec:
+   * `POST /v5/ad_accounts/{ad_account_id}/ad_groups/audience_sizing` with the
+   * spec in the JSON body as `targeting_spec` (`AdGroupAudienceSizingCreate`).
+   * Response: `{ audience_size_lower_bound, audience_size_upper_bound }`.
+   */
   async getAudienceEstimate(
     filters: { adAccountId: string },
-    targetingConfig: unknown,
+    targetingSpec: unknown,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
-    // Pinterest v5 audience sizing uses GET with targeting spec serialized as a JSON query param
-    const path = `/v5/ad_accounts/${filters.adAccountId}/audience_sizing`;
-    const params: Record<string, string> = {
-      targeting_spec: JSON.stringify(targetingConfig),
-    };
-    return this.httpClient.get(path, params, context);
+    const path = `/v5/ad_accounts/${encodeURIComponent(filters.adAccountId)}/ad_groups/audience_sizing`;
+    return this.httpClient.post(path, { targeting_spec: targetingSpec }, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
+  /**
+   * Preview an existing ad. Pinterest v5 has no preview-by-ad-id endpoint;
+   * `POST /v5/ad_accounts/{ad_account_id}/ad_previews` (`ad_previews/create`,
+   * scope `ads:write`) previews a Pin. So the ad is read first for its
+   * `pin_id`, and the preview is created from that Pin. The response is
+   * `{ url }` — a preview page that expires after 7 days.
+   */
   async getAdPreviews(
     filters: { adAccountId: string },
     adId: string,
-    adFormat?: string,
+    creativeType?: string,
     context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
-
-    const params: Record<string, string> = { ad_id: adId };
-    if (adFormat) {
-      params.ad_format = adFormat;
+  ): Promise<{ pinId: string; preview: unknown }> {
+    const ad = (await this.getEntity("ad", filters, adId, context)) as Record<string, unknown>;
+    const pinId = ad.pin_id;
+    if (pinId == null || String(pinId) === "") {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Ad ${adId} has no pin_id, so no preview can be created for it`,
+        { adId }
+      );
     }
 
-    const path = `/v5/ad_accounts/${filters.adAccountId}/ads/previews`;
-    return this.httpClient.get(path, params, context);
+    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
+
+    const path = `/v5/ad_accounts/${encodeURIComponent(filters.adAccountId)}/ad_previews`;
+    const preview = await this.httpClient.post(
+      path,
+      { pin_id: String(pinId), ...(creativeType ? { creative_type: creativeType } : {}) },
+      context
+    );
+    return { pinId: String(pinId), preview };
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
+}
+
+/** Pinterest v5 `PublicTargetingType` — the path values of `/v5/resources/targeting/{targeting_type}`. */
+export const PINTEREST_TARGETING_TYPES = [
+  "APPTYPE",
+  "GENDER",
+  "LOCALE",
+  "AGE_BUCKET",
+  "LOCATION",
+  "GEO",
+  "INTEREST",
+  "KEYWORD",
+  "AUDIENCE_INCLUDE",
+  "AUDIENCE_EXCLUDE",
+] as const;
+
+export type PinterestTargetingType = (typeof PINTEREST_TARGETING_TYPES)[number];
+
+/**
+ * `targeting_options/get` returns an array of `TargetingOption` objects whose
+ * documented sample is a single id→name map (`[{"36313": "Australia: …", "GR": "Greece"}]`).
+ * Expand map-shaped items into `{ id, name }` rows so they can be filtered and
+ * limited per option; any other object shape is passed through unchanged.
+ */
+export function flattenTargetingOptions(options: unknown[]): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  for (const option of options) {
+    if (!option || typeof option !== "object" || Array.isArray(option)) continue;
+    const entries = Object.entries(option as Record<string, unknown>);
+    if (entries.length > 0 && entries.every(([, v]) => typeof v === "string")) {
+      for (const [id, name] of entries) rows.push({ id, name });
+    } else {
+      rows.push(option as Record<string, unknown>);
+    }
+  }
+  return rows;
 }
 
 const MICROS_PER_UNIT = 1_000_000;
