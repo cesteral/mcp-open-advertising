@@ -142,18 +142,34 @@ export async function adjustBidsLogic(
     queryParams.AdGroupId = Number(input.scope.adGroupId);
   }
 
-  const result = (await msadsService.adjustBids(
+  const { response, results } = await msadsService.adjustBids(
     input.entityType as MsAdsEntityType,
     input.adjustments,
     queryParams,
     context
-  )) as Record<string, unknown>;
+  );
+
+  // Microsoft Ads returns HTTP 200 even when bids are rejected (PartialErrors),
+  // and entities missing on read are never sent. The service resolves both to a
+  // per-adjustment outcome; report those instead of blanket success. The raw
+  // Update response is kept as-is and `adjustmentResults` is added beside it —
+  // its PartialErrors[].Index counts only the entities actually submitted, so it
+  // cannot be read against `adjustments` on its own.
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.length - succeeded;
+  const result: Record<string, unknown> = {
+    ...(response && typeof response === "object" ? (response as Record<string, unknown>) : {}),
+    adjustmentResults: results,
+  };
 
   const effect: EffectResult = {
     effectKind: "bids_adjusted",
     summary: {
       entity_label: input.entityType,
       requested: input.adjustments.length,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
     },
   };
 
@@ -232,10 +248,24 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
       },
     ];
   }
+  const itemResults = Array.isArray(result.result.adjustmentResults)
+    ? (result.result.adjustmentResults as Array<{
+        entityId: string;
+        success: boolean;
+        error?: string;
+      }>)
+    : undefined;
+  const succeeded = itemResults
+    ? itemResults.filter((r) => r.success).length
+    : result.adjustmentCount;
+  const failures = itemResults ? itemResults.filter((r) => !r.success) : [];
+  const failureLines = failures.length
+    ? `\n\nFailed:\n${failures.map((r) => `  ${r.entityId}: ${r.error ?? "unknown error"}`).join("\n")}`
+    : "";
   return [
     {
       type: "text" as const,
-      text: `Adjusted ${result.adjustmentCount} ${result.entityType} bids\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Adjusted ${succeeded}/${result.adjustmentCount} ${result.entityType} bids${failureLines}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

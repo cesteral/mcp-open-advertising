@@ -130,16 +130,26 @@ export async function bulkUpdateEntitiesLogic(
     context
   );
 
-  // Microsoft Ads' bulk update returns raw batch results without a per-item
-  // success flag, so the effect summary carries the requested count only.
+  // Microsoft Ads returns HTTP 200 even when items are rejected; the service
+  // maps each batch's PartialErrors back to per-item outcomes, so the effect
+  // reports the real outcome rather than blanket success.
+  const requested = input.items.length;
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = requested - succeeded;
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
-    summary: { entity_kind: input.entityType, requested: input.items.length },
+    summary: {
+      entity_kind: input.entityType,
+      requested,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
+    },
   };
 
   return {
     confirmed: true,
-    results: results as Record<string, unknown>[],
+    results: results as unknown as Record<string, unknown>[],
     entityType: input.entityType,
     totalItems: input.items.length,
     timestamp: new Date().toISOString(),
@@ -220,10 +230,13 @@ export function bulkUpdateEntitiesResponseFormatter(
       },
     ];
   }
+  const succeeded = result.results.filter((r) => r.success === true).length;
+  const failed = result.results.length - succeeded;
+  const failedNote = failed > 0 ? ` (${failed} rejected by Microsoft Ads)` : "";
   return [
     {
       type: "text" as const,
-      text: `Bulk updated ${result.totalItems} ${result.entityType} entities\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk updated ${succeeded}/${result.totalItems} ${result.entityType} entities${failedNote}\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

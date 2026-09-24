@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { mapMsAdsItemOutcomes } from "../../../services/msads/partial-errors.js";
 import {
   elicitBulkDeleteConfirmation,
   assertGovernedEffectDryRun,
@@ -132,7 +133,7 @@ export async function deleteEntityLogic(
   // some ids fail — the per-item failures arrive as `PartialErrors[].Index`. Count
   // them so the effect reports the real outcome rather than blanket success.
   const requested = input.entityIds.length;
-  const failedCount = countMsAdsPartialFailures(result, requested);
+  const failedCount = mapMsAdsItemOutcomes(result, requested).filter((o) => !o.success).length;
   const succeeded = requested - failedCount;
 
   const effect: EffectResult = {
@@ -156,26 +157,6 @@ export async function deleteEntityLogic(
     effect,
     dispatchedCapability,
   };
-}
-
-/**
- * Count distinct request items the Microsoft Ads delete rejected. The JSON
- * Campaign Management API returns HTTP 200 with a top-level `PartialErrors`
- * array; each entry's `Index` points at the failed request item. Defensive: only
- * indices within the requested range are counted.
- */
-function countMsAdsPartialFailures(result: unknown, requested: number): number {
-  if (!result || typeof result !== "object") return 0;
-  const partialErrors = (result as Record<string, unknown>).PartialErrors;
-  if (!Array.isArray(partialErrors)) return 0;
-  const failedIndices = new Set<number>();
-  for (const entry of partialErrors) {
-    const index = (entry as Record<string, unknown>)?.Index;
-    if (typeof index === "number" && Number.isInteger(index) && index >= 0 && index < requested) {
-      failedIndices.add(index);
-    }
-  }
-  return failedIndices.size;
 }
 
 /**

@@ -11,6 +11,7 @@ import {
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
+import { assertMsAdsWriteSucceeded, mapMsAdsItemOutcomes } from "./partial-errors.js";
 import type {
   MsAdsCampaign,
   MsAdsAdGroup,
@@ -32,6 +33,35 @@ export type {
   MsAdsAudience,
   MsAdsLabel,
 };
+
+/**
+ * Status forced onto every duplicated entity so the copy can never start
+ * spending on creation. Microsoft Ads v13 accepts `Paused` on write for every
+ * status-bearing entity this package handles: CampaignStatus, AdGroupStatus,
+ * AdStatus and KeywordStatus all enumerate `Paused` (campaign-management-service
+ * `campaignstatus.md`, `adgroupstatus.md`, `adstatus.md`, `keywordstatus.md`),
+ * and `campaign.md` / `adgroup.md` document it as the Add default.
+ */
+export const MSADS_DUPLICATE_COPY_STATUS = "Paused";
+
+/** Per-item outcome returned by the bulk create/update service methods. */
+export interface MsAdsBulkItemResult {
+  /** Zero-based index of the item in the caller's `items` array. */
+  index: number;
+  /** Created ID (bulk create) or targeted ID (bulk update); absent when unknown. */
+  entityId?: string;
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+}
+
+/** Per-adjustment outcome returned by `adjustBids`. */
+export interface MsAdsBidAdjustmentResult {
+  entityId: string;
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+}
 
 interface MsAdsEntityMap {
   campaign: MsAdsCampaign;
@@ -161,7 +191,16 @@ export class MsAdsService {
     }
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.info({ entityType }, "Creating entity");
-    return this.httpClient.post(config.addOperation, data, context);
+    const result = await this.httpClient.post(config.addOperation, data, context);
+    // HTTP 200 does not mean the Add happened: rejected items come back in
+    // PartialErrors with a null id at their index.
+    assertMsAdsWriteSucceeded(result, {
+      operation: "create",
+      entityLabel: config.displayName,
+      requested: countBatchItems(data, config.pluralName),
+      idsField: config.idsField,
+    });
+    return result;
   }
 
   /**
@@ -169,6 +208,12 @@ export class MsAdsService {
    * has no native copy operation). Reads the source by ID, strips the
    * server-assigned `Id`, then submits a fresh Add payload
    * (`{ AccountId, <PluralName>: [copy] }`). Only `campaign` is supported.
+   *
+   * The copy is always created `Paused` (MSADS_DUPLICATE_COPY_STATUS), applied
+   * after `options`, so duplicating an Active entity can never produce a copy
+   * that spends before someone deliberately activates it. This also avoids
+   * copying read-only system statuses (e.g. `BudgetPaused`, `Suspended`) that
+   * Add rejects.
    */
   async duplicateEntity(
     entityType: MsAdsEntityType,
@@ -205,6 +250,13 @@ export class MsAdsService {
       if (key !== config.idField) copy[key] = val;
     }
     if (options) Object.assign(copy, options);
+    if (options && "Status" in options && options.Status !== MSADS_DUPLICATE_COPY_STATUS) {
+      this.logger.warn(
+        { entityType, requestedStatus: options.Status },
+        "Ignoring Status override on duplicate; copies are always created Paused"
+      );
+    }
+    copy.Status = MSADS_DUPLICATE_COPY_STATUS;
 
     const payload = { AccountId: Number(accountId), [config.pluralName]: [copy] };
     // MS Ads Add returns only the new IDs; surface the submitted item too so the
@@ -224,7 +276,14 @@ export class MsAdsService {
     const config = getEntityConfig(entityType);
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.info({ entityType }, "Updating entity");
-    return this.httpClient.put(config.updateOperation, data, context);
+    const result = await this.httpClient.put(config.updateOperation, data, context);
+    // Update returns HTTP 200 with PartialErrors for rejected items.
+    assertMsAdsWriteSucceeded(result, {
+      operation: "update",
+      entityLabel: config.displayName,
+      requested: countBatchItems(data, config.pluralName),
+    });
+    return result;
   }
 
   /**
@@ -248,14 +307,19 @@ export class MsAdsService {
 
   /**
    * Bulk create entities — batches items per entity batch limit.
+   *
+   * Returns one outcome per input item. Each batch's `PartialErrors[].Index`
+   * (batch-relative) and null entries in the Add id list are mapped back to
+   * the caller's item index, so an HTTP 200 whose items were all rejected is
+   * reported as failures, not success.
    */
   async bulkCreateEntities(
     entityType: MsAdsEntityType,
     items: Record<string, unknown>[],
     context?: RequestContext
-  ): Promise<unknown[]> {
+  ): Promise<MsAdsBulkItemResult[]> {
     const config = getEntityConfig(entityType);
-    const results: unknown[] = [];
+    const results: MsAdsBulkItemResult[] = [];
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
@@ -266,7 +330,13 @@ export class MsAdsService {
         "Bulk creating entities"
       );
       const result = await this.httpClient.post(config.addOperation, body, context);
-      results.push(result);
+      const ids = (result as Record<string, unknown> | null)?.[config.idsField];
+      for (const outcome of mapMsAdsItemOutcomes(result, batch.length, {
+        idsField: config.idsField,
+      })) {
+        const createdId = outcome.success && Array.isArray(ids) ? ids[outcome.index] : undefined;
+        results.push(toBulkItemResult(i + outcome.index, outcome, createdId));
+      }
     }
 
     return results;
@@ -274,14 +344,17 @@ export class MsAdsService {
 
   /**
    * Bulk update entities — batches items per entity batch limit.
+   *
+   * Returns one outcome per input item, mapping each batch's
+   * `PartialErrors[].Index` back to the caller's item index.
    */
   async bulkUpdateEntities(
     entityType: MsAdsEntityType,
     items: Record<string, unknown>[],
     context?: RequestContext
-  ): Promise<unknown[]> {
+  ): Promise<MsAdsBulkItemResult[]> {
     const config = getEntityConfig(entityType);
-    const results: unknown[] = [];
+    const results: MsAdsBulkItemResult[] = [];
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
@@ -289,7 +362,10 @@ export class MsAdsService {
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length }, "Bulk updating entities");
       const result = await this.httpClient.put(config.updateOperation, body, context);
-      results.push(result);
+      for (const outcome of mapMsAdsItemOutcomes(result, batch.length)) {
+        const item = batch[outcome.index] ?? {};
+        results.push(toBulkItemResult(i + outcome.index, outcome, item.Id ?? item.id));
+      }
     }
 
     return results;
@@ -316,7 +392,15 @@ export class MsAdsService {
         const body = {
           [config.pluralName]: [{ Id: Number(entityId), Status: status }],
         };
-        return this.httpClient.put(config.updateOperation, body, context);
+        const result = await this.httpClient.put(config.updateOperation, body, context);
+        // A rejected status change still returns HTTP 200 — surface its
+        // PartialErrors as this entity's failure.
+        assertMsAdsWriteSucceeded(result, {
+          operation: "status update",
+          entityLabel: `${config.displayName} ${entityId}`,
+          requested: 1,
+        });
+        return result;
       },
       { logger: this.logger }
     );
@@ -332,6 +416,11 @@ export class MsAdsService {
 
   /**
    * Adjust bids — safe read-modify-write pattern for keyword/adGroup bids.
+   *
+   * Returns the raw Update response plus one outcome per requested adjustment.
+   * Adjustments whose entity was not found on read are reported as failed
+   * (they are never sent). `PartialErrors[].Index` refers to the SUBMITTED
+   * list, which excludes those, so it is mapped back through that list.
    */
   async adjustBids(
     entityType: MsAdsEntityType,
@@ -342,7 +431,7 @@ export class MsAdsService {
     }>,
     queryParams: Record<string, unknown> | undefined,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ response: unknown; results: MsAdsBidAdjustmentResult[] }> {
     const config = getEntityConfig(entityType);
 
     // Read current entities
@@ -355,8 +444,10 @@ export class MsAdsService {
     );
 
     // Apply bid changes — skip missing entities to prevent data loss
+    // submittedFrom[k] = index in `adjustments` of the k-th entity sent.
+    const submittedFrom: number[] = [];
     const updatedEntities = adjustments
-      .map((adj) => {
+      .map((adj, adjIndex) => {
         const current = currentEntities.find(
           (e) => String((e as unknown as Record<string, unknown>)[config.idField]) === adj.entityId
         );
@@ -367,6 +458,7 @@ export class MsAdsService {
           );
           return null;
         }
+        submittedFrom.push(adjIndex);
         return { ...(current as unknown as Record<string, unknown>), [adj.bidField]: adj.newBid };
       })
       .filter((e): e is Record<string, unknown> => e !== null);
@@ -381,7 +473,25 @@ export class MsAdsService {
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body = { [config.pluralName]: updatedEntities };
     this.logger.info({ entityType, count: adjustments.length }, "Adjusting bids");
-    return this.httpClient.put(config.updateOperation, body, context);
+    const response = await this.httpClient.put(config.updateOperation, body, context);
+
+    const results: MsAdsBidAdjustmentResult[] = adjustments.map((adj) => ({
+      entityId: adj.entityId,
+      success: false,
+      error: `${config.displayName} ${adj.entityId} not found on read-before-write; not updated`,
+    }));
+    for (const outcome of mapMsAdsItemOutcomes(response, submittedFrom.length)) {
+      const adjIndex = submittedFrom[outcome.index];
+      const adj = adjIndex !== undefined ? adjustments[adjIndex] : undefined;
+      if (adjIndex === undefined || !adj) continue;
+      results[adjIndex] = {
+        entityId: adj.entityId,
+        success: outcome.success,
+        ...(outcome.error ? { error: outcome.error } : {}),
+        ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
+      };
+    }
+    return { response, results };
   }
 
   /**
@@ -437,4 +547,24 @@ export class MsAdsService {
       );
     }
   }
+}
+
+/** Number of items in a `{ <PluralName>: [...] }` write payload (1 if absent). */
+function countBatchItems(data: Record<string, unknown>, pluralName: string): number {
+  const collection = data[pluralName];
+  return Array.isArray(collection) && collection.length > 0 ? collection.length : 1;
+}
+
+function toBulkItemResult(
+  index: number,
+  outcome: { success: boolean; error?: string; errorCode?: string },
+  entityId: unknown
+): MsAdsBulkItemResult {
+  return {
+    index,
+    ...(entityId !== undefined && entityId !== null ? { entityId: String(entityId) } : {}),
+    success: outcome.success,
+    ...(outcome.error ? { error: outcome.error } : {}),
+    ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
+  };
 }

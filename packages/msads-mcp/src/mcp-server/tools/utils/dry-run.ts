@@ -25,6 +25,7 @@ import type {
   RequestContext,
 } from "@cesteral/shared";
 import { buildMsAdsSnapshot, ENTITY_KIND_MAP, type MsAdsServiceLike } from "./capture-snapshot.js";
+import { MSADS_DUPLICATE_COPY_STATUS } from "../../../services/msads/msads-service.js";
 
 export type { MsAdsServiceLike };
 
@@ -164,8 +165,9 @@ export interface MsAdsDuplicateDryRunArgs {
 
 /**
  * Symbolic dry-run for `msads_duplicate_entity`. Reads the source entity and
- * projects the would-be copy (source fields with any `options` overlaid, empty
- * new ID) as the expected post-state. Duplicate has no `before`. A read failure
+ * projects the would-be copy (source fields with any `options` overlaid, then
+ * `Status` forced to `Paused` exactly as the execute path does, empty new ID)
+ * as the expected post-state. Duplicate has no `before`. A read failure
  * on an in-scope kind fails the governed call via `assertGovernedDryRunResult`.
  */
 export async function runMsAdsDuplicateDryRun(
@@ -187,7 +189,10 @@ export async function runMsAdsDuplicateDryRun(
     );
     const source = (entities[0] ?? {}) as Record<string, unknown>;
     if (Object.keys(source).length > 0) {
-      const snapshot = buildMsAdsSnapshot(input.entityType, "", source, input.options ?? {});
+      const snapshot = buildMsAdsSnapshot(input.entityType, "", source, {
+        ...(input.options ?? {}),
+        Status: MSADS_DUPLICATE_COPY_STATUS,
+      });
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

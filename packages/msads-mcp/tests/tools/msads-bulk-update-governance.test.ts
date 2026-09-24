@@ -37,7 +37,12 @@ describe("msads_bulk_update_entities governance contract (effect class)", () => 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = { bulkUpdateEntities: vi.fn().mockResolvedValue([{ Id: 123 }, { Id: 456 }]) };
+    svc = {
+      bulkUpdateEntities: vi.fn().mockResolvedValue([
+        { index: 0, entityId: "123", success: true },
+        { index: 1, entityId: "456", success: true },
+      ]),
+    };
     mockResolveSessionServices.mockReturnValue({ msadsService: svc });
     mockElicit.mockResolvedValue(true);
   });
@@ -75,7 +80,13 @@ describe("msads_bulk_update_entities governance contract (effect class)", () => 
     expect(result.totalItems).toBe(2);
     expect(result.effect).toEqual({
       effectKind: "entities_updated",
-      summary: { entity_kind: "campaign", requested: 2 },
+      summary: {
+        entity_kind: "campaign",
+        requested: 2,
+        succeeded: 2,
+        failed: 0,
+        partial_success: false,
+      },
     });
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     expect(() => BulkUpdateEntitiesOutputSchema.parse(result)).not.toThrow();

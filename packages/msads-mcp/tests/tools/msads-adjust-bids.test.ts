@@ -31,7 +31,10 @@ describe("msads_adjust_bids governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
-      adjustBids: vi.fn().mockResolvedValue({ PartialErrors: [] }),
+      adjustBids: vi.fn().mockResolvedValue({
+        response: { PartialErrors: [] },
+        results: [{ entityId: "111", success: true }],
+      }),
     };
     mockResolveSessionServices.mockReturnValue({ msadsService: svc });
     mockElicit.mockResolvedValue(true);
@@ -76,7 +79,13 @@ describe("msads_adjust_bids governance contract (effect class)", () => {
     expect(svc.adjustBids).toHaveBeenCalledOnce();
     expect(result.effect).toEqual({
       effectKind: "bids_adjusted",
-      summary: { entity_label: "keyword", requested: 1 },
+      summary: {
+        entity_label: "keyword",
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        partial_success: false,
+      },
     });
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     expect(() => AdjustBidsOutputSchema.parse(result)).not.toThrow();
