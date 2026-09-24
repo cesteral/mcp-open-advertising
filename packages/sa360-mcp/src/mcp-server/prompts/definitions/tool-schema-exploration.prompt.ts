@@ -83,7 +83,7 @@ Fetch these resources for detailed schema information:
 - \`sa360_validate_conversion\` — Validate conversion payload (no API call)
 
 ### Audit
-- \`sa360_get_change_history\` — Get change history for SA360 entities
+- \`sa360_get_change_history\` — Unavailable on Reporting API v0 (no change_event resource); returns an error pointing to \`sa360_gaql_search\` + \`last_modified_time\`
 
 ## Workflow Prompts
 

@@ -2,21 +2,42 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_get_change_history";
 const TOOL_TITLE = "Get SA360 Change History";
-const TOOL_DESCRIPTION = `Get change history for SA360 entities using the change_event resource.
+const TOOL_DESCRIPTION = `UNAVAILABLE on the pinned SA360 Reporting API v0 — every call returns an error explaining why.
 
-Tracks entity modifications including what changed, when, and by which client. Useful for auditing campaign changes across engines.
+SA360 change history lives in the \`change_event\` resource, which Reporting API v0 does not expose (its SearchAds360Row has no change_event or change_status resource). This tool performs no API call.
 
-**Filterable resource types:** CAMPAIGN, AD_GROUP, AD, KEYWORD, CRITERION`;
+**Alternative:** to find recently modified entities, use \`sa360_gaql_search\` with the \`last_modified_time\` field that v0 exposes on campaign, ad_group, ad_group_ad, ad_group_criterion and campaign_criterion (e.g. \`SELECT campaign.id, campaign.name, campaign.last_modified_time FROM campaign\`). That returns when an entity last changed, not what changed.`;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const RESOURCE_TYPE_ENUM = ["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "CRITERION"] as const;
+/**
+ * `ChangeEvent.changeResourceType` values as published for SA360 `change_event`
+ * (searchads360 v23 Discovery). Retained so the input contract is valid if the
+ * tool is re-enabled on an API version that exposes `change_event`.
+ */
+const RESOURCE_TYPE_ENUM = [
+  "AD",
+  "AD_GROUP",
+  "AD_GROUP_AD",
+  "AD_GROUP_CRITERION",
+  "AD_GROUP_BID_MODIFIER",
+  "CAMPAIGN",
+  "CAMPAIGN_BUDGET",
+  "CAMPAIGN_CRITERION",
+  "ASSET",
+  "CUSTOMER_ASSET",
+  "CAMPAIGN_ASSET",
+  "AD_GROUP_ASSET",
+  "ASSET_SET",
+  "ASSET_SET_ASSET",
+  "CAMPAIGN_ASSET_SET",
+] as const;
 
 export const GetChangeHistoryInputSchema = z
   .object({
@@ -57,51 +78,28 @@ export const GetChangeHistoryOutputSchema = z
 type GetChangeHistoryInput = z.infer<typeof GetChangeHistoryInputSchema>;
 type GetChangeHistoryOutput = z.infer<typeof GetChangeHistoryOutputSchema>;
 
-function buildChangeHistoryQuery(input: GetChangeHistoryInput): string {
-  const selectFields = [
-    "change_event.change_date_time",
-    "change_event.change_resource_type",
-    "change_event.changed_fields",
-    "change_event.client_type",
-    "change_event.old_resource",
-    "change_event.new_resource",
-    "change_event.resource_name",
-  ].join(", ");
+export const CHANGE_HISTORY_UNAVAILABLE_MESSAGE =
+  "sa360_get_change_history is unavailable: SA360 Reporting API v0 (the version this server " +
+  "is pinned to) has no change_event resource, so change history cannot be queried. To find " +
+  "recently modified entities, use sa360_gaql_search with <resource>.last_modified_time " +
+  "(available on campaign, ad_group, ad_group_ad, ad_group_criterion and campaign_criterion).";
 
-  const whereClauses: string[] = [
-    `change_event.change_date_time >= '${input.startDate} 00:00:00'`,
-    `change_event.change_date_time <= '${input.endDate} 23:59:59'`,
-  ];
-
-  if (input.resourceType) {
-    whereClauses.push(`change_event.change_resource_type = '${input.resourceType}'`);
-  }
-
-  return `SELECT ${selectFields} FROM change_event WHERE ${whereClauses.join(" AND ")} ORDER BY change_event.change_date_time DESC LIMIT ${input.limit}`;
-}
-
+/**
+ * Always throws. Querying `FROM change_event` against v0 can only fail with a
+ * query error, so the tool refuses up front with an actionable message instead
+ * of spending an API call and surfacing an opaque upstream error.
+ */
 export async function getChangeHistoryLogic(
-  input: GetChangeHistoryInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
+  _input: GetChangeHistoryInput,
+  _context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<GetChangeHistoryOutput> {
-  const { sa360Service } = resolveSessionServices(sdkContext);
-
-  const query = buildChangeHistoryQuery(input);
-
-  const result = await sa360Service.sa360Search(
-    input.customerId,
-    query,
-    input.limit,
-    undefined,
-    context
-  );
-
-  return {
-    changes: result.results as unknown as Record<string, any>[],
-    totalChanges: result.results.length,
-    timestamp: new Date().toISOString(),
-  };
+  throw new McpError(JsonRpcErrorCode.InvalidRequest, CHANGE_HISTORY_UNAVAILABLE_MESSAGE, {
+    reason: "resource_not_in_api_version",
+    resource: "change_event",
+    apiVersion: "v0",
+    alternativeTool: "sa360_gaql_search",
+  });
 }
 
 export function getChangeHistoryResponseFormatter(

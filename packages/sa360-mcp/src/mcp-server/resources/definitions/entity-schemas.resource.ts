@@ -38,7 +38,7 @@ const ENTITY_SCHEMAS: Record<SA360EntityType, string> = {
 - \`ad_group.status\` (string) — ENABLED, PAUSED, REMOVED
 - \`ad_group.type\` (string) — SEARCH_STANDARD, DISPLAY_STANDARD, etc.
 - \`ad_group.cpc_bid_micros\` (int64) — CPC bid in micros
-- \`ad_group.campaign\` (string) — Parent campaign resource name`,
+- \`campaign.id\` (int64) — Parent campaign ID (attributed-resource join; v0 \`ad_group\` has no \`campaign\` field)`,
 
   adGroupAd: `# Ad Group Ad Schema (Query Fields)
 
@@ -47,7 +47,7 @@ const ENTITY_SCHEMAS: Record<SA360EntityType, string> = {
 - \`ad_group_ad.status\` (string) — ENABLED, PAUSED, REMOVED
 - \`ad_group_ad.ad.type\` (string) — EXPANDED_TEXT_AD, RESPONSIVE_SEARCH_AD, etc.
 - \`ad_group_ad.ad.final_urls\` (array) — Landing page URLs
-- \`ad_group_ad.ad_group\` (string) — Parent ad group resource name`,
+- \`ad_group.id\` (int64) — Parent ad group ID (attributed-resource join; v0 \`ad_group_ad\` has no \`ad_group\` field)`,
 
   adGroupCriterion: `# Ad Group Criterion Schema (Query Fields)
 
@@ -85,7 +85,7 @@ const ENTITY_SCHEMAS: Record<SA360EntityType, string> = {
 - \`conversion_action.status\` (string) — ENABLED, REMOVED, HIDDEN
 - \`conversion_action.type\` (string) — AD_CALL, CLICK_TO_CALL, GOOGLE_PLAY_DOWNLOAD, etc.
 - \`conversion_action.category\` (string) — DEFAULT, PAGE_VIEW, PURCHASE, SIGNUP, LEAD, etc.
-- \`conversion_action.counting_type\` (string) — ONE_PER_CLICK, MANY_PER_CLICK`,
+- \`conversion_action.floodlight_settings.activity_id\` (int64) — Floodlight activity ID in Campaign Manager`,
 };
 
 export const entitySchemaResources: Resource[] = getSupportedEntityTypes().map((entityType) => ({

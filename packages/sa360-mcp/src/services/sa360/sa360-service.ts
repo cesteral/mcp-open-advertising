@@ -13,6 +13,26 @@ export type SA360SearchRow =
   components["schemas"]["GoogleAdsSearchads360V0Services__SearchAds360Row"];
 
 /**
+ * v0 `totalResultsCount` is an int64, which Google's JSON mapping serialises as
+ * a decimal **string** (Discovery: `"type": "string", "format": "int64"`).
+ * Accept either shape and return a number, or undefined when absent/unparseable.
+ */
+function parseInt64Count(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return undefined;
+}
+
+export interface SA360SearchOptions {
+  /**
+   * Send `returnTotalResultsCount: true` so the response carries
+   * `totalResultsCount` (v0 default is false — without it the field is never
+   * returned).
+   */
+  returnTotalResultsCount?: boolean;
+}
+
+/**
  * SA360 Service — SA360 query language queries, account listing, and entity reads
  * via the SA360 Reporting API v0.
  *
@@ -37,7 +57,8 @@ export class SA360Service {
     query: string,
     pageSize?: number,
     pageToken?: string,
-    context?: RequestContext
+    context?: RequestContext,
+    options?: SA360SearchOptions
   ): Promise<{ results: SA360SearchRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     await this.rateLimiter.consume(`sa360:${customerId}`);
 
@@ -55,6 +76,10 @@ export class SA360Service {
       body.pageToken = pageToken;
     }
 
+    if (options?.returnTotalResultsCount) {
+      body.returnTotalResultsCount = true;
+    }
+
     const result = (await this.httpClient.fetch(
       `/customers/${customerId}/searchAds360:search`,
       context,
@@ -67,7 +92,7 @@ export class SA360Service {
     return {
       results: ((result.results as unknown[]) || []) as SA360SearchRow[],
       nextPageToken: result.nextPageToken as string | undefined,
-      totalResultsCount: result.totalResultsCount as number | undefined,
+      totalResultsCount: parseInt64Count(result.totalResultsCount),
     };
   }
 
@@ -126,7 +151,9 @@ export class SA360Service {
     context?: RequestContext
   ): Promise<{ entities: SA360SearchRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     const query = buildListQuery(entityType, filters, orderBy);
-    const result = await this.sa360Search(customerId, query, pageSize, pageToken, context);
+    const result = await this.sa360Search(customerId, query, pageSize, pageToken, context, {
+      returnTotalResultsCount: true,
+    });
 
     return {
       entities: result.results,
@@ -140,17 +167,25 @@ export class SA360Service {
   /**
    * Search for available fields, resources, and metrics in the SA360 API.
    * Uses the searchAds360Fields endpoint.
+   *
+   * v0 `SearchSearchAds360FieldsRequest` = {query, pageSize, pageToken} (it has
+   * no `returnTotalResultsCount`); the response is {results, nextPageToken,
+   * totalResultsCount}, with `totalResultsCount` always present.
    */
   async searchFields(
     query: string,
     pageSize?: number,
+    pageToken?: string,
     context?: RequestContext
-  ): Promise<{ fields: unknown[]; totalSize?: number }> {
+  ): Promise<{ fields: unknown[]; totalResultsCount?: number; nextPageToken?: string }> {
     await this.rateLimiter.consume("sa360:global");
 
     const body: Record<string, unknown> = { query };
     if (pageSize) {
       body.pageSize = pageSize;
+    }
+    if (pageToken) {
+      body.pageToken = pageToken;
     }
 
     const result = (await this.httpClient.fetch("/searchAds360Fields:search", context, {
@@ -160,7 +195,8 @@ export class SA360Service {
 
     return {
       fields: (result.results as unknown[]) || [],
-      totalSize: result.totalSize as number | undefined,
+      totalResultsCount: parseInt64Count(result.totalResultsCount),
+      nextPageToken: (result.nextPageToken as string | undefined) || undefined,
     };
   }
 

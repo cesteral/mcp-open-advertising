@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { buildListQuery, buildGetByIdQuery } from "../src/mcp-server/tools/utils/query-helpers.js";
+import { getSupportedEntityTypes } from "../src/mcp-server/tools/utils/entity-mapping.js";
+import { listEntitiesTool } from "../src/mcp-server/tools/definitions/list-entities.tool.js";
+import { entitySchemaAllResource } from "../src/mcp-server/resources/definitions/entity-schemas.resource.js";
+import {
+  extractFromResource,
+  extractQueryFields,
+  isV0Field,
+  isV0RowResource,
+} from "./helpers/v0-field-catalog.js";
 
 describe("SA360 Query Helpers", () => {
   describe("buildListQuery", () => {
@@ -23,7 +32,7 @@ describe("SA360 Query Helpers", () => {
     it("should add multiple filter conditions with AND", () => {
       const query = buildListQuery("adGroup", {
         "ad_group.status": "= 'ENABLED'",
-        "ad_group.campaign": "= 'customers/123/campaigns/456'",
+        "campaign.id": "= 456",
       });
       expect(query).toContain("WHERE");
       expect(query).toContain("AND");
@@ -132,6 +141,55 @@ describe("SA360 Query Helpers", () => {
       const query = buildGetByIdQuery("biddingStrategy", "999");
       expect(query).toContain("FROM bidding_strategy");
       expect(query).toContain("WHERE bidding_strategy.id = 999");
+    });
+  });
+
+  describe("Reporting API v0 schema conformance", () => {
+    // The catalog helper must actually reject GAQL-only fields, or the
+    // conformance checks below prove nothing.
+    it("rejects fields that exist in Google Ads GAQL but not in SA360 v0", () => {
+      expect(isV0Field("ad_group.campaign")).toBe(false);
+      expect(isV0Field("ad_group_ad.ad_group")).toBe(false);
+      expect(isV0Field("campaign_criterion.campaign")).toBe(false);
+      expect(isV0Field("ad_group.id")).toBe(true);
+      expect(isV0Field("ad_group_criterion.keyword.text")).toBe(true);
+    });
+
+    for (const entityType of getSupportedEntityTypes()) {
+      it(`default list/get queries for ${entityType} only use v0 fields`, () => {
+        for (const query of [buildListQuery(entityType), buildGetByIdQuery(entityType, "1")]) {
+          const from = extractFromResource(query);
+          expect(from && isV0RowResource(from), `FROM ${from}`).toBe(true);
+          const invalid = extractQueryFields(query).filter((f) => !isV0Field(f));
+          expect(invalid, query).toEqual([]);
+        }
+      });
+    }
+
+    it("selects the parent ID for child entities so they can be filtered by parent", () => {
+      expect(buildListQuery("adGroup")).toContain("campaign.id");
+      expect(buildListQuery("adGroupAd")).toContain("ad_group.id");
+      expect(buildListQuery("campaignCriterion")).toContain("campaign.id");
+    });
+
+    it("entity-schema resources only document v0 fields", async () => {
+      const content = await entitySchemaAllResource.getContent();
+      const documented = [...content.matchAll(/`([a-z_]+(?:\.[a-z_]+)+)`/g)].map((m) => m[1]);
+      expect(documented.length).toBeGreaterThan(30);
+      expect(documented.filter((f) => !isV0Field(f))).toEqual([]);
+    });
+
+    it("list_entities input examples only filter/order on v0 fields", () => {
+      for (const example of listEntitiesTool.inputExamples) {
+        const input = example.input as {
+          entityType: Parameters<typeof buildListQuery>[0];
+          filters?: Record<string, string>;
+          orderBy?: string;
+        };
+        const query = buildListQuery(input.entityType, input.filters, input.orderBy);
+        const invalid = extractQueryFields(query).filter((f) => !isV0Field(f));
+        expect(invalid, `${example.label}: ${query}`).toEqual([]);
+      }
     });
   });
 });
