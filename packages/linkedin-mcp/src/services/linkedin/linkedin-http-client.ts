@@ -7,6 +7,7 @@ import { McpError, mapHttpStatusToJsonRpc } from "@cesteral/shared";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withLinkedInApiSpan } from "../../utils/platform.js";
+import { encodeRestliQuery, type RestliQueryParams } from "./restli-query.js";
 
 /** LinkedIn error response shape */
 interface LinkedInApiError {
@@ -61,12 +62,13 @@ export class LinkedInHttpClient {
 
   /**
    * Make an authenticated GET request to the LinkedIn API.
+   *
+   * `params` are serialized in Rest.li 2.0 syntax (see restli-query.ts): pass
+   * arrays and records as values (`accounts: [urn]`,
+   * `dateRange: { start: {...} }`), never pre-encoded strings or 1.0-style
+   * `key[0]` / `a.b.c` names.
    */
-  async get(
-    path: string,
-    params?: Record<string, string>,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async get(path: string, params?: RestliQueryParams, context?: RequestContext): Promise<unknown> {
     const url = this.buildUrl(path, params);
     return this.request(url, context, { method: "GET" });
   }
@@ -181,17 +183,19 @@ export class LinkedInHttpClient {
     });
   }
 
-  private buildUrl(path: string, params?: Record<string, string>): string {
+  private buildUrl(path: string, params?: RestliQueryParams): string {
     // Callers supply the whole path (/rest/... or legacy /v2/...), so this
     // helper needs no surface knowledge of its own.
+    //
+    // The query string is concatenated, NOT set through URL.searchParams:
+    // URLSearchParams percent-encodes Rest.li 2.0's structural characters
+    // (`List(`, `(`, `:`, `,`) and double-encodes an already-encoded URN, so it
+    // cannot produce a valid 2.0 query at all.
     const baseUrlNoTrailing = this.baseUrl.replace(/\/$/, "");
-    const url = new URL(`${baseUrlNoTrailing}${path}`);
-    if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        url.searchParams.set(key, value);
-      }
-    }
-    return url.toString();
+    const url = `${baseUrlNoTrailing}${path}`;
+    const query = params ? encodeRestliQuery(params) : "";
+    if (!query) return url;
+    return `${url}${url.includes("?") ? "&" : "?"}${query}`;
   }
 
   /**

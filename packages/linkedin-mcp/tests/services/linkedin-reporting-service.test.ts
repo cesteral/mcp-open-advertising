@@ -68,13 +68,21 @@ describe("LinkedInReportingService", () => {
       "MONTHLY"
     );
 
+    // Structured values the HTTP client serializes as Rest.li 2.0
+    // (`accounts=List(...)`, `dateRange=(start:(...),end:(...))`) — never the
+    // 1.0 keys `accounts[0]` / `dateRange.start.month` this used to send.
     const [, params] = mockHttpClient.get.mock.calls[0];
-    expect(params["accounts[0]"]).toBe("urn:li:sponsoredAccount:987654");
+    expect(params.accounts).toEqual(["urn:li:sponsoredAccount:987654"]);
+    // Object.keys, not toHaveProperty: toHaveProperty reads these as paths.
+    expect(Object.keys(params)).not.toContain("accounts[0]");
+    expect(Object.keys(params)).not.toContain("dateRange.start.month");
     expect(params.pivot).toBe("MEMBER_JOB_FUNCTION");
     expect(params.timeGranularity).toBe("MONTHLY");
     expect(params.fields).toBe("impressions,videoViews");
-    expect(params["dateRange.start.month"]).toBe("4");
-    expect(params["dateRange.end.day"]).toBe("30");
+    expect(params.dateRange).toEqual({
+      start: { year: 2026, month: 4, day: 1 },
+      end: { year: 2026, month: 4, day: 30 },
+    });
   });
 
   it("throws on invalid date format", async () => {

@@ -22,13 +22,8 @@ function formatAnalyticsReferenceMarkdown(): string {
 | q | Query type | \`analytics\` |
 | pivot | Dimension to aggregate by | \`CAMPAIGN\` |
 | timeGranularity | Time bucket size | \`DAILY\` |
-| accounts[0] | Ad account URN | \`urn:li:sponsoredAccount:123\` |
-| dateRange.start.year | Start year | \`2026\` |
-| dateRange.start.month | Start month (1-12) | \`1\` |
-| dateRange.start.day | Start day | \`1\` |
-| dateRange.end.year | End year | \`2026\` |
-| dateRange.end.month | End month (1-12) | \`3\` |
-| dateRange.end.day | End day | \`31\` |
+| accounts | Ad account URNs, as a Rest.li 2.0 list | \`List(urn%3Ali%3AsponsoredAccount%3A123)\` |
+| dateRange | Start/end dates, as a Rest.li 2.0 record | \`(start:(year:2026,month:1,day:1),end:(year:2026,month:3,day:31))\` |
 | fields | Comma-separated metrics | \`impressions,clicks,costInUsd\` |
 
 ## Available Metrics
@@ -105,16 +100,20 @@ function formatAnalyticsReferenceMarkdown(): string {
 | YEARLY | One row per year |
 | ALL | Aggregate entire date range |
 
+## Query Syntax (Rest.li 2.0)
+
+Every request sends \`X-Restli-Protocol-Version: 2.0.0\`, so query parameters use
+Rest.li 2.0 syntax: a list is \`List(a,b)\`, a record is \`(key:value,...)\`, and
+URNs inside them are URL-encoded (\`:\` → \`%3A\`) while the structural
+\`List(\`, \`(\`, \`:\` and \`,\` stay literal. The Rest.li 1.0 forms
+\`accounts[0]=\` and \`dateRange.start.year=\` are a different wire format.
+\`fields\` is the exception: a plain comma-separated list.
+
 ## Date Range Format
 
-Dates are specified as year/month/day integers:
+Dates are year/month/day integers inside a \`dateRange\` record:
 \`\`\`
-dateRange.start.year=2026
-dateRange.start.month=1
-dateRange.start.day=1
-dateRange.end.year=2026
-dateRange.end.month=3
-dateRange.end.day=31
+dateRange=(start:(year:2026,month:1,day:1),end:(year:2026,month:3,day:31))
 \`\`\`
 
 ## Example: Get Daily Campaign Metrics
@@ -124,15 +123,11 @@ GET /rest/adAnalytics?
   q=analytics&
   pivot=CAMPAIGN&
   timeGranularity=DAILY&
-  accounts[0]=urn:li:sponsoredAccount:123456789&
-  dateRange.start.year=2026&
-  dateRange.start.month=1&
-  dateRange.start.day=1&
-  dateRange.end.year=2026&
-  dateRange.end.month=3&
-  dateRange.end.day=31&
+  accounts=List(urn%3Ali%3AsponsoredAccount%3A123456789)&
+  dateRange=(start:(year:2026,month:1,day:1),end:(year:2026,month:3,day:31))&
   fields=impressions,clicks,costInUsd,conversions
 \`\`\`
+(Line breaks added for readability; the real query string has none.)
 
 ## Response Shape
 
