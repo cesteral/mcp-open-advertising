@@ -29,8 +29,10 @@ const TOOL_DESCRIPTION = `Delete one or more Snapchat Ads entities.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Snapchat delete uses a POST to the /delete/ endpoint with an array of entity IDs.
-Deleted entities cannot be recovered. Consider using \`snapchat_bulk_update_status\` with DISABLE first.`;
+Each ID is deleted with its own \`DELETE /v1/{entity}s/{id}\` request (after a read that
+confirms the entity belongs to this session's ad account); per-ID results are reported.
+Deleted entities cannot be recovered. To stop delivery reversibly, use
+\`snapchat_bulk_update_status\` with \`PAUSED\` instead.`;
 
 const EFFECT_KIND = "entities_deleted";
 

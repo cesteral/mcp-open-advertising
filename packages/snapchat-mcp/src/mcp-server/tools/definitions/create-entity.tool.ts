@@ -36,13 +36,14 @@ const TOOL_DESCRIPTION = `Create a new Snapchat Ads entity.
 - **ad**: requires \`adSquadId\` + \`name\`, \`creative_id\`, \`type\`, \`status\`
 - **creative**: requires fields matching the chosen creative type, such as \`name\`, \`type\`, \`brand_name\`, \`headline\`, \`call_to_action\`, and media or destination properties
 
-**Parent entity IDs (passed as top-level params, not in data):**
-- Creating \`adGroup\`: supply \`campaignId\` (routes to /v1/campaigns/{id}/adsquads)
-- Creating \`ad\`: supply \`adSquadId\` (routes to /v1/adsquads/{id}/ads)
+**Parent IDs (top-level params — injected into the request body for you):**
+- \`campaign\` / \`creative\`: \`adAccountId\` → injected as \`ad_account_id\`
+- \`adGroup\`: \`campaignId\` (routes to /v1/campaigns/{id}/adsquads) → injected as \`campaign_id\`
+- \`ad\`: \`adSquadId\` (routes to /v1/adsquads/{id}/ads) → injected as \`ad_squad_id\`
+If \`data\` already carries the field it must match the top-level param; if the param is omitted, \`data\`'s value is used.
 
 **Gotchas:**
-- Budget values are in micro-currency (multiply by 1,000,000 — e.g., $10 = 10000000)
-- ad_account_id is automatically injected`;
+- Budget values are in micro-currency (multiply by 1,000,000 — e.g., $10 = 10000000)`;
 
 export const CreateEntityInputSchema = z
   .object({

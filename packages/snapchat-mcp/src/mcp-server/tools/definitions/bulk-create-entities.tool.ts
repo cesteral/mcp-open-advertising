@@ -29,10 +29,12 @@ const TOOL_DESCRIPTION = `Batch create multiple Snapchat Ads entities of the sam
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Creates entities sequentially (with concurrency). Each item follows the same
-schema as \`snapchat_create_entity\`.
+All items are sent in one POST to the parent collection route; each item follows
+the same schema as \`snapchat_create_entity\` and gets its own success/failure result.
 
-Max 50 items per call. ad_account_id is automatically injected per item.`;
+Max 50 items per call. The parent ID is injected into every item: \`ad_account_id\`
+(campaign, creative) from \`adAccountId\`, \`campaign_id\` (adGroup) from \`campaignId\`,
+\`ad_squad_id\` (ad) from \`adSquadId\`. If any item already carries a different value, the whole call is rejected before sending.`;
 
 const EFFECT_KIND = "entities_created";
 

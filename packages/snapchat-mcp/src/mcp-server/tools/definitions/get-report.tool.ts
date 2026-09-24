@@ -4,9 +4,9 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
+import { appendSnapchatComputedMetrics } from "../utils/computed-metrics.js";
 import {
   arrayRowsToRecords,
-  computeMetrics,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -27,7 +27,8 @@ This may take 30s–5 minutes depending on the data volume.
 
 **Common fields:** impressions, swipes, spend, video_views, conversion_purchases, reach, frequency, cpm, cpsu
 **Granularity:** TOTAL, DAY (default), HOUR, LIFETIME
-**start_time/end_time:** ISO 8601 format (e.g. 2024-01-01T00:00:00Z)`;
+**start_time/end_time:** ISO 8601 format (e.g. 2024-01-01T00:00:00Z)
+**Units:** \`spend\` is micro-currency (1,000,000 = 1.00 of the account currency)`;
 
 export const GetReportInputSchema = z
   .object({
@@ -40,7 +41,7 @@ export const GetReportInputSchema = z
       .enum(DATE_PRESET_VALUES)
       .optional()
       .describe(
-        "Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"
+        "Preset date range. Use this OR startTime+endTime (not both). Resolved to UTC-midnight start_time / T23:59:59Z end_time; for a non-UTC ad account prefer explicit startTime/endTime on the account's day boundaries"
       ),
     startTime: z
       .string()
@@ -67,7 +68,9 @@ export const GetReportInputSchema = z
       .boolean()
       .optional()
       .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
+      .describe(
+        "Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics (spend and conversion_purchases_value are converted from micro-currency first)"
+      ),
   })
   .merge(ReportViewInputSchema)
   .refine(
@@ -88,42 +91,6 @@ export const GetReportOutputSchema = z
 type GetReportInput = z.infer<typeof GetReportInputSchema>;
 type GetReportOutput = z.infer<typeof GetReportOutputSchema>;
 
-function appendComputedMetricsToRows(
-  headers: string[],
-  rows: string[][]
-): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
-  const spendIdx = idx("spend");
-  const impIdx = idx("impressions");
-  const clickIdx = idx("swipes"); // Snapchat calls clicks "swipes"
-  const convIdx = idx("conversion_purchases");
-
-  const newHeaders = [
-    ...headers,
-    "computed_cpa",
-    "computed_roas",
-    "computed_cpm",
-    "computed_ctr",
-    "computed_cpc",
-  ];
-  const newRows = rows.map((row) => {
-    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
-    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
-    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
-    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
-    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [
-      ...row,
-      m.cpa !== null ? String(m.cpa) : "",
-      m.roas !== null ? String(m.roas) : "",
-      m.cpm !== null ? String(m.cpm) : "",
-      m.ctr !== null ? String(m.ctr) : "",
-      m.cpc !== null ? String(m.cpc) : "",
-    ];
-  });
-  return { headers: newHeaders, rows: newRows };
-}
-
 export async function getReportLogic(
   input: GetReportInput,
   context: RequestContext,
@@ -135,6 +102,11 @@ export async function getReportLogic(
   let resolvedStartTime = input.startTime;
   let resolvedEndTime = input.endTime;
   if (input.datePreset) {
+    // UNVERIFIED: Snapchat is reported (secondary sources only — its docs host is
+    // unreachable from this repo) to require DAY-granularity start/end on day
+    // boundaries in the ad account's timezone. These UTC bounds are kept until
+    // that is confirmed; the datePreset description tells callers to pass
+    // explicit bounds for non-UTC accounts.
     const { startDate, endDate } = resolveDatePreset(input.datePreset);
     resolvedStartTime = `${startDate}T00:00:00Z`;
     resolvedEndTime = `${endDate}T23:59:59Z`;
@@ -156,7 +128,7 @@ export async function getReportLogic(
   let rows = result.rows;
 
   if (input.includeComputedMetrics) {
-    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
+    ({ headers, rows } = appendSnapchatComputedMetrics(headers, rows));
   }
 
   return {
