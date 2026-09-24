@@ -3,8 +3,8 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { appendMetaComputedMetricsToRows } from "../utils/computed-metrics.js";
 import {
-  appendComputedMetricsToRows,
   ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
@@ -19,7 +19,7 @@ const TOOL_NAME = "meta_download_report";
 const TOOL_TITLE = "Download Meta Report Results";
 const TOOL_DESCRIPTION = `Download results from a completed Meta Ads async insights report.
 
-Only call this after \`meta_check_report_status\` returns \`isComplete: true\` (status "Job Succeeded").
+Only call this after \`meta_check_report_status\` returns \`isComplete: true\` (status "Job Completed").
 
 Returns the insights data rows from the completed report run.`;
 
@@ -70,9 +70,9 @@ export async function downloadReportLogic(
     context
   );
   const rawRows = result.data as Record<string, unknown>[];
-  const rows = input.includeComputedMetrics
-    ? appendComputedMetricsToRows(rawRows.map(stringifyRow), META_COMPUTED_METRIC_ALIASES)
-    : rawRows;
+  // Rows keep Meta's own values (array fields such as `actions` included);
+  // computed columns are derived from them, never from stringified copies.
+  const rows = input.includeComputedMetrics ? appendMetaComputedMetricsToRows(rawRows) : rawRows;
   const warnings = result.fetchedAllRows
     ? []
     : ["More rows are available. Call again with cursor set to nextCursor to continue."];
@@ -89,22 +89,6 @@ export async function downloadReportLogic(
     nextCursor: result.nextCursor,
     timestamp: new Date().toISOString(),
   };
-}
-
-const META_COMPUTED_METRIC_ALIASES = {
-  cost: ["spend", "Spend"],
-  impressions: ["impressions", "Impressions"],
-  clicks: ["clicks", "Clicks", "inline_link_clicks"],
-  conversions: ["conversions", "actions", "Conversions"],
-  conversionValue: ["conversion_values", "action_values", "purchase_roas"],
-};
-
-function stringifyRow(row: Record<string, unknown>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(row)) {
-    out[k] = typeof v === "string" ? v : v == null ? "" : String(v);
-  }
-  return out;
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {

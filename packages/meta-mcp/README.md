@@ -24,7 +24,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `MetaBearerAuthStrategy` (validates tokens against `GET /me`)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (200/min default, writes cost 3x)
+- **Rate limiting** via shared `RateLimiter` class (20/min default per process, override with `META_RATE_LIMIT_PER_MINUTE`; writes cost 3x)
 - **Structured logging** via Pino
 - **MCP Resources** for entity schemas, examples, insights reference, and targeting reference
 - **MCP Prompts** for campaign setup, insights reporting, troubleshooting, and schema exploration
@@ -135,9 +135,48 @@ Get performance insights broken down by dimension (age, gender, country, device,
 - `after` (string, optional): Cursor for next upstream page
 - `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above)
 
+#### 9. `meta_get_available_metrics`
+
+List the Insights metrics, breakdowns and action breakdowns available (static catalog), grouped by category. Use it to discover valid `fields` before calling the insights tools.
+
+**Parameters:**
+
+- `level` (string, optional): `account`, `campaign`, `adset`, or `ad`
+
+### Async Reporting
+
+#### 10. `meta_submit_report`
+
+Submit an async insights report (`POST /{id}/insights` with `async=1`) and return a `reportRunId` immediately.
+
+**Parameters:**
+
+- `entityId` (string, required): Account (`act_XXX`), campaign, ad set, or ad ID
+- `fields`, `datePreset`, `timeRange`, `timeIncrement`, `level`, `breakdowns` (optional): As for `meta_get_insights` (`datePreset` and `timeRange` are mutually exclusive)
+- `dry_run` (boolean, optional): Validate without submitting
+
+#### 11. `meta_check_report_status`
+
+Poll an async report. Meta's `async_status` is mapped to canonical states — `"Job Completed"` → `complete`, `"Job Failed"` → `failed`; the raw string is returned as `rawStatus`.
+
+**Parameters:**
+
+- `reportRunId` (string, required): Report run ID from `meta_submit_report`
+
+#### 12. `meta_download_report`
+
+Download rows from a completed async report (bounded report-view contract).
+
+**Parameters:**
+
+- `reportRunId` (string, required): Report run ID
+- `cursor` (string, optional): `nextCursor` from a previous call
+- `includeComputedMetrics` (boolean, optional): Append `cpa`, `roas`, `cpm`, `ctr`, `cpc` columns, computed from `spend`, `impressions`, `clicks`, `actions` and `action_values`
+- `mode`, `columns`, `maxRows` (optional): Bounded report-view params
+
 ### Bulk Operations
 
-#### 9. `meta_bulk_update_status`
+#### 13. `meta_bulk_update_status`
 
 Batch update status for multiple Meta Ads entities.
 
@@ -147,7 +186,7 @@ Batch update status for multiple Meta Ads entities.
 - `entityIds` (string[], required): Entity IDs to update (max 50)
 - `status` (string, required): `ACTIVE`, `PAUSED`, or `ARCHIVED`
 
-#### 10. `meta_bulk_create_entities`
+#### 14. `meta_bulk_create_entities`
 
 Batch create multiple entities of the same type.
 
@@ -157,7 +196,7 @@ Batch create multiple entities of the same type.
 - `adAccountId` (string, required): Ad Account ID
 - `items` (array, required): Array of entity data objects (max 50)
 
-#### 11. `meta_bulk_update_entities`
+#### 15. `meta_bulk_update_entities`
 
 Batch update multiple entities with individual data payloads.
 
@@ -168,7 +207,7 @@ Batch update multiple entities with individual data payloads.
 
 ### Targeting
 
-#### 12. `meta_search_targeting`
+#### 16. `meta_search_targeting`
 
 Search for targeting options (interests, behaviors, demographics) by keyword.
 
@@ -176,9 +215,11 @@ Search for targeting options (interests, behaviors, demographics) by keyword.
 
 - `type` (string, required): Search type (`adinterest`, `adinterestsuggestion`, `adgeolocation`, `adlocale`, etc.)
 - `query` (string, required): Search keyword
+- `targetingClass` (string, optional): Meta's `class` parameter, used with `adTargetingCategory`
 - `limit` (number, optional): Max results (1-100, default 25)
+- `after` (string, optional): `pagination.nextCursor` from a previous response
 
-#### 13. `meta_get_targeting_options`
+#### 17. `meta_get_targeting_options`
 
 Browse available targeting categories for an ad account.
 
@@ -189,7 +230,7 @@ Browse available targeting categories for an ad account.
 
 ### Specialized
 
-#### 14. `meta_duplicate_entity`
+#### 18. `meta_duplicate_entity`
 
 Duplicate a campaign, ad set, or ad via `POST /{id}/copies`.
 
@@ -198,9 +239,9 @@ Duplicate a campaign, ad set, or ad via `POST /{id}/copies`.
 - `entityType` (string, required): Type of entity to duplicate (`campaign`, `adSet`, `ad`)
 - `entityId` (string, required): ID of the entity to duplicate
 - `renameOptions` (object, optional): Object with `prefix` and/or `suffix` for naming
-- `statusOption` (string, optional): Status for copy (`ACTIVE`, `PAUSED`, `INHERITED`)
+- `statusOption` (string, optional): Status for copy (`ACTIVE`, `PAUSED`, `INHERITED_FROM_SOURCE`)
 
-#### 15. `meta_get_delivery_estimate`
+#### 19. `meta_get_delivery_estimate`
 
 Get estimated audience size and delivery estimates for a targeting spec.
 
@@ -208,9 +249,9 @@ Get estimated audience size and delivery estimates for a targeting spec.
 
 - `adAccountId` (string, required): Ad Account ID
 - `targetingSpec` (object, required): Targeting specification (must include `geo_locations` or `custom_audiences`)
-- `optimizationGoal` (string, optional): Optimization goal (e.g., `LINK_CLICKS`, `REACH`, `CONVERSIONS`)
+- `optimizationGoal` (string, optional): Optimization goal (e.g., `LINK_CLICKS`, `REACH`, `OFFSITE_CONVERSIONS`)
 
-#### 16. `meta_get_ad_preview`
+#### 20. `meta_get_ad_preview`
 
 Get preview HTML for an ad in a specific format.
 
@@ -219,7 +260,7 @@ Get preview HTML for an ad in a specific format.
 - `adId` (string, required): Ad ID to preview
 - `adFormat` (string, required): Ad format (e.g., `DESKTOP_FEED_STANDARD`, `MOBILE_FEED_STANDARD`, `INSTAGRAM_STANDARD`)
 
-#### 17. `meta_adjust_bids`
+#### 21. `meta_adjust_bids`
 
 Batch adjust ad set bid amounts with percentage or absolute changes.
 
@@ -228,7 +269,7 @@ Batch adjust ad set bid amounts with percentage or absolute changes.
 - `adAccountId` (string, required): Ad Account ID
 - `adjustments` (array, required): Array of bid adjustments (max 50), each with `adSetId`, `adjustmentType` (percentage/absolute), and `value`
 
-#### 18. `meta_validate_entity`
+#### 22. `meta_validate_entity`
 
 Client-side validation of entity payloads without making API calls.
 
@@ -239,6 +280,61 @@ Client-side validation of entity payloads without making API calls.
 - `data` (object, required): Entity data to validate
 - `adAccountId` (string, optional): Required for create mode
 - `entityId` (string, optional): Required for update mode
+
+#### 23. `meta_upload_image`
+
+Download an image from a URL and upload it to the ad account's image library (`/act_{id}/adimages`). Returns the image hash for creative payloads.
+
+**Parameters:**
+
+- `adAccountId` (string, required): Ad Account ID
+- `mediaUrl` (string, required): Publicly accessible image URL
+- `name` (string, optional): Name in the media library
+- `dry_run` (boolean, optional): Validate without uploading
+
+#### 24. `meta_upload_video`
+
+Download a video from a URL, upload it to `/act_{id}/advideos`, and poll until processing completes.
+
+**Parameters:**
+
+- `adAccountId` (string, required): Ad Account ID
+- `mediaUrl` (string, required): Publicly accessible video URL
+- `title`, `description` (string, optional): Video metadata
+- `dry_run` (boolean, optional): Validate without uploading
+
+#### 25. `meta_manage_budget_schedule`
+
+Create or list budget schedules (high-demand periods) on a campaign via `/{campaignId}/budget_schedules`.
+
+**Parameters:**
+
+- `operation` (string, required): `create` or `list`
+- `campaignId` (string, required): Campaign ID
+- `data` (object, required for create): `budget_value` (integer), `budget_value_type` (`ABSOLUTE` or `MULTIPLIER`), `time_start` and `time_end` (Unix timestamps in seconds)
+- `dry_run` (boolean, optional): Validate without creating
+
+#### 26. `meta_get_pacing_status`
+
+Client-side pacing calculator (no Meta API call): actual vs expected spend for a flight.
+
+**Parameters:**
+
+- `adAccountId`, `campaignId` (string, required)
+- `spendToDate`, `budgetTotal` (number, required): In account currency
+- `flightStartDate`, `flightEndDate` (string, required): `YYYY-MM-DD`
+- `currency` (string, optional): Default `USD`
+
+### Discovery
+
+#### 27. `meta_search_tools`
+
+Rank this server's tools against a natural-language query.
+
+**Parameters:**
+
+- `query` (string, required): What you want to do
+- `limit` (number, optional): Max results (default 10)
 
 ## Supported Entity Types
 
@@ -285,8 +381,8 @@ pnpm run typecheck
 - `MCP_AUTH_MODE`: Authentication mode - `meta-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v25.0`)
-- `META_API_VERSION`: API version (default: `v25.0`)
-- `META_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 200)
+- `META_API_VERSION`: Graph API version (e.g. `v25.0`); used to build the base URL on `graph.facebook.com` when `META_API_BASE_URL` is not set. An explicit `META_API_BASE_URL` wins.
+- `META_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling per process (default: 20)
 - `META_ACCESS_TOKEN`: Access token for stdio mode
 - `META_VIDEO_UPLOAD_MAX_BUFFERED_BYTES`: Max buffered video upload size in bytes (default: `268435456`)
 

@@ -19,8 +19,18 @@ interface MetaApiError {
   };
 }
 
-/** Rate limit error codes from Meta */
-const RATE_LIMIT_CODES = new Set([4, 17, 32]);
+/**
+ * Graph API error codes that mean "throttled". Meta returns these with HTTP
+ * 400 (not 429), so they must be recognised from the body.
+ *
+ * 4, 17 and 341 are the codes Meta's own facebook-php-business-sdk maps to
+ * `ThrottleException` (`src/FacebookAds/Http/Exception/RequestException.php`,
+ * `RequestException::create`). 32 (page-level throttling) predates that
+ * sourcing and is kept. 613 and the Business Use Case codes (80000–80014) are
+ * NOT listed in any of Meta's Business SDKs and are deliberately not added
+ * until a primary source confirms them.
+ */
+const RATE_LIMIT_CODES = new Set([4, 17, 32, 341]);
 
 /** Warn when any rate-limit usage header reaches this percentage. */
 const RATE_LIMIT_WARNING_PERCENT = 80;
