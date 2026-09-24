@@ -62,6 +62,18 @@ export interface RateLimitDescription {
   maxWaitMs: number;
 }
 
+/** Result of {@link RateLimiter.projectAdmissions}. */
+export type AdmissionProjection =
+  | { configured: false; admissionOffsetsMs: number[] }
+  | {
+      configured: true;
+      limit: number;
+      windowMs: number;
+      maxWaitMs: number;
+      /** ms from now at which each request would be admitted, in issue order. */
+      admissionOffsetsMs: number[];
+    };
+
 interface LimitConfig {
   limit: number;
   windowMs: number;
@@ -197,6 +209,49 @@ export class RateLimiter {
     if (waitMs > 0) {
       await this.sleep(waitMs);
     }
+  }
+
+  /**
+   * Project when a sequence of requests on `key` would be admitted, without
+   * reserving anything — a dry run of {@link consume} applied in order to the
+   * key's current window and queue.
+   *
+   * Exists for bulk tools: `consume` now queues instead of
+   * failing, so a batch larger than the window no longer breaks half-way — it
+   * just runs for minutes, past client and Cloud Run request timeouts. Tools
+   * call this BEFORE the first write to refuse a batch that cannot be admitted
+   * within budget, rather than discovering it item by item.
+   *
+   * The projection assumes no other caller arrives on the key meanwhile, so it
+   * is a lower bound under concurrency — the same caveat as every per-process
+   * limit.
+   *
+   * @param costs token cost of each request, in the order they will be issued
+   * @returns `configured: false` when no limit matches `key` (never limited);
+   *   otherwise the ms-from-now admission offset of each request, `Infinity`
+   *   from the first request whose cost exceeds the limit onwards.
+   */
+  projectAdmissions(key: string, costs: readonly number[]): AdmissionProjection {
+    const match = this.findLimitConfig(key);
+    if (!match) {
+      return { configured: false, admissionOffsetsMs: costs.map(() => 0) };
+    }
+    const now = Date.now();
+    const { limit, windowMs, maxWaitMs } = match.config;
+    const timestamps = (this.requests.get(key) ?? []).filter((ts) => now - ts < windowMs);
+    const offsets: number[] = [];
+    let impossible = false;
+    for (const tokens of costs) {
+      if (impossible || tokens > limit) {
+        impossible = true;
+        offsets.push(Infinity);
+        continue;
+      }
+      const admitAt = RateLimiter.earliestAdmission(timestamps, now, limit, windowMs, tokens);
+      for (let i = 0; i < tokens; i++) timestamps.push(admitAt);
+      offsets.push(admitAt - now);
+    }
+    return { configured: true, limit, windowMs, maxWaitMs, admissionOffsetsMs: offsets };
   }
 
   /**
