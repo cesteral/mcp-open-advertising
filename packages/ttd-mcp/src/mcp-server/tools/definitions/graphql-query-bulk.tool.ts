@@ -20,16 +20,19 @@ import type {
   DispatchedCapability,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
+import { QUERY_BULK_ERROR_SELECTION, describePayloadErrors } from "../utils/graphql-bulk-job.js";
 
 const TOOL_NAME = "ttd_graphql_query_bulk";
 const TOOL_TITLE = "TTD GraphQL Query Bulk";
-const TOOL_DESCRIPTION = `Submit a bulk GraphQL query job to The Trade Desk.
+const TOOL_DESCRIPTION = `Submit a bulk GraphQL query job to The Trade Desk (\`createQueryBulk\`).
 
-Runs the same GraphQL query across many variable sets in parallel as an async bulk job. Returns a job ID that can be polled with \`ttd_graphql_bulk_job\`.
+Runs a GraphQL query as an async bulk job and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`. Jobs can end SUCCESS, PARTIAL_SUCCESS, FAILURE or CANCELLED.
+
+> **Unverified:** this tool sends \`variables\` as \`queryVariables\` (one JSON-encoded string) so the query runs once per variable set. TTD's published bulk samples submit \`createQueryBulk\` with \`query\` only and never show a variable-set field, so this binding has not been confirmed against TTD.
 
 ### Constraints
 - **Concurrency:** max 10 active jobs / 20 queued jobs per partner
-- **Result URL:** expires after 1 hour — download promptly via \`ttd_download_report\`
+- **Result:** a JSON GraphQL response file (not CSV). Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET. Do not use \`ttd_download_report\`, which only parses CSV. The URL expires after 1 hour.
 
 ### Example
 \`\`\`graphql
@@ -48,9 +51,7 @@ const CREATE_QUERY_BULK_MUTATION = `mutation CreateQueryBulk($input: CreateQuery
       id
       status
     }
-    errors {
-      __typename
-    }
+    ${QUERY_BULK_ERROR_SELECTION}
   }
 }`;
 
@@ -81,7 +82,9 @@ export const GraphqlQueryBulkOutputSchema = z
     status: z
       .string()
       .optional()
-      .describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+      .describe(
+        "Job status at submission (normally QUEUED). Poll with ttd_graphql_bulk_job; terminal statuses are SUCCESS, PARTIAL_SUCCESS, FAILURE, CANCELLED."
+      ),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No job was submitted."
     ),
@@ -115,12 +118,9 @@ function extractBulkJobOrThrow(
   const payload = result.data?.[mutationName] ?? result[mutationName];
   const payloadErrors = payload?.errors;
   if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
-    const messages = payloadErrors
-      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
-      .join("; ");
     throw new McpError(
       JsonRpcErrorCode.InvalidRequest,
-      `TTD GraphQL bulk request failed: ${messages}`,
+      `TTD GraphQL bulk request failed: ${describePayloadErrors(payloadErrors)}`,
       { errors: payloadErrors }
     );
   }
@@ -134,7 +134,7 @@ function extractBulkJobOrThrow(
     );
   }
 
-  return { id: job.id as string, status: job.status as string };
+  return { id: String(job.id), status: String(job.status) };
 }
 
 export async function graphqlQueryBulkLogic(
@@ -158,6 +158,11 @@ export async function graphqlQueryBulkLogic(
 
   const { ttdService } = resolveSessionServices(sdkContext);
 
+  // UNVERIFIED binding: TTD's samples (thetradedesk/platform, e.g.
+  // Python/FirstPartyData/GetAdvertiserFirstPartyDataBatchedGQL.py:99-104) send
+  // `createQueryBulk(input: { query })` only; the Workflows SDK's query-job input
+  // (graphqlqueryjobinput.py:21-29) has no variables either. Nothing published
+  // shows `queryVariables` or its encoding — left as-is pending a sandbox run.
   const variables = {
     input: {
       query: input.query,

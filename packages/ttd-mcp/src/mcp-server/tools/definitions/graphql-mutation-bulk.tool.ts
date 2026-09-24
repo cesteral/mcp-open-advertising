@@ -20,32 +20,42 @@ import type {
   DispatchedCapability,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
+import { MUTATION_ERROR_SELECTION, describePayloadErrors } from "../utils/graphql-bulk-job.js";
 
 const TOOL_NAME = "ttd_graphql_mutation_bulk";
 const TOOL_TITLE = "TTD GraphQL Mutation Bulk";
-const TOOL_DESCRIPTION = `Submit a bulk GraphQL mutation job to The Trade Desk.
+const TOOL_DESCRIPTION = `Submit a bulk GraphQL mutation job to The Trade Desk (\`createMutationBulk\`).
 
-Applies the same mutation across many input sets in parallel as an async bulk job. Returns a job ID that can be polled with \`ttd_graphql_bulk_job\`.
+Applies one mutation across many input sets as an async bulk job and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`.
 
 ### ⚠️ NON-CANCELABLE
 Mutation bulk jobs **cannot be cancelled** once submitted. Use \`ttd_graphql_query_bulk\` for read-only queries if you need cancellation support.
+
+### ⚠️ Partial failure
+A job can end **PARTIAL_SUCCESS**: some inputs were applied and some failed. Applied writes are not rolled back, so re-submitting the full input set applies them again. Before retrying, read \`gqlErrors\` and the result file from \`ttd_graphql_bulk_job\`, then re-submit only the failed inputs.
 
 ### Constraints
 - **Max 1000 inputs** per job
 - **Max 15,000 lexical tokens** for the mutation string (~60,000 characters)
 - **Non-cancelable** once submitted
 - **Concurrency:** max 10 active jobs / 20 queued jobs per partner
-- **Result URL:** expires after 1 hour — download promptly via \`ttd_download_report\`
+- **Result:** a JSON GraphQL response file (not CSV). Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET. Do not use \`ttd_download_report\`, which only parses CSV. The URL expires after 1 hour.
+
+### Mutation names
+TTD names mutations entity first, then verb: \`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`, \`seedCreate\`. TTD's Platform API reference lists \`campaignUpdate\`, not \`updateCampaign\`. Take input types and payload fields from the TTD GraphQL schema explorer. They are not validated here.
 
 ### Example
 \`\`\`graphql
-mutation UpdateCampaign($input: UpdateCampaignInput!) {
-  updateCampaign(input: $input) {
-    campaign { campaignId name }
+mutation UpdateBidList($input: BidListUpdateInput!) {
+  bidListUpdate(input: $input) {
+    data { id }
+    userErrors { field message }
   }
 }
 \`\`\`
-With inputs: \`[{ "campaignId": "c1", "name": "New Name 1" }, { "campaignId": "c2", "name": "New Name 2" }]\``;
+With inputs: \`[{ "id": "bl1", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }, { "id": "bl2", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }]\`
+
+> **Unverified:** each \`inputs\` entry is sent as one JSON-encoded element of \`mutationVariables\`. It is not confirmed whether TTD binds an entry to \`$input\` (as this example assumes) or reads it as the full variables map (\`{ "input": { … } }\`, the way \`ttd_graphql_query_bulk\` treats its entries).`;
 
 const MAX_MUTATION_CHARS = 60_000; // ~15,000 lexical tokens (chars/4 as conservative proxy)
 
@@ -55,9 +65,7 @@ const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: Creat
       id
       status
     }
-    errors {
-      __typename
-    }
+    ${MUTATION_ERROR_SELECTION}
   }
 }`;
 
@@ -97,7 +105,9 @@ export const GraphqlMutationBulkOutputSchema = z
     status: z
       .string()
       .optional()
-      .describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+      .describe(
+        "Job status at submission (normally QUEUED). Poll with ttd_graphql_bulk_job; terminal statuses are SUCCESS, PARTIAL_SUCCESS, FAILURE, CANCELLED."
+      ),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No job was submitted and no entities were mutated."
     ),
@@ -131,12 +141,9 @@ function extractMutationBulkJobOrThrow(result: Record<string, any>): {
   const payload = result.data?.createMutationBulk ?? result.createMutationBulk;
   const payloadErrors = payload?.errors;
   if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
-    const messages = payloadErrors
-      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
-      .join("; ");
     throw new McpError(
       JsonRpcErrorCode.InvalidRequest,
-      `TTD GraphQL bulk mutation failed: ${messages}`,
+      `TTD GraphQL bulk mutation failed: ${describePayloadErrors(payloadErrors)}`,
       { errors: payloadErrors }
     );
   }
@@ -150,7 +157,7 @@ function extractMutationBulkJobOrThrow(result: Record<string, any>): {
     );
   }
 
-  return { id: job.id as string, status: job.status as string };
+  return { id: String(job.id), status: String(job.status) };
 }
 
 export async function graphqlMutationBulkLogic(
@@ -174,6 +181,9 @@ export async function graphqlMutationBulkLogic(
 
   const { ttdService } = resolveSessionServices(sdkContext);
 
+  // UNVERIFIED binding: no TTD source (Workflows SDK or platform samples) shows
+  // createMutationBulk, its input type, or how a `mutationVariables` entry binds
+  // to the mutation's variables. Left as-is pending a sandbox run.
   const variables = {
     input: {
       mutation: input.mutation,
@@ -286,27 +296,52 @@ export const graphqlMutationBulkTool = {
       requiresSimulation: true,
     } satisfies CesteralWriteToolAnnotations,
   },
+  // Examples use TTD's documented bidListUpdate shape (input fields `id`,
+  // `bidLinesToAdd`/`bidLinesToRemove`, payload `data { id } userErrors { field
+  // message }`, from docs/api/ttd_partner_portal_api_docs.md:6062-6082) and the
+  // `BidListUpdateInput` type this package already sends (ttd-service.ts
+  // updateBidList). The previous `updateCampaign` / `updateAdGroup` examples used
+  // verb-first names that TTD's Platform API reference does not list. Its names are
+  // `campaignUpdate` / `adGroupUpdate` (docs/api/reference.md:155,331).
   inputExamples: [
     {
-      label: "Batch update campaign names via bulk mutation",
+      label: "Remove a domain bid line from many bid lists via bulk mutation",
       input: {
         mutation:
-          "mutation UpdateCampaign($input: UpdateCampaignInput!) { updateCampaign(input: $input) { campaign { campaignId name } } }",
+          "mutation UpdateBidList($input: BidListUpdateInput!) { bidListUpdate(input: $input) { data { id } userErrors { field message } } }",
         inputs: [
-          { campaignId: "camp456def", name: "Q1 2025 Brand Awareness - Updated" },
-          { campaignId: "camp789ghi", name: "Q1 2025 Retargeting - Updated" },
-          { campaignId: "camp012jkl", name: "Q1 2025 Prospecting - Updated" },
+          { id: "bl111aaa", bidLinesToRemove: [{ domainFragment: "example.com" }] },
+          { id: "bl222bbb", bidLinesToRemove: [{ domainFragment: "example.com" }] },
+          { id: "bl333ccc", bidLinesToRemove: [{ domainFragment: "example.com" }] },
         ],
       },
     },
     {
-      label: "Batch update ad group bids via bulk mutation",
+      label: "Add a domain bid adjustment to many bid lists via bulk mutation",
       input: {
         mutation:
-          "mutation UpdateAdGroup($input: UpdateAdGroupInput!) { updateAdGroup(input: $input) { adGroup { adGroupId baseBidCPM { amount } } } }",
+          "mutation UpdateBidList($input: BidListUpdateInput!) { bidListUpdate(input: $input) { data { id } userErrors { field message } } }",
         inputs: [
-          { adGroupId: "adg111aaa", baseBidCPM: { amount: 4.5, currencyCode: "USD" } },
-          { adGroupId: "adg222bbb", baseBidCPM: { amount: 6.0, currencyCode: "USD" } },
+          {
+            id: "bl111aaa",
+            bidLinesToAdd: [
+              {
+                domainFragment: "news.example.com",
+                bidAdjustment: 1,
+                volumeControlPriority: "NEUTRAL",
+              },
+            ],
+          },
+          {
+            id: "bl222bbb",
+            bidLinesToAdd: [
+              {
+                domainFragment: "news.example.com",
+                bidAdjustment: 1,
+                volumeControlPriority: "NEUTRAL",
+              },
+            ],
+          },
         ],
       },
     },

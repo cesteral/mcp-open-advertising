@@ -9,7 +9,13 @@
  * (__type returns null), so this resource serves as the schema reference for
  * AI agents and developers.
  *
- * Last validated: 2026-04-14 via live API testing.
+ * Provenance: the non-bulk patterns and the "Known Field Constraints" table
+ * are recorded as coming from live API testing on 2026-04-14. No captured
+ * evidence of that run is in the repo. The "Bulk Operations" section was never
+ * exercised live. It describes what the bulk tools actually send, and it marks
+ * each claim as corroborated by TTD's published code (thetradedesk/platform
+ * sample scripts @adff1a6, thetradedesk/ttd-workflows-python @cd4e64c) or as
+ * unverified.
  */
 import type { Resource } from "../types.js";
 
@@ -381,35 +387,55 @@ Use \`ttd_get_entity_report_types\` to discover valid \`reportType\` enum values
 
 ## Bulk Operations
 
-TTD supports async bulk GraphQL jobs for large-scale operations. Submit a job and poll for results:
+> **Not live-verified.** Nothing in this section has been run against TTD from this repo. Each statement names its basis: TTD's published sample scripts (github.com/thetradedesk/platform), TTD's Workflows SDK (github.com/thetradedesk/ttd-workflows-python), or only what the tools send.
 
-### Submit bulk query
-\`\`\`graphql
-mutation BulkQuery($query: String!, $variables: [JSON!]!) {
-  bulkQuery(input: { query: $query, variables: $variables }) {
-    jobId
-  }
-}
-\`\`\`
+Prefer \`ttd_graphql_query_bulk\`, \`ttd_graphql_mutation_bulk\`, \`ttd_graphql_bulk_job\` and \`ttd_graphql_cancel_bulk_job\` to hand-writing these operations.
 
-### Check job status
+### Submit a bulk query: \`createQueryBulk\`
+TTD's samples submit the query inline, with no variables:
 \`\`\`graphql
-query BulkJobStatus($jobId: ID!) {
-  bulkJob(jobId: $jobId) {
-    jobId
-    status
-    resultUrl
-    resultExpiresAt
-    errorMessage
-    progress {
-      completed
-      total
+mutation CreateBulkQuery {
+  createQueryBulk(input: { query: """query { partner(id: "PARTNER_ID") { thirdPartyData { nodes { id name } } } }""" }) {
+    data { id }
+    errors {
+      ... on MutationError { message field }
+      ... on BulkJobQueryValidationError { message field queryErrors }
     }
   }
 }
 \`\`\`
+The input also accepts an optional \`bulkJobCallback: { callbackUrl, callbackHeaders: [{ key, value }] }\` (shown in TTD's samples; not exposed by the tool).
 
-Use \`ttd_graphql_query_bulk\`, \`ttd_graphql_mutation_bulk\`, \`ttd_graphql_bulk_job\`, and \`ttd_graphql_cancel_bulk_job\` tools to avoid managing this flow manually.
+\`ttd_graphql_query_bulk\` sends \`mutation CreateQueryBulk($input: CreateQueryBulkInput!) { createQueryBulk(input: $input) { data { id status } errors { … } } }\` with variables \`{ "input": { "query": "…", "queryVariables": "<JSON-encoded array of variable maps>" } }\`. **Unverified:** no TTD source shows \`queryVariables\`, the \`CreateQueryBulkInput\` type name, or \`status\` on the returned job.
+
+### Submit a bulk mutation: \`createMutationBulk\`
+\`ttd_graphql_mutation_bulk\` sends \`mutation CreateMutationBulk($input: CreateMutationBulkInput!) { createMutationBulk(input: $input) { data { id status } errors { __typename ... on MutationError { field message } } } }\` with variables \`{ "input": { "mutation": "…", "mutationVariables": ["<JSON string per input>", …] } }\`. **Unverified:** no TTD source shows \`createMutationBulk\`, its input fields, whether mutation jobs can be cancelled, or how each entry binds to the mutation's variables.
+
+TTD mutation names are entity first, then verb (\`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`), per TTD's Platform API reference.
+
+TTD's documented route for creating campaigns in bulk (>100) is a separate, file-based flow. Call \`fileUpload { id uploadUrl }\`, PUT a JSONL file to \`uploadUrl\`, then call \`bulkCreateCampaigns(input: { advertiserId, fileId }) { data { id } userErrors { field message } }\` and poll \`jobProgress(id:) { jobStatus validationErrors }\` (statuses IN_PROGRESS, COMPLETE, VALIDATION_FAILURE, ERROR). Source: TTD sample \`Campaign/Creating/CreateCampaignsBulkGQL.py\`. No tool here wraps it, and it is not polled with \`bulkJob\`.
+
+### Poll: \`bulkJob\`
+\`\`\`graphql
+query GetBulkJobStatus($id: ID!) {
+  bulkJob(id: $id) {
+    id
+    status
+    url
+    gqlErrors
+  }
+}
+\`\`\`
+These four fields are exactly what TTD's samples select. The samples inline the id as a string literal, \`bulkJob(id: "123")\`. \`ttd_graphql_bulk_job\` also requests \`__typename\`, \`createdAt\` and \`completedAt\`. The last two are unverified as GraphQL fields.
+
+**Status values:** QUEUED and IN_PROGRESS (exact spellings seen in TTD's samples), plus SUCCESS, PARTIAL_SUCCESS, FAILURE and CANCELLED. The set of six comes from the Workflows SDK's \`BulkJobStatus\`, which uses PascalCase wire values. The GraphQL spellings of the last four follow the same SCREAMING_SNAKE convention but have not been observed. Poll while the status is QUEUED or IN_PROGRESS; every other status is terminal. TTD's samples treat a finished job with no \`url\` as failed and print \`gqlErrors\`. TTD's callback sample fetches results only for Success and PartialSuccess.
+
+**Result file:** TTD's samples fetch \`url\` with a plain HTTP GET (no \`TTD-Auth\` header) and parse the body as JSON: a GraphQL response, \`{"data": {…}}\`. It is **not** a CSV, so \`ttd_download_report\` cannot parse it. The 1-hour expiry quoted by the tools is unverified.
+
+**Not GraphQL fields as far as any TTD source shows:** \`completionPercentage\`, \`runtimeErrors\`, \`rawResult\`, \`queryGqlErrors\`. These appear only in the Workflows REST facade's model, whose names do not match GraphQL one-to-one (its \`queryGqlErrors\` appears to be GraphQL \`gqlErrors\`).
+
+### Cancel: \`cancelBulkJob\`
+\`ttd_graphql_cancel_bulk_job\` sends \`mutation CancelBulkJob($input: CancelBulkJobInput!) { cancelBulkJob(input: $input) { data { id status } errors { __typename ... on MutationError { field message } } } }\` with \`{ "input": { "jobId": "…" } }\`. **Unverified:** no TTD source shows this mutation.
 
 ---
 
