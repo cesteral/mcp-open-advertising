@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -111,6 +112,12 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
+  // Each entity is a GET + PUT on `cm360:{profileId}`. Refuse a batch that
+  // cannot clear the rate limit within the queue budget before prompting the
+  // user or sending anything — otherwise it queues for minutes, past client
+  // and Cloud Run timeouts, while the writes keep landing.
+  assertCM360BulkCapacity(TOOL_NAME, "status", input.profileId, input.entityIds.length);
+
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
     entityLabel: input.entityType,
@@ -180,7 +187,9 @@ export async function bulkUpdateStatusLogic(
  * Symbolic effect dry-run for `bulk_update_status`. Validates the batch (every
  * entity ID must be non-empty) and projects the would-be effect (an N-entity
  * status change to one target status). CM360 has no native bulk validate, so
- * both axes are symbolic. Pure (no I/O).
+ * both axes are symbolic. Also projects the batch against the rate limiter
+ * (read-only) so a batch the execute path would refuse as
+ * `BULK_EXCEEDS_CAPACITY` fails here too. No I/O.
  */
 function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -193,6 +202,15 @@ function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult
       });
     }
   });
+  // Parity with the execute path's assertCM360BulkCapacity refusal.
+  const capacityError = cm360BulkCapacityDryRunError(
+    TOOL_NAME,
+    "status",
+    input.profileId,
+    input.entityIds.length,
+    "entityIds"
+  );
+  if (capacityError) validationErrors.push(capacityError);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,

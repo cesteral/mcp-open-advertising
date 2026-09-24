@@ -5,6 +5,7 @@ import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -94,7 +95,15 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    // Parity with the execute path's assertCM360BulkCapacity refusal below.
+    const capacityError = cm360BulkCapacityDryRunError(
+      TOOL_NAME,
+      "create",
+      input.profileId,
+      input.items.length,
+      "items"
+    );
+    const dryRun = buildBulkEffectDryRun(input, capacityError ? [capacityError] : []);
     return {
       created: 0,
       failed: 0,
@@ -115,6 +124,10 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // One POST per item on `cm360:{profileId}`. Refuse a batch that cannot
+  // clear the rate limit within the queue budget before sending anything.
+  assertCM360BulkCapacity(TOOL_NAME, "create", input.profileId, input.items.length);
 
   const { cm360Service } = resolveSessionServices(sdkContext);
 
@@ -162,9 +175,14 @@ export async function bulkCreateEntitiesLogic(
  * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). CM360 has no native bulk validate, so both axes are symbolic.
- * Pure (no I/O).
+ * `extraErrors` carries the dry-run-only rate-limit capacity finding (the
+ * execute path reuses this as a payload preflight and refuses capacity
+ * separately, with `RateLimited`). Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
+function buildBulkEffectDryRun(
+  input: BulkCreateEntitiesInput,
+  extraErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
@@ -175,6 +193,7 @@ function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResu
       });
     }
   });
+  validationErrors.push(...extraErrors);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,

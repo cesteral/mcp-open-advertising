@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { BulkResult, RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityCheck, BulkResult, RateLimiter } from "@cesteral/shared";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -65,6 +65,52 @@ export type {
   CM360FloodlightActivity,
   CM360FloodlightConfiguration,
 };
+
+/**
+ * Rate-limit cost of ONE item of each bulk method, on `cm360:{profileId}` —
+ * one entry per `consume` the item makes, in order (see the bulk methods at
+ * the bottom of {@link CM360Service}):
+ *
+ * - `create`: {@link CM360Service.createEntity} (POST) — 1 token.
+ * - `update`: {@link CM360Service.patchEntity} (PATCH) — 1 token.
+ * - `status`: read-modify-write — {@link CM360Service.getEntity} (GET) then
+ *   {@link CM360Service.updateEntity} (PUT), 1 token each.
+ *
+ * CM360 has no native bulk endpoint, so none of these batch: cost is linear in
+ * item count. At the 5/min default a 120s queue budget admits 15 tokens — 15
+ * creates/updates or 7 status changes — so a 50-item batch would otherwise
+ * queue for up to ~10 minutes, past client and Cloud Run request timeouts.
+ * Keep in step with the consume calls below.
+ */
+export const CM360_BULK_COST_PER_ITEM = {
+  create: [1],
+  update: [1],
+  status: [1, 1],
+} as const satisfies Record<string, readonly number[]>;
+
+export type CM360BulkOperation = keyof typeof CM360_BULK_COST_PER_ITEM;
+
+/**
+ * The {@link BulkCapacityCheck} for a CM360 bulk batch, for
+ * `assertBulkCapacity` / `projectBulkCapacity`. `rateLimiter` must be the
+ * limiter the session's {@link CM360Service} consumes from (the package's
+ * `rateLimiter` from `utils/platform.ts`, which both transports hand to
+ * `createSessionServices`).
+ */
+export function cm360BulkCapacityCheck(
+  rateLimiter: RateLimiter,
+  toolName: string,
+  operation: CM360BulkOperation,
+  profileId: string,
+  itemCount: number
+): BulkCapacityCheck {
+  return {
+    rateLimiter,
+    toolName,
+    itemCount,
+    buckets: [{ key: `cm360:${profileId}`, costPerItem: CM360_BULK_COST_PER_ITEM[operation] }],
+  };
+}
 
 /**
  * Rate-limit keys: the limiter is configured for `cm360:*`, so every key must

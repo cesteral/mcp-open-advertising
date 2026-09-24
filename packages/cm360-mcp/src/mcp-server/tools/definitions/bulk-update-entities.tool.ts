@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
@@ -117,6 +118,11 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
+  // One PATCH per item on `cm360:{profileId}`. Refuse a batch that cannot
+  // clear the rate limit within the queue budget before prompting the user or
+  // sending anything.
+  assertCM360BulkCapacity(TOOL_NAME, "update", input.profileId, input.items.length);
+
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
@@ -188,7 +194,9 @@ export async function bulkUpdateEntitiesLogic(
  * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
  * item must target a non-empty entityId and carry a non-empty data payload) and
  * projects the would-be effect (an N-item update of one entity kind). CM360 has
- * no native bulk validate, so both axes are symbolic. Pure (no I/O).
+ * no native bulk validate, so both axes are symbolic. Also projects the batch
+ * against the rate limiter (read-only) so a batch the execute path would refuse
+ * as `BULK_EXCEEDS_CAPACITY` fails here too. No I/O.
  */
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -208,6 +216,15 @@ function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResu
       });
     }
   });
+  // Parity with the execute path's assertCM360BulkCapacity refusal.
+  const capacityError = cm360BulkCapacityDryRunError(
+    TOOL_NAME,
+    "update",
+    input.profileId,
+    input.items.length,
+    "items"
+  );
+  if (capacityError) validationErrors.push(capacityError);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,

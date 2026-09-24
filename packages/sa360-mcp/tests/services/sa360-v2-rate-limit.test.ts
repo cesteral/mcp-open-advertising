@@ -63,6 +63,24 @@ describe("SA360 v2 rate limiting (real limiter)", () => {
     expect(httpClient.fetch).toHaveBeenCalledTimes(LIMIT + 1);
   });
 
+  // Why the governed conversion tools carry no bulk-capacity pre-check
+  // (`assertBulkCapacity`): a whole batch — up to the tools' 200-row max — is
+  // ONE POST/PUT and ONE token on `sa360:v2:{advertiserId}`, so its rate-limit
+  // cost does not grow with input size. If this ever becomes per-row (e.g.
+  // chunking), the tools must project the batch before the confirmation prompt.
+  it("spends one token and one request per conversion batch, regardless of row count", async () => {
+    const service = new ConversionService(createMockLogger(), limiter, httpClient as any);
+    const rows = Array.from({ length: 200 }, (_, i) => ({ ...row, conversionId: `order-${i}` }));
+
+    await service.insertConversions("ag", "adv-1", rows);
+    expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+    expect(limiter.getRemainingTokens("sa360:v2:adv-1")).toBe(LIMIT - 1);
+
+    await service.updateConversions("ag", "adv-1", rows);
+    expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+    expect(limiter.getRemainingTokens("sa360:v2:adv-1")).toBe(LIMIT - 2);
+  });
+
   it("throttles v2 report submission and polling under the sa360 limit", async () => {
     const service = new SA360ReportingService(
       createMockLogger(),
