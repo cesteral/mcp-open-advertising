@@ -160,7 +160,7 @@ describe("MetaGraphApiClient", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
-    it.each([4, 17, 341])(
+    it.each([4, 17, 32, 341, 613, 80001, 80004])(
       "maps HTTP 400 + throttle code %i to RateLimited (POST is not re-sent on 400)",
       async (code) => {
         mockErrorResponse(400, {
