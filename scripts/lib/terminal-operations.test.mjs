@@ -37,7 +37,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
-import { isDestructiveCandidate } from "./destructive-tools.mjs";
+import { irreversibleStatusOptions, isDestructiveCandidate } from "./destructive-tools.mjs";
 
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
 
@@ -82,6 +82,28 @@ describe("terminal-operation declarations match the shipped tool surface", () =>
     }
   );
 
+  it.each(packages)(
+    "%s: every tool offering an irreversible status is declared terminal or allowlisted",
+    async (pkg) => {
+      const tools = await withServerClient(pkg, listRawTools);
+      const declared = new Set(declaredFor(pkg).map((t) => t.tool));
+      const allowed = new Set(reversible.filter((r) => r.package === pkg).map((r) => r.tool));
+
+      const undeclared = tools
+        .map((t) => ({ name: t.name, values: irreversibleStatusOptions(t) }))
+        .filter((t) => t.values.length > 0 && !declared.has(t.name) && !allowed.has(t.name))
+        .map((t) => `${t.name} (${t.values.join(", ")})`);
+
+      expect(
+        undeclared,
+        `${pkg}: tools whose input offers an irreversible status value are missing from ` +
+          `registry.servers[].operational.terminalOperations. Declare them (terminal for that ` +
+          `value only, as dv360_update_entity does), or allowlist them with the reason the ` +
+          `value is reversible on this platform.`
+      ).toEqual([]);
+    }
+  );
+
   it.each(packages)("%s: no stale terminal declaration", async (pkg) => {
     const tools = await withServerClient(pkg, listRawTools);
     const live = new Map(tools.map((t) => [t.name, t]));
@@ -118,5 +140,55 @@ describe("terminal-operation declarations match the shipped tool surface", () =>
     for (const entry of reversible) {
       expect(entry.reason?.length ?? 0, `${entry.package}:${entry.tool}`).toBeGreaterThan(20);
     }
+  });
+});
+
+describe("irreversibleStatusOptions", () => {
+  const tool = (inputSchema, annotations = {}) => ({ name: "x_update", inputSchema, annotations });
+
+  it("finds an irreversible value on a status-like enum, case-insensitively", () => {
+    const t = tool({
+      type: "object",
+      properties: { status: { type: "string", enum: ["Available", "Paused", "Archived"] } },
+    });
+    expect(irreversibleStatusOptions(t)).toEqual(["Archived"]);
+  });
+
+  it("walks nested objects, arrays and unions", () => {
+    const t = tool({
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            anyOf: [
+              { type: "object", properties: { operationStatus: { enum: ["ENABLE", "DELETE"] } } },
+              { type: "object", properties: { state: { enum: ["ENABLED", "ARCHIVED"] } } },
+            ],
+          },
+        },
+      },
+    });
+    expect(irreversibleStatusOptions(t)).toEqual(["ARCHIVED", "DELETE"]);
+  });
+
+  it("ignores read-only tools — a list filter on ARCHIVED destroys nothing", () => {
+    const t = tool(
+      { type: "object", properties: { status: { enum: ["ACTIVE", "ARCHIVED"] } } },
+      { readOnlyHint: true }
+    );
+    expect(irreversibleStatusOptions(t)).toEqual([]);
+  });
+
+  it("ignores reversible values and enums on non-status fields", () => {
+    const t = tool({
+      type: "object",
+      properties: {
+        status: { enum: ["ACTIVE", "PAUSED"] },
+        reportType: { enum: ["DELETED_ITEMS"] },
+        action: { enum: ["delete"] },
+      },
+    });
+    expect(irreversibleStatusOptions(t)).toEqual([]);
   });
 });
