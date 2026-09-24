@@ -6,12 +6,16 @@ import type { SA360V2HttpClient } from "./sa360-v2-http-client.js";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
+  assertSafeDownloadUrl,
   fetchWithTimeout,
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   McpError,
   mapHttpStatusToJsonRpc,
 } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
+
+/** Hosts that may receive the bearer token when downloading a report file. */
+export const SA360_DOWNLOAD_HOST_SUFFIXES = ["googleapis.com"] as const;
 
 /**
  * Column definition for SA360 v2 async reports.
@@ -135,6 +139,14 @@ export class SA360ReportingService {
    * Returns: raw CSV string
    */
   async downloadReport(downloadUrl: string, context?: RequestContext): Promise<string> {
+    // The URL comes from the MCP client and receives the user's Google bearer
+    // token below, so only Google API hosts are allowed (report files are
+    // served from www.googleapis.com/doubleclicksearch/v2/reports/...).
+    assertSafeDownloadUrl(downloadUrl, {
+      allowedHostSuffixes: SA360_DOWNLOAD_HOST_SUFFIXES,
+      toolName: "sa360_download_report",
+    });
+
     await this.rateLimiter.consume(`sa360v2:reports`);
 
     this.logger.debug({ downloadUrl }, "Downloading SA360 report");

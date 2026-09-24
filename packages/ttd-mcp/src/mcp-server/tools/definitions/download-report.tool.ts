@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
 import {
+  assertSafeDownloadUrl,
   ComputedMetricsFlagSchema,
   createServiceDownloadedReportView,
   extractReportIdFromUrl,
@@ -124,6 +125,8 @@ export async function downloadReportLogic(
   sdkContext?: SdkContext
 ): Promise<DownloadOutput> {
   const { authAdapter } = resolveSessionServices(sdkContext);
+
+  assertSafeDownloadUrl(input.downloadUrl, { toolName: TOOL_NAME });
 
   if (!isAllowedReportUrl(input.downloadUrl)) {
     throw new McpError(
