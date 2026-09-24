@@ -363,13 +363,20 @@ export class RateLimiter {
       return { pattern: key, config: exact };
     }
 
+    // Most specific match wins (longest literal part), not the first one
+    // configured: `createPlatformRateLimiter` registers the catch-all
+    // `platform:*` first, so first-match would make any narrower pattern
+    // (e.g. `sa360:v2:*`) unreachable.
+    let best: { pattern: string; config: LimitConfig; specificity: number } | undefined;
     for (const [pattern, config] of this.limits.entries()) {
-      if (this.matchPattern(key, pattern)) {
-        return { pattern, config };
+      if (!this.matchPattern(key, pattern)) continue;
+      const specificity = pattern.replace(/\*/g, "").length;
+      if (!best || specificity > best.specificity) {
+        best = { pattern, config, specificity };
       }
     }
 
-    return undefined;
+    return best ? { pattern: best.pattern, config: best.config } : undefined;
   }
 
   private matchPattern(key: string, pattern: string): boolean {

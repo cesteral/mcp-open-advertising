@@ -429,4 +429,18 @@ describe("RateLimiter", () => {
       platform.destroy();
     });
   });
+
+  describe("RateLimiter pattern precedence", () => {
+    it("applies the most specific matching pattern, whatever the configuration order", async () => {
+      const limiter = new RateLimiter();
+      limiter.configure("p:*", 100, 60_000);
+      limiter.configure("p:v2:*", 2, 60_000);
+
+      await limiter.consume("p:v2:a");
+      await limiter.consume("p:v2:a");
+      await expect(limiter.consume("p:v2:a")).rejects.toThrow("Rate limit exceeded");
+      expect(limiter.getRemainingTokens("p:other")).toBe(100);
+      limiter.destroy();
+    });
+  });
 });
