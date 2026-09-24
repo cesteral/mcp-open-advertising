@@ -37,8 +37,10 @@ runs TTD's documented three-step flow for you:
 creative's display \`width\`/\`height\` in pixels. The video must be reachable at a
 public \`mediaUrl\` — the server downloads it, then uploads the bytes to TTD.
 
-Returns the created \`CreativeId\`, which \`ttd_create_entity\` (entityType \`ad\`)
-attaches to an ad group.`;
+Returns the created \`CreativeId\`. To serve it, attach it to ad groups with TTD's
+\`creativeAdGroupAssociate\` GraphQL mutation (via \`ttd_graphql_query\`), or with
+\`ttd_update_entity\` on the ad group's \`RTBAttributes.CreativeIds\` — that array
+replaces the current one, so include the ad group's existing creative IDs.`;
 
 const ASSET_TYPE = "video";
 
@@ -74,7 +76,7 @@ export const UploadVideoOutputSchema = z
       .string()
       .optional()
       .describe(
-        "The created CreativeId, for attaching to an ad group via `ttd_create_entity` (entityType `ad`). Absent on a dry_run."
+        "The created CreativeId, for attaching to ad groups (GraphQL `creativeAdGroupAssociate`, or the ad group's `RTBAttributes.CreativeIds`). Absent on a dry_run."
       ),
     creative: z.record(z.any()).optional().describe("Raw POST /v3/creative response."),
     uploadedAt: z.string().datetime(),
@@ -215,7 +217,7 @@ export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpText
   return [
     {
       type: "text" as const,
-      text: `Hosted video creative created in The Trade Desk!\n\nCreativeId: ${result.creativeId}\n\nAttach it to an ad group with ttd_create_entity (entityType "ad").`,
+      text: `Hosted video creative created in The Trade Desk!\n\nCreativeId: ${result.creativeId}\n\nAttach it to ad groups with the creativeAdGroupAssociate GraphQL mutation (ttd_graphql_query), or via ttd_update_entity on the ad group's RTBAttributes.CreativeIds (the array replaces the current one — include existing IDs).`,
     },
   ];
 }

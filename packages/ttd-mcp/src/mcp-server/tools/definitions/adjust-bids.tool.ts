@@ -25,14 +25,11 @@ const TOOL_NAME = "ttd_adjust_bids";
 const TOOL_TITLE = "Adjust TTD Ad Group Bids";
 const TOOL_DESCRIPTION = `Batch adjust bid CPMs for multiple The Trade Desk ad groups.
 
-For each ad group, the tool:
-1. Fetches the current entity (to preserve all existing fields)
-2. Updates BaseBidCPM and/or MaxBidCPM in RTBAttributes
-3. PUTs the full entity back
+For each ad group, the tool sends one partial \`PUT /v3/adgroup\` containing only the ad group ID and the changed \`RTBAttributes.BaseBidCPM\` / \`MaxBidCPM\`. TTD updates are partial — fields not sent are left unchanged — so no other ad group setting is touched.
 
-This is a safe read-modify-write pattern that avoids accidentally clearing other fields.
+**Currency:** each bid is sent as \`{ Amount, CurrencyCode }\`. When \`currencyCode\` is omitted, the tool reads the ad group and reuses the currency of its current bid (falling back to the advertiser's currency); if neither can be found, that adjustment fails rather than guessing.
 
-**Note:** Concurrent bid adjustments to the same ad group may cause one update to overwrite the other, since TTD does not support optimistic locking. Avoid adjusting the same ad group in parallel.`;
+**Note:** TTD has no optimistic locking, so the last write wins. Avoid adjusting the same ad group from parallel calls.`;
 
 export const AdjustBidsInputSchema = z
   .object({
@@ -43,7 +40,12 @@ export const AdjustBidsInputSchema = z
             adGroupId: z.string().min(1).describe("Ad group ID"),
             baseBidCpm: z.number().positive().optional().describe("New base bid CPM amount"),
             maxBidCpm: z.number().positive().optional().describe("New max bid CPM amount"),
-            currencyCode: z.string().optional().describe("Currency code (default: USD)"),
+            currencyCode: z
+              .string()
+              .optional()
+              .describe(
+                "ISO 4217 currency code of the amounts. Omit to reuse the ad group's current bid currency (or the advertiser's)."
+              ),
           })
           .refine((adj) => adj.baseBidCpm !== undefined || adj.maxBidCpm !== undefined, {
             message: "At least one of baseBidCpm or maxBidCpm must be provided",
@@ -145,7 +147,7 @@ export async function adjustBidsLogic(
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "ad group",
-    summary: "Applying BaseBidCPM/MaxBidCPM changes via read-modify-write PUT.",
+    summary: "Applying BaseBidCPM/MaxBidCPM changes via a partial PUT per ad group.",
     impactPreview: input.adjustments.map((a) => a.adGroupId),
     sdkContext,
   });
@@ -267,9 +269,11 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
     .map((r) => {
       if (r.success) {
         const rtb = r.entity?.RTBAttributes;
-        const base = rtb?.BaseBidCPM?.Amount ?? "?";
-        const max = rtb?.MaxBidCPM?.Amount ?? "?";
-        return `  [OK] ${r.adGroupId}: base=$${base}, max=$${max}`;
+        const fmt = (bid: { Amount?: unknown; CurrencyCode?: unknown } | undefined) =>
+          bid?.Amount !== undefined
+            ? `${String(bid.Amount)}${bid.CurrencyCode ? ` ${String(bid.CurrencyCode)}` : ""}`
+            : "?";
+        return `  [OK] ${r.adGroupId}: base=${fmt(rtb?.BaseBidCPM)}, max=${fmt(rtb?.MaxBidCPM)}`;
       }
       return `  ✗ ${r.adGroupId}: ${r.error}`;
     })

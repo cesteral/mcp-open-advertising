@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertPollableReportConfig } from "../../../services/ttd/ttd-reporting-service.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -71,7 +72,12 @@ export const SubmitReportInputSchema = z
       .describe(
         "ISO date or datetime when the schedule should first run. Defaults to today UTC at 00:00. Required by TTD for one-time schedules."
       ),
-    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
+    advertiserIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .describe(
+        "Advertiser IDs the report covers (at least one). Required: TTD's only REST execution-status query is scoped by advertiser, so a schedule without advertiser filters could never be polled by ttd_check_report_status."
+      ),
     dimensions: z
       .array(z.string())
       .optional()
@@ -162,9 +168,13 @@ export async function submitReportLogic(
     IncludeHeaders: true,
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
-    ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),
+    AdvertiserFilters: input.advertiserIds,
     ...input.additionalConfig,
   };
+
+  // Refuse before anything is created: a schedule with no advertiser filters
+  // (e.g. `additionalConfig` overriding them) cannot be polled afterwards.
+  assertPollableReportConfig(reportConfig);
 
   const result = await ttdReportingService.createReportSchedule(reportConfig, context);
 
@@ -189,6 +199,19 @@ export async function submitReportLogic(
  */
 function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
+  // `additionalConfig` is merged last, so it can override the advertiser scope.
+  const effectiveFilters =
+    input.additionalConfig && "AdvertiserFilters" in input.additionalConfig
+      ? input.additionalConfig.AdvertiserFilters
+      : input.advertiserIds;
+  if (!Array.isArray(effectiveFilters) || effectiveFilters.length === 0) {
+    validationErrors.push({
+      code: "MISSING_ADVERTISER_FILTERS",
+      message:
+        "The report must be scoped to at least one advertiser — ttd_check_report_status polls executions by advertiser",
+      field: "advertiserIds",
+    });
+  }
   if (!Number.isInteger(input.reportTemplateId) || input.reportTemplateId <= 0) {
     validationErrors.push({
       code: "INVALID_TEMPLATE_ID",

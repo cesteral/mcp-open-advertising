@@ -37,7 +37,7 @@ const TOOL_DESCRIPTION = `Batch update the availability status for multiple The 
 
 Use this tool for batch pause/resume operations across campaigns or ad groups.
 
-**Note:** This uses a read-modify-write pattern (GET → PUT). Concurrent modifications to the same entity may cause one update to overwrite the other. Avoid running multiple status updates for the same entity in parallel.`;
+**Note:** Each entity gets one partial PUT containing only its ID and \`Availability\` — no other field is read or written. TTD has no optimistic locking, so the last write wins; avoid running multiple status updates for the same entity in parallel.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({

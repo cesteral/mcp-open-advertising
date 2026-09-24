@@ -10,6 +10,7 @@ import {
   getEntityConfig,
   type TtdEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import { throwIfGraphqlErrors } from "../../mcp-server/tools/utils/graphql-errors.js";
 import type {
   TtdAdvertiser,
   TtdCampaign,
@@ -78,23 +79,24 @@ export class TtdService {
       }
     }
 
-    body.PageStartIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
+    const startIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
+    body.PageStartIndex = startIndex;
 
     const result = (await this.httpClient.fetch(config.queryPath, context, {
       method: "POST",
       body: JSON.stringify(body),
     })) as Record<string, unknown>;
 
-    // TTD returns { Result: [...], TotalCount, ResultCount }
-    const entities = ((result.Result as unknown[]) || []) as TtdEntityMap[T][];
-    const totalCount = (result.TotalCount as number) || 0;
-    const resultCount = (result.ResultCount as number) || 0;
-    const startIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
-    const nextStartIndex = startIndex + resultCount;
+    const entities = (Array.isArray(result.Result) ? result.Result : []) as TtdEntityMap[T][];
 
     return {
       entities,
-      nextPageToken: nextStartIndex < totalCount ? String(nextStartIndex) : undefined,
+      nextPageToken: computeNextPageToken(
+        startIndex,
+        entities.length,
+        body.PageSize as number,
+        result
+      ),
     };
   }
 
@@ -212,11 +214,19 @@ export class TtdService {
   }
 
   /**
-   * Duplicate an entity via the client-side read+create clone pattern (TTD has
-   * no native copy endpoint). Reads the source, strips server-managed fields
-   * (the id + audit timestamps), then creates a fresh copy. The source's own
-   * `AdvertiserId` rides along in the body, so no extra parent ID is needed.
-   * Only entity types flagged `supportsDuplicate` (campaign) are allowed.
+   * Duplicate an entity via a client-side read + create. Only entity types
+   * flagged `supportsDuplicate` (campaign) are allowed.
+   *
+   * The create body is built by `buildDuplicateCreateBody`: an allowlist of
+   * documented create fields, NOT the whole GET payload. TTD advises against
+   * pasting GET responses into writes (Foundations §8/§10) and answers a
+   * request that uses a deprecated property with 410 Gone (§11); GET payloads
+   * carry such properties. Only the campaign itself is created — ad groups are
+   * not copied — so the copy has nothing to bid with until ad groups are added.
+   *
+   * TTD also has a native, asynchronous clone (`POST /v3/campaign/clone`,
+   * GraphQL `campaignClonesCreate`) that copies ad groups; this method does not
+   * use it.
    */
   async duplicateEntity<T extends TtdEntityType>(
     entityType: T,
@@ -237,18 +247,11 @@ export class TtdService {
       unknown
     >;
 
-    // Server-managed fields the create endpoint rejects or reassigns.
-    const SYSTEM_FIELDS = [config.idField, "CreatedAtUTC", "LastModifiedAtUTC", "Version"] as const;
-    const body: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(source)) {
-      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
-        body[key] = val;
-      }
-    }
-    // Caller overrides (e.g. a new CampaignName) win over the copied fields.
-    if (options) Object.assign(body, options);
-
-    return this.createEntity(entityType, body, context);
+    return this.createEntity(
+      entityType,
+      buildDuplicateCreateBody(entityType, source, options),
+      context
+    );
   }
 
   async updateEntity<T extends TtdEntityType>(
@@ -384,7 +387,7 @@ export class TtdService {
 
   /**
    * Archive multiple entities by setting Availability to "Archived".
-   * Uses read-modify-write: GET full entity, set Availability, PUT full entity back.
+   * One partial PUT per entity ({ id, Availability }) — see `updateAvailability`.
    */
   async archiveEntities(
     entityType: TtdEntityType,
@@ -412,7 +415,7 @@ export class TtdService {
 
   /**
    * Batch update availability status for multiple entities of the same type.
-   * Uses read-modify-write: GET full entity, set Availability, PUT full entity back.
+   * One partial PUT per entity ({ id, Availability }) — see `updateAvailability`.
    */
   async bulkUpdateStatus(
     entityType: TtdEntityType,
@@ -438,9 +441,10 @@ export class TtdService {
   }
 
   /**
-   * Read-modify-write helper: GET entity, set Availability, PUT full entity back.
-   * TTD uses full-replacement PUT semantics, so sending only { Availability } would
-   * reset all other fields. This pattern preserves the full entity payload.
+   * Set Availability with a single partial PUT of `{ <idField>, Availability }`.
+   * TTD PUTs are partial: only the properties sent are updated (Foundations §8,
+   * "submit the object ID and the properties that need to be updated"), so no
+   * GET is needed and no other field is touched.
    */
   private async updateAvailability(
     entityType: TtdEntityType,
@@ -482,6 +486,8 @@ export class TtdService {
   }> {
     const partnerId = this.httpClient.partnerId;
     const adGroupConfig = getEntityConfig("adGroup");
+    // One advertiser lookup per batch, shared by every ad group under it.
+    const advertiserCurrency = new Map<string, Promise<string | undefined>>();
 
     // Partial PUTs only. Round-tripping the full entity is fragile under TTD —
     // deprecated fields (e.g. AdBrainHouseholdCrossDeviceEnabled, retired
@@ -492,7 +498,9 @@ export class TtdService {
     const putResults = await executeBulkConcurrent(
       adjustments,
       async (adj) => {
-        const cc = adj.currencyCode || "USD";
+        const cc =
+          adj.currencyCode ||
+          (await this.resolveAdGroupBidCurrency(adj.adGroupId, advertiserCurrency, context));
         const rtb: Record<string, unknown> = {};
         if (adj.baseBidCpm !== undefined)
           rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
@@ -516,6 +524,50 @@ export class TtdService {
         error: r.error,
       })),
     };
+  }
+
+  /**
+   * Currency for a bid adjustment the caller sent without `currencyCode`.
+   *
+   * The partial PUT carries TTD money objects (`{ Amount, CurrencyCode }`), so
+   * a currency has to be sent. Hard-coding "USD" (the previous behaviour) sent
+   * the wrong currency for every non-USD advertiser. Instead: reuse the ad
+   * group's current BaseBidCPM/MaxBidCPM currency, else the owning advertiser's
+   * `CurrencyCode`; throw (failing just this item) when neither is known.
+   */
+  private async resolveAdGroupBidCurrency(
+    adGroupId: string,
+    advertiserCurrency: Map<string, Promise<string | undefined>>,
+    context?: RequestContext
+  ): Promise<string> {
+    const adGroup = (await this.getEntity("adGroup", adGroupId, context)) as unknown as Record<
+      string,
+      any
+    >;
+    const rtb = adGroup?.RTBAttributes as Record<string, any> | undefined;
+    const fromBid = [rtb?.BaseBidCPM?.CurrencyCode, rtb?.MaxBidCPM?.CurrencyCode].find(
+      (c): c is string => typeof c === "string" && c.length > 0
+    );
+    if (fromBid) return fromBid;
+
+    const advertiserId = adGroup?.AdvertiserId;
+    if (typeof advertiserId === "string" && advertiserId.length > 0) {
+      let pending = advertiserCurrency.get(advertiserId);
+      if (!pending) {
+        pending = this.getEntity("advertiser", advertiserId, context).then((adv) => {
+          const code = (adv as unknown as Record<string, unknown>)?.CurrencyCode;
+          return typeof code === "string" && code.length > 0 ? code : undefined;
+        });
+        advertiserCurrency.set(advertiserId, pending);
+      }
+      const fromAdvertiser = await pending;
+      if (fromAdvertiser) return fromAdvertiser;
+    }
+
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Could not determine the bid currency for ad group ${adGroupId}; pass currencyCode explicitly.`
+    );
   }
 
   // ─── GraphQL Passthrough ──────────────────────────────────────────
@@ -630,16 +682,29 @@ export class TtdService {
   // The query selection is intentionally narrow (`id name`) so callers can
   // extend it via the `selection` parameter when they need richer payloads.
 
+  //
+  // Every GraphQL failure arrives as HTTP 200 (docs/api/thetradedesk_graphql_api_docs.md
+  // "Mutation Errors"), so each method below checks the response itself and
+  // THROWS on failure — that is what makes the single-item tool fail instead of
+  // emitting a governed success effect, and what makes `executeBulkConcurrent`
+  // count a failed batch item as failed. Checked, in order:
+  //   1. top-level `errors[]` (GraphQL/server errors);
+  //   2. the mutation payload's own error list — `userErrors` on
+  //      bidListCreate/Update/Set (`PayloadWithErrorsOfBidList`), `errors` on
+  //      bidListDelete (docs/api/ttd_partner_portal_api_docs.md "Create and
+  //      Manage Bid Lists in GraphQL" examples);
+  //   3. a delete the API reports as not performed (`wasDeleted: false`).
+
   private async bidListGraphql(
     body: { query: string; variables: Record<string, unknown> },
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<Record<string, unknown>> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetchDirect(this.graphqlUrl, context, {
+    return (await this.httpClient.fetchDirect(this.graphqlUrl, context, {
       method: "POST",
       body: JSON.stringify(body),
-    });
+    })) as Record<string, unknown>;
   }
 
   async createBidList(
@@ -650,9 +715,12 @@ export class TtdService {
     const query = `mutation BidListCreate($input: BidListCreateInput!) {
       bidListCreate(input: $input) {
         data { ${selection} }
+        userErrors { field message }
       }
     }`;
-    return this.bidListGraphql({ query, variables: { input } }, context);
+    const raw = await this.bidListGraphql({ query, variables: { input } }, context);
+    assertBidListMutationSucceeded(raw, "bidListCreate");
+    return raw;
   }
 
   async getBidList(
@@ -663,7 +731,9 @@ export class TtdService {
     const query = `query BidListGet($id: ID!) {
       bidList(id: $id) { ${selection} }
     }`;
-    return this.bidListGraphql({ query, variables: { id: bidListId } }, context);
+    const raw = await this.bidListGraphql({ query, variables: { id: bidListId } }, context);
+    throwIfGraphqlErrors(raw, `TTD bidList query failed for ${bidListId}`);
+    return raw;
   }
 
   /**
@@ -678,9 +748,12 @@ export class TtdService {
     const query = `mutation BidListUpdate($input: BidListUpdateInput!) {
       bidListUpdate(input: $input) {
         data { ${selection} }
+        userErrors { field message }
       }
     }`;
-    return this.bidListGraphql({ query, variables: { input } }, context);
+    const raw = await this.bidListGraphql({ query, variables: { input } }, context);
+    assertBidListMutationSucceeded(raw, "bidListUpdate");
+    return raw;
   }
 
   /**
@@ -694,20 +767,29 @@ export class TtdService {
     const query = `mutation BidListSet($input: BidListSetInput!) {
       bidListSet(input: $input) {
         data { ${selection} }
+        userErrors { field message }
       }
     }`;
-    return this.bidListGraphql({ query, variables: { input } }, context);
+    const raw = await this.bidListGraphql({ query, variables: { input } }, context);
+    assertBidListMutationSucceeded(raw, "bidListSet");
+    return raw;
   }
 
   async deleteBidList(input: Record<string, unknown>, context?: RequestContext): Promise<unknown> {
-    // BidListDeletePayload only exposes __typename — TTD returns the payload
-    // type as a 200-OK confirmation that the deletion was processed.
+    // Selection per TTD's documented bidListDelete example: `data { wasDeleted }`
+    // plus the `errors` object (which needs `__typename` to be inspectable).
     const query = `mutation BidListDelete($input: BidListDeleteInput!) {
       bidListDelete(input: $input) {
-        __typename
+        data { wasDeleted }
+        errors {
+          __typename
+          ... on InSchemaError { field message }
+        }
       }
     }`;
-    return this.bidListGraphql({ query, variables: { input } }, context);
+    const raw = await this.bidListGraphql({ query, variables: { input } }, context);
+    assertBidListMutationSucceeded(raw, "bidListDelete");
+    return raw;
   }
 
   /**
@@ -754,6 +836,139 @@ export class TtdService {
       error: r.error,
     }));
   }
+}
+
+/**
+ * Campaign settings a client-side duplicate copies from the source. These are
+ * the fields of TTD's documented `POST /v3/campaign` create body
+ * (docs/api/ttd_partner_portal_api_docs.md "Create a Campaign" example and
+ * time-zone section; thetradedesk/platform
+ * Python/Campaign/Creating/CreateCampaignWorkflowREST.py) plus `Description`.
+ *
+ * Deliberately NOT copied: IDs and audit fields, `Availability` (the source's
+ * state), flights (they carry the source's flight IDs), and every other
+ * property of the GET payload — any of which may be read-only or deprecated.
+ * Pass anything else explicitly via the duplicate `options`.
+ */
+export const CAMPAIGN_DUPLICATE_FIELDS = [
+  "AdvertiserId",
+  "CampaignName",
+  "Description",
+  "Version",
+  "SeedId",
+  "Budget",
+  "StartDate",
+  "EndDate",
+  "TimeZone",
+  "PacingMode",
+  "PrimaryChannel",
+  "PrimaryGoal",
+  "SecondaryGoal",
+  "TertiaryGoal",
+  "CampaignConversionReportingColumns",
+] as const;
+
+/**
+ * Build the create body for a duplicate: the allowlisted source fields, then
+ * the caller's `options` (which win). Pure — shared by the execute path and
+ * the dry-run projection so both describe the same request.
+ */
+export function buildDuplicateCreateBody(
+  entityType: TtdEntityType,
+  source: Record<string, unknown>,
+  options?: Record<string, unknown>
+): Record<string, unknown> {
+  if (entityType !== "campaign") {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Entity type ${entityType} does not support duplication`
+    );
+  }
+  const body: Record<string, unknown> = {};
+  for (const field of CAMPAIGN_DUPLICATE_FIELDS) {
+    if (source?.[field] !== undefined && source[field] !== null) body[field] = source[field];
+  }
+  return { ...body, ...(options ?? {}) };
+}
+
+/**
+ * Throw unless a bid-list mutation response reports success. See the
+ * "Bid Lists (GraphQL)" section comment on `TtdService` for what is checked.
+ */
+export function assertBidListMutationSucceeded(
+  raw: Record<string, unknown>,
+  mutationName: "bidListCreate" | "bidListUpdate" | "bidListSet" | "bidListDelete"
+): void {
+  throwIfGraphqlErrors(raw ?? {}, `TTD ${mutationName} failed`);
+
+  const data = raw?.data as Record<string, unknown> | null | undefined;
+  const payload = data?.[mutationName] as Record<string, unknown> | null | undefined;
+  if (!payload || typeof payload !== "object") {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `TTD ${mutationName} returned no payload — the operation cannot be confirmed`,
+      { response: raw }
+    );
+  }
+
+  const payloadErrors = [
+    ...(Array.isArray(payload.userErrors) ? payload.userErrors : []),
+    ...(Array.isArray(payload.errors) ? payload.errors : []),
+  ] as Array<{ field?: unknown; message?: unknown; __typename?: unknown }>;
+  if (payloadErrors.length > 0) {
+    const messages = payloadErrors
+      .map((e) => {
+        const field = Array.isArray(e.field) ? e.field.join(".") : e.field;
+        const message = typeof e.message === "string" ? e.message : String(e.__typename ?? "error");
+        return field ? `${String(field)}: ${message}` : message;
+      })
+      .join("; ");
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `TTD ${mutationName} failed: ${messages}`, {
+      errors: payloadErrors,
+    });
+  }
+
+  if (mutationName === "bidListDelete") {
+    const wasDeleted = (payload.data as Record<string, unknown> | null | undefined)?.wasDeleted;
+    if (wasDeleted !== true) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TTD bidListDelete did not confirm the deletion (wasDeleted: ${String(wasDeleted)})`,
+        { response: raw }
+      );
+    }
+  }
+}
+
+/**
+ * Next-page token for a TTD v3 paged query (`PageStartIndex` / `PageSize`).
+ *
+ * The total comes from `TotalFilteredCount` — the field TTD Foundations
+ * (docs/api/TTD_Foundations.md §12, "TotalFilteredCount or
+ * TotalUnfilteredCount") and this package's own `TtdPagedResponse` name. The
+ * former `TotalCount` read appears in no TTD source; when it was absent every
+ * listing silently stopped after page 1.
+ *
+ * The page advance uses the number of rows actually returned rather than
+ * `ResultCount`, whose meaning the vendored reference describes as a total
+ * (ttd-api-reference-part5.md "Standard Pagination Response Fields"). When no
+ * total is present (e.g. a caller sent `ExcludeTotalCounts`), a full page means
+ * there may be more — at worst one extra, empty page is fetched, never a
+ * silently truncated listing.
+ */
+export function computeNextPageToken(
+  startIndex: number,
+  returnedCount: number,
+  pageSize: number,
+  response: Record<string, unknown>
+): string | undefined {
+  if (returnedCount <= 0) return undefined;
+  const nextStartIndex = startIndex + returnedCount;
+  const total = response.TotalFilteredCount;
+  if (typeof total === "number" && Number.isFinite(total)) {
+    return nextStartIndex < total ? String(nextStartIndex) : undefined;
+  }
+  return returnedCount >= pageSize ? String(nextStartIndex) : undefined;
 }
 
 /**

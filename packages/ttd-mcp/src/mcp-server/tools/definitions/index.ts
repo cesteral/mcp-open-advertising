@@ -11,14 +11,14 @@
  * no TypeScript SDK and is gated behind a User-Agent check. We expose
  * Platform API operations directly via REST + GraphQL instead.
  *
- * 44 tools total:
+ * 46 tools total:
  *   1  context: get context (cold-start partner discovery)
- *   5  core CRUD: list, get, create, update, delete
+ *   6  core CRUD: list, get, create, update, delete, duplicate
  *   4  reporting (REST async): get report (blocking), submit, check status, download
  *   5  bulk: bulk create, bulk update, bulk update status, archive, adjust bids
  *   2  bid lists: single + bulk
  *   1  seeds (GraphQL Kokai-only): manage seed
- *   2  advanced: graphql query, validate entity
+ *   3  advanced: graphql query, validate entity, upload video
  *   4  GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1  preview: get ad preview
  *   1  pacing: get pacing status (client-side, no API call)

@@ -82,6 +82,35 @@ export interface TtdReportConfig {
 }
 
 /**
+ * Throw `InvalidParams` unless a report config carries at least one advertiser
+ * filter.
+ *
+ * TTD's only REST report-execution query is
+ * `POST /v3/myreports/reportexecution/query/advertisers` — "Report Executions
+ * that match the Advertisers ... in the specified query"
+ * (docs/api/ttd-api-reference-part4.md, My Reports). A schedule created
+ * without `AdvertiserFilters` therefore can never be polled here: the blocking
+ * `runReport` used to create it and only then throw, orphaning a schedule in
+ * the account; `ttd_submit_report` returned an id `ttd_check_report_status`
+ * could never resolve. Call this BEFORE the schedule is created.
+ */
+export function assertPollableReportConfig(config: { AdvertiserFilters?: unknown }): void {
+  const filters = config.AdvertiserFilters;
+  if (
+    !Array.isArray(filters) ||
+    filters.length === 0 ||
+    !filters.every((f) => typeof f === "string" && f.length > 0)
+  ) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "The report must be scoped to at least one advertiser (advertiserIds / AdvertiserFilters). " +
+        "TTD's report-execution status query is advertiser-scoped, so a schedule without advertiser " +
+        "filters could not be polled. No report schedule was created."
+    );
+  }
+}
+
+/**
  * TTD Reporting Service — Async report workflow.
  *
  * TTD reports follow an async pattern:
@@ -102,6 +131,9 @@ export class TtdReportingService {
    * Create and run a report, polling until completion.
    */
   async runReport(config: TtdReportConfig, context?: RequestContext): Promise<unknown> {
+    // Validate before creating anything — polling needs the advertiser filters.
+    assertPollableReportConfig(config);
+
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
@@ -125,7 +157,7 @@ export class TtdReportingService {
 
     // Poll for completion — reuse advertiser filters from the submitted
     // config so we do not need a second HTTP call to discover them.
-    const advertiserIds = config.AdvertiserFilters ?? [];
+    const advertiserIds = config.AdvertiserFilters as string[];
     const execution = await this.pollReportExecution(reportScheduleId, advertiserIds, context);
 
     const downloadUrl = execution.ReportDeliveries?.[0]?.DownloadURL;
@@ -257,7 +289,9 @@ export class TtdReportingService {
     if (!advertiserFilters || advertiserFilters.length === 0) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
-        `Report schedule ${reportScheduleId} has no AdvertiserFilters; cannot query execution status via /query/advertisers.`
+        `Report schedule ${reportScheduleId} has no AdvertiserFilters, so its execution status cannot be ` +
+          `queried via /myreports/reportexecution/query/advertisers (TTD's only REST execution query). ` +
+          `Use ttd_get_report_executions with scheduleId "${reportScheduleId}" instead.`
       );
     }
     return advertiserFilters;

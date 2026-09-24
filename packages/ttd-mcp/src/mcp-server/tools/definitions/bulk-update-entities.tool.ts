@@ -31,9 +31,9 @@ const TOOL_DESCRIPTION = `Update multiple The Trade Desk entities of the same ty
 
 **Supported entity types for bulk update:** ${getBulkEntityTypeEnum().join(", ")}
 
-Provide an array of update items, each with an entityId and data payload. Uses TTD PUT semantics (full entity replacement). Partial failures are reported per-item.
+Provide an array of update items, each with an entityId and data payload. Partial failures are reported per-item.
 
-**Important:** TTD uses PUT for updates — include ALL fields you want to keep, not just changed ones. Consider GETting each entity first to merge changes.`;
+**Updates are partial:** TTD's PUT changes only the properties you send; everything you omit is left as is. Send just the fields you want to change — do not copy a full GET response into \`data\` (TTD advises against it, and deprecated properties in a GET payload are rejected with 410 Gone). **Arrays replace:** an array you send replaces the entity's current array, so to add items GET the current array first and send the merged list.`;
 
 const EFFECT_KIND = "entities_updated";
 

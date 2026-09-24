@@ -25,9 +25,11 @@ const TOOL_DESCRIPTION = `Duplicate a The Trade Desk entity (copy it).
 
 **Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
 
-Creates a copy of the entity (clone via read + create — TTD has no native copy API).
-The copy preserves the source's settings unless overridden via \`options\`.
-Use \`options\` (e.g. \`{ "CampaignName": "Copy of …" }\`) to rename or re-state the copy.`;
+Creates a copy by reading the source and creating a new campaign from its core settings: advertiser, name, description, version, seed, budget, start/end dates, time zone, pacing mode, primary channel, goals and conversion-reporting columns. The rest of the source payload is not copied — TTD rejects deprecated properties echoed from a GET response (410 Gone). Use \`options\` (e.g. \`{ "CampaignName": "Copy of …" }\`) to rename the copy or set anything else; \`options\` win over copied values.
+
+**The copy is not live:** only the campaign is created. Ad groups, flights, and the source's status are not copied, so the copy cannot bid until you add ad groups.
+
+For a full-fidelity copy that includes ad groups, TTD's native asynchronous clone is \`POST /v3/campaign/clone\` or the \`campaignClonesCreate\` GraphQL mutation (available via \`ttd_graphql_query\`).`;
 
 export const DuplicateEntityInputSchema = z
   .object({
@@ -42,7 +44,7 @@ export const DuplicateEntityInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied) without calling the TTD API. No copy is created."
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the copied core settings with any `options` applied) without calling the TTD API. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a TTD entity");
