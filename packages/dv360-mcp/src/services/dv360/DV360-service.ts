@@ -93,12 +93,30 @@ function deepMerge<T extends Record<string, unknown>>(
   return result as T;
 }
 
+/**
+ * Per-attempt timeout for DV360 methods that v4 Discovery flags as "regularly
+ * experiences high latency" (used for `lineItems.duplicate`).
+ */
+export const DV360_HIGH_LATENCY_TIMEOUT_MS = 120_000;
+
+/** Display name for a duplicate: the explicit override, else `Copy of {source}`. */
+function copyDisplayName(override: string | undefined, sourceName: unknown): string | undefined {
+  if (override) return override;
+  return typeof sourceName === "string" && sourceName ? `Copy of ${sourceName}` : undefined;
+}
+
 // ============================================================================
 // Custom Bidding Types
 // ============================================================================
 
 const ScriptErrorSchema = z.object({
-  errorCode: z.enum(["SYNTAX_ERROR", "DEPRECATED_SYNTAX", "INTERNAL_ERROR"]),
+  // Discovery `ScriptError.errorCode`.
+  errorCode: z.enum([
+    "ERROR_CODE_UNSPECIFIED",
+    "SYNTAX_ERROR",
+    "DEPRECATED_SYNTAX",
+    "INTERNAL_ERROR",
+  ]),
   line: z.string(),
   column: z.string(),
   errorMessage: z.string(),
@@ -111,7 +129,8 @@ const CustomBiddingScriptSchema = z
     customBiddingScriptId: z.string(),
     createTime: z.string().optional(),
     active: z.boolean().optional(),
-    state: z.enum(["PENDING", "ACCEPTED", "REJECTED"]),
+    // Discovery `CustomBiddingScript.state`.
+    state: z.enum(["STATE_UNSPECIFIED", "ACCEPTED", "REJECTED", "PENDING"]),
     errors: z.array(ScriptErrorSchema).optional(),
     script: z.object({ resourceName: z.string() }).optional(),
   })
@@ -124,12 +143,23 @@ const CustomBiddingAlgorithmRulesSchema = z
     customBiddingAlgorithmRulesId: z.string(),
     createTime: z.string().optional(),
     active: z.boolean().optional(),
-    state: z.enum(["ACCEPTED", "REJECTED"]),
+    // Discovery `CustomBiddingAlgorithmRules.state`.
+    state: z.enum(["STATE_UNSPECIFIED", "ACCEPTED", "REJECTED"]),
+    // Discovery `CustomBiddingAlgorithmRulesError` has ONLY `errorCode` — no
+    // message field — and the constraint value is `CONSTRAINT_VIOLATION_ERROR`.
+    // Requiring `errorMessage` or pinning `CONSTRAINT_VIOLATION` made every
+    // REJECTED rules resource throw a ZodError instead of reporting why.
     error: z
       .object({
-        errorCode: z.enum(["SYNTAX_ERROR", "CONSTRAINT_VIOLATION", "INTERNAL_ERROR"]),
-        errorMessage: z.string(),
+        errorCode: z.enum([
+          "ERROR_CODE_UNSPECIFIED",
+          "SYNTAX_ERROR",
+          "CONSTRAINT_VIOLATION_ERROR",
+          "INTERNAL_ERROR",
+        ]),
+        errorMessage: z.string().optional(),
       })
+      .passthrough()
       .optional(),
     rules: z.object({ resourceName: z.string() }).optional(),
   })
@@ -138,6 +168,7 @@ const CustomBiddingAlgorithmRulesSchema = z
 export type ScriptError = z.infer<typeof ScriptErrorSchema>;
 export type CustomBiddingScript = z.infer<typeof CustomBiddingScriptSchema>;
 export type CustomBiddingAlgorithmRules = z.infer<typeof CustomBiddingAlgorithmRulesSchema>;
+export { CustomBiddingScriptSchema, CustomBiddingAlgorithmRulesSchema };
 
 /**
  * Scope for custom-bidding sub-resource calls. DV360 requires either
@@ -908,10 +939,21 @@ export class DV360Service {
   }
 
   /**
-   * Duplicate a DV360 entity by fetching it and creating a copy.
+   * Duplicate a DV360 insertion order or line item. The copy never lands in a
+   * running state.
    *
-   * DV360 does not have a native :duplicate endpoint for most entity types.
-   * This implements copy-on-read: GET entity -> strip read-only fields -> POST create.
+   * - **lineItem** uses DV360's native `POST advertisers/{a}/lineItems/{l}:duplicate`
+   *   (v4 Discovery `advertisers.lineItems.duplicate`, request
+   *   `DuplicateLineItemRequest{targetDisplayName, containsEuPoliticalAds}`,
+   *   response `DuplicateLineItemResponse{duplicateLineItemId}`). The copy is
+   *   made server-side, so the line item's assigned targeting sub-resources are
+   *   not dropped the way a GET→POST copy drops them. The created copy is
+   *   re-read; if it came back `ENTITY_STATUS_ACTIVE` it is patched to
+   *   `ENTITY_STATUS_PAUSED` before returning.
+   * - **insertionOrder** has no native duplicate method in v4, so it is copied
+   *   GET → strip server-assigned fields → POST create, with `entityStatus`
+   *   forced to `ENTITY_STATUS_DRAFT` — the only status `CreateInsertionOrder`
+   *   accepts (Discovery `InsertionOrder.entityStatus`).
    *
    * @param entityType - Entity type to duplicate (insertionOrder, lineItem)
    * @param ids - Entity IDs including advertiserId and the entity ID
@@ -928,14 +970,24 @@ export class DV360Service {
     return withDV360ApiSpan("duplicateEntity", entityType, async () => {
       setSpanAttribute("dv360.entityType", entityType);
 
+      if (entityType === "lineItem") {
+        return this.duplicateLineItemNative(ids, displayName, context);
+      }
+      if (entityType !== "insertionOrder") {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity type ${entityType} cannot be duplicated (supported: insertionOrder, lineItem)`,
+          { entityType }
+        );
+      }
+
       // Fetch the source entity
       const source = (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
 
       // Strip read-only / server-generated fields. entityStatus stays because
-      // DV360's create schemas require it; we force PAUSED below so duplicates
-      // never start spending without explicit re-activation.
+      // DV360's create schemas require it; it is forced to DRAFT below.
       const readOnlyFields = [
-        "name", // resource name (e.g., advertisers/123/lineItems/456)
+        "name", // resource name (e.g., advertisers/123/insertionOrders/456)
         `${entityType}Id`, // server-assigned ID
         "updateTime",
         "createTime",
@@ -948,18 +1000,11 @@ export class DV360Service {
         }
       }
 
-      // Safety: duplicates always land in a non-running state. Caller must
-      // re-activate after review. DV360 accepts different initial statuses per
-      // entity — line items must start as DRAFT; campaigns/IOs accept PAUSED.
-      copyData.entityStatus =
-        entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
-
-      // Override display name if provided
-      if (displayName) {
-        copyData.displayName = displayName;
-      } else if (copyData.displayName) {
-        copyData.displayName = `Copy of ${copyData.displayName as string}`;
-      }
+      // CreateInsertionOrder accepts only ENTITY_STATUS_DRAFT, so the copy
+      // always lands non-running; the caller activates it after review.
+      copyData.entityStatus = "ENTITY_STATUS_DRAFT";
+      copyData.displayName = copyDisplayName(displayName, source.displayName);
+      if (copyData.displayName === undefined) delete copyData.displayName;
 
       // Create the copy using the parent IDs
       const parentIds: Record<string, string> = {};
@@ -974,66 +1019,127 @@ export class DV360Service {
   }
 
   /**
-   * Get a delivery/targeting forecast for a line item via DV360 API.
+   * Native line-item duplicate (`lineItems:duplicate`). See {@link duplicateEntity}.
+   */
+  private async duplicateLineItemNative(
+    ids: Record<string, string>,
+    displayName: string | undefined,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const { advertiserId, lineItemId } = ids;
+    if (!advertiserId || !lineItemId) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "advertiserId and lineItemId are required to duplicate a line item",
+        { providedIds: Object.keys(ids) }
+      );
+    }
+
+    // Read the source for the default copy name and its EU-political-ads
+    // declaration, which DV360 requires on every new line item.
+    const source = (await this.getEntity("lineItem", ids, context)) as Record<string, unknown>;
+
+    const body: Record<string, unknown> = {};
+    const targetDisplayName = copyDisplayName(displayName, source.displayName);
+    if (targetDisplayName !== undefined) body.targetDisplayName = targetDisplayName;
+    if (typeof source.containsEuPoliticalAds === "string") {
+      body.containsEuPoliticalAds = source.containsEuPoliticalAds;
+    }
+
+    await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+    setSpanAttribute("dv360.advertiserId", advertiserId);
+
+    const response = (await this.httpClient.fetch(
+      `/advertisers/${advertiserId}/lineItems/${lineItemId}:duplicate`,
+      context,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      // Discovery: "This method regularly experiences high latency. We
+      // recommend increasing your default timeout".
+      { timeoutMs: DV360_HIGH_LATENCY_TIMEOUT_MS }
+    )) as { duplicateLineItemId?: string } | undefined;
+
+    const newLineItemId = response?.duplicateLineItemId;
+    if (!newLineItemId) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        "DV360 lineItems:duplicate returned no duplicateLineItemId",
+        { advertiserId, lineItemId, response }
+      );
+    }
+    setSpanAttribute("dv360.duplicateLineItemId", newLineItemId);
+
+    const copyIds = { advertiserId, lineItemId: String(newLineItemId) };
+    try {
+      const copy = (await this.getEntity("lineItem", copyIds, context)) as Record<string, unknown>;
+      if (copy?.entityStatus === "ENTITY_STATUS_ACTIVE") {
+        // Safety: a duplicate must never start spending without an explicit,
+        // reviewed activation.
+        return await this.updateEntity(
+          "lineItem",
+          copyIds,
+          { entityStatus: "ENTITY_STATUS_PAUSED" },
+          "entityStatus",
+          context,
+          copy
+        );
+      }
+      return copy;
+    } catch (error) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `DV360 created duplicate line item ${newLineItemId}, but its status could not be read back or made non-running: ${
+          error instanceof Error ? error.message : String(error)
+        }. Check it with dv360_get_entity before retrying — a retry creates another copy.`,
+        { advertiserId, sourceLineItemId: lineItemId, duplicateLineItemId: String(newLineItemId) }
+      );
+    }
+  }
+
+  /**
+   * Read a line item's delivery configuration and its assigned targeting, as
+   * context for delivery planning.
    *
-   * Uses the lineItems:generateDefault endpoint to get forecast data
-   * for the given advertiser, or reads an existing line item's targeting
-   * to provide reach estimation context.
+   * There is no advertiser-level default/forecast variant: the former
+   * `lineItems:generateDefault` method is absent from DV360 v2, v3 and v4
+   * Discovery, so a line item is required.
    *
    * @param advertiserId - The advertiser ID
-   * @param lineItemId - Optional: existing line item to read forecast for
+   * @param lineItemId - Existing line item to read
    * @param context - Request context
-   * @returns Forecast data from DV360
    */
   async getDeliveryEstimate(
     advertiserId: string,
-    lineItemId?: string,
+    lineItemId: string,
     context?: RequestContext
   ): Promise<Record<string, unknown>> {
     return withDV360ApiSpan("getDeliveryEstimate", advertiserId, async () => {
       setSpanAttribute("dv360.advertiserId", advertiserId);
+      setSpanAttribute("dv360.lineItemId", lineItemId);
 
       await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
 
-      if (lineItemId) {
-        setSpanAttribute("dv360.lineItemId", lineItemId);
+      // Fetch line item details including budget and targeting info
+      const lineItem = (await this.httpClient.fetch(
+        `/advertisers/${advertiserId}/lineItems/${lineItemId}`,
+        context
+      )) as Record<string, unknown>;
 
-        // Fetch line item details including budget and targeting info
-        const lineItem = (await this.httpClient.fetch(
-          `/advertisers/${advertiserId}/lineItems/${lineItemId}`,
-          context
-        )) as Record<string, unknown>;
-
-        // Fetch targeting assigned to this line item.
-        // The v4 method is on the lineItems collection, not the resource:
-        // GET /advertisers/{advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds={id}
-        const targeting = (await this.httpClient.fetch(
-          `/advertisers/${advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds=${encodeURIComponent(lineItemId)}`,
-          context
-        )) as Record<string, unknown>;
-
-        return {
-          lineItem,
-          assignedTargetingOptions: targeting,
-          source: "lineItem",
-        };
-      }
-
-      // Use generateDefault to get a default line item structure
-      // which includes DV360's recommended settings and targeting defaults
-      const result = (await this.httpClient.fetch(
-        `/advertisers/${advertiserId}/lineItems:generateDefault`,
-        context,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ advertiserId }),
-        }
+      // Fetch targeting assigned to this line item.
+      // The v4 method is on the lineItems collection, not the resource:
+      // GET /advertisers/{advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds={id}
+      const targeting = (await this.httpClient.fetch(
+        `/advertisers/${advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds=${encodeURIComponent(lineItemId)}`,
+        context
       )) as Record<string, unknown>;
 
       return {
-        defaultLineItem: result,
-        source: "generateDefault",
+        lineItem,
+        assignedTargetingOptions: targeting,
+        source: "lineItem",
       };
     });
   }

@@ -155,9 +155,11 @@ describe("dv360 transport integration workflow", () => {
       entities: [{ campaignId: "cmp-001", displayName: "Campaign 1" }],
       nextPageToken: undefined,
     });
+    // DV360 only deletes an archived campaign, so the fixture is archived.
     mockState.dv360Service.getEntity.mockResolvedValue({
       campaignId: "cmp-001",
       displayName: "Campaign 1",
+      entityStatus: "ENTITY_STATUS_ARCHIVED",
     });
     mockState.dv360Service.deleteEntity.mockResolvedValue(undefined);
 
