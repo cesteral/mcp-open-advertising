@@ -96,32 +96,6 @@ campaign_id, create_time, modify_time, advertiser_id
 ## Read-Only Fields
 ad_id, adgroup_id (inherited), create_time, modify_time
 `,
-
-  creative: `# TikTok Creative Fields
-
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| display_name | string | Creative display name |
-
-## Creative Asset Fields (provide at least one)
-| Field | Type | Description |
-|-------|------|-------------|
-| video_id | string | Video asset ID from Creative Library |
-| image_ids | array | Array of image asset IDs |
-
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| ad_text | string | Ad copy text |
-| call_to_action | string | CTA: LEARN_MORE, SHOP_NOW, DOWNLOAD, etc. |
-| landing_page_url | string | Destination URL |
-| profile_image_url | string | Brand profile image |
-| app_name | string | App name for app install ads |
-
-## Read-Only Fields
-creative_id, advertiser_id, created_time
-`,
 };
 
 function buildEntitySchemaMarkdown(entityType: TikTokEntityType): string {

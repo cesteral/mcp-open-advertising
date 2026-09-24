@@ -16,11 +16,15 @@ import {
   ReportViewOutputSchema,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import {
+  TIKTOK_REPORT_DATA_LEVELS,
+  TIKTOK_REPORT_SERVICE_TYPES,
+} from "../../../services/tiktok/tiktok-reporting-service.js";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_get_report_breakdowns";
 const TOOL_TITLE = "Get TikTok Ads Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async TikTok Ads report with dimensional breakdowns.
+const TOOL_DESCRIPTION = `Run a TikTok Ads report with dimensional breakdowns and return the rows (synchronous \`report/integrated/get/\`).
 
 Like \`tiktok_get_report\` but adds breakdown dimensions for more granular data.
 
@@ -36,6 +40,17 @@ export const GetReportBreakdownsInputSchema = z
       .optional()
       .default("BASIC")
       .describe("Report type (default: BASIC)"),
+    serviceType: z
+      .enum(TIKTOK_REPORT_SERVICE_TYPES)
+      .optional()
+      .default("AUCTION")
+      .describe("TikTok service_type (default: AUCTION)"),
+    dataLevel: z
+      .enum(TIKTOK_REPORT_DATA_LEVELS)
+      .optional()
+      .describe(
+        "TikTok data_level for BASIC/AUDIENCE reports, e.g. AUCTION_CAMPAIGN, AUCTION_ADGROUP, AUCTION_AD, AUCTION_ADVERTISER"
+      ),
     dimensions: z
       .array(z.string())
       .min(1)
@@ -78,7 +93,6 @@ export const GetReportBreakdownsInputSchema = z
 
 export const GetReportBreakdownsOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID"),
     ...ReportViewOutputSchema.shape,
     appliedDimensions: z.array(z.string()).describe("All dimensions used (base + breakdowns)"),
     timestamp: z.string().datetime(),
@@ -143,6 +157,8 @@ export async function getReportBreakdownsLogic(
   const result = await tiktokReportingService.getReportBreakdowns(
     {
       report_type: input.reportType,
+      service_type: input.serviceType,
+      ...(input.dataLevel ? { data_level: input.dataLevel } : {}),
       dimensions: input.dimensions,
       metrics: input.metrics,
       start_date: resolvedStartDate!,
@@ -161,7 +177,6 @@ export async function getReportBreakdownsLogic(
   }
 
   return {
-    taskId: result.taskId,
     ...createReportView({
       headers,
       rows: arrayRowsToRecords(headers, rows),
@@ -179,7 +194,7 @@ export function getReportBreakdownsResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Report task: ${result.taskId}\nApplied dimensions: ${result.appliedDimensions.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
+      text: `Applied dimensions: ${result.appliedDimensions.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
     },
   ];
 }

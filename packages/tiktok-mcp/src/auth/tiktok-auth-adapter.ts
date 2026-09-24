@@ -5,13 +5,15 @@
  * TikTok Auth Adapters
  *
  * Two adapter implementations:
- * 1. TikTokAccessTokenAdapter — holds a pre-generated static access token.
- * 2. TikTokRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens (24h expiry). Caching + single-flight refresh
- *    come from OAuth2RefreshAdapterBase in @cesteral/shared.
+ * 1. TikTokAccessTokenAdapter — holds a pre-generated access token.
+ * 2. TikTokRefreshTokenAdapter — rejects refresh-token credentials with a
+ *    clear Unauthorized error: TikTok documents no refresh endpoint (see
+ *    TIKTOK_REFRESH_UNSUPPORTED_MESSAGE).
  *
  * Validates tokens by calling GET /open_api/{version}/user/info/.
- * Token is passed via Authorization: Bearer <token> header.
+ * The token is sent upstream in TikTok's `Access-Token` header (see
+ * TIKTOK_ACCESS_TOKEN_HEADER). Inbound, MCP clients still present it to this
+ * server as `Authorization: Bearer <token>` — only the outbound header differs.
  */
 
 import {
@@ -20,8 +22,8 @@ import {
   fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
-  OAuth2RefreshAdapterBase,
 } from "@cesteral/shared";
+import { TIKTOK_ACCESS_TOKEN_HEADER } from "../services/tiktok/tiktok-http-client.js";
 
 /**
  * TikTok API response shape (success)
@@ -61,7 +63,7 @@ async function fetchTikTokUserId(
     undefined,
     {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { [TIKTOK_ACCESS_TOKEN_HEADER]: token },
     }
   );
 
@@ -129,95 +131,56 @@ export interface TikTokRefreshCredentials {
 }
 
 /**
- * TikTok wraps OAuth2 responses in a code+message envelope around `data`.
+ * Why there is no working refresh flow.
+ *
+ * The only token endpoint in TikTok's official SDK
+ * (github.com/tiktok/tiktok-business-api-sdk) is `POST oauth2/access_token/`,
+ * whose body is `{ app_id, secret, auth_code }` with all three required
+ * (python_sdk/docs/Oauth2AccessTokenBody.md). It exchanges a one-time
+ * authorization code; it has no `grant_type`/`refresh_token` fields, and no
+ * refresh endpoint appears anywhere in the SDK's 202 specs. This adapter used
+ * to POST `grant_type=refresh_token` there, which that body schema cannot
+ * accept (`auth_code` missing).
+ *
+ * Rather than keep calling an endpoint with a body it does not take, the
+ * refresh branch now fails at session establishment with an explicit
+ * Unauthorized error that says what to do instead.
  */
-interface TikTokTokenResponse {
-  code: number;
-  message: string;
-  data?: {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number; // seconds (typically 86400 = 24h)
-  };
-}
+export const TIKTOK_REFRESH_UNSUPPORTED_MESSAGE =
+  "TikTok refresh-token authentication is not supported: TikTok's documented token endpoint " +
+  "(POST /open_api/v1.3/oauth2/access_token/) only exchanges an authorization code " +
+  "(app_id, secret, auth_code) and no refresh-token endpoint is documented in TikTok's " +
+  "official Business API SDK. Supply a TikTok access token instead (Authorization: Bearer " +
+  "<token> with X-TikTok-Advertiser-Id, or TIKTOK_ACCESS_TOKEN + TIKTOK_ADVERTISER_ID).";
 
 /**
- * Refresh token adapter — uses app credentials + refresh token to obtain
- * and auto-refresh access tokens via TikTok's OAuth2 endpoint.
- *
- * TikTok access tokens expire after 24 hours. Caching + single-flight refresh
- * live in OAuth2RefreshAdapterBase; this subclass unwraps TikTok's code+message
- * envelope and forwards the inner OAuth2 response to the base.
+ * Refresh-token adapter — retained so the X-TikTok-App-Id/-App-Secret/
+ * -Refresh-Token headers and TIKTOK_APP_ID/_APP_SECRET/_REFRESH_TOKEN env vars
+ * produce a clear error instead of an opaque upstream failure. Makes no
+ * network calls; see TIKTOK_REFRESH_UNSUPPORTED_MESSAGE.
  */
-export class TikTokRefreshTokenAdapter
-  extends OAuth2RefreshAdapterBase<TikTokRefreshCredentials>
-  implements TikTokAuthAdapter
-{
-  private _userId = "";
-
+export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
   constructor(
-    credentials: TikTokRefreshCredentials,
+    _credentials: TikTokRefreshCredentials,
     private readonly _advertiserId: string,
-    private readonly baseUrl: string = "https://business-api.tiktok.com",
-    private readonly apiVersion: string = "v1.3"
-  ) {
-    super({
-      platformName: "TikTok",
-      credentials,
-      requestToken: async (refreshToken) => {
-        const response = await fetchWithTimeout(
-          `${baseUrl}/open_api/${apiVersion}/oauth2/access_token/`,
-          10_000,
-          undefined,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              app_id: credentials.appId,
-              secret: credentials.appSecret,
-              grant_type: "refresh_token",
-              refresh_token: refreshToken,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.text().catch(() => "");
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `TikTok token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-          );
-        }
-
-        const data = (await response.json()) as TikTokTokenResponse;
-        if (data.code !== 0 || !data.data?.access_token) {
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `TikTok token refresh failed: code=${data.code} message=${data.message}`
-          );
-        }
-
-        return {
-          access_token: data.data.access_token,
-          expires_in: data.data.expires_in,
-          refresh_token: data.data.refresh_token,
-        };
-      },
-    });
-  }
+    _baseUrl: string = "https://business-api.tiktok.com",
+    _apiVersion: string = "v1.3"
+  ) {}
 
   get userId(): string {
-    return this._userId;
+    return "";
   }
 
   get advertiserId(): string {
     return this._advertiserId;
   }
 
+  async getAccessToken(): Promise<string> {
+    throw new McpError(JsonRpcErrorCode.Unauthorized, TIKTOK_REFRESH_UNSUPPORTED_MESSAGE);
+  }
+
   async validate(): Promise<void> {
-    // Force a token exchange to validate credentials
-    const token = await this.getAccessToken();
-    this._userId = await fetchTikTokUserId(token, this.baseUrl, this.apiVersion);
+    throw new McpError(JsonRpcErrorCode.Unauthorized, TIKTOK_REFRESH_UNSUPPORTED_MESSAGE);
   }
 }
 

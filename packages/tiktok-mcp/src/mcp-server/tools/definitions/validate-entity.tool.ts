@@ -88,7 +88,6 @@ const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
     { field: "adgroup_id", expectedType: "string" },
     { field: "creatives", expectedType: "array", hint: "TikTok AdCreateBody requires creatives[]" },
   ],
-  creative: [{ field: "display_name", expectedType: "string" }],
 };
 
 /** Optional enum-typed fields validated when present (write-time fields, not required). */
@@ -129,7 +128,6 @@ const OPTIONAL_ENUM_FIELDS: Record<TikTokEntityType, FieldRule[]> = {
       suggestedValues: OPERATION_STATUSES,
     },
   ],
-  creative: [],
 };
 
 /** Fields that are always read-only and cannot be set via the API. */

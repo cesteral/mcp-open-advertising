@@ -68,7 +68,8 @@ Update an existing TikTok Ads entity.
 
 #### 5. `tiktok_delete_entity`
 
-Delete TikTok Ads entities.
+Delete TikTok Ads entities. TikTok v1.3 has no `/delete/` endpoint for these entities, so this
+sends `operation_status: "DELETE"` to the entity's `/status/update/` endpoint. Irreversible.
 
 **Parameters:**
 
@@ -80,7 +81,8 @@ Delete TikTok Ads entities.
 
 #### 6. `tiktok_list_advertisers`
 
-List advertiser accounts accessible to the authenticated user.
+Get account info for the session-bound advertiser (`advertiser/info/` with `advertiser_ids`).
+TikTok's `advertiser/info/` does not enumerate every advertiser a token can access.
 
 **Parameters:** _(none)_
 
@@ -90,7 +92,7 @@ List advertiser accounts accessible to the authenticated user.
 
 #### 7. `tiktok_get_report`
 
-Submit an async report and download results once complete.
+Run a report via TikTok's synchronous `report/integrated/get/` endpoint and return the rows.
 
 **Parameters:**
 
@@ -193,13 +195,14 @@ Batch adjust ad group bid prices with safe read-modify-write pattern.
 
 #### 16. `tiktok_search_targeting`
 
-Search for targeting options (interest categories, behaviors, demographics) by keyword.
+Search location targeting tags via `tool/targeting/search/`.
 
 **Parameters:**
 
 - `advertiserId` (string, required): TikTok Advertiser ID
-- `targetingType` (string, required): Type of targeting to search
-- `query` (string, optional): Search keyword
+- `query` (string or string[], required): Keyword(s), sent as `keywords`
+- `placements` (string[], required), `objectiveType` (string, required)
+- `searchType` (optional): `FUZZY_SEARCH` (default), `BATCH_REGION_SEARCH`, `BATCH_ZIPCODE_SEARCH`
 
 #### 17. `tiktok_get_targeting_options`
 
@@ -214,7 +217,9 @@ Browse available targeting categories.
 
 #### 18. `tiktok_duplicate_entity`
 
-Duplicate a campaign, ad group, or ad.
+**Not available** — TikTok v1.3 has no copy endpoint, so this tool always returns an error.
+Duplicate by reading the entity with `tiktok_get_entity` and creating a new one with
+`tiktok_create_entity`.
 
 **Parameters:**
 
@@ -234,7 +239,7 @@ Get estimated audience size for a targeting configuration.
 
 #### 20. `tiktok_get_ad_preview`
 
-Get ad preview for video or image ads.
+**Not available** — TikTok v1.3 has no ad-preview endpoint, so this tool always returns an error.
 
 **Parameters:**
 
@@ -260,17 +265,21 @@ Client-side validation of entity payloads without making API calls.
 | ----------- | ---------- | ----------------------------------------------- |
 | `campaign`  | Campaign   | Top-level entity under advertiser account       |
 | `adGroup`   | Ad Group   | Targeting, budget, schedule, bidding, placement |
-| `ad`        | Ad         | Links creative content to ad group              |
-| `creative`  | Creative   | Video/image creative assets                     |
+| `ad`        | Ad         | Carries its creatives (`creatives[]`)           |
 
-**Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad (+ Creatives)
+**Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad. There is no standalone creative
+entity in v1.3 (no `creative/adcreative/*` endpoints); upload assets with `tiktok_upload_image` /
+`tiktok_upload_video` and reference them in the ad's `creatives[]`.
 
 ## Current Status
 
 **Phase: Production-Ready**
 
-All listed tools are fully implemented using TikTok Marketing API v1.3 with
-Bearer token authentication, async reporting, and targeting discovery.
+Tools target TikTok Marketing API v1.3 as described by TikTok's official Business API SDK
+(github.com/tiktok/tiktok-business-api-sdk). Clients authenticate to this server with
+`Authorization: Bearer`; upstream calls send the token in TikTok's `Access-Token` header.
+Refresh-token credentials are rejected (TikTok documents no refresh endpoint). Nothing has
+been exercised against a live TikTok account.
 
 ## Development
 
@@ -308,8 +317,8 @@ pnpm run typecheck
 ### Key Components
 
 - **`TikTokHttpClient`** - HTTP client for TikTok Marketing API v1.3
-- **`TikTokService`** - CRUD, bulk ops, duplication, targeting, audience estimates, ad previews
-- **`TikTokReportingService`** - Async report submission, polling, and download
+- **`TikTokService`** - CRUD, bulk ops, targeting, audience estimates
+- **`TikTokReportingService`** - Synchronous reports (`report/integrated/get/`), async task submission and status checks
 - **`TikTokBearerAuthStrategy`** - Bearer token + advertiser ID auth
 - **`TikTokAuthAdapter`** - Token + advertiser ID management for per-session API calls
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
@@ -318,7 +327,7 @@ pnpm run typecheck
 
 - `advertiser_id` is automatically injected into GET query params and POST request bodies
 - Uses page-based pagination (`page`/`page_size`) not cursor-based
-- Reporting is async: submit report -> poll for completion -> download results
+- `tiktok_get_report` is synchronous; the async task path is submit -> status check (TikTok's documented check response has no download URL)
 - Delete operations accept max 20 entity IDs per call
 - `DISABLE` status is used instead of `PAUSED` (TikTok-specific terminology)
 

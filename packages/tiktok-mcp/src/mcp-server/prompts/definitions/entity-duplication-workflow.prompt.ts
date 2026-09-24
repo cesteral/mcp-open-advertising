@@ -12,7 +12,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const tiktokEntityDuplicationWorkflowPrompt: Prompt = {
   name: "tiktok_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating TikTok Ads campaigns, ad groups, and ads using tiktok_duplicate_entity — covers A/B testing, scaling, and common patterns.",
+    "Step-by-step guide for duplicating TikTok Ads campaigns, ad groups, and ads client-side (get + create; TikTok has no copy endpoint) — covers A/B testing, scaling, and common patterns.",
   arguments: [
     {
       name: "entityType",
@@ -47,13 +47,10 @@ Advertiser ID: \`${advertiserId}\`
 
 ## Overview
 
-\`tiktok_duplicate_entity\` creates a copy of a campaign, ad group, or ad with all settings preserved.
-
-| What Gets Copied | Details |
-|------------------|---------|
-| **Campaign** | Structure, budget mode, objective |
-| **Ad Group** | Targeting, bid, schedule, budget |
-| **Ad** | Creative reference, copy, CTA, landing page |
+TikTok Marketing API v1.3 has **no copy/duplicate endpoint** for campaigns, ad groups or ads,
+so \`tiktok_duplicate_entity\` always returns an error. Duplicate client-side instead: read the
+source with \`tiktok_get_entity\`, then create a new entity with \`tiktok_create_entity\` using the
+fields you want to carry over.
 
 ---
 
@@ -76,17 +73,18 @@ Confirm this is the right entity and note its current state.
 
 ---
 
-## Step 2: Duplicate the Entity
+## Step 2: Create the Copy
+
+Build a create payload from the fields returned in Step 1 (drop read-only IDs and timestamps):
 
 \`\`\`json
 {
-  "tool": "tiktok_duplicate_entity",
+  "tool": "tiktok_create_entity",
   "params": {
     "entityType": "${entityType}",
     "advertiserId": "${advertiserId}",
-    "entityId": "${entityId}",
-    "options": {
-      "newName": "Copy of ${entityType} ${entityId}"
+    "data": {
+      "operation_status": "DISABLE"
     }
   }
 }
@@ -94,7 +92,7 @@ Confirm this is the right entity and note its current state.
 
 The response includes the new entity ID.
 
-⚠️ **GOTCHA**: Duplicated entities are created in **DISABLE** status by default. Enable only after review.
+⚠️ **GOTCHA**: TikTok defaults \`operation_status\` to ENABLE on create — pass \`DISABLE\` so the copy does not start delivering before review.
 
 ---
 

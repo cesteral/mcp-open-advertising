@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
@@ -125,9 +126,14 @@ export async function uploadImageLogic(
 
   const effectiveFilename = input.filename ?? filename;
 
+  // Per TikTok's FileImageAdUpload spec (official SDK), UPLOAD_BY_FILE requires
+  // `image_signature` = MD5 of the image bytes, for server-side verification.
   const result = (await tiktokService.client.postMultipart(
     tiktokService.client.versionedPath("file/image/ad/upload/"),
-    {},
+    {
+      upload_type: "UPLOAD_BY_FILE",
+      image_signature: createHash("md5").update(buffer).digest("hex"),
+    },
     "image_file",
     buffer,
     effectiveFilename,

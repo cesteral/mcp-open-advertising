@@ -22,7 +22,6 @@ import type {
   TikTokAdAccount,
   TikTokAdGroup,
   TikTokCampaign,
-  TikTokCreative,
   TikTokPageInfoShape,
 } from "./types.js";
 
@@ -34,7 +33,6 @@ export type {
   TikTokAdAccount,
   TikTokAdGroup,
   TikTokCampaign,
-  TikTokCreative,
   TikTokPageInfoShape,
 };
 
@@ -42,19 +40,29 @@ interface TikTokEntityMap {
   campaign: TikTokCampaign;
   adGroup: TikTokAdGroup;
   ad: TikTokAd;
-  creative: TikTokCreative;
 }
 
+// Tool inputs arrive as free-form records validated upstream; the typed
+// request shapes document the common fields.
 type TikTokCreateEntityInputMap = {
-  campaign: CreateTikTokCampaignRequest;
-  adGroup: CreateTikTokAdGroupRequest;
-  ad: CreateTikTokAdRequest;
-  creative: Record<string, unknown>;
+  campaign: CreateTikTokCampaignRequest | Record<string, unknown>;
+  adGroup: CreateTikTokAdGroupRequest | Record<string, unknown>;
+  ad: CreateTikTokAdRequest | Record<string, unknown>;
 };
 
 type TikTokUpdateEntityInputMap = {
   [K in TikTokEntityType]: Partial<TikTokEntityMap[K]> & Record<string, unknown>;
 };
+
+export const TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE =
+  "TikTok Marketing API v1.3 has no copy/duplicate endpoint for campaigns, ad groups or ads " +
+  "(none exists in TikTok's official Business API SDK). To duplicate, read the source with " +
+  "tiktok_get_entity and create a new entity with tiktok_create_entity (set operation_status " +
+  "to DISABLE so the copy does not start delivering).";
+
+export const TIKTOK_AD_PREVIEW_UNSUPPORTED_MESSAGE =
+  "Ad previews are not available: TikTok's official Business API SDK defines no ad-preview " +
+  "endpoint for v1.3. Inspect the ad with tiktok_get_entity (entityType 'ad') instead.";
 
 /** TikTok list response data shape */
 interface TikTokListData<T> {
@@ -74,7 +82,8 @@ interface TikTokAdvertiserListData {
  * - advertiser_id is always required (injected by TikTokHttpClient)
  * - Updates use POST (not PATCH), with entity ID in the body
  * - Status updates use separate /status/update/ endpoints
- * - Deletes use separate /delete/ endpoints (POST with IDs array)
+ * - Deletes are status updates with operation_status "DELETE" (v1.3 has no
+ *   campaign/adgroup/ad /delete/ endpoint in TikTok's official SDK)
  * - Pagination is page-based (page, page_size), not cursor-based
  */
 export class TikTokService {
@@ -195,22 +204,18 @@ export class TikTokService {
     ) as Promise<TikTokEntityMap[T]>;
   }
 
+  /**
+   * Delete entities. TikTok's official v1.3 SDK defines no `campaign/delete/`,
+   * `adgroup/delete/` or `ad/delete/` endpoint; deletion is
+   * `{entity}/status/update/` with `operation_status: "DELETE"` (enum
+   * StatusOptType: ENABLE/DISABLE/DELETE). Irreversible.
+   */
   async deleteEntity(
     entityType: TikTokEntityType,
     entityIds: string[],
     context?: RequestContext
   ): Promise<unknown> {
-    const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`tiktok:default`, 3);
-
-    return this.httpClient.post(
-      config.deletePath,
-      {
-        [config.idsField]: entityIds,
-      },
-      context
-    );
+    return this.updateEntityStatus(entityType, entityIds, "DELETE", context);
   }
 
   async updateEntityStatus(
@@ -242,50 +247,41 @@ export class TikTokService {
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listAdvertisers(context?: RequestContext): Promise<TikTokAdvertiserListData> {
+  /**
+   * GET advertiser/info/. Per the official SDK spec (advertiser_info.yml)
+   * `advertiser_ids` is a required query parameter — this endpoint returns
+   * info for the advertisers you name, it does not enumerate accessible ones
+   * (that is `oauth2/advertiser/get/`, which needs app_id + secret).
+   */
+  async listAdvertisers(
+    advertiserIds: string[],
+    context?: RequestContext
+  ): Promise<TikTokAdvertiserListData> {
     await this.rateLimiter.consume(`tiktok:default`);
 
     return this.httpClient.get(
       `/open_api/${this.apiVersion}/advertiser/info/`,
-      {},
+      { advertiser_ids: JSON.stringify(advertiserIds) },
       context
     ) as Promise<TikTokAdvertiserListData>;
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
 
-  async duplicateEntity<T extends TikTokEntityType>(
-    entityType: T,
-    entityId: string,
-    options?: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<TikTokEntityMap[T]> {
-    const config = getEntityConfig(entityType);
-
-    if (!config.supportsDuplicate) {
-      this.logger.debug(
-        { entityType },
-        "Duplicate skipped: entity type does not support duplication"
-      );
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity type ${entityType} does not support duplication`
-      );
-    }
-
-    await this.rateLimiter.consume(`tiktok:default`, 3);
-
-    // TikTok copy endpoints follow pattern /{entity}/copy/
-    const copyPath = config.createPath.replace("/create/", "/copy/");
-
-    return this.httpClient.post(
-      copyPath,
-      {
-        [config.idField]: entityId,
-        ...options,
-      },
-      context
-    ) as Promise<TikTokEntityMap[T]>;
+  /**
+   * TikTok's official v1.3 SDK defines no copy endpoint for campaigns, ad
+   * groups or ads (the `/{entity}/copy/` paths this used to derive do not
+   * exist in it), so duplication is refused rather than sent to a path that
+   * is not part of the API.
+   */
+  async duplicateEntity(
+    entityType: TikTokEntityType,
+    _entityId: string,
+    _options?: Record<string, unknown>,
+    _context?: RequestContext
+  ): Promise<never> {
+    this.logger.debug({ entityType }, "Duplicate refused: no TikTok copy endpoint");
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE);
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
@@ -497,6 +493,15 @@ export class TikTokService {
 
   // ─── Audience Estimate ──────────────────────────────────────────
 
+  /**
+   * Audience size estimate. TikTok's own spec text names the endpoint
+   * `/ad/audience_size/estimate/` (tool_targeting_list.yml and
+   * tool_targeting_search.yml in the official SDK: "pass the returned ISP IDs
+   * to isp_ids when calling /adgroup/create/, /adgroup/update/ or
+   * /ad/audience_size/estimate/"). The previous `audience/estimate/` path
+   * appears nowhere in the SDK. The SDK carries no request schema for this
+   * endpoint, so the method and body shape are unchanged (unverified).
+   */
   async getAudienceEstimate(
     targetingConfig: Record<string, unknown>,
     context?: RequestContext
@@ -504,7 +509,7 @@ export class TikTokService {
     await this.rateLimiter.consume(`tiktok:default`);
 
     return this.httpClient.post(
-      `/open_api/${this.apiVersion}/audience/estimate/`,
+      `/open_api/${this.apiVersion}/ad/audience_size/estimate/`,
       targetingConfig,
       context
     );
@@ -512,18 +517,17 @@ export class TikTokService {
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
-  async getAdPreviews(adId: string, adFormat?: string, context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
-
-    const params: Record<string, string> = {
-      ad_id: adId,
-    };
-
-    if (adFormat) {
-      params.ad_format = adFormat;
-    }
-
-    return this.httpClient.get(`/open_api/${this.apiVersion}/ad/preview/`, params, context);
+  /**
+   * TikTok's official v1.3 SDK defines no ad-preview endpoint (the `ad/preview/`
+   * path this used to GET is not in it), so previews are refused rather than
+   * sent to a path that is not part of the API.
+   */
+  async getAdPreviews(
+    _adId: string,
+    _adFormat?: string,
+    _context?: RequestContext
+  ): Promise<never> {
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, TIKTOK_AD_PREVIEW_UNSUPPORTED_MESSAGE);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────

@@ -37,6 +37,10 @@ import {
   UploadVideoOutputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-video.tool.js";
 import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
+import { createHash } from "node:crypto";
+
+// md5("x") — the mocked downloadFileToBuffer returns Buffer.from("x").
+const MD5_OF_X = createHash("md5").update(Buffer.from("x")).digest("hex");
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -109,6 +113,16 @@ describe("tiktok uploads governance contract (effect class)", () => {
       expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
     });
 
+    // TikTok FileImageAdUpload spec: image_signature (MD5) is required for UPLOAD_BY_FILE.
+    it("sends upload_type UPLOAD_BY_FILE with the image's MD5 as image_signature", async () => {
+      client.postMultipart.mockResolvedValueOnce({ image_id: "img-1" });
+      await uploadImageLogic({ ...input } as any, ctx, sdk);
+      const [path, fields, fileField] = client.postMultipart.mock.calls[0];
+      expect(path).toBe("file/image/ad/upload/");
+      expect(fileField).toBe("image_file");
+      expect(fields).toEqual({ upload_type: "UPLOAD_BY_FILE", image_signature: MD5_OF_X });
+    });
+
     it("formatter renders a dry-run message without a false success", () => {
       const content = uploadImageResponseFormatter({
         uploadedAt: "2026-06-03T00:00:00.000Z",
@@ -157,6 +171,22 @@ describe("tiktok uploads governance contract (effect class)", () => {
       expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
       expect(() => UploadVideoOutputSchema.parse(result)).not.toThrow();
       expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+    });
+
+    // TikTok AdUploadBody spec: video_signature (MD5) is required for UPLOAD_BY_FILE and the
+    // name field is file_name (no video_name request field exists).
+    it("sends video_signature (MD5) and the name as file_name", async () => {
+      client.postMultipart.mockResolvedValueOnce({ video_id: "vid-1" });
+      await uploadVideoLogic({ ...input, videoName: "Spring Promo" } as any, ctx, sdk);
+      const [path, fields, fileField] = client.postMultipart.mock.calls[0];
+      expect(path).toBe("file/video/ad/upload/");
+      expect(fileField).toBe("video_file");
+      expect(fields).toEqual({
+        upload_type: "UPLOAD_BY_FILE",
+        video_signature: MD5_OF_X,
+        file_name: "Spring Promo",
+      });
+      expect(fields).not.toHaveProperty("video_name");
     });
 
     it("formatter renders a dry-run message without a false success", () => {

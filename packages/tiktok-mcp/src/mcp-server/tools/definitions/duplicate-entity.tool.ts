@@ -2,12 +2,11 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope } from "@cesteral/shared";
-import { getDuplicateEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
-import { runTiktokDuplicateDryRun, resolveTiktokDuplicateCapability } from "../utils/dry-run.js";
-import { snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
+import { getEntityTypeEnum } from "../utils/entity-mapping.js";
+import { TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE } from "../../../services/tiktok/tiktok-service.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -16,22 +15,22 @@ import type {
   RequestContext,
   McpTextContent,
   SdkContext,
-  NormalizedEntitySnapshot,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_duplicate_entity";
 const TOOL_TITLE = "Duplicate TikTok Ads Entity";
-const TOOL_DESCRIPTION = `Duplicate a TikTok Ads entity (copy it).
+const TOOL_DESCRIPTION = `Duplicate a TikTok Ads entity — NOT AVAILABLE on TikTok.
 
-**Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
+TikTok Marketing API v1.3 has no copy/duplicate endpoint for campaigns, ad groups or ads, so
+every call (including \`dry_run\`) returns an error and nothing is created.
 
-Creates a copy of the entity. The copy is created in DISABLED status by default.
-Use the returned entity ID to make modifications before enabling.`;
+To copy an entity, read it with \`tiktok_get_entity\` and create a new one with
+\`tiktok_create_entity\` (set \`operation_status: "DISABLE"\` so it does not start delivering).`;
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to duplicate"),
     advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
@@ -70,60 +69,14 @@ type DuplicateEntityInput = z.infer<typeof DuplicateEntityInputSchema>;
 type DuplicateEntityOutput = z.infer<typeof DuplicateEntityOutputSchema>;
 
 export async function duplicateEntityLogic(
-  input: DuplicateEntityInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
+  _input: DuplicateEntityInput,
+  _context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<DuplicateEntityOutput> {
-  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
-  const dispatchedCapability = resolveTiktokDuplicateCapability(input.entityType);
-
-  if (input.dry_run === true) {
-    const dryRun = await runTiktokDuplicateDryRun(
-      { entityType: input.entityType, entityId: input.entityId, options: input.options },
-      tiktokService,
-      context
-    );
-    return {
-      newEntity: {},
-      sourceEntityId: input.entityId,
-      entityType: input.entityType,
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
-  }
-
-  // Fail fast on a mismatched account — but only on the real-execution path, so a
-  // dry-run preview with a different id is allowed (matches the other write tools).
-  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
-
-  const newEntity = (await tiktokService.duplicateEntity(
-    input.entityType as TikTokEntityType,
-    input.entityId,
-    input.options,
-    context
-  )) as unknown as Record<string, unknown>;
-
-  // The duplicate returns the full new entity, so normalize it directly for the
-  // canonical `after` snapshot (no re-read needed). Duplicate has no `before`.
-  // Best-effort: undefined for out-of-scope kinds.
-  const newId = String(
-    newEntity?.campaign_id ?? newEntity?.adgroup_id ?? newEntity?.ad_id ?? newEntity?.id ?? ""
-  );
-  const after: NormalizedEntitySnapshot | undefined = snapshotFromTiktokEntity(
-    input.entityType,
-    newId,
-    newEntity
-  );
-
-  return {
-    newEntity,
-    sourceEntityId: input.entityId,
-    entityType: input.entityType,
-    timestamp: new Date().toISOString(),
-    ...(after ? { after } : {}),
-    dispatchedCapability,
-  };
+  // TikTok's official v1.3 SDK has no copy endpoint for any entity type, so
+  // both the dry-run and the execute path refuse. A dry-run that reported
+  // "would succeed" for a call that can only fail would mislead governance.
+  throw new McpError(JsonRpcErrorCode.InvalidRequest, TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE);
 }
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {

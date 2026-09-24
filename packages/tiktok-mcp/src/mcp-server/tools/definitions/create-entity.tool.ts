@@ -35,7 +35,7 @@ const TOOL_DESCRIPTION = `Create a new TikTok Ads entity.
 - **campaign**: requires \`campaign_name\`, \`objective_type\` (for example \`TRAFFIC\` or \`APP_PROMOTION\`); \`budget_mode\` and \`budget\` are used for budgeted campaigns
 - **adGroup**: requires \`campaign_id\`, \`adgroup_name\`; TikTok commonly also requires scheduling, pacing, and optimization fields depending on objective and promotion type
 - **ad**: requires \`adgroup_id\` and \`creatives\` per TikTok's \`AdCreateBody\`
-- **creative**: this server's creative endpoints are custom mappings and should be checked against account-level creative support before use
+- Creatives are not a separate entity in TikTok v1.3: set them on the ad via \`creatives[]\` (upload assets with \`tiktok_upload_image\` / \`tiktok_upload_video\`)
 
 **Gotchas:**
 - Budget values are in the advertiser's account currency

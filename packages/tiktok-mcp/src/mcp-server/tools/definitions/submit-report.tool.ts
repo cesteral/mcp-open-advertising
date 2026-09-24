@@ -22,6 +22,10 @@ import type {
   DryRunValidationError,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
+import {
+  TIKTOK_REPORT_DATA_LEVELS,
+  TIKTOK_REPORT_SERVICE_TYPES,
+} from "../../../services/tiktok/tiktok-reporting-service.js";
 
 const TOOL_NAME = "tiktok_submit_report";
 const TOOL_TITLE = "Submit TikTok Report";
@@ -31,10 +35,11 @@ Returns a \`taskId\` immediately. Use \`tiktok_check_report_status\` to poll for
 
 **Non-blocking workflow:**
 1. \`tiktok_submit_report\` → get \`taskId\`
-2. \`tiktok_check_report_status\` (repeat every 10s) → wait for "DONE"
-3. \`tiktok_download_report\` with the \`downloadUrl\` → get parsed data
+2. \`tiktok_check_report_status\` (repeat every 10s) → wait for state \`complete\`
+3. If the status check returns a \`downloadUrl\`, fetch it with \`tiktok_download_report\`
 
-Use \`tiktok_get_report\` instead for a blocking convenience shortcut.`;
+TikTok's documented task-check response carries only \`status\` and \`message\` (no download URL),
+so prefer \`tiktok_get_report\`, which returns rows synchronously.`;
 
 export const SubmitReportInputSchema = z
   .object({
@@ -49,6 +54,17 @@ export const SubmitReportInputSchema = z
       .optional()
       .default("BASIC")
       .describe("Report type (default: BASIC)"),
+    serviceType: z
+      .enum(TIKTOK_REPORT_SERVICE_TYPES)
+      .optional()
+      .default("AUCTION")
+      .describe("TikTok service_type (default: AUCTION)"),
+    dataLevel: z
+      .enum(TIKTOK_REPORT_DATA_LEVELS)
+      .optional()
+      .describe(
+        "TikTok data_level for BASIC/AUDIENCE reports, e.g. AUCTION_CAMPAIGN, AUCTION_ADGROUP, AUCTION_AD, AUCTION_ADVERTISER"
+      ),
     dimensions: z
       .array(z.string())
       .min(1)
@@ -147,6 +163,8 @@ export async function submitReportLogic(
   const result = await tiktokReportingService.submitReport(
     {
       report_type: input.reportType,
+      service_type: input.serviceType,
+      ...(input.dataLevel ? { data_level: input.dataLevel } : {}),
       dimensions: input.dimensions,
       metrics: input.metrics,
       start_date: resolvedStartDate!,
