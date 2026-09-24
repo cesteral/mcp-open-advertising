@@ -103,9 +103,9 @@ Input: {
   "entityId": "${entityId}",
   "data": {
     "name": "Q2 Search Campaign — Revised",
-    "endDate": "2025-06-30"
+    "endDateTime": "2025-06-30 23:59:59"
   },
-  "updateMask": "name,end_date"
+  "updateMask": "name,end_date_time"
 }
 \`\`\`
 
@@ -195,7 +195,7 @@ Compare the returned values with what you set in Step 2.
 |--------|-------|-----------------|
 | campaign | status | \`status\` |
 | campaign | name | \`name\` |
-| campaign | end date | \`end_date\` |
+| campaign | end date/time | \`end_date_time\` |
 | campaign | budget | \`campaign_budget\` |
 | adGroup | status | \`status\` |
 | adGroup | CPC bid | \`cpc_bid_micros\` |

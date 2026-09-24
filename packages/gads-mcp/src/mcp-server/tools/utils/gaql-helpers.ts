@@ -20,8 +20,13 @@ const DEFAULT_SELECT_FIELDS: Record<GAdsEntityType, string[]> = {
     "campaign.name",
     "campaign.status",
     "campaign.advertising_channel_type",
-    "campaign.start_date",
-    "campaign.end_date",
+    // v23 replaced `start_date` / `end_date` with these ("yyyy-MM-dd HH:mm:ss",
+    // customer time zone) — selecting the old names fails the whole query.
+    "campaign.start_date_time",
+    "campaign.end_date_time",
+    // EU political-advertising self-declaration. Selected so a duplicated
+    // campaign carries the source's declaration into its create payload.
+    "campaign.contains_eu_political_advertising",
     "campaign.campaign_budget",
     "campaign.resource_name",
   ],
@@ -98,9 +103,9 @@ export function buildListQuery(
     query += ` ORDER BY ${orderBy}`;
   }
 
-  // Note: No LIMIT clause — pagination is handled by the API's pageSize/pageToken
-  // body parameters in gaqlSearch(). Adding LIMIT here would cap total results and
-  // prevent multi-page iteration.
+  // Note: No LIMIT clause — a GAQL LIMIT caps the total result set, which would
+  // make every page after the first unreachable. Page bounding is applied
+  // client-side in GAdsService.gaqlSearch() (Google Ads rejects `pageSize`).
 
   // Reduce payload size by omitting resource names for fields not in SELECT
   query += " PARAMETERS omit_unselected_resource_names=true";

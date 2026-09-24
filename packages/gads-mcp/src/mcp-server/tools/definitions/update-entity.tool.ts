@@ -26,7 +26,7 @@ const TOOL_DESCRIPTION = `Update an existing Google Ads entity using the :mutate
 **updateMask is required** — specify which fields to update as a comma-separated string.
 Only fields listed in updateMask will be modified. This prevents accidental overwrites.
 
-Example updateMask: "name,status" or "campaignBudget,startDate"
+Example updateMask: "name,status" or "campaignBudget,endDateTime"
 
 **Composite entityId required for:** \`ad\` → use \`{adGroupId}~{adId}\`, \`keyword\` → use \`{adGroupId}~{criterionId}\`. Other entity types use simple IDs.`;
 

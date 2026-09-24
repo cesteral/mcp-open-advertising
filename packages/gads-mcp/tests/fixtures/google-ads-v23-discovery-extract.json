@@ -1,0 +1,920 @@
+{
+  "_provenance": {
+    "source": "https://googleads.googleapis.com/$discovery/rest?version=v23",
+    "revision": "20260923",
+    "extractedAt": "2026-09-24",
+    "note": "Property names (and $ref targets, prefix 'GoogleAdsGoogleadsV23' stripped) of the six GAQL resources gads-mcp selects from, plus every schema those resources reference directly. Regenerate from the live Discovery doc when bumping the API version."
+  },
+  "resources": {
+    "campaign": "Resources__Campaign",
+    "ad_group": "Resources__AdGroup",
+    "ad_group_ad": "Resources__AdGroupAd",
+    "ad_group_criterion": "Resources__AdGroupCriterion",
+    "campaign_budget": "Resources__CampaignBudget",
+    "asset": "Resources__Asset"
+  },
+  "schemas": {
+    "Common__AgeRangeInfo": {
+      "type": null
+    },
+    "Common__AppDeepLinkAsset": {
+      "appDeepLinkUri": null
+    },
+    "Common__AppPaymentModelInfo": {
+      "type": null
+    },
+    "Common__AudienceInfo": {
+      "audience": null
+    },
+    "Common__BookOnGoogleAsset": {},
+    "Common__BrandListInfo": {
+      "sharedSet": null
+    },
+    "Common__BusinessMessageAsset": {
+      "callToAction": "Common__BusinessMessageCallToActionInfo",
+      "facebookMessengerInfo": "Common__FacebookMessengerBusinessMessageInfo",
+      "messageProvider": null,
+      "starterMessage": null,
+      "whatsappInfo": "Common__WhatsappBusinessMessageInfo",
+      "zaloInfo": "Common__ZaloBusinessMessageInfo"
+    },
+    "Common__CallAsset": {
+      "adScheduleTargets": "Common__AdScheduleInfo",
+      "callConversionAction": null,
+      "callConversionReportingState": null,
+      "countryCode": null,
+      "phoneNumber": null
+    },
+    "Common__CallToActionAsset": {
+      "callToAction": null
+    },
+    "Common__CalloutAsset": {
+      "adScheduleTargets": "Common__AdScheduleInfo",
+      "calloutText": null,
+      "endDate": null,
+      "startDate": null
+    },
+    "Common__CampaignThirdPartyIntegrationPartners": {
+      "brandLiftIntegrationPartners": "Common__CampaignThirdPartyBrandLiftIntegrationPartner",
+      "brandSafetyIntegrationPartners": "Common__CampaignThirdPartyBrandSafetyIntegrationPartner",
+      "reachIntegrationPartners": "Common__CampaignThirdPartyReachIntegrationPartner",
+      "viewabilityIntegrationPartners": "Common__CampaignThirdPartyViewabilityIntegrationPartner"
+    },
+    "Common__CombinedAudienceInfo": {
+      "combinedAudience": null
+    },
+    "Common__Commission": {
+      "commissionRateMicros": null
+    },
+    "Common__CustomAffinityInfo": {
+      "customAffinity": null
+    },
+    "Common__CustomAudienceInfo": {
+      "customAudience": null
+    },
+    "Common__CustomIntentInfo": {
+      "customIntent": null
+    },
+    "Common__CustomParameter": {
+      "key": null,
+      "value": null
+    },
+    "Common__DemandGenCarouselCardAsset": {
+      "callToActionText": null,
+      "headline": null,
+      "marketingImageAsset": null,
+      "portraitMarketingImageAsset": null,
+      "squareMarketingImageAsset": null
+    },
+    "Common__DynamicCustomAsset": {
+      "androidAppLink": null,
+      "contextualKeywords": null,
+      "formattedPrice": null,
+      "formattedSalePrice": null,
+      "id": null,
+      "id2": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "itemAddress": null,
+      "itemCategory": null,
+      "itemDescription": null,
+      "itemSubtitle": null,
+      "itemTitle": null,
+      "price": null,
+      "salePrice": null,
+      "similarIds": null
+    },
+    "Common__DynamicEducationAsset": {
+      "address": null,
+      "androidAppLink": null,
+      "contextualKeywords": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "locationId": null,
+      "programDescription": null,
+      "programId": null,
+      "programName": null,
+      "schoolName": null,
+      "similarProgramIds": null,
+      "subject": null,
+      "thumbnailImageUrl": null
+    },
+    "Common__DynamicFlightsAsset": {
+      "androidAppLink": null,
+      "customMapping": null,
+      "destinationId": null,
+      "destinationName": null,
+      "flightDescription": null,
+      "flightPrice": null,
+      "flightSalePrice": null,
+      "formattedPrice": null,
+      "formattedSalePrice": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "originId": null,
+      "originName": null,
+      "similarDestinationIds": null
+    },
+    "Common__DynamicHotelsAndRentalsAsset": {
+      "address": null,
+      "androidAppLink": null,
+      "category": null,
+      "contextualKeywords": null,
+      "description": null,
+      "destinationName": null,
+      "formattedPrice": null,
+      "formattedSalePrice": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "price": null,
+      "propertyId": null,
+      "propertyName": null,
+      "salePrice": null,
+      "similarPropertyIds": null,
+      "starRating": null
+    },
+    "Common__DynamicJobsAsset": {
+      "address": null,
+      "androidAppLink": null,
+      "contextualKeywords": null,
+      "description": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "jobCategory": null,
+      "jobId": null,
+      "jobSubtitle": null,
+      "jobTitle": null,
+      "locationId": null,
+      "salary": null,
+      "similarJobIds": null
+    },
+    "Common__DynamicLocalAsset": {
+      "address": null,
+      "androidAppLink": null,
+      "category": null,
+      "contextualKeywords": null,
+      "dealId": null,
+      "dealName": null,
+      "description": null,
+      "formattedPrice": null,
+      "formattedSalePrice": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "price": null,
+      "salePrice": null,
+      "similarDealIds": null,
+      "subtitle": null
+    },
+    "Common__DynamicRealEstateAsset": {
+      "address": null,
+      "androidAppLink": null,
+      "cityName": null,
+      "contextualKeywords": null,
+      "description": null,
+      "formattedPrice": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "listingId": null,
+      "listingName": null,
+      "listingType": null,
+      "price": null,
+      "propertyType": null,
+      "similarListingIds": null
+    },
+    "Common__DynamicTravelAsset": {
+      "androidAppLink": null,
+      "category": null,
+      "contextualKeywords": null,
+      "destinationAddress": null,
+      "destinationId": null,
+      "destinationName": null,
+      "formattedPrice": null,
+      "formattedSalePrice": null,
+      "imageUrl": null,
+      "iosAppLink": null,
+      "iosAppStoreId": null,
+      "originId": null,
+      "originName": null,
+      "price": null,
+      "salePrice": null,
+      "similarDestinationIds": null,
+      "title": null
+    },
+    "Common__ExtendedDemographicInfo": {
+      "extendedDemographicId": null
+    },
+    "Common__FixedCpm": {
+      "goal": null,
+      "targetFrequencyInfo": "Common__FixedCpmTargetFrequencyGoalInfo"
+    },
+    "Common__FrequencyCapEntry": {
+      "cap": null,
+      "key": "Common__FrequencyCapKey"
+    },
+    "Common__GenderInfo": {
+      "type": null
+    },
+    "Common__HotelCalloutAsset": {
+      "languageCode": null,
+      "text": null
+    },
+    "Common__HotelPropertyAsset": {
+      "hotelAddress": null,
+      "hotelName": null,
+      "placeId": null
+    },
+    "Common__ImageAsset": {
+      "data": null,
+      "fileSize": null,
+      "fullSize": "Common__ImageDimension",
+      "mimeType": null
+    },
+    "Common__IncomeRangeInfo": {
+      "type": null
+    },
+    "Common__KeywordInfo": {
+      "matchType": null,
+      "text": null
+    },
+    "Common__LanguageInfo": {
+      "languageConstant": null
+    },
+    "Common__LeadFormAsset": {
+      "backgroundImageAsset": null,
+      "businessName": null,
+      "callToActionDescription": null,
+      "callToActionType": null,
+      "customDisclosure": null,
+      "customQuestionFields": "Common__LeadFormCustomQuestionField",
+      "deliveryMethods": "Common__LeadFormDeliveryMethod",
+      "description": null,
+      "desiredIntent": null,
+      "fields": "Common__LeadFormField",
+      "headline": null,
+      "postSubmitCallToActionType": null,
+      "postSubmitDescription": null,
+      "postSubmitHeadline": null,
+      "privacyPolicyUrl": null
+    },
+    "Common__LifeEventInfo": {
+      "lifeEventId": null
+    },
+    "Common__ListingGroupInfo": {
+      "caseValue": "Common__ListingDimensionInfo",
+      "parentAdGroupCriterion": null,
+      "path": "Common__ListingDimensionPath",
+      "type": null
+    },
+    "Common__LocationAsset": {
+      "businessProfileLocations": "Common__BusinessProfileLocation",
+      "locationOwnershipType": null,
+      "placeId": null
+    },
+    "Common__LocationInfo": {
+      "geoTargetConstant": null
+    },
+    "Common__ManualCpa": {},
+    "Common__ManualCpc": {
+      "enhancedCpcEnabled": null
+    },
+    "Common__ManualCpm": {},
+    "Common__ManualCpv": {},
+    "Common__MaximizeConversionValue": {
+      "cpcBidCeilingMicros": null,
+      "cpcBidFloorMicros": null,
+      "targetRoas": null,
+      "targetRoasTolerancePercentMillis": null
+    },
+    "Common__MaximizeConversions": {
+      "cpcBidCeilingMicros": null,
+      "cpcBidFloorMicros": null,
+      "targetCpaMicros": null
+    },
+    "Common__MediaBundleAsset": {
+      "data": null
+    },
+    "Common__MobileAppAsset": {
+      "appId": null,
+      "appStore": null,
+      "endDate": null,
+      "linkText": null,
+      "startDate": null
+    },
+    "Common__MobileAppCategoryInfo": {
+      "mobileAppCategoryConstant": null
+    },
+    "Common__MobileApplicationInfo": {
+      "appId": null,
+      "name": null
+    },
+    "Common__PageFeedAsset": {
+      "labels": null,
+      "pageUrl": null
+    },
+    "Common__ParentalStatusInfo": {
+      "type": null
+    },
+    "Common__PercentCpc": {
+      "cpcBidCeilingMicros": null,
+      "enhancedCpcEnabled": null
+    },
+    "Common__PlacementInfo": {
+      "url": null
+    },
+    "Common__PriceAsset": {
+      "languageCode": null,
+      "priceOfferings": "Common__PriceOffering",
+      "priceQualifier": null,
+      "type": null
+    },
+    "Common__PromotionAsset": {
+      "adScheduleTargets": "Common__AdScheduleInfo",
+      "discountModifier": null,
+      "endDate": null,
+      "languageCode": null,
+      "moneyAmountOff": "Common__Money",
+      "occasion": null,
+      "ordersOverAmount": "Common__Money",
+      "percentOff": null,
+      "promotionBarcodeInfo": "Common__PromotionBarcodeInfo",
+      "promotionCode": null,
+      "promotionQrCodeInfo": "Common__PromotionQrCodeInfo",
+      "promotionTarget": null,
+      "redemptionEndDate": null,
+      "redemptionStartDate": null,
+      "startDate": null,
+      "termsAndConditionsText": null,
+      "termsAndConditionsUri": null
+    },
+    "Common__RealTimeBiddingSetting": {
+      "optIn": null
+    },
+    "Common__SitelinkAsset": {
+      "adScheduleTargets": "Common__AdScheduleInfo",
+      "description1": null,
+      "description2": null,
+      "endDate": null,
+      "linkText": null,
+      "startDate": null
+    },
+    "Common__StructuredSnippetAsset": {
+      "header": null,
+      "values": null
+    },
+    "Common__SyntheticContentInfo": {
+      "advertiserAttestation": "Common__SyntheticContentAttestation",
+      "systemAttestation": "Common__SyntheticContentAttestation"
+    },
+    "Common__TargetCpa": {
+      "cpcBidCeilingMicros": null,
+      "cpcBidFloorMicros": null,
+      "targetCpaMicros": null
+    },
+    "Common__TargetCpc": {
+      "targetCpcMicros": null
+    },
+    "Common__TargetCpm": {
+      "targetFrequencyGoal": "Common__TargetCpmTargetFrequencyGoal"
+    },
+    "Common__TargetCpv": {},
+    "Common__TargetImpressionShare": {
+      "cpcBidCeilingMicros": null,
+      "location": null,
+      "locationFractionMicros": null
+    },
+    "Common__TargetRoas": {
+      "cpcBidCeilingMicros": null,
+      "cpcBidFloorMicros": null,
+      "targetRoas": null,
+      "targetRoasTolerancePercentMillis": null
+    },
+    "Common__TargetSpend": {
+      "cpcBidCeilingMicros": null,
+      "targetSpendMicros": null
+    },
+    "Common__TargetingSetting": {
+      "targetRestrictionOperations": "Common__TargetRestrictionOperation",
+      "targetRestrictions": "Common__TargetRestriction"
+    },
+    "Common__TextAsset": {
+      "text": null
+    },
+    "Common__TopicInfo": {
+      "path": null,
+      "topicConstant": null
+    },
+    "Common__UserInterestInfo": {
+      "userInterestCategory": null
+    },
+    "Common__UserListInfo": {
+      "userList": null
+    },
+    "Common__VerticalAdsItemGroupRuleListInfo": {
+      "sharedSet": null
+    },
+    "Common__VideoLineupInfo": {
+      "videoLineupId": null
+    },
+    "Common__WebpageInfo": {
+      "conditions": "Common__WebpageConditionInfo",
+      "coveragePercentage": null,
+      "criterionName": null,
+      "sample": "Common__WebpageSampleInfo"
+    },
+    "Common__YouTubeChannelInfo": {
+      "channelId": null
+    },
+    "Common__YouTubeVideoInfo": {
+      "videoId": null
+    },
+    "Common__YouTubeVideoListAsset": {
+      "youtubeVideos": "Common__AdVideoAsset"
+    },
+    "Common__YoutubeVideoAsset": {
+      "youtubeVideoId": null,
+      "youtubeVideoTitle": null
+    },
+    "Resources_AdGroupCriterion_PositionEstimates": {
+      "estimatedAddClicksAtFirstPositionCpc": null,
+      "estimatedAddCostAtFirstPositionCpc": null,
+      "firstPageCpcMicros": null,
+      "firstPositionCpcMicros": null,
+      "topOfPageCpcMicros": null
+    },
+    "Resources_AdGroupCriterion_QualityInfo": {
+      "creativeQualityScore": null,
+      "postClickQualityScore": null,
+      "qualityScore": null,
+      "searchPredictedCtr": null
+    },
+    "Resources_AdGroup_AiMaxAdGroupSetting": {
+      "disableSearchTermMatching": null
+    },
+    "Resources_AdGroup_AudienceSetting": {
+      "useAudienceGrouped": null
+    },
+    "Resources_AdGroup_DemandGenAdGroupSettings": {
+      "channelControls": "Resources_AdGroupDemandGenAdGroupSettings_DemandGenChannelControls"
+    },
+    "Resources_AdGroup_VerticalAdsFormatSetting": {
+      "disableTextAds": null,
+      "enableBookingLinks": null,
+      "enableVerticalPromotionAds": null
+    },
+    "Resources_AdGroup_VideoAdGroupSettings": {
+      "videoAdSequence": "Resources_AdGroupVideoAdGroupSettings_VideoAdSequenceStepSetting"
+    },
+    "Resources_Campaign_AiMaxSetting": {
+      "bundlingRequired": null,
+      "enableAiMax": null
+    },
+    "Resources_Campaign_AppCampaignSetting": {
+      "appId": null,
+      "appStore": null,
+      "biddingStrategyGoalType": null
+    },
+    "Resources_Campaign_AssetAutomationSetting": {
+      "assetAutomationStatus": null,
+      "assetAutomationType": null
+    },
+    "Resources_Campaign_AudienceSetting": {
+      "useAudienceGrouped": null
+    },
+    "Resources_Campaign_BrandGuidelines": {
+      "accentColor": null,
+      "mainColor": null,
+      "predefinedFontFamily": null
+    },
+    "Resources_Campaign_DemandGenCampaignSettings": {
+      "upgradedTargeting": null
+    },
+    "Resources_Campaign_DynamicSearchAdsSetting": {
+      "domainName": null,
+      "languageCode": null,
+      "useSuppliedUrlsOnly": null
+    },
+    "Resources_Campaign_GeoTargetTypeSetting": {
+      "negativeGeoTargetType": null,
+      "positiveGeoTargetType": null
+    },
+    "Resources_Campaign_HotelSettingInfo": {
+      "disableHotelSetting": null,
+      "hotelCenterId": null
+    },
+    "Resources_Campaign_LocalCampaignSetting": {
+      "locationSourceType": null
+    },
+    "Resources_Campaign_LocalServicesCampaignSettings": {
+      "categoryBids": "Resources_Campaign_CategoryBid"
+    },
+    "Resources_Campaign_NetworkSettings": {
+      "targetContentNetwork": null,
+      "targetGoogleSearch": null,
+      "targetGoogleTvNetwork": null,
+      "targetPartnerSearchNetwork": null,
+      "targetSearchNetwork": null,
+      "targetYoutube": null
+    },
+    "Resources_Campaign_OptimizationGoalSetting": {
+      "optimizationGoalTypes": null
+    },
+    "Resources_Campaign_PerformanceMaxUpgrade": {
+      "performanceMaxCampaign": null,
+      "preUpgradeCampaign": null,
+      "status": null
+    },
+    "Resources_Campaign_PmaxCampaignSettings": {
+      "brandTargetingOverrides": "Resources_CampaignPmaxCampaignSettings_BrandTargetingOverrides"
+    },
+    "Resources_Campaign_SelectiveOptimization": {
+      "conversionActions": null
+    },
+    "Resources_Campaign_ShoppingSetting": {
+      "advertisingPartnerIds": null,
+      "campaignPriority": null,
+      "disableProductFeed": null,
+      "enableLocal": null,
+      "feedLabel": null,
+      "merchantId": null,
+      "useVehicleInventory": null
+    },
+    "Resources_Campaign_TextGuidelines": {
+      "messagingRestrictions": "Resources_Campaign_MessagingRestriction",
+      "termExclusions": null
+    },
+    "Resources_Campaign_TrackingSetting": {
+      "trackingUrl": null
+    },
+    "Resources_Campaign_TravelCampaignSettings": {
+      "travelAccountId": null
+    },
+    "Resources_Campaign_VanityPharma": {
+      "vanityPharmaDisplayUrlMode": null,
+      "vanityPharmaText": null
+    },
+    "Resources_Campaign_VideoCampaignSettings": {
+      "bookingDetails": "Resources_CampaignVideoCampaignSettings_BookingDetails",
+      "reservationAdCategorySelfDisclosure": "Resources_CampaignVideoCampaignSettings_ReservationAdCategorySelfDisclosure",
+      "videoAdFormatControl": "Resources_CampaignVideoCampaignSettings_VideoAdFormatControl",
+      "videoAdInventoryControl": "Resources_CampaignVideoCampaignSettings_VideoAdInventoryControl",
+      "videoAdSequence": "Resources_CampaignVideoCampaignSettings_VideoAdSequence"
+    },
+    "Resources__Ad": {
+      "addedByGoogleAds": null,
+      "appAd": "Common__AppAdInfo",
+      "appEngagementAd": "Common__AppEngagementAdInfo",
+      "appPreRegistrationAd": "Common__AppPreRegistrationAdInfo",
+      "demandGenCarouselAd": "Common__DemandGenCarouselAdInfo",
+      "demandGenMultiAssetAd": "Common__DemandGenMultiAssetAdInfo",
+      "demandGenProductAd": "Common__DemandGenProductAdInfo",
+      "demandGenVideoResponsiveAd": "Common__DemandGenVideoResponsiveAdInfo",
+      "devicePreference": null,
+      "displayUploadAd": "Common__DisplayUploadAdInfo",
+      "displayUrl": null,
+      "expandedDynamicSearchAd": "Common__ExpandedDynamicSearchAdInfo",
+      "expandedTextAd": "Common__ExpandedTextAdInfo",
+      "finalAppUrls": "Common__FinalAppUrl",
+      "finalMobileUrls": null,
+      "finalUrlSuffix": null,
+      "finalUrls": null,
+      "hotelAd": "Common__HotelAdInfo",
+      "id": null,
+      "imageAd": "Common__ImageAdInfo",
+      "legacyAppInstallAd": "Common__LegacyAppInstallAdInfo",
+      "legacyResponsiveDisplayAd": "Common__LegacyResponsiveDisplayAdInfo",
+      "localAd": "Common__LocalAdInfo",
+      "name": null,
+      "resourceName": null,
+      "responsiveDisplayAd": "Common__ResponsiveDisplayAdInfo",
+      "responsiveSearchAd": "Common__ResponsiveSearchAdInfo",
+      "shoppingComparisonListingAd": "Common__ShoppingComparisonListingAdInfo",
+      "shoppingProductAd": "Common__ShoppingProductAdInfo",
+      "shoppingSmartAd": "Common__ShoppingSmartAdInfo",
+      "smartCampaignAd": "Common__SmartCampaignAdInfo",
+      "syntheticContentInfo": "Common__SyntheticContentInfo",
+      "systemManagedResourceSource": null,
+      "textAd": "Common__TextAdInfo",
+      "trackingUrlTemplate": null,
+      "travelAd": "Common__TravelAdInfo",
+      "type": null,
+      "urlCollections": "Common__UrlCollection",
+      "urlCustomParameters": "Common__CustomParameter",
+      "videoAd": "Common__VideoAdInfo",
+      "videoResponsiveAd": "Common__VideoResponsiveAdInfo"
+    },
+    "Resources__AdGroup": {
+      "adRotationMode": null,
+      "aiMaxAdGroupSetting": "Resources_AdGroup_AiMaxAdGroupSetting",
+      "audienceSetting": "Resources_AdGroup_AudienceSetting",
+      "baseAdGroup": null,
+      "campaign": null,
+      "cpcBidMicros": null,
+      "cpmBidMicros": null,
+      "cpvBidMicros": null,
+      "demandGenAdGroupSettings": "Resources_AdGroup_DemandGenAdGroupSettings",
+      "displayCustomBidDimension": null,
+      "effectiveCpcBidMicros": null,
+      "effectiveTargetCpaMicros": null,
+      "effectiveTargetCpaSource": null,
+      "effectiveTargetCpc": null,
+      "effectiveTargetCpcSource": null,
+      "effectiveTargetRoas": null,
+      "effectiveTargetRoasSource": null,
+      "excludeDemographicExpansion": null,
+      "excludedParentAssetFieldTypes": null,
+      "excludedParentAssetSetTypes": null,
+      "finalUrlSuffix": null,
+      "fixedCpmMicros": null,
+      "id": null,
+      "labels": null,
+      "name": null,
+      "optimizedTargetingEnabled": null,
+      "percentCpcBidMicros": null,
+      "primaryStatus": null,
+      "primaryStatusReasons": null,
+      "resourceName": null,
+      "status": null,
+      "targetCpaMicros": null,
+      "targetCpcMicros": null,
+      "targetCpmMicros": null,
+      "targetCpvMicros": null,
+      "targetRoas": null,
+      "targetingSetting": "Common__TargetingSetting",
+      "trackingUrlTemplate": null,
+      "type": null,
+      "urlCustomParameters": "Common__CustomParameter",
+      "verticalAdsFormatSetting": "Resources_AdGroup_VerticalAdsFormatSetting",
+      "videoAdGroupSettings": "Resources_AdGroup_VideoAdGroupSettings"
+    },
+    "Resources__AdGroupAd": {
+      "actionItems": null,
+      "ad": "Resources__Ad",
+      "adGroup": null,
+      "adGroupAdAssetAutomationSettings": "Resources__AdGroupAdAssetAutomationSetting",
+      "adStrength": null,
+      "endDateTime": null,
+      "labels": null,
+      "policySummary": "Resources__AdGroupAdPolicySummary",
+      "primaryStatus": null,
+      "primaryStatusReasons": null,
+      "resourceName": null,
+      "startDateTime": null,
+      "status": null
+    },
+    "Resources__AdGroupAdAssetAutomationSetting": {
+      "assetAutomationStatus": null,
+      "assetAutomationType": null
+    },
+    "Resources__AdGroupAdPolicySummary": {
+      "approvalStatus": null,
+      "policyTopicEntries": "Common__PolicyTopicEntry",
+      "reviewStatus": null
+    },
+    "Resources__AdGroupCriterion": {
+      "adGroup": null,
+      "ageRange": "Common__AgeRangeInfo",
+      "appPaymentModel": "Common__AppPaymentModelInfo",
+      "approvalStatus": null,
+      "audience": "Common__AudienceInfo",
+      "bidModifier": null,
+      "brandList": "Common__BrandListInfo",
+      "combinedAudience": "Common__CombinedAudienceInfo",
+      "cpcBidMicros": null,
+      "cpmBidMicros": null,
+      "cpvBidMicros": null,
+      "criterionId": null,
+      "customAffinity": "Common__CustomAffinityInfo",
+      "customAudience": "Common__CustomAudienceInfo",
+      "customIntent": "Common__CustomIntentInfo",
+      "disapprovalReasons": null,
+      "displayName": null,
+      "effectiveCpcBidMicros": null,
+      "effectiveCpcBidSource": null,
+      "effectiveCpmBidMicros": null,
+      "effectiveCpmBidSource": null,
+      "effectiveCpvBidMicros": null,
+      "effectiveCpvBidSource": null,
+      "effectivePercentCpcBidMicros": null,
+      "effectivePercentCpcBidSource": null,
+      "extendedDemographic": "Common__ExtendedDemographicInfo",
+      "finalMobileUrls": null,
+      "finalUrlSuffix": null,
+      "finalUrls": null,
+      "gender": "Common__GenderInfo",
+      "incomeRange": "Common__IncomeRangeInfo",
+      "keyword": "Common__KeywordInfo",
+      "labels": null,
+      "language": "Common__LanguageInfo",
+      "lifeEvent": "Common__LifeEventInfo",
+      "listingGroup": "Common__ListingGroupInfo",
+      "location": "Common__LocationInfo",
+      "mobileAppCategory": "Common__MobileAppCategoryInfo",
+      "mobileApplication": "Common__MobileApplicationInfo",
+      "negative": null,
+      "parentalStatus": "Common__ParentalStatusInfo",
+      "percentCpcBidMicros": null,
+      "placement": "Common__PlacementInfo",
+      "positionEstimates": "Resources_AdGroupCriterion_PositionEstimates",
+      "primaryStatus": null,
+      "primaryStatusReasons": null,
+      "qualityInfo": "Resources_AdGroupCriterion_QualityInfo",
+      "resourceName": null,
+      "status": null,
+      "systemServingStatus": null,
+      "topic": "Common__TopicInfo",
+      "trackingUrlTemplate": null,
+      "type": null,
+      "urlCustomParameters": "Common__CustomParameter",
+      "userInterest": "Common__UserInterestInfo",
+      "userList": "Common__UserListInfo",
+      "verticalAdsItemGroupRuleList": "Common__VerticalAdsItemGroupRuleListInfo",
+      "videoLineup": "Common__VideoLineupInfo",
+      "webpage": "Common__WebpageInfo",
+      "youtubeChannel": "Common__YouTubeChannelInfo",
+      "youtubeVideo": "Common__YouTubeVideoInfo"
+    },
+    "Resources__Asset": {
+      "appDeepLinkAsset": "Common__AppDeepLinkAsset",
+      "bookOnGoogleAsset": "Common__BookOnGoogleAsset",
+      "businessMessageAsset": "Common__BusinessMessageAsset",
+      "callAsset": "Common__CallAsset",
+      "callToActionAsset": "Common__CallToActionAsset",
+      "calloutAsset": "Common__CalloutAsset",
+      "demandGenCarouselCardAsset": "Common__DemandGenCarouselCardAsset",
+      "dynamicCustomAsset": "Common__DynamicCustomAsset",
+      "dynamicEducationAsset": "Common__DynamicEducationAsset",
+      "dynamicFlightsAsset": "Common__DynamicFlightsAsset",
+      "dynamicHotelsAndRentalsAsset": "Common__DynamicHotelsAndRentalsAsset",
+      "dynamicJobsAsset": "Common__DynamicJobsAsset",
+      "dynamicLocalAsset": "Common__DynamicLocalAsset",
+      "dynamicRealEstateAsset": "Common__DynamicRealEstateAsset",
+      "dynamicTravelAsset": "Common__DynamicTravelAsset",
+      "fieldTypePolicySummaries": "Resources__AssetFieldTypePolicySummary",
+      "finalMobileUrls": null,
+      "finalUrlSuffix": null,
+      "finalUrls": null,
+      "hotelCalloutAsset": "Common__HotelCalloutAsset",
+      "hotelPropertyAsset": "Common__HotelPropertyAsset",
+      "id": null,
+      "imageAsset": "Common__ImageAsset",
+      "leadFormAsset": "Common__LeadFormAsset",
+      "locationAsset": "Common__LocationAsset",
+      "mediaBundleAsset": "Common__MediaBundleAsset",
+      "mobileAppAsset": "Common__MobileAppAsset",
+      "name": null,
+      "orientation": null,
+      "pageFeedAsset": "Common__PageFeedAsset",
+      "policySummary": "Resources__AssetPolicySummary",
+      "priceAsset": "Common__PriceAsset",
+      "promotionAsset": "Common__PromotionAsset",
+      "resourceName": null,
+      "sitelinkAsset": "Common__SitelinkAsset",
+      "source": null,
+      "structuredSnippetAsset": "Common__StructuredSnippetAsset",
+      "syntheticContentInfo": "Common__SyntheticContentInfo",
+      "textAsset": "Common__TextAsset",
+      "trackingUrlTemplate": null,
+      "type": null,
+      "urlCustomParameters": "Common__CustomParameter",
+      "youtubeVideoAsset": "Common__YoutubeVideoAsset",
+      "youtubeVideoListAsset": "Common__YouTubeVideoListAsset"
+    },
+    "Resources__AssetFieldTypePolicySummary": {
+      "assetFieldType": null,
+      "assetSource": null,
+      "policySummaryInfo": "Resources__AssetPolicySummary"
+    },
+    "Resources__AssetPolicySummary": {
+      "approvalStatus": null,
+      "policyTopicEntries": "Common__PolicyTopicEntry",
+      "reviewStatus": null
+    },
+    "Resources__Campaign": {
+      "accessibleBiddingStrategy": null,
+      "adServingOptimizationStatus": null,
+      "advertisingChannelSubType": null,
+      "advertisingChannelType": null,
+      "aiMaxSetting": "Resources_Campaign_AiMaxSetting",
+      "appCampaignSetting": "Resources_Campaign_AppCampaignSetting",
+      "assetAutomationSettings": "Resources_Campaign_AssetAutomationSetting",
+      "audienceSetting": "Resources_Campaign_AudienceSetting",
+      "baseCampaign": null,
+      "biddingStrategy": null,
+      "biddingStrategySystemStatus": null,
+      "biddingStrategyType": null,
+      "brandGuidelines": "Resources_Campaign_BrandGuidelines",
+      "brandGuidelinesEnabled": null,
+      "campaignBudget": null,
+      "campaignGroup": null,
+      "commission": "Common__Commission",
+      "containsEuPoliticalAdvertising": null,
+      "demandGenCampaignSettings": "Resources_Campaign_DemandGenCampaignSettings",
+      "dynamicSearchAdsSetting": "Resources_Campaign_DynamicSearchAdsSetting",
+      "endDateTime": null,
+      "excludedParentAssetFieldTypes": null,
+      "excludedParentAssetSetTypes": null,
+      "experimentType": null,
+      "feedTypes": null,
+      "finalUrlSuffix": null,
+      "fixedCpm": "Common__FixedCpm",
+      "frequencyCaps": "Common__FrequencyCapEntry",
+      "geoTargetTypeSetting": "Resources_Campaign_GeoTargetTypeSetting",
+      "hotelPropertyAssetSet": null,
+      "hotelSetting": "Resources_Campaign_HotelSettingInfo",
+      "id": null,
+      "keywordMatchType": null,
+      "labels": null,
+      "listingType": null,
+      "localCampaignSetting": "Resources_Campaign_LocalCampaignSetting",
+      "localServicesCampaignSettings": "Resources_Campaign_LocalServicesCampaignSettings",
+      "manualCpa": "Common__ManualCpa",
+      "manualCpc": "Common__ManualCpc",
+      "manualCpm": "Common__ManualCpm",
+      "manualCpv": "Common__ManualCpv",
+      "maximizeConversionValue": "Common__MaximizeConversionValue",
+      "maximizeConversions": "Common__MaximizeConversions",
+      "missingEuPoliticalAdvertisingDeclaration": null,
+      "name": null,
+      "networkSettings": "Resources_Campaign_NetworkSettings",
+      "optimizationGoalSetting": "Resources_Campaign_OptimizationGoalSetting",
+      "optimizationScore": null,
+      "paymentMode": null,
+      "percentCpc": "Common__PercentCpc",
+      "performanceMaxUpgrade": "Resources_Campaign_PerformanceMaxUpgrade",
+      "pmaxCampaignSettings": "Resources_Campaign_PmaxCampaignSettings",
+      "primaryStatus": null,
+      "primaryStatusReasons": null,
+      "realTimeBiddingSetting": "Common__RealTimeBiddingSetting",
+      "resourceName": null,
+      "selectiveOptimization": "Resources_Campaign_SelectiveOptimization",
+      "servingStatus": null,
+      "shoppingSetting": "Resources_Campaign_ShoppingSetting",
+      "startDateTime": null,
+      "status": null,
+      "targetCpa": "Common__TargetCpa",
+      "targetCpc": "Common__TargetCpc",
+      "targetCpm": "Common__TargetCpm",
+      "targetCpv": "Common__TargetCpv",
+      "targetImpressionShare": "Common__TargetImpressionShare",
+      "targetRoas": "Common__TargetRoas",
+      "targetSpend": "Common__TargetSpend",
+      "targetingSetting": "Common__TargetingSetting",
+      "textGuidelines": "Resources_Campaign_TextGuidelines",
+      "thirdPartyIntegrationPartners": "Common__CampaignThirdPartyIntegrationPartners",
+      "trackingSetting": "Resources_Campaign_TrackingSetting",
+      "trackingUrlTemplate": null,
+      "travelCampaignSettings": "Resources_Campaign_TravelCampaignSettings",
+      "urlCustomParameters": "Common__CustomParameter",
+      "vanityPharma": "Resources_Campaign_VanityPharma",
+      "videoBrandSafetySuitability": null,
+      "videoCampaignSettings": "Resources_Campaign_VideoCampaignSettings"
+    },
+    "Resources__CampaignBudget": {
+      "alignedBiddingStrategyId": null,
+      "amountMicros": null,
+      "deliveryMethod": null,
+      "explicitlyShared": null,
+      "hasRecommendedBudget": null,
+      "id": null,
+      "name": null,
+      "period": null,
+      "recommendedBudgetAmountMicros": null,
+      "recommendedBudgetEstimatedChangeWeeklyClicks": null,
+      "recommendedBudgetEstimatedChangeWeeklyCostMicros": null,
+      "recommendedBudgetEstimatedChangeWeeklyInteractions": null,
+      "recommendedBudgetEstimatedChangeWeeklyViews": null,
+      "referenceCount": null,
+      "resourceName": null,
+      "status": null,
+      "totalAmountMicros": null,
+      "type": null
+    }
+  }
+}

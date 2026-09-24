@@ -27,7 +27,8 @@ function campaignExamplesMarkdown(): string {
     "advertisingChannelType": "SEARCH",
     "status": "PAUSED",
     "campaignBudget": "customers/1234567890/campaignBudgets/111222333",
-    "startDate": "2025-03-01",
+    "containsEuPoliticalAdvertising": "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+    "startDateTime": "2025-03-01 00:00:00",
     "networkSettings": {
       "targetGoogleSearch": true,
       "targetSearchNetwork": true,
@@ -54,7 +55,8 @@ function campaignExamplesMarkdown(): string {
     "advertisingChannelType": "DISPLAY",
     "status": "PAUSED",
     "campaignBudget": "customers/1234567890/campaignBudgets/111222333",
-    "startDate": "2025-03-01",
+    "containsEuPoliticalAdvertising": "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+    "startDateTime": "2025-03-01 00:00:00",
     "targetCpa": {
       "targetCpaMicros": "5000000"
     }
