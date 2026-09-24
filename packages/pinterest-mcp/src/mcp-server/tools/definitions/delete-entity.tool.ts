@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
+import {
   getEntityConfig,
   getEntityTypeEnum,
   type PinterestEntityType,
@@ -126,7 +131,15 @@ export async function deleteEntityLogic(
   const removal = removalFor(input.entityType);
 
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.entityIds.length,
+        pinterestBulkBuckets.delete(input.adAccountId, input.entityType),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       deleted: false,
@@ -141,6 +154,14 @@ export async function deleteEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first archive/delete.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    pinterestBulkBuckets.delete(input.adAccountId, input.entityType)
+  );
 
   const confirmed = await elicitBulkDeleteConfirmation({
     count: input.entityIds.length,
@@ -212,8 +233,11 @@ export async function deleteEntityLogic(
  * and projects the would-be effect (an N-item archive/delete of one entity kind).
  * Pinterest has no native bulk validate, so both axes are symbolic. Pure.
  */
-function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: DeleteEntityInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((entityId, i) => {
     if (!entityId || entityId.trim().length === 0) {
       validationErrors.push({

@@ -121,6 +121,36 @@ const PARENT_ENTITY_TYPE: Record<SnapchatEntityType, SnapchatEntityType | null> 
 };
 
 /**
+ * Limiter tokens one read / one write `consume` costs (a read passes no count,
+ * i.e. `consume`'s default of 1). Exported because the bulk capacity pre-check
+ * (`tools/utils/bulk-capacity.ts`) projects a batch from exactly these costs —
+ * a change here must move the projection with it.
+ */
+export const SNAPCHAT_READ_TOKENS = 1;
+export const SNAPCHAT_WRITE_TOKENS = 3;
+
+/**
+ * Limiter consumes, in order, of ONE `getEntity(entityType)` whose ownership is
+ * not yet memoized, in the worst case: the entity's own GET (`fetchEntity`) plus
+ * one GET per ancestor `resolveOwningAccount` may walk when a level carries no
+ * `ad_account_id` — ad → ad squad → campaign, so `ad` = 3, `adGroup` = 2,
+ * `campaign` / `creative` = 1.
+ *
+ * Worst case on purpose: `owningAccountCache` makes a repeat read of a resolved
+ * parent free, but the bulk paths read their items concurrently
+ * (`Promise.all` / `Promise.allSettled`), so every item of the first wave walks
+ * the same uncached parent before any of them populates the cache, and later
+ * waves queue behind those walks. The memo cannot be counted on inside a batch.
+ */
+export function getEntityWorstCaseConsumes(entityType: SnapchatEntityType): number[] {
+  const costs = [SNAPCHAT_READ_TOKENS];
+  for (let t = PARENT_ENTITY_TYPE[entityType]; t; t = PARENT_ENTITY_TYPE[t]) {
+    costs.push(SNAPCHAT_READ_TOKENS);
+  }
+  return costs;
+}
+
+/**
  * Upper bound on targeting pages `searchTargeting` scans for a keyword. Each
  * page is one API request (and one rate-limiter token), so the scan is capped;
  * the result reports whether every page was covered.
@@ -507,7 +537,7 @@ export class SnapchatService {
     const { pathParams, items } = this.resolveCreateTarget(entityType, filters, [data]);
     await this.assertParentInBoundAccount(entityType, pathParams, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, 3);
+    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.createPath, pathParams);
 
@@ -578,7 +608,7 @@ export class SnapchatService {
   ): Promise<SnapchatEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`snapchat:default`, 3);
+    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
 
     const { mergedItem, pathParams } = await this.buildMergedUpdateItem(
       entityType,
@@ -611,7 +641,7 @@ export class SnapchatService {
     // token can reach would be deletable from a session bound to another account.
     await this.getEntity(entityType, entityId, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, 3);
+    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.deletePath, { entityId });
     return this.httpClient.delete(interpolatedPath, undefined, context);
@@ -718,7 +748,7 @@ export class SnapchatService {
     const { pathParams, items: bodyItems } = this.resolveCreateTarget(entityType, filters, items);
     await this.assertParentInBoundAccount(entityType, pathParams, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, 3);
+    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.createPath, pathParams);
 
@@ -741,7 +771,7 @@ export class SnapchatService {
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`snapchat:default`, 3);
+    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
 
     const mergedItems = await Promise.all(
       items.map(async (item) => {

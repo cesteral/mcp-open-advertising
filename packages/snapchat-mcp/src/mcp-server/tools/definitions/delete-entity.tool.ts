@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertSnapchatBulkCapacity,
+  snapchatBulkCost,
+  snapchatBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
 import {
@@ -102,7 +107,15 @@ export async function deleteEntityLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      snapchatBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.entityIds.length,
+        snapchatBulkCost.delete(input.entityType),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       deleted: false,
@@ -116,6 +129,14 @@ export async function deleteEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/delete.
+  assertSnapchatBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    snapchatBulkCost.delete(input.entityType)
+  );
 
   const confirmed = await elicitBulkDeleteConfirmation({
     count: input.entityIds.length,
@@ -190,8 +211,11 @@ export async function deleteEntityLogic(
  * and projects the would-be effect (an N-item delete of one entity kind).
  * Snapchat has no native bulk validate, so both axes are symbolic. Pure.
  */
-function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: DeleteEntityInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((entityId, i) => {
     if (!entityId || entityId.trim().length === 0) {
       validationErrors.push({

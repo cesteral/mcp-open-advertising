@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -106,7 +111,15 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        "items"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -118,6 +131,14 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first write.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+  );
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -183,8 +204,11 @@ export async function bulkUpdateEntitiesLogic(
  * projects the would-be effect (an N-item update of one entity kind). Pinterest
  * has no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
       validationErrors.push({

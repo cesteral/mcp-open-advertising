@@ -21,6 +21,15 @@ import type {
 
 export type { MetaCampaign, MetaAdSet, MetaAd, MetaAdCreative, MetaCustomAudience, MetaAdAccount };
 
+/**
+ * Limiter tokens one read / one write `consume` costs (a read passes no count,
+ * i.e. `consume`'s default of 1). Exported because the bulk capacity pre-check
+ * (`tools/utils/bulk-capacity.ts`) projects a batch from exactly these costs —
+ * a change here must move the projection with it.
+ */
+export const META_READ_TOKENS = 1;
+export const META_WRITE_TOKENS = 3;
+
 interface MetaEntityMap {
   campaign: MetaCampaign;
   adSet: MetaAdSet;
@@ -134,7 +143,7 @@ export class MetaService {
     const config = getEntityConfig(entityType);
 
     // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`meta:${adAccountId}`, 3);
+    await this.rateLimiter.consume(`meta:${adAccountId}`, META_WRITE_TOKENS);
 
     const actId = this.normalizeAccountId(adAccountId);
 
@@ -149,7 +158,7 @@ export class MetaService {
     context?: RequestContext
   ): Promise<unknown> {
     // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`meta:default`, 3);
+    await this.rateLimiter.consume(`meta:default`, META_WRITE_TOKENS);
 
     // Meta uses POST with PATCH semantics for updates
     return this.httpClient.post(`/${entityId}`, data, context);

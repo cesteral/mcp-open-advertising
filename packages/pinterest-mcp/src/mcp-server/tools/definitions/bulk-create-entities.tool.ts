@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode, assertAccountScope } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -96,7 +101,15 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        "items"
+      )
+    );
     return {
       totalRequested: 0,
       successCount: 0,
@@ -118,6 +131,14 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the first write.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+  );
 
   const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
@@ -168,8 +189,11 @@ export async function bulkCreateEntitiesLogic(
  * entity kind). Pinterest has no native bulk validate, so both axes are
  * symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkCreateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({

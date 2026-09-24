@@ -35,6 +35,15 @@ interface PinterestEntityMap {
 
 export type { PinterestCampaign, PinterestAdGroup, PinterestAd, PinterestPin };
 
+/**
+ * Limiter tokens one read / one write `consume` costs (a read passes no count,
+ * i.e. `consume`'s default of 1). Exported because the bulk capacity pre-check
+ * (`tools/utils/bulk-capacity.ts`) projects a batch from exactly these costs —
+ * a change here must move the projection with it.
+ */
+export const PINTEREST_READ_TOKENS = 1;
+export const PINTEREST_WRITE_TOKENS = 3;
+
 /** Pinterest v5 list response shape — cursor-based pagination */
 interface PinterestListResponse {
   items: unknown[];
@@ -152,7 +161,7 @@ export class PinterestService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.createPath, { adAccountId: filters.adAccountId });
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
+    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
 
     if (!config.batchWrite) {
       // `POST /v5/pins` takes a single `PinCreate` object and returns the Pin.
@@ -173,7 +182,7 @@ export class PinterestService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { adAccountId: filters.adAccountId, entityId });
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
+    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
 
     // Single-entity endpoints (e.g. /v5/pins/{entityId}) expect a flat body
     const isSingleEntity = config.updatePath.includes("{entityId}");
@@ -243,7 +252,7 @@ export class PinterestService {
       );
     }
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
+    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
 
     const settled = await Promise.allSettled(
       entityIds.map((id) => {

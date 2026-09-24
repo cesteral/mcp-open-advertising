@@ -54,6 +54,15 @@ type TikTokUpdateEntityInputMap = {
   [K in TikTokEntityType]: Partial<TikTokEntityMap[K]> & Record<string, unknown>;
 };
 
+/**
+ * Limiter tokens one read / one write `consume` costs (a read passes no count,
+ * i.e. `consume`'s default of 1). Exported because the bulk capacity pre-check
+ * (`tools/utils/bulk-capacity.ts`) projects a batch from exactly these costs —
+ * a change here must move the projection with it.
+ */
+export const TIKTOK_READ_TOKENS = 1;
+export const TIKTOK_WRITE_TOKENS = 3;
+
 export const TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE =
   "TikTok Marketing API v1.3 has no copy/duplicate endpoint for campaigns, ad groups or ads " +
   "(none exists in TikTok's official Business API SDK). To duplicate, read the source with " +
@@ -174,7 +183,7 @@ export class TikTokService {
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, 3);
+    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.createPath,
@@ -191,7 +200,7 @@ export class TikTokService {
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, 3);
+    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
 
     // TikTok uses POST for updates, with entity ID in body
     return this.httpClient.post(
@@ -233,7 +242,7 @@ export class TikTokService {
       );
     }
 
-    await this.rateLimiter.consume(`tiktok:default`, 3);
+    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.statusUpdatePath,
