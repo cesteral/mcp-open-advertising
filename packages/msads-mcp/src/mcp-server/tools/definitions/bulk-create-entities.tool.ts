@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMsAdsChunkedBulkCapacity,
+  chunkedBulkCapacityDryRunError,
+  withBulkCapacityError,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
@@ -87,7 +92,10 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      chunkedBulkCapacityDryRunError(input.entityType, input.items.length, "items")
+    );
     return {
       results: [],
       entityType: input.entityType,
@@ -108,6 +116,10 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the first
+  // Add. One 3-token msads:write request per batchLimit-sized chunk.
+  assertMsAdsChunkedBulkCapacity(TOOL_NAME, input.entityType, input.items.length);
 
   const { msadsService } = resolveSessionServices(sdkContext);
 

@@ -3,6 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMsAdsBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_STATUS_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import type { MsAdsEntityType } from "../utils/entity-mapping.js";
 import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
@@ -107,7 +113,15 @@ export async function bulkUpdateStatusLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(
+        TOOL_NAME,
+        input.entityIds.length,
+        ONE_STATUS_WRITE_PER_ITEM,
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       results: [],
@@ -130,6 +144,10 @@ export async function bulkUpdateStatusLogic(
       `Invalid bulk status update: ${parentErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first Update. One 1-token msads:write request per entity.
+  assertMsAdsBulkCapacity(TOOL_NAME, input.entityIds.length, ONE_STATUS_WRITE_PER_ITEM);
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,

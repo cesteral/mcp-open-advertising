@@ -3,6 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertAmazonDspBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  READ_THEN_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import {
   elicitBidChangeConfirmation,
@@ -105,7 +111,15 @@ export async function adjustBidsLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = withBulkCapacityError(
+      buildAdjustBidsEffectDryRun(input.adjustments),
+      bulkCapacityDryRunError(
+        TOOL_NAME,
+        input.adjustments.length,
+        READ_THEN_WRITE_PER_ITEM,
+        "adjustments"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -118,6 +132,11 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first read. Per item: 1 read (amazon_dsp:read) + 1 write
+  // (amazon_dsp:write, 3 tokens), see AmazonDspService.adjustBids.
+  assertAmazonDspBulkCapacity(TOOL_NAME, input.adjustments.length, READ_THEN_WRITE_PER_ITEM);
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,

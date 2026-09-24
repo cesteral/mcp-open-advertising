@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMsAdsChunkedBulkCapacity,
+  chunkedBulkCapacityDryRunError,
+  withBulkCapacityError,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
@@ -96,7 +101,10 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      chunkedBulkCapacityDryRunError(input.entityType, input.items.length, "items")
+    );
     return {
       confirmed: true,
       results: [],
@@ -121,6 +129,11 @@ export async function bulkUpdateEntitiesLogic(
   // MSAds items are flat records (e.g. { Id: 123, DailyBudget: 100 }) — the
   // whole row IS the payload, no .data wrapper.
   const items = input.items as Array<Record<string, unknown>>;
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first Update. One 3-token msads:write request per
+  // batchLimit-sized chunk.
+  assertMsAdsChunkedBulkCapacity(TOOL_NAME, input.entityType, items.length);
+
   const confirmed = await elicitBulkMutationConfirmation({
     count: items.length,
     entityLabel: input.entityType,

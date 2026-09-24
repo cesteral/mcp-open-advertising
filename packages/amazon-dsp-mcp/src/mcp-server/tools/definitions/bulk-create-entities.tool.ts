@@ -4,6 +4,12 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertAmazonDspBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getCreatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
@@ -97,7 +103,10 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM, "items")
+    );
     return {
       totalRequested: 0,
       successCount: 0,
@@ -119,6 +128,10 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the first
+  // write. One 3-token amazon_dsp:write per item.
+  assertAmazonDspBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
   const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.profileId, boundProfileId, "profileId");
