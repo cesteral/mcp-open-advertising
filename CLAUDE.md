@@ -199,7 +199,7 @@ The card's `operational` block (#201) answers what a client needs before pointin
 
 ## Platform-Facts Ledger
 
-`platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 19 facts: the versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, and the behavioural constraints in Server-Specific Notes above. Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).
+`platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 41 facts: the versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, the behavioural constraints in Server-Specific Notes above, and each server's default rate limit (`<platform>.rate_limit_default`, pinned to the `default(N)` literal so a default cannot be raised without touching its fact). No platform quota could be sourced from a primary document, so every default was kept and the snippet-level figures are recorded as `unverified` — confirm them on the vendor page before raising a default. Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).
 
 Two of these have already rotted. `linkedin-mcp` pinned `LinkedIn-Version: 202409` for roughly a year past sunset with every call erroring and nothing detecting it (#206/#209); Google's v4 Discovery rev 20260608 removed campaign + insertion-order assigned targeting and broke all CI (PR #79). One was caught loudly, the other was silent for a year, and the difference was luck about which fact happened to be fetched at build time.
 
