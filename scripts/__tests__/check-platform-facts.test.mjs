@@ -251,3 +251,32 @@ describe("freshness", () => {
     expect(stale[0].days).toBeGreaterThan(270);
   });
 });
+
+describe("where the freshness half runs", () => {
+  const release = readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf-8");
+  const fleetLane = release.slice(
+    release.indexOf("\n  release:\n"),
+    release.indexOf("\n  release-contracts:\n")
+  );
+  const contractLane = release.slice(release.indexOf("\n  release-contracts:\n"));
+
+  it("gates the fleet release before anything is published", () => {
+    // #202: a stale load-bearing fact blocks a release-current claim. Without
+    // this gate, freshness is only ever reported by the weekly job.
+    const gate = fleetLane.indexOf("check-platform-facts.mjs --freshness");
+    const publish = fleetLane.indexOf("publish-all.sh");
+    expect(gate, "the v* lane no longer runs the freshness gate").toBeGreaterThan(0);
+    expect(publish).toBeGreaterThan(0);
+    expect(gate, "the freshness gate must run before publish").toBeLessThan(publish);
+  });
+
+  it("does not gate the contract-library lane, which relies on no platform fact", () => {
+    expect(contractLane).not.toContain("check-platform-facts.mjs");
+  });
+
+  it("CLAUDE.md states the ledger's real size", () => {
+    // It said "19 facts" for a week after #210 added nine.
+    const claude = readFileSync(join(ROOT, "CLAUDE.md"), "utf-8");
+    expect(claude).toContain(`— ${ledger.facts.length} facts:`);
+  });
+});
