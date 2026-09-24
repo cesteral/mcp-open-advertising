@@ -5,15 +5,18 @@
  * Dry-run helpers for the CM360 `cm360_update_entity` tool. R4-U2 wiring.
  *
  * CM360 exposes NO native validate / preview / draft mode for entity
- * mutations — the dfareporting `*.update` endpoints are plain PUT replacements
- * with no simulator. So both axes here are SYMBOLIC:
+ * mutations — the dfareporting `*.patch` endpoint the tool writes through has
+ * no simulator. So both axes here are SYMBOLIC:
  *
  * - **Validation** runs a small set of business rules (status-boolean type
  *   checks, the `active`/`archived` mutual-exclusion CM360 enforces) against
  *   the requested patch. `validationSource: "symbolic"`.
  * - **Expected post-state** reads the current entity through the read partner
- *   and shallow-merges the patch (CM360 PUT replaces the whole object), then
- *   normalizes. `expectedStateSource: "server_symbolic_apply"`.
+ *   and applies the patch with `mergeCm360Patch` — the same semantics as the
+ *   real `PATCH userprofiles/{profileId}/{collection}?id=` call, so fields the
+ *   caller did not send are preserved in the prediction exactly as they are
+ *   on the platform — then normalizes.
+ *   `expectedStateSource: "server_symbolic_apply"`.
  */
 
 import { assertGovernedDryRunResult } from "@cesteral/shared";
@@ -61,7 +64,8 @@ export function symbolicValidate(data: Record<string, unknown>): DryRunValidatio
 }
 
 /**
- * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
+ * Symbolic apply: merge `data` into `preState` with CM360 PATCH semantics
+ * (`mergeCm360Patch`), then normalize. Pure
  * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
  * mirrors what the dry-run handler does in-tool.
  */
@@ -183,6 +187,15 @@ export async function runCm360UpdateDryRun(
   context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
+  // Mirror the real-write guard in `updateEntityLogic`: an empty patch is
+  // rejected before the API is called, so the dry-run must not predict success.
+  if (Object.keys(input.data).length === 0) {
+    validationErrors.push({
+      code: "EMPTY_UPDATE",
+      message: "`data` must contain at least one field to update a CM360 entity.",
+      field: "data",
+    });
+  }
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";

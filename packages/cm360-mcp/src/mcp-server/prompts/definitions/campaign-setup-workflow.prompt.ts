@@ -170,7 +170,7 @@ List all entities to confirm structure:
 | Placement requires a site | Create or reuse site first |
 | Ad requires both placement and creative | Create both before linking |
 | Creative size must match placement size | Ensure width/height are identical |
-| Updates use PUT semantics | Fetch full object before updating |
+| Updates use PATCH semantics | Send only changed fields; arrays are replaced whole |
 | Only creative + floodlightActivity can be deleted | Other entities: archive/deactivate |
 `;
 }

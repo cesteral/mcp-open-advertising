@@ -134,7 +134,7 @@ CM360 entities managed by this server:
 | `floodlightActivity`      | floodlightActivities     | Yes             | Conversion tracking       |
 | `floodlightConfiguration` | floodlightConfigurations | No              | Floodlight setup          |
 
-All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection}[/{id}]`
+All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection}[/{id}]`, plus `PATCH /userprofiles/{profileId}/{collection}?id={id}` for partial updates
 
 ---
 
@@ -150,16 +150,16 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 
 ### Core CRUD
 
-| Tool                    | Description                                           | Key Parameters                                                     |
-| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
-| `cm360_list_entities`   | List entities with filters/pagination                 | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
-| `cm360_get_entity`      | Get a single entity by ID                             | `profileId`, `entityType`, `entityId`                              |
-| `cm360_create_entity`   | Create any supported entity                           | `profileId`, `entityType`, `data`                                  |
-| `cm360_update_entity`   | Update entity (PUT semantics -- full object required) | `profileId`, `entityType`, `entityId`, `data`                      |
-| `cm360_delete_entity`   | Delete entity (floodlightActivity only)               | `profileId`, `entityType`, `entityId`                              |
-| `cm360_validate_entity` | Dry-run validate payload (no API call)                | `entityType`, `mode`, `data`                                       |
+| Tool                    | Description                                            | Key Parameters                                                     |
+| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ |
+| `cm360_list_entities`   | List entities with filters/pagination                  | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
+| `cm360_get_entity`      | Get a single entity by ID                              | `profileId`, `entityType`, `entityId`                              |
+| `cm360_create_entity`   | Create any supported entity                            | `profileId`, `entityType`, `data`                                  |
+| `cm360_update_entity`   | Update entity (PATCH semantics -- send changed fields) | `profileId`, `entityType`, `entityId`, `data`                      |
+| `cm360_delete_entity`   | Delete entity (floodlightActivity only)                | `profileId`, `entityType`, `entityId`                              |
+| `cm360_validate_entity` | Dry-run validate payload (no API call)                 | `entityType`, `mode`, `data`                                       |
 
-**CM360 update pattern**: CM360 uses PUT (full replacement), not PATCH. Always fetch the current entity with `cm360_get_entity` first, modify the fields you need, then pass the complete object to `cm360_update_entity`.
+**CM360 update pattern**: `cm360_update_entity` and `cm360_bulk_update_entities` call CM360's `PATCH ?id=` endpoint (v5 `{collection}.patch`), so send only the fields you want to change -- omitted fields keep their current values, nested objects are merged, and arrays are replaced whole. Use `dry_run: true` to preview the merged result. Only `cm360_bulk_update_status` uses the full-replacement `PUT`, and it GETs each entity first and sends the whole object back.
 
 ### Reporting
 

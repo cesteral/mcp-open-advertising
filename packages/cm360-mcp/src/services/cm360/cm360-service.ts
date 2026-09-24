@@ -151,6 +151,13 @@ export class CM360Service {
     }) as Promise<CM360EntityMap[T]>;
   }
 
+  /**
+   * Full replacement — dfareporting v5 `{collection}.update`
+   * (`PUT userprofiles/{profileId}/{collection}`, entity id in the body).
+   * Any field absent from `data` is reset by CM360, so this is only safe with
+   * a complete entity object (e.g. the read-modify-write in
+   * {@link bulkUpdateStatus}). Partial updates must use {@link patchEntity}.
+   */
   async updateEntity<T extends CM360EntityType>(
     entityType: T,
     profileId: string,
@@ -164,6 +171,32 @@ export class CM360Service {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+    }) as Promise<CM360EntityMap[T]>;
+  }
+
+  /**
+   * Partial update — dfareporting v5 `{collection}.patch`
+   * (`PATCH userprofiles/{profileId}/{collection}?id={entityId}`, `id` a
+   * required query parameter on all 8 entity types). Only the fields present
+   * in `patch` change; everything else on the entity is preserved. The id is
+   * also written into the body so it can never disagree with the query.
+   * Returns the full updated entity.
+   */
+  async patchEntity<T extends CM360EntityType>(
+    entityType: T,
+    profileId: string,
+    entityId: string,
+    patch: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<CM360EntityMap[T]> {
+    await this.rateLimiter.consume("cm360");
+    const config = getEntityConfig(entityType);
+    const query = new URLSearchParams({ id: entityId }).toString();
+    const path = `/userprofiles/${profileId}/${config.apiCollection}?${query}`;
+    return this.httpClient.fetch(path, context, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...patch, id: entityId }),
     }) as Promise<CM360EntityMap[T]>;
   }
 
@@ -252,8 +285,7 @@ export class CM360Service {
   > {
     const bulkResults = await executeBulkConcurrent(
       items,
-      (item) =>
-        this.updateEntity(entityType, profileId, { ...item.data, id: item.entityId }, context),
+      (item) => this.patchEntity(entityType, profileId, item.entityId, item.data, context),
       { logger: this.logger }
     );
     return bulkResults.map((r, i) => ({
@@ -265,10 +297,11 @@ export class CM360Service {
   }
 
   /**
-   * Read-modify-write status update. CM360's PUT semantics replace the entire
-   * resource, so each status flip needs a fresh GET to avoid clobbering other
-   * fields. The caller provides the per-entity-type status mapping via the
-   * `applyStatus` transform.
+   * Read-modify-write status update: GET the full entity, flip its status
+   * fields, then PUT the complete object back via {@link updateEntity}. The PUT
+   * is a full replacement, which is safe here only because the body is the
+   * whole entity just read. The caller provides the per-entity-type status
+   * mapping via the `applyStatus` transform.
    */
   async bulkUpdateStatus<T extends CM360EntityType>(
     entityType: T,

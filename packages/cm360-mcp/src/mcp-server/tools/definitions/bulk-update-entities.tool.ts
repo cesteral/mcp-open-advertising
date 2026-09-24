@@ -27,7 +27,7 @@ const TOOL_NAME = "cm360_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update CM360 Entities";
 const TOOL_DESCRIPTION = `Batch update multiple CM360 entities of the same type.
 
-Each item must include the id field (CM360 uses PUT/replace semantics). Loops individual update calls with rate limiting. Max 50 items per call.`;
+Items are partial updates (CM360 PATCH semantics): send only the fields to change in \`data\`; omitted fields keep their current values. Loops individual PATCH calls with rate limiting. Max 50 items per call.`;
 
 const EFFECT_KIND = "entities_updated";
 
@@ -39,7 +39,9 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(
         z.object({
           entityId: z.string().min(1).describe("Entity ID to update"),
-          data: z.record(z.any()).describe("Full entity data including id field"),
+          data: z
+            .record(z.any())
+            .describe("Fields to change (PATCH semantics — omitted fields are preserved)"),
         })
       )
       .min(1)
@@ -119,7 +121,7 @@ export async function bulkUpdateEntitiesLogic(
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
-    summary: "Applying field updates across multiple CM360 entities (PUT/replace semantics).",
+    summary: "Applying partial field updates (PATCH) across multiple CM360 entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
     sdkContext,
@@ -308,11 +310,11 @@ export const bulkUpdateEntitiesTool = {
         items: [
           {
             entityId: "111",
-            data: { id: "111", name: "Campaign A - Updated", advertiserId: "789" },
+            data: { name: "Campaign A - Updated" },
           },
           {
             entityId: "222",
-            data: { id: "222", name: "Campaign B - Updated", advertiserId: "789" },
+            data: { name: "Campaign B - Updated" },
           },
         ],
       },

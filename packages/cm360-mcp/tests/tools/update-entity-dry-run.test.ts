@@ -17,6 +17,7 @@ import {
 import {
   buildCm360Snapshot,
   captureCm360Snapshot,
+  mergeCm360Patch,
   snapshotFromCm360Entity,
 } from "../../src/mcp-server/tools/utils/capture-snapshot.js";
 
@@ -130,6 +131,34 @@ describe("runCm360UpdateDryRun", () => {
     expect(result.validationErrors[0].code).toBe("INVALID_STATUS");
   });
 
+  it("preserves fields the patch omits (PATCH semantics, not full replacement)", async () => {
+    // A rename must not predict that schedule / status / accountId vanish —
+    // the real call is PATCH ?id=, which keeps every field not sent.
+    const result = await runCm360UpdateDryRun(
+      { entityType: "campaign", profileId: "p_1", entityId: "camp_1", data: { name: "Renamed" } },
+      fakeService(campaignEntity({ archived: true })),
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(true);
+    expect(result.expectedPostState!.displayName).toBe("Renamed");
+    expect(result.expectedPostState!.accountId).toBe("acct_1");
+    expect(result.expectedPostState!.status.canonical).toBe("archived");
+    expect(result.expectedPostState!.schedule).toEqual({
+      startAt: "2026-01-01",
+      endAt: "2026-12-31",
+    });
+  });
+
+  it("predicts failure for an empty patch, matching the real-write guard", async () => {
+    const result = await runCm360UpdateDryRun(
+      { entityType: "campaign", profileId: "p_1", entityId: "camp_1", data: {} },
+      fakeService(campaignEntity()),
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(false);
+    expect(result.validationErrors.map((e) => e.code)).toContain("EMPTY_UPDATE");
+  });
+
   it("fails the call when the read partner cannot resolve the entity", async () => {
     // The tool declares requiresSimulation:true — a dry-run that cannot
     // produce an expected post-state must fail the call, not return an
@@ -182,8 +211,39 @@ describe("resolveCm360DispatchedCapability", () => {
   });
 });
 
+describe("mergeCm360Patch (CM360 PATCH semantics)", () => {
+  it("keeps fields absent from the patch", () => {
+    expect(mergeCm360Patch({ a: 1, b: 2 }, { b: 3 })).toEqual({ a: 1, b: 3 });
+  });
+
+  it("merges nested objects recursively", () => {
+    const current = { pricingSchedule: { pricingType: "CPM", capCostOption: "NONE" }, x: 1 };
+    expect(mergeCm360Patch(current, { pricingSchedule: { pricingType: "CPC" } })).toEqual({
+      pricingSchedule: { pricingType: "CPC", capCostOption: "NONE" },
+      x: 1,
+    });
+  });
+
+  it("replaces arrays, scalars and null wholesale", () => {
+    const current = { ids: [1, 2, 3], o: { k: 1 }, s: "a" };
+    expect(mergeCm360Patch(current, { ids: [9], o: null, s: "b" })).toEqual({
+      ids: [9],
+      o: null,
+      s: "b",
+    });
+  });
+
+  it("does not mutate its inputs", () => {
+    const current = { o: { k: 1 } };
+    const patch = { o: { j: 2 } };
+    mergeCm360Patch(current, patch);
+    expect(current).toEqual({ o: { k: 1 } });
+    expect(patch).toEqual({ o: { j: 2 } });
+  });
+});
+
 describe("applyCm360Patch", () => {
-  it("shallow-merges the patch over pre-state", () => {
+  it("merges the patch over pre-state", () => {
     const snapshot = applyCm360Patch("ad", "ad_1", adEntity(), { active: false });
     expect(snapshot!.status.canonical).toBe("paused");
     expect(snapshot!.displayName).toBe("Sample Ad");
@@ -199,7 +259,7 @@ describe("buildCm360Snapshot / snapshotFromCm360Entity", () => {
     expect(snapshotFromCm360Entity("ad", "ad_1", {})).toBeUndefined();
   });
 
-  it("snapshotFromCm360Entity normalizes the entity a PUT returns", () => {
+  it("snapshotFromCm360Entity normalizes the entity a PATCH returns", () => {
     const snapshot = snapshotFromCm360Entity(
       "campaign",
       "camp_1",

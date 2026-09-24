@@ -69,7 +69,7 @@ export function getBulkOperationsWorkflowMessage(args?: Record<string, string>):
 
 ## Batch Update
 
-Each item must contain the **full entity object** (PUT semantics).
+Each item is a **partial update** (PATCH semantics) — send only the fields to change; omitted fields are preserved.
 
 \`\`\`json
 {
@@ -78,8 +78,8 @@ Each item must contain the **full entity object** (PUT semantics).
     "profileId": "${profileId}",
     "entityType": "campaign",
     "items": [
-      { "entityId": "CID_1", "data": { "...full object..." } },
-      { "entityId": "CID_2", "data": { "...full object..." } }
+      { "entityId": "CID_1", "data": { "name": "Campaign 1 - Renamed" } },
+      { "entityId": "CID_2", "data": { "name": "Campaign 2 - Renamed" } }
     ]
   }
 }
@@ -91,7 +91,7 @@ Each item must contain the **full entity object** (PUT semantics).
 |-------|----------|
 | Max 50 items per request | Split into batches |
 | Partial failures possible | Check results array for individual errors |
-| PUT semantics for updates | Fetch all entities first, then merge changes |
+| Arrays are replaced by PATCH, not merged | Fetch the entity and send the full array when changing one element |
 | Status cascading | Deactivating parent affects children |
 `;
 }

@@ -304,6 +304,88 @@ describe("CM360Service", () => {
   });
 
   // ==========================================================================
+  // patchEntity — dfareporting v5 `{collection}.patch`
+  // ==========================================================================
+
+  describe("patchEntity", () => {
+    it("PATCHes the collection with the entity id as the required `id` query param", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ id: "789" });
+
+      await service.patchEntity("campaign", "12345", "789", { name: "Updated" });
+
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/userprofiles/12345/campaigns?id=789");
+      expect(options.method).toBe("PATCH");
+      expect(options.headers).toMatchObject({ "Content-Type": "application/json" });
+    });
+
+    it("sends only the caller's fields (plus the id) — no full-object replacement", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.patchEntity("ad", "12345", "345678", { active: false });
+
+      const [, , options] = httpClient.fetch.mock.calls[0];
+      expect(JSON.parse(options.body)).toEqual({ active: false, id: "345678" });
+    });
+
+    it("forces the body id to the entityId so it can never disagree with the query", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.patchEntity("ad", "12345", "345678", { id: "999", active: true });
+
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/userprofiles/12345/ads?id=345678");
+      expect(JSON.parse(options.body)).toEqual({ id: "345678", active: true });
+    });
+
+    it.each([
+      ["campaign", "campaigns"],
+      ["placement", "placements"],
+      ["ad", "ads"],
+      ["creative", "creatives"],
+      ["site", "sites"],
+      ["advertiser", "advertisers"],
+      ["floodlightActivity", "floodlightActivities"],
+      ["floodlightConfiguration", "floodlightConfigurations"],
+    ] as const)("uses PATCH ?id= for %s (v5 %s.patch)", async (entityType, collection) => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.patchEntity(entityType, "p1", "42", { name: "n" });
+
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe(`/userprofiles/p1/${collection}?id=42`);
+      expect(options.method).toBe("PATCH");
+    });
+
+    it("URL-encodes the id query value", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.patchEntity("campaign", "p1", "1&x=2", { name: "n" });
+
+      const [path] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/userprofiles/p1/campaigns?id=1%26x%3D2");
+    });
+
+    it("returns the entity the PATCH responds with", async () => {
+      const full = { id: "789", name: "Updated", advertiserId: "999", archived: false };
+      httpClient.fetch.mockResolvedValueOnce(full);
+
+      const result = await service.patchEntity("campaign", "12345", "789", { name: "Updated" });
+
+      expect(result).toEqual(full);
+    });
+
+    it("consumes the rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.patchEntity("campaign", "12345", "789", { name: "x" });
+
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ==========================================================================
   // deleteEntity
   // ==========================================================================
 
@@ -456,7 +538,7 @@ describe("CM360Service", () => {
   // ==========================================================================
 
   describe("bulkUpdateEntities", () => {
-    it("merges entityId into the PUT body for each item", async () => {
+    it("PATCHes each item at ?id={entityId} with only the caller's fields", async () => {
       httpClient.fetch.mockResolvedValue({ id: "ok" });
 
       await service.bulkUpdateEntities("campaign", "p1", [
@@ -465,9 +547,26 @@ describe("CM360Service", () => {
       ]);
 
       expect(httpClient.fetch).toHaveBeenCalledTimes(2);
-      const bodies = httpClient.fetch.mock.calls.map((c: any[]) => JSON.parse(c[2].body));
+      const calls = httpClient.fetch.mock.calls as any[][];
+      expect(calls.map((c) => c[0])).toEqual([
+        "/userprofiles/p1/campaigns?id=c-1",
+        "/userprofiles/p1/campaigns?id=c-2",
+      ]);
+      for (const call of calls) {
+        expect(call[2].method).toBe("PATCH");
+      }
+      const bodies = calls.map((c) => JSON.parse(c[2].body));
       expect(bodies[0]).toEqual({ name: "new-1", id: "c-1" });
       expect(bodies[1]).toEqual({ name: "new-2", id: "c-2" });
+    });
+
+    it("never issues a full-replacement PUT", async () => {
+      httpClient.fetch.mockResolvedValue({ id: "ok" });
+
+      await service.bulkUpdateEntities("ad", "p1", [{ entityId: "a-1", data: { active: false } }]);
+
+      const methods = (httpClient.fetch.mock.calls as any[][]).map((c) => c[2]?.method);
+      expect(methods).not.toContain("PUT");
     });
 
     it("collects partial failures with the entityId carried through", async () => {
@@ -507,6 +606,24 @@ describe("CM360Service", () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ entityId: "c-1", success: true });
       expect(result[1]).toMatchObject({ entityId: "c-2", success: true });
+    });
+
+    it("PUTs back the FULL entity it just read (full replacement is safe only with the whole object)", async () => {
+      const current = { id: "c-1", name: "X", advertiserId: "adv", startDate: "2026-01-01" };
+      httpClient.fetch.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+
+      await service.bulkUpdateStatus("campaign", "p1", ["c-1"], "ARCHIVED", (cur) => ({
+        ...cur,
+        archived: true,
+      }));
+
+      const [getPath, , getOptions] = httpClient.fetch.mock.calls[0];
+      expect(getPath).toBe("/userprofiles/p1/campaigns/c-1");
+      expect(getOptions).toBeUndefined();
+      const [putPath, , putOptions] = httpClient.fetch.mock.calls[1];
+      expect(putPath).toBe("/userprofiles/p1/campaigns");
+      expect(putOptions.method).toBe("PUT");
+      expect(JSON.parse(putOptions.body)).toEqual({ ...current, archived: true });
     });
 
     it("reports failure if the GET step throws", async () => {
