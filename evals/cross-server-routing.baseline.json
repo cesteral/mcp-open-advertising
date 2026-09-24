@@ -1,22 +1,22 @@
 {
-  "$comment": "Recorded baselines for the cross-server routing eval (#205 Part 2). A router with an entry here is compared against it and fails the run on regression; a router with no entry reports `unmeasured` and does not fail. Adding an entry requires an actual run \u2014 see $unmeasured below.",
+  "$comment": "Recorded baselines for the cross-server routing eval (#205 Part 2). A router with an entry here is compared against it and fails the run on regression; a router with no entry reports `unmeasured` and does not fail. Adding an entry requires an actual run — see $unmeasured below.",
   "schemaVersion": 1,
   "routers": {
     "lexical": {
-      "measuredAt": "2026-09-17",
+      "measuredAt": "2026-09-24",
       "cases": 20,
       "correct": 7,
       "accuracy": 0.35,
       "wrongPlatform": 7,
       "wrongOperation": 6,
       "unsafePicks": 2,
-      "note": "The deterministic control: the fleet's own shipped scorer (packages/shared/src/utils/tool-search.ts) pointed at the merged 314-tool catalog instead of one server's registry. Measured by running it, not estimated. This is the floor \u2014 35% accuracy, and it calls a destructive tool on 2 of 3 requests that name no platform at all. Any model number is only meaningful against this."
+      "note": "The deterministic control: the fleet's own shipped scorer (packages/shared/src/utils/tool-search.ts) pointed at the merged 314-tool catalog instead of one server's registry. Measured by running it, not estimated. This is the floor — 35% accuracy, and it calls a destructive tool on 2 of 3 requests that name no platform at all. Any model number is only meaningful against this. Re-measured 2026-09-24 after the ranker started splitting names into words and reading 'remove' as 'delete': the totals are unchanged (7/20 correct, 2 unsafe picks) and the same case ids fail. Some wrong picks changed; e.g. explicit-tiktok-delete now goes to msads_manage_ad_extensions instead of gads_adjust_bids."
     }
   },
   "$unmeasured": {
     "anthropic:claude-sonnet-5": {
-      "reason": "No model run has happened. The harness was authored in an environment with no Anthropic credential \u2014 api.anthropic.com is reachable (an unauthenticated probe returns 401, not a proxy 403), but nothing was measured.",
-      "howToRecord": "Run it locally when tool names, titles or descriptions change \u2014 this is deliberately not on a schedule, so it never bills unattended. With the Anthropic CLI: `ant auth login`, then `unset ANTHROPIC_API_KEY`, then `set -a; eval \"$(ant auth print-credentials --env)\"; set +a`, then `pnpm eval:routing:model`. An exported ANTHROPIC_API_KEY works instead. Read the per-case failures, then add a `routers` entry above with those numbers and the date of the run. Do not backdate `measuredAt`, and do not record a baseline from a run whose failures you have not read \u2014 a baseline says this is the standard, not just the last number seen.",
+      "reason": "No model run has happened. The harness was authored in an environment with no Anthropic credential — api.anthropic.com is reachable (an unauthenticated probe returns 401, not a proxy 403), but nothing was measured.",
+      "howToRecord": "Run it locally when tool names, titles or descriptions change — this is deliberately not on a schedule, so it never bills unattended. With the Anthropic CLI: `ant auth login`, then `unset ANTHROPIC_API_KEY`, then `set -a; eval \"$(ant auth print-credentials --env)\"; set +a`, then `pnpm eval:routing:model`. An exported ANTHROPIC_API_KEY works instead. Read the per-case failures, then add a `routers` entry above with those numbers and the date of the run. Do not backdate `measuredAt`, and do not record a baseline from a run whose failures you have not read — a baseline says this is the standard, not just the last number seen.",
       "$why": "Writing a plausible accuracy here would be exactly the confidently-wrong claim #203 removed from the manifest and #202 removed from the platform-facts ledger. An unmeasured router reports `unmeasured` and exits 0; it never silently passes as measured."
     }
   }

@@ -306,17 +306,15 @@ describe("scoring weights and their documented quirks", () => {
     expect(scoreOf(results, "x_zulu2")).toBe(1);
   });
 
-  it("treats a whole tool name as ONE token — underscores are word characters", () => {
-    // `tokenize` splits on /[^a-z0-9_]+/, and `_` is INSIDE that class, so
-    // "alpha_beta" is a single token rather than ["alpha", "beta"]. Two
-    // consequences the issue's write-up did not have: the `break` in the name
-    // loop is dead code (there is never a second name token to reach), and the
-    // substring test runs against the ENTIRE name.
+  it("splits a tool name into its words, and scores a name once per query word", () => {
+    // Names used to be ONE token, because `_` is a word character in the
+    // tokenizer. Only names are split now; descriptions keep `_` so an enum
+    // like SINGLE_IMAGE_AD stays one token (see the "ad" test below).
     expect(run([tool("alpha_beta", "Zulu", "zulu")], "alpha")[0].score).toBe(5);
     expect(run([tool("alpha_beta", "Zulu", "zulu")], "beta")[0].score).toBe(5);
-    // The name weight therefore accumulates per QUERY token, not per name token.
+    // Name weight accumulates per QUERY word that matches some name word...
     expect(run([tool("alpha_beta", "Zulu", "zulu")], "alpha beta")[0].score).toBe(10);
-    // A repeated name token still scores once, because there is only one token.
+    // ...but a name repeating a word still pays one query word only once.
     expect(run([tool("alpha_alpha", "Zulu", "zulu")], "alpha")[0].score).toBe(5);
   });
 
@@ -325,15 +323,44 @@ describe("scoring weights and their documented quirks", () => {
     expect(run([tool("x_zulu", "Alpha Alpha", "alpha alpha alpha")], "alpha")[0].score).toBe(9);
   });
 
-  it("matches names by substring in EITHER direction, across the whole name", () => {
-    // Why `delete an ad group` hands the full name weight to `tiktok_adjust_bids`.
-    expect(run([tool("x_adjust", "Zulu", "zulu")], "ad")[0].score).toBe(5);
-    // And the blast radius is wider than "ad hits adgroup/advertiser/ads": because
-    // the name is one token, "ad" also matches anything containing it ANYWHERE —
-    // including the "ad" inside "downloAD" and "uploAD". Verified live: on
-    // meta-mcp the query "ad" scores meta_download_report 5 on the name alone.
-    expect(run([tool("x_download_report", "Zulu", "zulu")], "ad")[0].score).toBe(5);
-    expect(run([tool("x_upload_video", "Zulu", "zulu")], "ad")[0].score).toBe(5);
+  it("does not let a 2-character query word match inside a longer name word", () => {
+    // The old rule matched substrings in EITHER direction across the whole
+    // name, so "ad" scored +5 on `adjust`, `download` and `upload` — which is
+    // how `delete an ad group` used to rank tiktok_adjust_bids first.
+    expect(run([tool("x_adjust", "Zulu", "zulu")], "ad")).toHaveLength(0);
+    expect(run([tool("x_download_report", "Zulu", "zulu")], "ad")).toHaveLength(0);
+    expect(run([tool("x_upload_video", "Zulu", "zulu")], "ad")).toHaveLength(0);
+    // The word "ad" itself still matches.
+    expect(run([tool("x_get_ad_preview", "Zulu", "zulu")], "ad")[0].score).toBe(5);
+  });
+
+  it("matches a name word by prefix only from 3 characters", () => {
+    expect(run([tool("x_campaigns", "Zulu", "zulu")], "camp")[0].score).toBe(5);
+    expect(run([tool("x_campaigns", "Zulu", "zulu")], "ca")).toHaveLength(0);
+    // One-directional: a query word longer than the name word is not a match.
+    expect(run([tool("x_camp", "Zulu", "zulu")], "campaign")).toHaveLength(0);
+  });
+
+  it("folds simple plurals in names and titles, but not descriptions", () => {
+    expect(run([tool("x_create_entity", "Zulu", "zulu")], "entities")[0].score).toBe(5);
+    expect(run([tool("x_zulu", "Campaigns", "zulu")], "campaign")[0].score).toBe(3);
+    // Folding descriptions let "deletes" in cm360_delete_report_schedule's prose
+    // count as "delete" and tie cm360's delete-a-campaign case, so it is off there.
+    expect(run([tool("x_zulu", "Zulu", "reports")], "report")).toHaveLength(0);
+  });
+
+  it("reads a small set of query synonyms as the word tool names use", () => {
+    // "remove" → "delete" is the synonym gap #205 recorded on dv360 and ttd.
+    expect(run([tool("x_delete_entity", "Zulu", "zulu")], "remove")[0].score).toBe(5);
+    expect(run([tool("x_update_entity", "Zulu", "zulu")], "modify")[0].score).toBe(5);
+    // matchedTokens reports the word the caller typed, not the synonym.
+    expect(run([tool("x_delete_entity", "Zulu", "zulu")], "remove")[0].matchedTokens).toEqual([
+      "remove",
+    ]);
+    // delete ↔ remove goes both ways, because gads names its tool gads_remove_entity...
+    expect(run([tool("x_remove_entity", "Zulu", "zulu")], "delete")[0].score).toBe(5);
+    // ...but other entries go one way only: "delete" does not reach "erase".
+    expect(run([tool("x_erase_entity", "Zulu", "zulu")], "delete")).toHaveLength(0);
   });
 
   it("ignores description tokens past the 400-token cap", () => {

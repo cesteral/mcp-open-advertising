@@ -12,6 +12,13 @@
  * Scoring is a simple weighted token frequency over name + title +
  * description. No embeddings, no external index — the input data is small
  * (a few dozen tools) and lives entirely in process.
+ *
+ * Names are split into words on `_`; a query word matches a name word when it
+ * equals it (after plural folding), is a synonym listed in QUERY_SYNONYMS, or
+ * is a prefix of it at least MIN_PREFIX_LENGTH characters long. Titles match
+ * on equality after plural folding; descriptions on exact equality with the
+ * query word or a synonym. Rankings are pinned over the wire by
+ * evals/tool-search-ranking.test.mjs.
  */
 
 import { z } from "zod";
@@ -55,11 +62,77 @@ const STOP_WORDS = new Set([
   "should",
 ]);
 
+/**
+ * Query words that name the same operation as a word tool names actually use.
+ * Deliberately short: every entry here widens what a query can reach, so an
+ * entry belongs only when the two words mean the same operation on an ad
+ * platform. "remove" → "delete" earns its place because tool names say
+ * `delete`, users say "remove", and the lexical ranker otherwise hands the
+ * query to whatever tool shares its object noun (#205 gaps).
+ */
+const QUERY_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  // Both ways: most platforms name the tool `delete_entity`, but gads names it
+  // `gads_remove_entity`, so "delete" must reach "remove" too.
+  delete: ["remove"],
+  remove: ["delete"],
+  erase: ["delete"],
+  destroy: ["delete"],
+  edit: ["update"],
+  modify: ["update"],
+  change: ["update"],
+};
+
+/**
+ * Shortest query token allowed to match a name word by prefix ("camp" →
+ * "campaigns"). Two characters is too permissive: "ad" would prefix-match
+ * "adjust", which is how `delete an ad group` used to rank `tiktok_adjust_bids`
+ * first.
+ */
+const MIN_PREFIX_LENGTH = 3;
+
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9_]+/)
     .filter((t) => t.length > 1 && !STOP_WORDS.has(t));
+}
+
+/**
+ * A tool name split into its words: `tiktok_delete_entity` →
+ * ["tiktok", "delete", "entity"]. Names only — descriptions keep `_` as a word
+ * character, so an enum like `SINGLE_IMAGE_AD` stays one token instead of
+ * adding an "ad" hit to every tool that lists ad formats.
+ */
+function nameWords(name: string): string[] {
+  return tokenize(name.replace(/_/g, " "));
+}
+
+/**
+ * Crude plural folding, enough that "campaigns"/"campaign" and
+ * "entities"/"entity" compare equal. Not a real stemmer, and it does not need
+ * to be — the registries it runs over are a few dozen tools.
+ */
+function stem(token: string): string {
+  if (token.length > 4 && token.endsWith("ies")) return `${token.slice(0, -3)}y`;
+  if (token.length >= 3 && token.endsWith("s") && !/(ss|us|is)$/.test(token)) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+/** The forms a query token may match as: itself plus any synonym. */
+function queryForms(token: string): string[] {
+  return [stem(token), ...(QUERY_SYNONYMS[token] ?? [])];
+}
+
+function wordMatches(forms: string[], word: string): boolean {
+  const stemmed = stem(word);
+  return forms.some((f) => f === stemmed);
+}
+
+function nameWordMatches(query: string, forms: string[], word: string): boolean {
+  if (wordMatches(forms, word)) return true;
+  return query.length >= MIN_PREFIX_LENGTH && word.startsWith(query);
 }
 
 interface ScoredTool {
@@ -71,7 +144,7 @@ interface ScoredTool {
 }
 
 function scoreTool(tool: ToolDefinitionForFactory, queryTokens: string[]): ScoredTool {
-  const nameTokens = tokenize(tool.name);
+  const nameTokens = nameWords(tool.name);
   const titleTokens = tool.title ? tokenize(tool.title) : [];
   const descTokens = tokenize(tool.description).slice(0, DESCRIPTION_TOKEN_LIMIT);
 
@@ -79,22 +152,28 @@ function scoreTool(tool: ToolDefinitionForFactory, queryTokens: string[]): Score
   const matched = new Set<string>();
 
   for (const qt of queryTokens) {
+    const forms = queryForms(qt);
     let hit = false;
+    // Name words are matched once per query token: a name repeating a word
+    // must not double-count a single query word.
     for (const nt of nameTokens) {
-      if (nt === qt || nt.includes(qt) || qt.includes(nt)) {
+      if (nameWordMatches(qt, forms, nt)) {
         score += NAME_WEIGHT;
         hit = true;
         break;
       }
     }
     for (const tt of titleTokens) {
-      if (tt === qt) {
+      if (wordMatches(forms, tt)) {
         score += TITLE_WEIGHT;
         hit = true;
       }
     }
+    // Descriptions match the query word (or a synonym) exactly, without
+    // plural folding: folding here let "deletes" in one tool's prose count
+    // as "delete" and tie cm360's delete-a-campaign case.
     for (const dt of descTokens) {
-      if (dt === qt) {
+      if (dt === qt || forms.includes(dt)) {
         score += DESCRIPTION_WEIGHT;
         hit = true;
       }

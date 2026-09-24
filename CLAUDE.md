@@ -231,15 +231,16 @@ The freshness half is deliberately **not** PR-blocking, for the same reason as `
 
 ### Ranker facts worth knowing before editing a tool description
 
-| Fact                                                                       | Consequence                                                                                                             |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Weights: name **5**, title **3**, description **1**                        | Name dominates; a description edit moves things by single points                                                        |
-| `tokenize` splits on `/[^a-z0-9_]+/` — **`_` is a word character**         | A whole tool name is **ONE token**, not `["ttd","download","report"]`                                                   |
-| Name match is substring **either direction**, over that single token       | Query `ad` matches `meta_download_report` (inside "downlo**ad**") and `ttd_upload_video`. Far wider than `ad`→`adgroup` |
-| The `break` in the name loop                                               | **Dead code** — there is never a second name token to reach                                                             |
-| Name weight accumulates per **query** token, not per name token            | A 2-word query matching the name twice scores 10                                                                        |
-| Title/description matches accumulate; description capped at **400 tokens** | Long descriptions have their tails silently ignored                                                                     |
-| Ties resolve by **registry order** (stable sort)                           | Reordering `allTools` silently reorders results with no scoring change                                                  |
+| Fact                                                                                                      | Consequence                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Weights: name **5**, title **3**, description **1**                                                       | Name dominates; a description edit moves things by single points                                                            |
+| Names are split into words on `_`; descriptions keep `_` as a word character                              | `ttd_download_report` is `["ttd","download","report"]`, but an enum like `SINGLE_IMAGE_AD` in a description stays one token |
+| A query word matches a name word by equality, plural folding, a synonym, or a **prefix of 3+ characters** | `camp` reaches `campaigns`; `ad` no longer matches inside `adjust`/`download`/`upload`                                      |
+| `QUERY_SYNONYMS`: remove/erase/destroy → delete, delete → remove, edit/modify/change → update             | Every entry widens what a query reaches; add one only for words meaning the same operation                                  |
+| Plural folding applies to names and titles, **not** descriptions                                          | Folding descriptions made "deletes" count as "delete" and tied cm360's delete-a-campaign case                               |
+| Name weight counts once per **query** word                                                                | A 2-word query matching two name words scores 10; a name repeating a word still scores 5                                    |
+| Title/description matches accumulate; description capped at **400 tokens**                                | Long descriptions have their tails silently ignored                                                                         |
+| Ties resolve by **registry order** (stable sort)                                                          | Reordering `allTools` silently reorders results with no scoring change                                                      |
 
 **Margins are thin.** `cm360_delete_entity` beats `cm360_delete_report_schedule` for "delete a campaign" by **one point**; on `msads-mcp` the same pair is the wrong way round. Adding two sentences to a neighbouring tool's description is enough to invert it — verified by mutation.
 

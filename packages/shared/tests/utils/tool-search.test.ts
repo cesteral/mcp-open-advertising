@@ -58,9 +58,29 @@ describe("searchTools", () => {
     expect(out.results.every((r) => r.score === 0)).toBe(true);
   });
 
-  it("matches partial tokens via substring containment", () => {
+  it("matches a name word by prefix of 3+ characters", () => {
     const out = searchTools(fixtures, { query: "camp" }, "ttd_search_tools");
     expect(out.results[0].name).toBe("ttd_create_campaigns");
+  });
+
+  it("does not let a 2-character word match inside a longer name word", () => {
+    const tools = [
+      makeTool("x_adjust_bids", "Adjust bids"),
+      makeTool("x_delete_entity", "Delete an ad group or campaign"),
+    ];
+    const out = searchTools(tools, { query: "delete an ad group" }, "x_search_tools");
+    expect(out.results[0].name).toBe("x_delete_entity");
+    expect(out.results.find((r) => r.name === "x_adjust_bids")).toBeUndefined();
+  });
+
+  it("reads 'remove' as 'delete'", () => {
+    const tools = [
+      makeTool("x_get_pacing_status", "Pacing for a campaign"),
+      makeTool("x_delete_entity", "Delete an entity"),
+    ];
+    const out = searchTools(tools, { query: "remove a campaign" }, "x_search_tools");
+    expect(out.results[0].name).toBe("x_delete_entity");
+    expect(out.results[0].matchedTokens).toEqual(["remove"]);
   });
 });
 
