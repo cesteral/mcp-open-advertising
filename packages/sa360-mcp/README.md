@@ -361,7 +361,7 @@ Validate a conversion payload before uploading (no API call).
 
 ## Rate Limiting
 
-- Default: 100 requests/minute per customer ID
+- Default: 10 requests/minute per customer ID (Reporting API v0); the legacy v2 API has its own limit (`SA360_V2_RATE_LIMIT_PER_MINUTE`, default 10)
 - Separate rate limit pools for reporting API v0 and v2 API
 - Automatic exponential backoff on 429/5xx responses (max 3 retries)
 - Configurable via `SA360_RATE_LIMIT_PER_MINUTE` environment variable
@@ -446,7 +446,7 @@ AI Agent:
 | `MCP_AUTH_SECRET_KEY`         | —                                                 | JWT secret (jwt mode only)                |
 | `SA360_API_BASE_URL`          | `https://searchads360.googleapis.com/v0`          | Reporting API base URL                    |
 | `SA360_V2_API_BASE_URL`       | `https://www.googleapis.com/doubleclicksearch/v2` | Legacy v2 API base URL                    |
-| `SA360_RATE_LIMIT_PER_MINUTE` | `100`                                             | Rate limit per customer ID                |
+| `SA360_RATE_LIMIT_PER_MINUTE` | `10`                                              | Rate limit per customer ID                |
 | `SA360_CLIENT_ID`             | —                                                 | OAuth2 client ID (stdio mode)             |
 | `SA360_CLIENT_SECRET`         | —                                                 | OAuth2 client secret (stdio mode)         |
 | `SA360_REFRESH_TOKEN`         | —                                                 | OAuth2 refresh token (stdio mode)         |

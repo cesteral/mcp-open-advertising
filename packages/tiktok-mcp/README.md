@@ -15,7 +15,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `TikTokBearerAuthStrategy` (validates tokens and extracts advertiser ID)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (100/min default)
+- **Rate limiting** via shared `RateLimiter` class (10/min default)
 - **Structured logging** via Pino
 - **Automatic `advertiser_id` injection** into GET query params and POST request bodies
 
@@ -308,7 +308,7 @@ pnpm run typecheck
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `TIKTOK_API_BASE_URL`: TikTok Business API base URL (default: `https://business-api.tiktok.com`)
 - `TIKTOK_API_VERSION`: API version (default: `v1.3`)
-- `TIKTOK_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 100)
+- `TIKTOK_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 10)
 - `TIKTOK_ACCESS_TOKEN`: Access token for stdio mode
 - `TIKTOK_ADVERTISER_ID`: Advertiser ID for stdio mode
 

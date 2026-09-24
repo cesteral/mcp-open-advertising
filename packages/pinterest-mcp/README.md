@@ -15,7 +15,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `PinterestBearerAuthStrategy` (validates tokens and extracts advertiser ID)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (100/min default)
+- **Rate limiting** via shared `RateLimiter` class (10/min default)
 - **Structured logging** via Pino
 - **Automatic `ad_account_id` injection** into GET query params and POST request bodies
 
@@ -300,7 +300,7 @@ pnpm run typecheck
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `PINTEREST_API_BASE_URL`: Pinterest Business API base URL (default: `https://business-api.pinterest.com`)
 - `PINTEREST_API_VERSION`: API version (default: `v1.3`)
-- `PINTEREST_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 100)
+- `PINTEREST_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 10)
 - `PINTEREST_ACCESS_TOKEN`: Access token for stdio mode
 - `PINTEREST_ADVERTISER_ID`: Advertiser ID for stdio mode
 
