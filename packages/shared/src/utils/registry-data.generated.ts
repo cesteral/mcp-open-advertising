@@ -532,7 +532,7 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "delete_schedule"
             ],
-            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+            "note": "Deletes nothing: Microsoft Advertising Reporting v13 has no report schedules, so this tool refuses every call without contacting the API. Declared only because its name marks it destructive."
           },
           {
             "tool": "msads_update_entity",

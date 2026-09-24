@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { MSADS_AGE_RANGES, MSADS_GENDERS } from "../utils/targeting-values.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_targeting_options";
@@ -44,17 +45,8 @@ type GetTargetingOptionsOutput = z.infer<typeof GetTargetingOptionsOutputSchema>
  * These are fixed in the API schema; MS Ads exposes no endpoint to query them.
  */
 const TARGETING_OPTIONS: Record<string, Array<Record<string, unknown>>> = {
-  age: [
-    { Id: "EighteenToTwentyFour", Name: "18-24" },
-    { Id: "TwentyFiveToThirtyFour", Name: "25-34" },
-    { Id: "ThirtyFiveToFortyNine", Name: "35-49" },
-    { Id: "FiftyToSixtyFour", Name: "50-64" },
-    { Id: "SixtyFiveAndAbove", Name: "65+" },
-  ],
-  gender: [
-    { Id: "Male", Name: "Male" },
-    { Id: "Female", Name: "Female" },
-  ],
+  age: MSADS_AGE_RANGES.map((v) => ({ ...v })),
+  gender: MSADS_GENDERS.map((v) => ({ ...v })),
   device: [
     { Id: "Computers", Name: "Computers" },
     { Id: "Smartphones", Name: "Smartphones" },

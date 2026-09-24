@@ -148,7 +148,7 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
       PartialErrors: [batchError(0, "Campaign status is invalid", "CampaignInvalidStatus")],
     });
     await expect(
-      service.updateEntity("campaign", { Campaigns: [{ Id: 1, Status: "Bogus" }] })
+      service.updateEntity("campaign", { AccountId: 5, Campaigns: [{ Id: 1, Status: "Bogus" }] })
     ).rejects.toThrow(/CampaignInvalidStatus/);
   });
 
@@ -163,7 +163,7 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
         PartialErrors: [batchError(0, "Ad text too long", "AdTextTooLong")],
       });
 
-    const results = await service.bulkCreateEntities("ad", items);
+    const results = await service.bulkCreateEntities("ad", items, undefined, "77");
 
     expect(results).toHaveLength(52);
     expect(results[0]).toEqual({ index: 0, entityId: "1000", success: true });
@@ -179,10 +179,15 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
     http.put.mockResolvedValueOnce({
       PartialErrors: [batchError(0, "Not found", "CampaignIdInvalid"), batchError(1, "Not found")],
     });
-    const results = await service.bulkUpdateEntities("campaign", [
-      { Id: 10, Name: "a" },
-      { Id: 20, Name: "b" },
-    ]);
+    const results = await service.bulkUpdateEntities(
+      "campaign",
+      [
+        { Id: 10, Name: "a" },
+        { Id: 20, Name: "b" },
+      ],
+      undefined,
+      "5"
+    );
     expect(results).toEqual([
       expect.objectContaining({ index: 0, entityId: "10", success: false }),
       expect.objectContaining({ index: 1, entityId: "20", success: false }),
@@ -193,7 +198,13 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
     http.put.mockResolvedValueOnce({ PartialErrors: null }).mockResolvedValueOnce({
       PartialErrors: [batchError(0, "Cannot change status", "InvalidStatusChange")],
     });
-    const { results } = await service.bulkUpdateStatus("campaign", ["1", "2"], "Paused");
+    const { results } = await service.bulkUpdateStatus(
+      "campaign",
+      ["1", "2"],
+      "Paused",
+      undefined,
+      "5"
+    );
     expect(results[0]).toEqual({ entityId: "1", success: true });
     expect(results[1]).toMatchObject({ entityId: "2", success: false });
     expect(results[1]?.error).toContain("Cannot change status");

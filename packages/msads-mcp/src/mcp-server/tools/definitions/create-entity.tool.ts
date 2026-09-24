@@ -14,7 +14,7 @@ import {
   symbolicValidate,
 } from "../utils/dry-run.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import { snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
+import { resolveMsAdsCurrency, snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -154,7 +154,8 @@ export async function createEntityLogic(
   const after: NormalizedEntitySnapshot | undefined = snapshotFromMsAdsEntity(
     input.entityType,
     createdId,
-    entityItem
+    entityItem,
+    await resolveMsAdsCurrency(msadsService, context)
   );
 
   return {

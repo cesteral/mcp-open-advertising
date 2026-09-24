@@ -4,7 +4,10 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
@@ -27,7 +30,12 @@ const TOOL_NAME = "msads_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update Microsoft Ads Entities";
 const TOOL_DESCRIPTION = `Batch update multiple Microsoft Advertising entities.
 
-Each item must include the Id field. Only include fields you want to change.`;
+Each item must include the Id field. Only include fields you want to change.
+
+All items in one call belong to one parent, sent as the request-body parent element
+Microsoft Ads' Update operation requires: campaign and adExtension need \`accountId\`,
+adGroup needs \`campaignId\`, ad and keyword need \`adGroupId\`. budget, label and
+audience take no parent.`;
 
 const EFFECT_KIND = "entities_updated";
 
@@ -38,6 +46,7 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(z.record(z.unknown()))
       .min(1)
       .describe("Array of entity data objects with Id and fields to update"),
+    ...parentIdInputFields,
     dry_run: z
       .boolean()
       .optional()
@@ -99,6 +108,16 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
+  // Refuse before prompting when the request-body parent ID is missing — the
+  // Update call cannot succeed without it.
+  const parentErrors = validateParentId(input);
+  if (parentErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bulk update payload: ${parentErrors.map((e) => e.message).join("; ")}`
+    );
+  }
+
   // MSAds items are flat records (e.g. { Id: 123, DailyBudget: 100 }) — the
   // whole row IS the payload, no .data wrapper.
   const items = input.items as Array<Record<string, unknown>>;
@@ -127,7 +146,8 @@ export async function bulkUpdateEntitiesLogic(
   const results = await msadsService.bulkUpdateEntities(
     input.entityType as MsAdsEntityType,
     input.items,
-    context
+    context,
+    resolveParentId(input)
   );
 
   // Microsoft Ads returns HTTP 200 even when items are rejected; the service
@@ -165,7 +185,7 @@ export async function bulkUpdateEntitiesLogic(
  * native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...validateParentId(input)];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({
@@ -277,6 +297,7 @@ export const bulkUpdateEntitiesTool = {
       label: "Bulk update campaign budgets",
       input: {
         entityType: "campaign",
+        accountId: "789012",
         items: [
           { Id: 123, DailyBudget: 100.0 },
           { Id: 456, DailyBudget: 200.0 },

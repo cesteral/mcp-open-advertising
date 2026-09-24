@@ -242,7 +242,7 @@ The freshness half is deliberately **not** PR-blocking, for the same reason as `
 | Title/description matches accumulate; description capped at **400 tokens** | Long descriptions have their tails silently ignored                                                                     |
 | Ties resolve by **registry order** (stable sort)                           | Reordering `allTools` silently reorders results with no scoring change                                                  |
 
-**Margins are thin.** `cm360_delete_entity` beats `cm360_delete_report_schedule` for "delete a campaign" by **one point**; on `msads-mcp` the same pair is the wrong way round. Adding two sentences to a neighbouring tool's description is enough to invert it — verified by mutation.
+**Margins are thin.** `cm360_delete_entity` beats `cm360_delete_report_schedule` for "delete a campaign" by **one point**; on `msads-mcp` the same pair is a **tie** (9–9) that only registry order resolves in the delete tool's favour — it was the wrong way round until the schedule tool's description started with "NOT SUPPORTED". Adding two sentences to a neighbouring tool's description is enough to invert it — verified by mutation.
 
 ## Cross-Server Routing Evals
 

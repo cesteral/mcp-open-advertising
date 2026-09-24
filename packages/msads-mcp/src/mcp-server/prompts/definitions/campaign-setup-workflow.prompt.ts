@@ -28,8 +28,8 @@ msads_create_entity({
   "data": {
     "Budgets": [{
       "Name": "Q1 2026 Budget",
-      "Amount": 3000.00,
-      "BudgetType": "MonthlyBudgetSpendUntilDepleted"
+      "Amount": 100.00,
+      "BudgetType": "DailyBudgetStandard"
     }]
   }
 })
@@ -136,7 +136,9 @@ msads_manage_ad_extensions({
 \`\`\`json
 msads_update_entity({
   "entityType": "campaign",
-  "data": { "Campaigns": [{ "Id": {campaignId}, "Status": "Active" }] }
+  "entityId": "{campaignId}",
+  "accountId": "${args?.accountId || "{accountId}"}",
+  "data": { "Status": "Active" }
 })
 \`\`\`
 

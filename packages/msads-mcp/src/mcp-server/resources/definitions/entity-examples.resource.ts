@@ -77,9 +77,9 @@ export const entityExampleAllResource: Resource = {
 \`\`\`json
 {
   "Budgets": [{
-    "Name": "Shared Monthly Budget",
-    "Amount": 1000.00,
-    "BudgetType": "MonthlyBudgetSpendUntilDepleted"
+    "Name": "Shared Daily Budget",
+    "Amount": 100.00,
+    "BudgetType": "DailyBudgetStandard"
   }]
 }
 \`\`\`

@@ -26,6 +26,7 @@ const sdk = { sessionId: "s" } as any;
 
 const baseInput = {
   entityType: "campaign",
+  accountId: "789",
   items: [
     { Id: 123, DailyBudget: 100 },
     { Id: 456, DailyBudget: 200 },
@@ -123,5 +124,23 @@ describe("msads_bulk_update_entities governance contract (effect class)", () => 
     } as any);
     expect(content[0].text).toContain("Dry run: bulk-updating 2 campaign(s) would succeed");
     expect(content[0].text).not.toContain("Bulk updated");
+  });
+
+  it("execute passes the accountId parent through to the Update body", async () => {
+    await bulkUpdateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
+    expect(svc.bulkUpdateEntities).toHaveBeenCalledWith("campaign", baseInput.items, ctx, "789");
+  });
+
+  it("refuses a campaign batch without accountId before prompting (UpdateCampaigns needs AccountId)", async () => {
+    const { accountId: _omit, ...noParent } = baseInput;
+    const dry = await bulkUpdateEntitiesLogic({ ...noParent, dry_run: true } as any, ctx, sdk);
+    expect(dry.dryRun?.validationErrors).toEqual([
+      expect.objectContaining({ code: "MISSING_PARENT_ID", field: "accountId" }),
+    ]);
+    await expect(bulkUpdateEntitiesLogic({ ...noParent } as any, ctx, sdk)).rejects.toThrow(
+      /accountId is required/
+    );
+    expect(mockElicit).not.toHaveBeenCalled();
+    expect(svc.bulkUpdateEntities).not.toHaveBeenCalled();
   });
 });

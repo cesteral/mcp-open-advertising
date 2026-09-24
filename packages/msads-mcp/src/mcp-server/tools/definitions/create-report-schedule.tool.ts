@@ -2,8 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -13,7 +14,6 @@ import type {
   RequestContext,
   McpTextContent,
   SdkContext,
-  EffectResult,
   EffectDryRunResult,
   DispatchedCapability,
   DryRunValidationError,
@@ -22,25 +22,24 @@ import type {
 
 const TOOL_NAME = "msads_create_report_schedule";
 const TOOL_TITLE = "Create Microsoft Ads Report Schedule";
-const TOOL_DESCRIPTION = `Create a scheduled report request in Microsoft Advertising.
+const TOOL_DESCRIPTION = `NOT SUPPORTED — always fails without calling Microsoft Advertising. Nothing is scheduled.
 
-Submits a report request with a Schedule object, which Microsoft Advertising will re-run on the configured frequency. Returns a scheduleId to reference this schedule.
+The Microsoft Advertising Reporting API v13 has no report schedules: it exposes only GenerateReport/Submit and GenerateReport/Poll, and ReportRequest has no Schedule element. No API call can create, list or delete a report schedule.
 
-**Frequency values:** Daily, Weekly, Monthly
+For a one-off report use msads_submit_report + msads_check_report_status, or msads_get_report.`;
 
-**Example schedule:**
-\`\`\`json
-{
-  "StartDate": "2026-04-07",
-  "EndDate": "2026-12-31",
-  "Frequency": "Weekly"
-}
-\`\`\`
-
-Note: Microsoft Advertising's API has limited schedule management. Use the UI at app.ads.microsoft.com to view, edit, or delete existing schedules.`;
-
-const EFFECT_KIND = "report_schedule_saved";
-const ENTITY_LABEL = "report_schedule";
+/**
+ * Microsoft Advertising Reporting v13 has no schedule surface. Per the
+ * MicrosoftDocs/Advertising `reporting-service` reference, the only REST
+ * operations are `POST /Reporting/v13/GenerateReport/Submit` and
+ * `.../GenerateReport/Poll`, and `reportrequest.md` /
+ * `campaignperformancereportrequest.md` list no `Schedule` element. The tool
+ * previously sent `ReportRequest.Schedule` anyway and returned the one-off
+ * ReportRequestId as a "scheduleId". It is kept (rather than removed) so the
+ * published tool surface stays stable, but it now refuses every call.
+ */
+export const MSADS_NO_REPORT_SCHEDULES_MESSAGE =
+  "Microsoft Advertising Reporting API v13 has no report schedules — it exposes only GenerateReport/Submit and GenerateReport/Poll, and ReportRequest has no Schedule element. Nothing was scheduled. Run a one-off report with msads_submit_report / msads_get_report instead.";
 
 export const CreateReportScheduleInputSchema = z
   .object({
@@ -66,7 +65,7 @@ export const CreateReportScheduleInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be schedule creation) without calling the Microsoft Ads API. No schedule is created."
+        "When true, returns an EffectDryRunResult under `dryRun` that always reports wouldSucceed: false (Microsoft Advertising has no report schedules). Never calls the Microsoft Ads API."
       ),
   })
   .describe("Parameters for creating a scheduled Microsoft Ads report");
@@ -77,7 +76,7 @@ export const CreateReportScheduleOutputSchema = z
       .string()
       .optional()
       .describe(
-        "Schedule ID (ReportRequestId of first scheduled run). Absent on a dry_run (nothing was created)."
+        "Never populated: Microsoft Advertising has no report schedules, so this tool creates nothing."
       ),
     scheduleName: z.string().optional(),
     timestamp: z.string().datetime(),
@@ -85,7 +84,7 @@ export const CreateReportScheduleOutputSchema = z
       "Present only when the request was made with `dry_run: true`. No schedule was created."
     ),
     effect: EffectResultSchema.optional().describe(
-      "Effect-class result identity (effectKind `report_schedule_saved` + scalar audit summary). Present on a confirmed execute. Effect writes carry no canonical entity snapshot."
+      "Never emitted: every execute call fails, so no schedule is ever saved."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to — `create_schedule` with `canonicalEntityKind: null` (effect class). Present on every response."
@@ -98,8 +97,8 @@ type CreateReportScheduleOutput = z.infer<typeof CreateReportScheduleOutputSchem
 
 export async function createReportScheduleLogic(
   input: CreateReportScheduleInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
+  _context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<CreateReportScheduleOutput> {
   // Effect-class write: a report schedule is not a canonical ad entity, so there
   // is no entity snapshot. The capability is `create_schedule` with a null kind.
@@ -108,8 +107,7 @@ export async function createReportScheduleLogic(
     canonicalEntityKind: null,
   };
 
-  // Symbolic dry-run: validate the request and project the would-be effect
-  // (a report-schedule creation). No API call.
+  // Symbolic dry-run: always reports that the call cannot succeed. No API call.
   if (input.dry_run === true) {
     const dryRun = buildEffectDryRun(input);
     return {
@@ -119,44 +117,30 @@ export async function createReportScheduleLogic(
     };
   }
 
-  const { msadsReportingService } = resolveSessionServices(sdkContext);
-
-  const result = await msadsReportingService.createReportSchedule(
-    {
-      reportType: input.reportType,
-      accountId: input.accountId,
-      columns: input.columns,
-      dateRange: { startDate: input.startDate, endDate: input.endDate },
-      aggregation: input.aggregation,
-      scheduleName: input.scheduleName,
-      schedule: input.schedule as Record<string, unknown>,
-    },
-    context
-  );
-
-  const effect: EffectResult = {
-    effectKind: EFFECT_KIND,
-    summary: { entity_label: ENTITY_LABEL, schedule_handle: result.scheduleId },
-  };
-
-  return {
-    scheduleId: result.scheduleId,
-    scheduleName: result.scheduleName,
-    timestamp: new Date().toISOString(),
-    effect,
-    dispatchedCapability,
-  };
+  // No Microsoft Advertising operation creates a report schedule; refuse
+  // rather than submit a one-off report and call it a schedule.
+  throw new McpError(JsonRpcErrorCode.InvalidRequest, MSADS_NO_REPORT_SCHEDULES_MESSAGE, {
+    platform: "msads",
+    tool: TOOL_NAME,
+    unsupported: true,
+  });
 }
 
 /**
- * Symbolic effect dry-run for `create_report_schedule`. Validates the request
- * (schedule name non-empty; report date format + ordering — Microsoft Ads'
- * startDate/endDate are free strings, mirroring the parseDate guard the report
- * path applies) and projects the would-be effect. No native validate/preview, so
- * both axes are symbolic. Pure (no I/O).
+ * Symbolic effect dry-run for `create_report_schedule`. Always fails with an
+ * UNSUPPORTED_OPERATION error (Microsoft Advertising has no report schedules);
+ * the input checks still run so a caller sees every problem at once. There is
+ * no effect to simulate, so the contract declares requiresSimulation: false and
+ * the dry-run carries no expected effect. Pure (no I/O).
  */
 function buildEffectDryRun(input: CreateReportScheduleInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [
+    {
+      code: "UNSUPPORTED_OPERATION",
+      message: MSADS_NO_REPORT_SCHEDULES_MESSAGE,
+      field: "schedule",
+    },
+  ];
   if (input.scheduleName.trim().length === 0) {
     validationErrors.push({
       code: "INVALID_SCHEDULE_NAME",
@@ -189,21 +173,15 @@ function buildEffectDryRun(input: CreateReportScheduleInput): EffectDryRunResult
     });
   }
 
-  const expectedEffect: EffectResult = {
-    effectKind: EFFECT_KIND,
-    summary: { entity_label: ENTITY_LABEL },
-  };
-
   return assertGovernedEffectDryRun(
     {
-      wouldSucceed: validationErrors.length === 0,
+      wouldSucceed: false,
       validationErrors,
       validationSource: "symbolic",
-      expectedEffectSource: "symbolic",
-      expectedEffect,
+      expectedEffectSource: "none",
     },
     TOOL_NAME,
-    { requiresValidation: true, requiresSimulation: true }
+    { requiresValidation: true, requiresSimulation: false }
   );
 }
 
@@ -219,7 +197,7 @@ export function createReportScheduleResponseFormatter(
       {
         type: "text" as const,
         text:
-          `Dry run: creating a report schedule ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No schedule was created.` +
+          `Dry run: creating a report schedule ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Microsoft Advertising has no report schedules; no schedule was created.` +
           (errs ? `\n${errs}` : "") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
@@ -228,7 +206,7 @@ export function createReportScheduleResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Scheduled report created: ${result.scheduleId}\nName: ${result.scheduleName}\nTimestamp: ${result.timestamp}`,
+      text: `${MSADS_NO_REPORT_SCHEDULES_MESSAGE}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -259,8 +237,11 @@ export const createReportScheduleTool = {
       contractId: "msads.create_report_schedule.v1",
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
+      // Honest contract booleans: the request is validated symbolically, but
+      // Microsoft Ads has no report schedules, so there is never an effect to
+      // simulate (requiresSimulation: false) and every execute call fails.
       requiresValidation: true,
-      requiresSimulation: true,
+      requiresSimulation: false,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [

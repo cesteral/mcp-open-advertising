@@ -5,6 +5,7 @@ import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -26,7 +27,12 @@ const TOOL_NAME = "msads_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create Microsoft Ads Entities";
 const TOOL_DESCRIPTION = `Batch create multiple Microsoft Advertising entities in a single operation.
 
-Items are automatically batched per entity type limits. Each batch is sent as a separate API call.`;
+Items are automatically batched per entity type limits. Each batch is sent as a separate API call.
+
+All items in one call belong to one parent, sent as the request-body parent element
+Microsoft Ads' Add operation requires: campaign and adExtension need \`accountId\`,
+adGroup needs \`campaignId\`, ad and keyword need \`adGroupId\`. budget, label and
+audience take no parent.`;
 
 const EFFECT_KIND = "entities_created";
 
@@ -34,6 +40,7 @@ export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     items: z.array(z.record(z.unknown())).min(1).describe("Array of entity data objects to create"),
+    ...parentIdInputFields,
     dry_run: z
       .boolean()
       .optional()
@@ -107,7 +114,8 @@ export async function bulkCreateEntitiesLogic(
   const results = await msadsService.bulkCreateEntities(
     input.entityType as MsAdsEntityType,
     input.items,
-    context
+    context,
+    resolveParentId(input)
   );
 
   // Microsoft Ads returns HTTP 200 even when items are rejected; the service
@@ -145,7 +153,7 @@ export async function bulkCreateEntitiesLogic(
  * symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...validateParentId(input)];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({
@@ -240,10 +248,8 @@ export const bulkCreateEntitiesTool = {
       label: "Bulk create ad groups",
       input: {
         entityType: "adGroup",
-        items: [
-          { Name: "Ad Group 1", CampaignId: 123 },
-          { Name: "Ad Group 2", CampaignId: 123 },
-        ],
+        campaignId: "123",
+        items: [{ Name: "Ad Group 1" }, { Name: "Ad Group 2" }],
       },
     },
   ],

@@ -97,6 +97,7 @@ describe("msads_adjust_bids governance contract (effect class)", () => {
     const result = await adjustBidsLogic(
       {
         entityType: "keyword",
+        scope: { adGroupId: "333" },
         adjustments: [{ entityId: "111", bidField: "Bid", newBid: 1.5 }],
       } as any,
       ctx,
@@ -106,6 +107,67 @@ describe("msads_adjust_bids governance contract (effect class)", () => {
     expect(result.confirmed).toBe(false);
     expect(result.effect).toBeUndefined();
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
+  });
+
+  it("execute passes the scope parent to the service as the Update body parent", async () => {
+    await adjustBidsLogic(
+      {
+        entityType: "adGroup",
+        scope: { campaignId: "44" },
+        adjustments: [{ entityId: "7", bidField: "CpcBid", newBid: 0.8 }],
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.adjustBids).toHaveBeenCalledWith(
+      "adGroup",
+      [{ entityId: "7", bidField: "CpcBid", newBid: 0.8 }],
+      { CampaignId: 44 },
+      ctx
+    );
+  });
+
+  it("refuses keyword bids without scope.adGroupId before prompting", async () => {
+    await expect(
+      adjustBidsLogic(
+        {
+          entityType: "keyword",
+          adjustments: [{ entityId: "111", bidField: "Bid", newBid: 1.5 }],
+        } as any,
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow("scope.adGroupId is required");
+    expect(mockElicit).not.toHaveBeenCalled();
+    expect(svc.adjustBids).not.toHaveBeenCalled();
+  });
+
+  it("dry_run fails validation when the parent scope is missing", async () => {
+    const result = await adjustBidsLogic(
+      {
+        entityType: "adGroup",
+        adjustments: [{ entityId: "7", bidField: "CpcBid", newBid: 0.8 }],
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors).toEqual([
+      expect.objectContaining({ code: "MISSING_PARENT_ID", field: "scope.campaignId" }),
+    ]);
+  });
+
+  it("only accepts entity types that carry a Bid field", async () => {
+    const { AdjustBidsInputSchema } = await import(
+      "../../src/mcp-server/tools/definitions/adjust-bids.tool.js"
+    );
+    expect(() =>
+      AdjustBidsInputSchema.parse({
+        entityType: "campaign",
+        adjustments: [{ entityId: "1", bidField: "Bid", newBid: 1 }],
+      })
+    ).toThrow();
   });
 
   it("formatter renders a dry-run message without a false success", () => {

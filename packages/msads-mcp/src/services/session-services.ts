@@ -58,7 +58,12 @@ export function createSessionServices(
   const reportingClient = new MsAdsHttpClient(authAdapter, config.reportingApiBaseUrl, logger);
   const customerClient = new MsAdsHttpClient(authAdapter, config.customerApiBaseUrl, logger);
 
-  const msadsService = new MsAdsService(rateLimiter, campaignClient, logger);
+  // The customer client lets the campaign service read the account currency
+  // (GetAccount) for canonical budget snapshots.
+  const msadsService = new MsAdsService(rateLimiter, campaignClient, logger, {
+    customerClient,
+    accountId: authAdapter.accountId,
+  });
   const msadsCustomerService = new MsAdsService(rateLimiter, customerClient, logger);
   const msadsReportingService = new MsAdsReportingService(
     rateLimiter,

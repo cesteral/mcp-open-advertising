@@ -20,10 +20,8 @@ const sdk = { sessionId: "s" } as any;
 
 const baseInput = {
   entityType: "adGroup",
-  items: [
-    { Name: "A", CampaignId: 123 },
-    { Name: "B", CampaignId: 123 },
-  ],
+  campaignId: "123",
+  items: [{ Name: "A" }, { Name: "B" }],
 };
 
 describe("msads_bulk_create_entities governance contract (effect class)", () => {
@@ -111,5 +109,32 @@ describe("msads_bulk_create_entities governance contract (effect class)", () => 
     } as any);
     expect(content[0].text).toContain("Dry run: bulk-creating 2 adGroup(s) would succeed");
     expect(content[0].text).not.toContain("Bulk created");
+  });
+
+  it("execute passes the campaignId parent through to the Add body", async () => {
+    await bulkCreateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
+    expect(svc.bulkCreateEntities).toHaveBeenCalledWith("adGroup", baseInput.items, ctx, "123");
+  });
+
+  it("dry_run and execute refuse an ad-group batch without campaignId (AddAdGroups needs CampaignId)", async () => {
+    const { campaignId: _omit, ...noParent } = baseInput;
+    const dry = await bulkCreateEntitiesLogic({ ...noParent, dry_run: true } as any, ctx, sdk);
+    expect(dry.dryRun?.wouldSucceed).toBe(false);
+    expect(dry.dryRun?.validationErrors).toEqual([
+      expect.objectContaining({ code: "MISSING_PARENT_ID", field: "campaignId" }),
+    ]);
+    await expect(bulkCreateEntitiesLogic({ ...noParent } as any, ctx, sdk)).rejects.toThrow(
+      /campaignId is required/
+    );
+    expect(svc.bulkCreateEntities).not.toHaveBeenCalled();
+  });
+
+  it("parentless entity types (budget) need no parent ID", async () => {
+    const dry = await bulkCreateEntitiesLogic(
+      { entityType: "budget", items: [{ Name: "b", Amount: 5 }], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(dry.dryRun?.wouldSucceed).toBe(true);
   });
 });

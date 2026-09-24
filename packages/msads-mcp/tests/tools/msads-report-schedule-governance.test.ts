@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+/**
+ * Microsoft Advertising Reporting v13 has no report schedules (the reporting
+ * service documents only GenerateReport/Submit and /Poll; ReportRequest has no
+ * Schedule element). The create/delete schedule tools therefore refuse every
+ * call: they must never reach the API, prompt for confirmation, or emit an
+ * effect that governance would record as a schedule saved/deleted.
+ */
+
 const { mockResolveSessionServices, mockElicitDelete } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
   mockElicitDelete: vi.fn(),
@@ -17,14 +25,16 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import {
   createReportScheduleLogic,
   createReportScheduleResponseFormatter,
+  createReportScheduleTool,
   CreateReportScheduleOutputSchema,
 } from "../../src/mcp-server/tools/definitions/create-report-schedule.tool.js";
 import {
   deleteReportScheduleLogic,
   deleteReportScheduleResponseFormatter,
+  deleteReportScheduleTool,
   DeleteReportScheduleOutputSchema,
 } from "../../src/mcp-server/tools/definitions/delete-report-schedule.tool.js";
-import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, EffectDryRunResultSchema } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -39,37 +49,43 @@ const createInput = {
   schedule: { StartDate: "2026-04-07", Frequency: "Weekly" },
 };
 
-describe("msads report-schedule governance contract (effect class)", () => {
-  let svc: {
-    createReportSchedule: ReturnType<typeof vi.fn>;
-    deleteReportSchedule: ReturnType<typeof vi.fn>;
-  };
+describe("msads report-schedule tools (Microsoft Advertising has no report schedules)", () => {
+  let reportingSvc: Record<string, ReturnType<typeof vi.fn>>;
+  let campaignSvc: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = {
-      createReportSchedule: vi
-        .fn()
-        .mockResolvedValue({ scheduleId: "sch-1", scheduleName: "Weekly Report" }),
-      deleteReportSchedule: vi.fn().mockResolvedValue(undefined),
-    };
-    mockResolveSessionServices.mockReturnValue({ msadsReportingService: svc });
+    reportingSvc = { submitReport: vi.fn(), pollReport: vi.fn() };
+    campaignSvc = { executeOperation: vi.fn() };
+    mockResolveSessionServices.mockReturnValue({
+      msadsReportingService: reportingSvc,
+      msadsService: campaignSvc,
+    });
     mockElicitDelete.mockResolvedValue(true);
   });
 
   describe("msads_create_report_schedule", () => {
-    it("dry_run returns a symbolic effect preview, no API call", async () => {
+    it("execute refuses with a clear error and calls nothing", async () => {
+      const call = createReportScheduleLogic({ ...createInput } as any, ctx, sdk);
+      await expect(call).rejects.toBeInstanceOf(McpError);
+      await expect(call).rejects.toMatchObject({ code: JsonRpcErrorCode.InvalidRequest });
+      await expect(call).rejects.toThrow(/has no report schedules/);
+      expect(reportingSvc.submitReport).not.toHaveBeenCalled();
+      expect(mockResolveSessionServices).not.toHaveBeenCalled();
+    });
+
+    it("dry_run always reports wouldSucceed: false with no expected effect", async () => {
       const result = await createReportScheduleLogic(
         { ...createInput, dry_run: true } as any,
         ctx,
         sdk
       );
-      expect(svc.createReportSchedule).not.toHaveBeenCalled();
       expect(result.scheduleId).toBeUndefined();
-      expect(result.dryRun?.expectedEffect).toEqual({
-        effectKind: "report_schedule_saved",
-        summary: { entity_label: "report_schedule" },
-      });
+      expect(result.effect).toBeUndefined();
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      expect(result.dryRun?.validationErrors[0]?.code).toBe("UNSUPPORTED_OPERATION");
+      expect(result.dryRun?.expectedEffect).toBeUndefined();
+      expect(result.dryRun?.expectedEffectSource).toBe("none");
       expect(result.dispatchedCapability).toEqual({
         operation: "create_schedule",
         canonicalEntityKind: null,
@@ -78,47 +94,36 @@ describe("msads report-schedule governance contract (effect class)", () => {
       expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
     });
 
-    it("dry_run flags malformed dates", async () => {
+    it("dry_run still reports malformed dates alongside the unsupported error", async () => {
       const result = await createReportScheduleLogic(
         { ...createInput, startDate: "foo", endDate: "zzz", dry_run: true } as any,
         ctx,
         sdk
       );
-      expect(result.dryRun?.wouldSucceed).toBe(false);
-      expect(result.dryRun?.validationErrors.map((e: any) => e.code)).toContain(
-        "INVALID_DATE_FORMAT"
+      expect(result.dryRun?.validationErrors.map((e: any) => e.code)).toEqual(
+        expect.arrayContaining(["UNSUPPORTED_OPERATION", "INVALID_DATE_FORMAT"])
       );
     });
 
-    it("execute returns the effect identity + null-kind capability", async () => {
-      const result = await createReportScheduleLogic({ ...createInput } as any, ctx, sdk);
-      expect(svc.createReportSchedule).toHaveBeenCalledOnce();
-      expect(result.scheduleId).toBe("sch-1");
-      expect(result.effect).toEqual({
-        effectKind: "report_schedule_saved",
-        summary: { entity_label: "report_schedule", schedule_handle: "sch-1" },
-      });
-      expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
-      expect(() => CreateReportScheduleOutputSchema.parse(result)).not.toThrow();
-      expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+    it("description and contract no longer claim a schedule is created", () => {
+      expect(createReportScheduleTool.description).toMatch(/^NOT SUPPORTED/);
+      expect(createReportScheduleTool.description).not.toMatch(/will re-run/);
+      const c = (createReportScheduleTool.annotations as { cesteral: any }).cesteral;
+      expect(c.requiresSimulation).toBe(false);
     });
 
-    it("formatter renders a dry-run message without a false success", () => {
+    it("formatter renders the dry-run failure without claiming a schedule", () => {
       const content = createReportScheduleResponseFormatter({
         timestamp: "2026-06-03T00:00:00.000Z",
         dispatchedCapability: { operation: "create_schedule", canonicalEntityKind: null },
         dryRun: {
-          wouldSucceed: true,
-          validationErrors: [],
+          wouldSucceed: false,
+          validationErrors: [{ code: "UNSUPPORTED_OPERATION", message: "no schedules" }],
           validationSource: "symbolic",
-          expectedEffectSource: "symbolic",
-          expectedEffect: {
-            effectKind: "report_schedule_saved",
-            summary: { entity_label: "report_schedule" },
-          },
+          expectedEffectSource: "none",
         },
       } as any);
-      expect(content[0].text).toContain("Dry run: creating a report schedule would succeed");
+      expect(content[0].text).toContain("Dry run: creating a report schedule would FAIL");
       expect(content[0].text).not.toContain("Scheduled report created:");
     });
   });
@@ -126,15 +131,23 @@ describe("msads report-schedule governance contract (effect class)", () => {
   describe("msads_delete_report_schedule", () => {
     const deleteInput = { scheduleId: "sch-1" };
 
-    it("dry_run validates only — no simulated effect (MS Ads cannot delete programmatically)", async () => {
+    it("execute refuses without prompting, calling the API, or emitting an effect", async () => {
+      const call = deleteReportScheduleLogic({ ...deleteInput } as any, ctx, sdk);
+      await expect(call).rejects.toBeInstanceOf(McpError);
+      await expect(call).rejects.toThrow(/has no report schedules.*Nothing was deleted/);
+      expect(mockElicitDelete).not.toHaveBeenCalled();
+      expect(mockResolveSessionServices).not.toHaveBeenCalled();
+    });
+
+    it("dry_run always reports wouldSucceed: false with no simulated effect", async () => {
       const result = await deleteReportScheduleLogic(
         { ...deleteInput, dry_run: true } as any,
         ctx,
         sdk
       );
       expect(mockElicitDelete).not.toHaveBeenCalled();
-      expect(svc.deleteReportSchedule).not.toHaveBeenCalled();
-      expect(result.dryRun?.wouldSucceed).toBe(true);
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      expect(result.dryRun?.validationErrors[0]?.code).toBe("UNSUPPORTED_OPERATION");
       expect(result.dryRun?.expectedEffect).toBeUndefined();
       expect(result.dryRun?.expectedEffectSource).toBe("none");
       expect(result.dispatchedCapability).toEqual({
@@ -145,43 +158,28 @@ describe("msads report-schedule governance contract (effect class)", () => {
       expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
     });
 
-    it("execute logs the request but emits NO completed-deletion effect", async () => {
-      const result = await deleteReportScheduleLogic({ ...deleteInput } as any, ctx, sdk);
-      expect(svc.deleteReportSchedule).toHaveBeenCalledOnce();
-      expect(result.confirmed).toBe(true);
-      // MS Ads has no programmatic delete — must NOT claim a completed deletion.
-      expect(result.effect).toBeUndefined();
-      expect(result.note).toContain("manual");
-      expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
-      expect(() => DeleteReportScheduleOutputSchema.parse(result)).not.toThrow();
+    it("description no longer reads as a delete", () => {
+      expect(deleteReportScheduleTool.description).toMatch(/^NOT SUPPORTED/);
+      expect(deleteReportScheduleTool.description).toContain("Nothing is deleted");
     });
 
-    it("declined confirmation reports the capability, no effect", async () => {
-      mockElicitDelete.mockResolvedValue(false);
-      const result = await deleteReportScheduleLogic({ ...deleteInput } as any, ctx, sdk);
-      expect(svc.deleteReportSchedule).not.toHaveBeenCalled();
-      expect(result.confirmed).toBe(false);
-      expect(result.effect).toBeUndefined();
-      expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
-    });
-
-    it("formatter renders a dry-run message without a false success", () => {
+    it("formatter renders the dry-run failure", () => {
       const content = deleteReportScheduleResponseFormatter({
         confirmed: true,
         scheduleId: "sch-1",
         timestamp: "2026-06-03T00:00:00.000Z",
         dispatchedCapability: { operation: "delete_schedule", canonicalEntityKind: null },
         dryRun: {
-          wouldSucceed: true,
-          validationErrors: [],
+          wouldSucceed: false,
+          validationErrors: [{ code: "UNSUPPORTED_OPERATION", message: "no schedules" }],
           validationSource: "symbolic",
           expectedEffectSource: "none",
         },
       } as any);
       expect(content[0].text).toContain(
-        "Dry run: delete request for report schedule sch-1 is well-formed"
+        "Dry run: delete request for report schedule sch-1 would FAIL"
       );
-      expect(content[0].text).not.toContain("Schedule sch-1 deletion requested");
+      expect(content[0].text).toContain("nothing would be deleted");
     });
   });
 });

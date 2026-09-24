@@ -55,8 +55,11 @@ function adGroupEntity(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function fakeService(entity: Record<string, unknown>): MsAdsServiceLike {
-  return { getEntity: async () => ({ entities: [entity] }) };
+function fakeService(entity: Record<string, unknown>, currency = "USD"): MsAdsServiceLike {
+  return {
+    getEntity: async () => ({ entities: [entity] }),
+    getAccountCurrency: async () => currency,
+  };
 }
 
 describe("runMsAdsUpdateDryRun", () => {
@@ -110,7 +113,7 @@ describe("runMsAdsUpdateDryRun", () => {
       ctx
     );
     expect(result.wouldSucceed).toBe(true);
-    // 75 major units × 100 = 7,500 minor units; DailyBudget* → daily.
+    // 75 major units × 100 = 7,500 minor units; DailyBudgetStandard → daily.
     expect(result.expectedPostState!.budget.daily).toEqual({
       amountMinor: 7_500,
       currency: "USD",
@@ -129,6 +132,41 @@ describe("runMsAdsUpdateDryRun", () => {
       amountMinor: 25_000,
       currency: "USD",
     });
+  });
+
+  it("takes the currency from the account, not a hard-coded USD", async () => {
+    const result = await runMsAdsUpdateDryRun(
+      { entityType: "budget", entityId: "555", data: { Amount: 250 }, readParams: {} },
+      fakeService(budgetEntity(), "EUR"),
+      ctx
+    );
+    expect(result.expectedPostState!.budget.daily).toEqual({
+      amountMinor: 25_000,
+      currency: "EUR",
+    });
+  });
+
+  it("uses the currency's ISO 4217 exponent for minor units (JPY has none)", async () => {
+    const result = await runMsAdsUpdateDryRun(
+      { entityType: "campaign", entityId: "111", data: { DailyBudget: 5000 }, readParams: {} },
+      fakeService(campaignEntity(), "JPY"),
+      ctx
+    );
+    expect(result.expectedPostState!.budget.daily).toEqual({ amountMinor: 5000, currency: "JPY" });
+  });
+
+  it("marks money with ISO 'XXX' (no currency) when the account currency is unknown", async () => {
+    const result = await runMsAdsUpdateDryRun(
+      { entityType: "budget", entityId: "555", data: { Amount: 1 }, readParams: {} },
+      {
+        getEntity: async () => ({ entities: [budgetEntity()] }),
+        getAccountCurrency: async () => {
+          throw new Error("GetAccount denied");
+        },
+      },
+      ctx
+    );
+    expect(result.expectedPostState!.budget.daily).toEqual({ amountMinor: 100, currency: "XXX" });
   });
 
   it("fails the call when the read partner cannot resolve the entity", async () => {
@@ -194,15 +232,15 @@ describe("applyMsAdsPatch", () => {
 
 describe("buildMsAdsSnapshot / snapshotFromMsAdsEntity", () => {
   it("returns null for an out-of-scope entity type", () => {
-    expect(buildMsAdsSnapshot("keyword", "kw_1", {}, {})).toBeNull();
+    expect(buildMsAdsSnapshot("keyword", "kw_1", {}, {}, "USD")).toBeNull();
   });
 
   it("snapshotFromMsAdsEntity returns undefined for an empty entity", () => {
-    expect(snapshotFromMsAdsEntity("campaign", "111", {})).toBeUndefined();
+    expect(snapshotFromMsAdsEntity("campaign", "111", {}, "USD")).toBeUndefined();
   });
 
   it("normalizes an ad group's date-object schedule", () => {
-    const snapshot = buildMsAdsSnapshot("adGroup", "222", adGroupEntity(), {});
+    const snapshot = buildMsAdsSnapshot("adGroup", "222", adGroupEntity(), {}, "USD");
     expect(snapshot!.entityKind).toBe("ad_group");
     expect(snapshot!.schedule).toEqual({
       startAt: "2026-01-01",
@@ -210,19 +248,55 @@ describe("buildMsAdsSnapshot / snapshotFromMsAdsEntity", () => {
     });
   });
 
-  it("normalizes a campaign monthly budget to lifetime", () => {
+  it("reads DailyBudget as the lifetime amount under LifetimeBudgetStandard (campaign.md)", () => {
     const snapshot = buildMsAdsSnapshot(
       "campaign",
       "111",
-      campaignEntity({
-        BudgetType: "MonthlyBudgetSpendUntilDepleted",
-        DailyBudget: undefined,
-        MonthlyBudget: 1500,
-      }),
-      {}
+      campaignEntity({ BudgetType: "LifetimeBudgetStandard", DailyBudget: 1500 }),
+      {},
+      "USD"
     );
     expect(snapshot!.budget.lifetime).toEqual({ amountMinor: 150_000, currency: "USD" });
     expect(snapshot!.budget.daily).toBeNull();
+  });
+
+  it("keeps DailyBudget daily for DailyBudgetStandard / DailyBudgetAccelerated", () => {
+    for (const BudgetType of ["DailyBudgetStandard", "DailyBudgetAccelerated"]) {
+      const snapshot = buildMsAdsSnapshot(
+        "campaign",
+        "111",
+        campaignEntity({ BudgetType, DailyBudget: 20 }),
+        {},
+        "USD"
+      );
+      expect(snapshot!.budget.daily).toEqual({ amountMinor: 2_000, currency: "USD" });
+      expect(snapshot!.budget.lifetime).toBeNull();
+    }
+  });
+
+  it("ignores the nonexistent MonthlyBudget field", () => {
+    const snapshot = buildMsAdsSnapshot(
+      "campaign",
+      "111",
+      campaignEntity({ DailyBudget: undefined, MonthlyBudget: 1500 }),
+      {},
+      "USD"
+    );
+    expect(snapshot!.budget).toEqual({ daily: null, lifetime: null });
+  });
+
+  it("treats a shared Budget Amount as daily whatever BudgetType says (budget.md)", () => {
+    const snapshot = buildMsAdsSnapshot(
+      "budget",
+      "555",
+      budgetEntity({ BudgetType: "MonthlyBudgetSpendUntilDepleted", Amount: 30 }),
+      {},
+      "USD"
+    );
+    expect(snapshot!.budget).toEqual({
+      daily: { amountMinor: 3_000, currency: "USD" },
+      lifetime: null,
+    });
   });
 });
 
@@ -237,6 +311,17 @@ describe("captureMsAdsSnapshot", () => {
     );
     expect(snapshot!.entityKind).toBe("ad_group");
     expect(snapshot!.status.canonical).toBe("active");
+  });
+
+  it("stamps the account currency on captured money", async () => {
+    const snapshot = await captureMsAdsSnapshot(
+      fakeService(campaignEntity(), "GBP"),
+      "campaign",
+      "111",
+      {},
+      ctx
+    );
+    expect(snapshot!.budget.daily).toEqual({ amountMinor: 5_000, currency: "GBP" });
   });
 
   it("returns undefined (best-effort) when the read throws", async () => {

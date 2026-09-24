@@ -221,6 +221,14 @@
       "expectInTopN": ["dv360_delete_entity"],
       "n": 4,
       "note": "Promoted from gaps[] when dv360_delete_entity's description began stating that deletion is permanent and cannot be undone (P1 fleet review). Still a lexical near-miss: it ranks #4, not #1 — dv360_adjust_line_item_bids still wins on 'line'+'item'. Pinned so the delete tool does not fall back out of the top 4."
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "delete a campaign",
+      "expectTop": "msads_delete_entity",
+      "outranks": ["msads_delete_report_schedule"],
+      "note": "Promoted from gaps[] once msads_delete_report_schedule's description began with 'NOT SUPPORTED' (Microsoft Advertising Reporting has no schedules) and stopped picking up description hits. The margin is a TIE (9–9) resolved by registry order, so reordering allTools can flip it — the thinnest pinned case in the corpus."
     }
   ],
   "gaps": [
@@ -241,15 +249,6 @@
       "actualTop": "tiktok_adjust_bids",
       "wantedNotInTopN": 1,
       "note": "THE 2-CHARACTER SUBSTRING EDGE the issue predicted, demonstrated live. Name matching is substring-either-direction, so the query token 'ad' matches 'adjust' inside tiktok_adjust_bids and buys it the full +5 name weight. tiktok_delete_entity is #2."
-    },
-    {
-      "server": "msads-mcp",
-      "platform": "msads",
-      "query": "delete a campaign",
-      "wanted": "msads_delete_entity",
-      "actualTop": "msads_delete_report_schedule",
-      "wantedNotInTopN": 1,
-      "note": "Deleting a report SCHEDULE outranks deleting the campaign, because the extra 'report'/'schedule' tokens pick up description hits. cm360 has the same two tools and gets it the right way round, so this is wording drift rather than an inevitability."
     },
     {
       "server": "amazon-dsp-mcp",

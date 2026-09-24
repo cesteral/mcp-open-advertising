@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import { runMsAdsDuplicateDryRun, resolveMsAdsDuplicateCapability } from "../utils/dry-run.js";
-import { snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
+import { resolveMsAdsCurrency, snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -123,7 +123,8 @@ export async function duplicateEntityLogic(
   const after: NormalizedEntitySnapshot | undefined = snapshotFromMsAdsEntity(
     input.entityType,
     createdId,
-    item
+    item,
+    await resolveMsAdsCurrency(msadsService, context)
   );
 
   return {

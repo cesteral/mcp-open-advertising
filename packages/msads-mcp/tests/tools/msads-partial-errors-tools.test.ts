@@ -186,10 +186,8 @@ describe("bulk writes report per-item failures", () => {
     const result = await bulkCreateEntitiesLogic(
       {
         entityType: "adGroup",
-        items: [
-          { Name: "A", CampaignId: 1 },
-          { Name: "A", CampaignId: 1 },
-        ],
+        campaignId: "1",
+        items: [{ Name: "A" }, { Name: "A" }],
       } as any,
       ctx,
       sdk
@@ -222,6 +220,7 @@ describe("bulk writes report per-item failures", () => {
     const result = await bulkUpdateEntitiesLogic(
       {
         entityType: "campaign",
+        accountId: "9",
         items: [
           { Id: 1, DailyBudget: 10 },
           { Id: 2, DailyBudget: 20 },
