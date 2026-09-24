@@ -230,6 +230,67 @@ describe("freshness", () => {
     expect(overdue).toEqual([]);
   });
 
+  it("rejects a deadline parked beyond the class cadence — the escape hatch is not a rubber stamp", () => {
+    // Moving verifyBy is the documented way past a blocked release. Without a
+    // cap, 2099 passes as readily as a real extension.
+    const { parked, overdue } = assessFreshness(
+      { facts: [fact({ status: "unverified", verifiedAt: null, verifyBy: "2099-01-01" })] },
+      NOW
+    );
+    expect(overdue).toEqual([]);
+    expect(parked).toHaveLength(1);
+    expect(parked[0].cadence).toBe(90);
+  });
+
+  it("accepts a deadline exactly one cadence out, and caps by class", () => {
+    // 2026-09-16 + 90 = 2026-12-15: the longest legitimate extension today.
+    const at90 = assessFreshness(
+      { facts: [fact({ status: "unverified", verifiedAt: null, verifyBy: "2026-12-15" })] },
+      NOW
+    );
+    expect(at90.parked).toEqual([]);
+    const at91 = assessFreshness(
+      { facts: [fact({ status: "unverified", verifiedAt: null, verifyBy: "2026-12-16" })] },
+      NOW
+    );
+    expect(at91.parked).toHaveLength(1);
+    // A behavioural constraint gets 180 days, so the same date is fine for it.
+    const behavioural = assessFreshness(
+      {
+        facts: [
+          fact({
+            class: "behavioral-constraint",
+            status: "unverified",
+            verifiedAt: null,
+            verifyBy: "2026-12-16",
+          }),
+        ],
+      },
+      NOW
+    );
+    expect(behavioural.parked).toEqual([]);
+  });
+
+  it("treats a future-dated verification as parked, not current", () => {
+    // verifiedAt in the future derives a refreshDue beyond the cadence.
+    const { parked, stale } = assessFreshness(
+      { facts: [fact({ status: "verified", verifiedAt: "2027-06-01" })] },
+      NOW
+    );
+    expect(stale).toEqual([]);
+    expect(parked).toHaveLength(1);
+  });
+
+  it("warns ahead of a deadline only when asked to", () => {
+    const facts = [
+      fact({ id: "in20", status: "unverified", verifiedAt: null, verifyBy: "2026-10-06" }),
+      fact({ id: "in40", status: "unverified", verifiedAt: null, verifyBy: "2026-10-26" }),
+    ];
+    expect(assessFreshness({ facts }, NOW).dueSoon).toEqual([]);
+    const { dueSoon } = assessFreshness({ facts }, NOW, { dueWithinDays: 30 });
+    expect(dueSoon.map((r) => r.fact.id)).toEqual(["in20"]);
+  });
+
   it("would have caught the #206 LinkedIn lapse a year before it was found by hand", () => {
     // The issue's worked example. `202409` verified 2024-09-01 on a 90-day
     // cadence is overdue from 2024-11-30 — CI would have said so in 2024, not
@@ -268,6 +329,22 @@ describe("where the freshness half runs", () => {
     expect(gate, "the v* lane no longer runs the freshness gate").toBeGreaterThan(0);
     expect(publish).toBeGreaterThan(0);
     expect(gate, "the freshness gate must run before publish").toBeLessThan(publish);
+  });
+
+  it("gates the release WITHOUT --due-within, so only an actually-expired or parked fact blocks", () => {
+    const step = fleetLane.split("\n").find((l) => l.includes("check-platform-facts.mjs"));
+    expect(step).not.toContain("--due-within");
+  });
+
+  it("warns a month early from the weekly job", () => {
+    const weekly = readFileSync(join(ROOT, ".github/workflows/platform-facts.yml"), "utf-8");
+    expect(weekly).toContain("check-platform-facts.mjs --freshness --due-within 30");
+  });
+
+  it("parks no shipped deadline beyond its cadence", () => {
+    // Monotone: a deadline within one cadence of today stays within it as
+    // time passes, so this cannot go red by the calendar alone.
+    expect(assessFreshness(ledger).parked).toEqual([]);
   });
 
   it("does not gate the contract-library lane, which relies on no platform fact", () => {

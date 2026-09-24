@@ -25,7 +25,13 @@
 //                          it can only fail because of something in this commit.
 //
 //   --freshness            Time-dependent. Reports facts whose refreshDue or
-//                          verifyBy has passed. NOT for the PR path — it would
+//                          verifyBy has passed, and facts whose deadline is
+//                          parked further out than their class cadence allows.
+//                          Also the fleet release gate (release.yml).
+//
+//   --due-within <days>    With --freshness: also report a fact due within
+//                          <days>, so the weekly job warns BEFORE a deadline
+//                          starts failing releases. Not used by release.yml. NOT for the PR path — it would
 //                          turn `main` red by the mere passage of time, handing
 //                          an outside system (the calendar) a switch, which is
 //                          the same reason check-terraform-drift.mjs runs on a
@@ -195,31 +201,68 @@ export function checkCodeRefs(ledger, root = ROOT) {
  * An expired fact is NOT current. Being unable to check it does not make it
  * fresh — an unreachable vendor doc produces `unverified`, which is reported,
  * never silently treated as a pass.
+ *
+ * Two further classes, both about the DEADLINE rather than the fact:
+ *
+ *   parked   The deadline sits further out than the class cadence
+ *            (REFRESH_DAYS) allows. Without this, the escape hatch for a
+ *            blocked release — move `verifyBy` in a reviewed commit — accepts
+ *            `2099-01-01` as readily as a real 90-day extension, and the gate
+ *            becomes a rubber stamp. A legitimate extension is at most one
+ *            cadence from the day it is made, so this only ever gets easier to
+ *            satisfy as time passes and cannot turn anything red by itself.
+ *   dueSoon  The deadline is within `dueWithinDays` (0 = off). Lets the weekly
+ *            job warn before a deadline starts failing releases, instead of
+ *            opening its first issue the same week they break.
  */
-export function assessFreshness(ledger, now = new Date()) {
+export function assessFreshness(ledger, now = new Date(), { dueWithinDays = 0 } = {}) {
   const stale = [];
   const overdue = [];
+  const parked = [];
+  const dueSoon = [];
   for (const fact of ledger.facts) {
     if (fact.status === "superseded") continue;
+    const cadence = REFRESH_DAYS[fact.class] ?? 180;
 
+    let due;
     if (fact.status === "unverified") {
-      if (fact.verifyBy && daysBetween(new Date(fact.verifyBy), now) > 0) {
-        overdue.push({ fact, days: daysBetween(new Date(fact.verifyBy), now) });
+      due = fact.verifyBy;
+      if (due && daysBetween(new Date(due), now) > 0) {
+        overdue.push({ fact, days: daysBetween(new Date(due), now) });
+        continue;
       }
-      continue;
+    } else {
+      due =
+        fact.refreshDue ??
+        (() => {
+          const d = new Date(fact.verifiedAt);
+          d.setUTCDate(d.getUTCDate() + cadence);
+          return d.toISOString().slice(0, 10);
+        })();
+      const overdueDays = daysBetween(new Date(due), now);
+      if (overdueDays > 0) {
+        stale.push({ fact, days: overdueDays, due });
+        continue;
+      }
     }
+    if (!due) continue;
 
-    const due =
-      fact.refreshDue ??
-      (() => {
-        const d = new Date(fact.verifiedAt);
-        d.setUTCDate(d.getUTCDate() + (REFRESH_DAYS[fact.class] ?? 180));
-        return d.toISOString().slice(0, 10);
-      })();
-    const overdueDays = daysBetween(new Date(due), now);
-    if (overdueDays > 0) stale.push({ fact, days: overdueDays, due });
+    const daysLeft = daysBetween(now, new Date(due));
+    if (daysLeft > cadence) parked.push({ fact, due, daysLeft, cadence });
+    else if (dueWithinDays > 0 && daysLeft <= dueWithinDays) dueSoon.push({ fact, due, daysLeft });
   }
-  return { stale, overdue };
+  return { stale, overdue, parked, dueSoon };
+}
+
+function parseDueWithin(argv) {
+  const i = argv.indexOf("--due-within");
+  if (i === -1) return 0;
+  const days = Number(argv[i + 1]);
+  if (!Number.isInteger(days) || days < 1) {
+    console.error(`check:platform-facts: --due-within needs a positive whole number of days`);
+    process.exit(EXIT_CANNOT_CHECK);
+  }
+  return days;
 }
 
 function loadLedger() {
@@ -263,8 +306,10 @@ function main() {
     process.exit(EXIT_OK);
   }
 
-  const { stale, overdue } = assessFreshness(ledger);
-  const blocking = [...stale, ...overdue].filter((r) => r.fact.loadBearing);
+  const { stale, overdue, parked, dueSoon } = assessFreshness(ledger, new Date(), {
+    dueWithinDays: parseDueWithin(process.argv),
+  });
+  const blocking = [...stale, ...overdue, ...parked, ...dueSoon].filter((r) => r.fact.loadBearing);
 
   for (const { fact, days, due } of stale) {
     console.error(
@@ -276,6 +321,20 @@ function main() {
     console.error(
       `NEVER VERIFIED${fact.loadBearing ? " (load-bearing)" : ""}: ${fact.id} — deadline ` +
         `${fact.verifyBy} passed ${days} days ago.\n    ${fact.claim}\n    Source: ${fact.sourceUrl ?? "(none)"}`
+    );
+  }
+
+  for (const { fact, due, daysLeft, cadence } of parked) {
+    console.error(
+      `DEADLINE PARKED${fact.loadBearing ? " (load-bearing)" : ""}: ${fact.id} — due ${due}, ` +
+        `${daysLeft} days out, but its class (${fact.class}) allows at most ${cadence}.\n` +
+        `    A deadline may be moved to buy time, but by no more than one cadence from today.`
+    );
+  }
+  for (const { fact, due, daysLeft } of dueSoon) {
+    console.error(
+      `DUE SOON${fact.loadBearing ? " (load-bearing)" : ""}: ${fact.id} — due ${due}, ` +
+        `${daysLeft} days from now.\n    ${fact.claim}\n    Source: ${fact.sourceUrl ?? "(none)"}`
     );
   }
 
