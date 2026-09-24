@@ -1,3 +1,4 @@
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices, mockElicit } = vi.hoisted(() => ({
@@ -31,12 +32,32 @@ const baseInput = {
   status: "ENTITY_STATUS_PAUSED",
 };
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see dv360-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityChecks = (
+  toolName: string,
+  advertiserIds: ReadonlyArray<string | undefined>,
+  costPerItem: readonly number[]
+) => [
+  {
+    rateLimiter: new RateLimiter(),
+    toolName,
+    itemCount: advertiserIds.length,
+    buckets: [{ key: "dv360:test", costPerItem }],
+  },
+];
+
 describe("dv360_bulk_update_status governance contract (effect class)", () => {
-  let svc: { getEntity: ReturnType<typeof vi.fn>; updateEntity: ReturnType<typeof vi.fn> };
+  let svc: {
+    getEntity: ReturnType<typeof vi.fn>;
+    updateEntity: ReturnType<typeof vi.fn>;
+    bulkCapacityChecks: typeof unlimitedBulkCapacityChecks;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      bulkCapacityChecks: unlimitedBulkCapacityChecks,
       getEntity: vi
         .fn()
         .mockResolvedValueOnce({ displayName: "LI A", entityStatus: "ENTITY_STATUS_ACTIVE" })

@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices } = vi.hoisted(() => ({
@@ -33,6 +34,19 @@ function createMockSdkContext(sessionId = "session-123") {
   return { sessionId } as any;
 }
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see ttd-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityCheck = (
+  toolName: string,
+  itemCount: number,
+  costPerItem: readonly number[]
+) => ({
+  rateLimiter: new RateLimiter(),
+  toolName,
+  itemCount,
+  buckets: [{ key: "ttd:test", costPerItem }],
+});
+
 describe("ttd bid list tools", () => {
   let mockTtdService: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -40,6 +54,7 @@ describe("ttd bid list tools", () => {
     vi.clearAllMocks();
 
     mockTtdService = {
+      bulkCapacityCheck: unlimitedBulkCapacityCheck,
       createBidList: vi.fn(),
       getBidList: vi.fn(),
       updateBidList: vi.fn(),
@@ -318,7 +333,7 @@ describe("ttd bid list tools", () => {
       fetchDirect = vi.fn();
       const service = new TtdService(
         { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
-        { consume: vi.fn().mockResolvedValue(undefined) } as any,
+        new RateLimiter(),
         { partnerId: "p", fetch: vi.fn(), fetchDirect } as any
       );
       mockResolveSessionServices.mockReturnValue({ ttdService: service });

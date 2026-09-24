@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { GAdsHttpClient } from "./gads-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityCheck, RateLimiter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
@@ -78,6 +78,27 @@ export class GAdsService {
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: GAdsHttpClient
   ) {}
+
+  /**
+   * The bulk-capacity projection input for a batch this service would run
+   * against one customer. Every call here consumes one token from
+   * `gads:${customerId}`; `costPerItem` lists the token cost of each `consume`
+   * one item makes, in order. Pass the result to `assertBulkCapacity` (execute)
+   * or `projectBulkCapacity` (dry run).
+   */
+  bulkCapacityCheck(
+    toolName: string,
+    customerId: string,
+    itemCount: number,
+    costPerItem: readonly number[]
+  ): BulkCapacityCheck {
+    return {
+      rateLimiter: this.rateLimiter,
+      toolName,
+      itemCount,
+      buckets: [{ key: `gads:${customerId}`, costPerItem }],
+    };
+  }
 
   // ─── GAQL Search ──────────────────────────────────────────────────
 

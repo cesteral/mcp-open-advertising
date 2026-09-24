@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntitySchemaForOperation,
@@ -122,9 +123,18 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // One POST per item, one token each on `dv360:${advertiserId}`
+  // (DV360Service.bulkCreateEntities → createEntity).
+  const { dv360Service } = resolveSessionServices(sdkContext);
+  const capacityChecks = dv360Service.bulkCapacityChecks(
+    TOOL_NAME,
+    input.items.map(() => input.advertiserId),
+    [1]
+  );
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors(capacityChecks));
     return {
       entityType: input.entityType,
       totalRequested: 0,
@@ -153,7 +163,8 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  const { dv360Service } = resolveSessionServices(sdkContext);
+  // Refuse a batch the rate limiter cannot admit in time — before any upstream call.
+  assertBulkCapacityAll(capacityChecks);
 
   // Pre-process all items (merge IDs, extract parent IDs) before parallel execution.
   const preparedItems = input.items.map((itemData) => ({
@@ -304,8 +315,11 @@ function validateBulkItem(
  * entity kind). DV360 has no native bulk validate, so both axes are symbolic.
  * Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkCreateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     validationErrors.push(...validateBulkItem(input, item as Record<string, unknown>, i));
   });

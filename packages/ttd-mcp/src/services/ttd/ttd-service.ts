@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityCheck, RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent, fetchWithTimeout } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
@@ -47,6 +47,28 @@ export class TtdService {
     private readonly httpClient: TtdHttpClient,
     private readonly graphqlUrl: string = "https://desk.thetradedesk.com/graphql"
   ) {}
+
+  /**
+   * The bulk-capacity projection input for a batch this service would run.
+   *
+   * Every call in this service consumes ONE token from the single per-partner
+   * key `ttd:${partnerId}`, so a batch tool describes its per-item pattern as
+   * `costPerItem` (one entry per `consume` an item makes, in order) and this
+   * fills in the limiter and key the calls will actually hit. Pass the result to
+   * `assertBulkCapacity` (execute) or `projectBulkCapacity` (dry run).
+   */
+  bulkCapacityCheck(
+    toolName: string,
+    itemCount: number,
+    costPerItem: readonly number[]
+  ): BulkCapacityCheck {
+    return {
+      rateLimiter: this.rateLimiter,
+      toolName,
+      itemCount,
+      buckets: [{ key: `ttd:${this.httpClient.partnerId}`, costPerItem }],
+    };
+  }
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 

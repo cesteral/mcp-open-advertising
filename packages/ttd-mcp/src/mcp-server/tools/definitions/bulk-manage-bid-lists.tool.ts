@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -17,6 +18,7 @@ import type {
   EffectDryRunResult,
   DispatchedCapability,
   CesteralWriteToolAnnotations,
+  DryRunValidationError,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_manage_bid_lists";
@@ -120,6 +122,11 @@ export async function bidListBulkLogic(
   const requested =
     input.operation === "batch_get" ? (input.bidListIds?.length ?? 0) : (input.items?.length ?? 0);
 
+  // One GraphQL request per bid list (batch_get → getBidList, batch_update →
+  // updateBidList; both via bidListGraphql), one token each on `ttd:${partnerId}`.
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, requested, [1]);
+
   if (input.dry_run === true) {
     return {
       operation: input.operation,
@@ -128,12 +135,18 @@ export async function bidListBulkLogic(
       failed: 0,
       results: [],
       timestamp: ts,
-      dryRun: buildBidListBulkEffectDryRun(input.operation, requested),
+      dryRun: buildBidListBulkEffectDryRun(
+        input.operation,
+        requested,
+        bulkCapacityDryRunErrors([capacityCheck])
+      ),
       dispatchedCapability,
     };
   }
 
-  const { ttdService } = resolveSessionServices(sdkContext);
+  // Refuse a batch the rate limiter cannot admit in time — before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
+
   const selection = input.selection ?? "id name";
 
   const results =
@@ -167,13 +180,15 @@ export async function bidListBulkLogic(
 /**
  * Symbolic effect dry-run for `ttd_bulk_manage_bid_lists`. The per-operation
  * required arrays (bidListIds / items, each 1..50) are enforced by the input
- * schema, so a well-formed call always passes; the projected effect is a batch
- * job over the supplied items. Pure (no I/O); never includes the raw item
- * payloads.
+ * schema; the only way a well-formed call fails is a batch the rate limiter
+ * cannot admit in time (`capacityErrors`, which the execute path refuses). The
+ * projected effect is a batch job over the supplied items. No I/O; never
+ * includes the raw item payloads.
  */
 function buildBidListBulkEffectDryRun(
   operation: BidListBulkInput["operation"],
-  requested: number
+  requested: number,
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
   const expectedEffect: EffectResult = {
     effectKind: "bid_lists_managed",
@@ -182,8 +197,8 @@ function buildBidListBulkEffectDryRun(
 
   return assertGovernedEffectDryRun(
     {
-      wouldSucceed: true,
-      validationErrors: [],
+      wouldSucceed: capacityErrors.length === 0,
+      validationErrors: capacityErrors,
       validationSource: "symbolic",
       expectedEffectSource: "symbolic",
       expectedEffect,
@@ -195,11 +210,13 @@ function buildBidListBulkEffectDryRun(
 
 export function bidListBulkResponseFormatter(result: BidListBulkOutput): McpTextContent[] {
   if (result.dryRun) {
-    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const errs = validationErrors.map((e) => `\n  - [${e.code}] ${e.message}`).join("");
     return [
       {
         type: "text" as const,
-        text: `Dry run: ${result.operation} over ${result.totalItems} item(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bid lists were changed.\n\nTimestamp: ${result.timestamp}`,
+        text: `Dry run: ${result.operation} over ${result.totalItems} item(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bid lists were changed.${errs}\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

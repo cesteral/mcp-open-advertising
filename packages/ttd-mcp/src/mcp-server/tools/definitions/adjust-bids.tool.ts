@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -130,8 +131,18 @@ export async function adjustBidsLogic(
     canonicalEntityKind: null,
   };
 
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(
+    TOOL_NAME,
+    input.adjustments.length,
+    adjustBidsCostPerItem(input.adjustments)
+  );
+
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      bulkCapacityDryRunErrors([capacityCheck])
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -143,6 +154,10 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -163,8 +178,6 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
-
-  const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.adjustBids(input.adjustments, context);
 
@@ -204,9 +217,10 @@ export async function adjustBidsLogic(
  * both axes are symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"]
+  adjustments: AdjustBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   adjustments.forEach((a, i) => {
     for (const [field, value] of [
       ["baseBidCpm", a.baseBidCpm],
@@ -238,6 +252,19 @@ function buildAdjustBidsEffectDryRun(
     "ttd_adjust_bids",
     { requiresValidation: true, requiresSimulation: true }
   );
+}
+
+/**
+ * `consume` calls one adjustment makes on `ttd:${partnerId}` (TtdService.adjustBids,
+ * ttd-service.ts): an item WITH `currencyCode` sends only the partial PUT
+ * (`[1]`); an item WITHOUT reads the ad group first (`resolveAdGroupBidCurrency`
+ * → `getEntity`, 1 token) and then PUTs (`[1, 1]`). A mixed batch is modelled
+ * at the higher cost for every item (conservative). The per-advertiser currency
+ * lookup — made only when the ad group carries no bid currency, once per
+ * advertiser — cannot be known up front and is not counted.
+ */
+function adjustBidsCostPerItem(adjustments: AdjustBidsInput["adjustments"]): number[] {
+  return adjustments.every((a) => a.currencyCode) ? [1] : [1, 1];
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
