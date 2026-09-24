@@ -50,13 +50,17 @@ Check: operation_status, primary_status, secondary_status, and any rejection rea
 
 \`\`\`json
 amazon_dsp_get_report({
-  "profileId": "${profileId}",
-  "dimensions": ["orderId", "date"],
+  "accountId": "{dspAdvertiserId}",
+  "type": "CAMPAIGN",
+  "dimensions": ["ORDER", "LINE_ITEM"],
   "metrics": ["impressions", "clickThroughs", "totalCost"],
+  "timeUnit": "DAILY",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
+
+\`accountId\` is the entity's DSP advertiser ID (from \`amazon_dsp_list_advertisers\`), not the profile ID.
 
 ## Step 3: Check Parent Entity
 

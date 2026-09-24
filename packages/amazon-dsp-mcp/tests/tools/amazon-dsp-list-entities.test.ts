@@ -103,6 +103,41 @@ describe("amazonDsp_list_entities tool", () => {
       expect(result.pagination.nextCursor).toBe("1");
     });
 
+    it("reports the returned count, not the requested page size, and advances by it", async () => {
+      mockListEntities.mockResolvedValueOnce({
+        entities: [{ orderId: "a" }, { orderId: "b" }, { orderId: "c" }],
+        pageInfo: { startIndex: 10, count: 25, totalResults: 30 },
+      });
+
+      const result = await listEntitiesLogic(
+        { entityType: "order", profileId: "1234567890", startIndex: 10, pageSize: 25 },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(result.pagination.pageSize).toBe(3);
+      expect(result.pagination.nextCursor).toBe("13");
+      expect(result.pagination.hasMore).toBe(true);
+      expect(listEntitiesResponseFormatter(result)[0].text).toContain("Found 3 entities");
+    });
+
+    it("reports an empty page as empty and stops paginating", async () => {
+      mockListEntities.mockResolvedValueOnce({
+        entities: [],
+        pageInfo: { startIndex: 0, count: 25, totalResults: 7 },
+      });
+
+      const result = await listEntitiesLogic(
+        { entityType: "order", profileId: "1234567890", startIndex: 0, pageSize: 25 },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(result.pagination.pageSize).toBe(0);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(listEntitiesResponseFormatter(result)[0].text).toContain("No entities found");
+    });
+
     it("passes filters to service when provided", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [],

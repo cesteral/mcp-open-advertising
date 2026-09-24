@@ -53,7 +53,7 @@ ${pathRows}
 
 ## Key Notes
 - An Amazon DSP \`order\` is the campaign-level object; a \`lineItem\` is the ad-group-level object.
-- Amazon DSP reporting v3 uses \`POST /reporting/reports\` and \`GET /reporting/reports/{reportId}\`.
+- Amazon DSP reporting uses DSP reports v3: \`POST /accounts/{accountId}/dsp/reports\` and \`GET /accounts/{accountId}/dsp/reports/{reportId}\`, where \`accountId\` is the DSP advertiser ID (see \`reporting-reference://amazonDsp\`).
 - List responses are modeled as JSON objects containing the entity-specific response key plus \`totalResults\`.
 - Entity support in this MCP is intentionally narrower than the full Amazon Ads surface; Guidance, Quick Actions, and newer targeting APIs remain follow-up work.
 `;

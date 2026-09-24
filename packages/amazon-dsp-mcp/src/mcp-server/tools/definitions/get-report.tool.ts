@@ -20,18 +20,26 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_report";
 const TOOL_TITLE = "Get Amazon DSP Report";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP performance report (legacy /dsp/reports API).
+const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP performance report (DSP reports v3: /accounts/{accountId}/dsp/reports).
 
 Follows the async polling pattern: submit task → poll until SUCCESS → download data. This may take 30s–5 minutes depending on the data volume.
 
+\`accountId\` is the DSP advertiser ID (from \`amazon_dsp_list_advertisers\`), not the profile ID.
+
 **Allowed \`type\`:** CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE.
 **CAMPAIGN \`dimensions\`:** ORDER, LINE_ITEM, CREATIVE.
-**Common metrics:** impressions, totalCost, viewableImpressions, viewabilityRate (Amazon returns an authoritative invalid-list for unknown names).
+**Common metrics:** impressions, clickThroughs, totalCost, viewableImpressions, viewabilityRate (Amazon returns an authoritative invalid-list for unknown names).
 
 Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is supported; avoid custom ranges beyond 95 days.`;
 
 export const GetReportInputSchema = z
   .object({
+    accountId: z
+      .string()
+      .min(1)
+      .describe(
+        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Used as the `{accountId}` segment of the report URL. Distinct from the profile ID."
+      ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -43,7 +51,7 @@ export const GetReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Start date (YYYY-MM-DD format). Max 95-day lookback. Required if datePreset not provided. Converted to YYYYMMDD upstream."
+        "Start date (YYYY-MM-DD format). Max 95-day lookback. Required if datePreset not provided."
       ),
     endDate: z
       .string()
@@ -62,7 +70,7 @@ export const GetReportInputSchema = z
     metrics: z
       .array(z.string())
       .optional()
-      .describe("Metric names. Joined to comma-string upstream."),
+      .describe("Metric names (e.g. ['impressions', 'totalCost'])."),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
       .optional()
@@ -110,6 +118,7 @@ export async function getReportLogic(
 
   const result = await amazonDspReportingService.getReport(
     {
+      accountId: input.accountId,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
       type: input.type,
@@ -201,6 +210,7 @@ export const getReportTool = {
     {
       label: "Daily line-item-level CAMPAIGN report for last 7 days",
       input: {
+        accountId: "577020615253975655",
         datePreset: "LAST_7_DAYS",
         type: "CAMPAIGN",
         dimensions: ["ORDER", "LINE_ITEM"],
@@ -211,6 +221,7 @@ export const getReportTool = {
     {
       label: "Order-level CAMPAIGN summary for a custom range",
       input: {
+        accountId: "577020615253975655",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",

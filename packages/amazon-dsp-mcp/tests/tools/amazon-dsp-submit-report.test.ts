@@ -45,6 +45,7 @@ describe("submitReportLogic", () => {
 
     const result = await submitReportLogic(
       {
+        accountId: "adv-1",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",
@@ -60,11 +61,12 @@ describe("submitReportLogic", () => {
     expect(result.timestamp).toBeDefined();
   });
 
-  it("passes the flat /dsp/reports config shape to submitReport", async () => {
+  it("passes the DSP reports v3 config shape (with accountId) to submitReport", async () => {
     mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-cfg" });
 
     await submitReportLogic(
       {
+        accountId: "adv-1",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",
@@ -78,6 +80,7 @@ describe("submitReportLogic", () => {
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
       expect.objectContaining({
+        accountId: "adv-1",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",
@@ -94,6 +97,7 @@ describe("submitReportLogic", () => {
 
     await submitReportLogic(
       {
+        accountId: "adv-1",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",

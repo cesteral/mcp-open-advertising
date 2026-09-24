@@ -195,7 +195,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
       true
     );
     expect(hierarchyResource?.getContent()).toContain("Creative Association");
-    expect(reportingResource?.getContent()).toContain("POST /dsp/reports");
+    expect(reportingResource?.getContent()).toContain("POST /accounts/{accountId}/dsp/reports");
     expect(reportingResource?.getContent()).toContain("IN_PROGRESS");
   });
 

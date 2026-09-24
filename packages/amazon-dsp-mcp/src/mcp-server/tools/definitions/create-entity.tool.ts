@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getCreatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   runAmazonDspCreateDryRun,
   resolveAmazonDspCreateCapability,
@@ -29,14 +29,15 @@ const TOOL_NAME = "amazon_dsp_create_entity";
 const TOOL_TITLE = "Create AmazonDsp Ads Entity";
 const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getCreatableEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign** / **order**: requires \`name\`, \`advertiserId\`, \`startDateTime\`, \`endDateTime\`
-- **adGroup** / **lineItem**: requires \`name\`, \`orderId\`, \`advertiserId\`, \`budget\`
-- **creative**: requires \`name\`, \`advertiserId\`, \`creativeType\` (STANDARD_DISPLAY, VIDEO, RICH_MEDIA)
+- **order** (campaign): requires \`name\`, \`advertiserId\`, \`startDateTime\`, \`endDateTime\`
+- **lineItem** (ad group): requires \`name\`, \`orderId\`, \`advertiserId\`, \`budget\`
 - **target**: typically requires \`lineItemId\` plus tactic-specific targeting fields
 - **creativeAssociation**: requires \`creativeId\` and \`lineItemId\`
+
+Creatives cannot be created here: Amazon routes creative writes to subtype-specific endpoints this server does not implement. Associate an existing creative with a \`creativeAssociation\` instead.
 
 **Gotchas:**
 - State values: ENABLED, PAUSED, ARCHIVED
@@ -45,7 +46,7 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    entityType: z.enum(getCreatableEntityTypeEnum()).describe("Type of entity to create"),
     profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     data: z.record(z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
