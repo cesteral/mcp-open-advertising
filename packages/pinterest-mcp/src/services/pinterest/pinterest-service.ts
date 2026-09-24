@@ -53,8 +53,11 @@ interface PinterestPageInfo {
  * Pinterest v5 patterns:
  * - ad_account_id is in the URL path (interpolated via interpolatePath)
  * - Pagination is cursor-based via `bookmark` query param
- * - Create: POST with array body `[entityObject]`, returns `{ items: [created] }`
- * - Update: PATCH with array body `[{ id, ...fields }]`, returns `{ items: [updated] }`
+ * - Get: GET `/v5/ad_accounts/{ad_account_id}/{campaigns|ad_groups|ads}/{id}` (or `/v5/pins/{id}`)
+ * - Create: POST with array body `[entityObject]`, returns HTTP 200 with
+ *   `{ items: [{ data, exceptions }] }` — a rejected item still arrives as a 200,
+ *   so every item's `exceptions` must be checked (see `unwrapBatchWriteItem`)
+ * - Update: PATCH with array body `[{ id, ...fields }]`, same `{ items: [{ data, exceptions }] }` shape
  * - Delete: DELETE with query params `?campaign_ids=id1,id2`
  * - Status update: PATCH (status is just a field in the update body)
  */
@@ -106,51 +109,30 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
-    // If entity config has an explicit getPath, use direct fetch
-    if (config.getPath) {
-      const path = interpolatePath(config.getPath, {
-        adAccountId: filters.adAccountId,
-        entityId,
-      });
-
-      const result = (await this.httpClient.get(path, {}, context)) as
-        | PinterestListResponse
-        | Record<string, unknown>;
-
-      // If single-entity response (e.g. GET /v5/pins/{id}), return as-is
-      if (!("items" in (result as object))) {
-        return result as PinterestEntityMap[T];
-      }
-
-      // Otherwise it's a list; find by id
-      const list = (result as PinterestListResponse).items ?? [];
-      const entity = list.find((e) => (e as Record<string, unknown>)[config.idField] === entityId);
-      if (!entity) {
-        throw new McpError(
-          JsonRpcErrorCode.NotFound,
-          `${config.displayName} with ID ${entityId} not found`
-        );
-      }
-      return entity as PinterestEntityMap[T];
-    }
-
-    // Fallback: list entities and filter by ID
-    const listPath = interpolatePath(config.listPath, {
+    // Direct GET by ID. Pinterest v5's list endpoints have no `id` filter (only
+    // `campaign_ids` / `ad_group_ids` / `ad_ids`), so listing with `?id=` and
+    // taking the first item returned an arbitrary entity from the account.
+    const path = interpolatePath(config.getPath, {
       adAccountId: filters.adAccountId,
+      entityId: encodeURIComponent(entityId),
     });
-    const data = (await this.httpClient.get(
-      listPath,
-      { [config.idField]: entityId, page_size: "1" },
-      context
-    )) as PinterestListResponse;
-    const list = data?.items ?? [];
-    if (list.length === 0) {
+
+    const result = (await this.httpClient.get(path, {}, context)) as unknown;
+
+    // Never hand back an entity other than the one asked for — every write
+    // tool's snapshot, dry-run, duplicate and previous-bid read builds on this.
+    const returnedId =
+      result && typeof result === "object" && !Array.isArray(result)
+        ? (result as Record<string, unknown>)[config.idField]
+        : undefined;
+    if (returnedId == null || String(returnedId) !== entityId) {
       throw new McpError(
         JsonRpcErrorCode.NotFound,
-        `${config.displayName} with ID ${entityId} not found`
+        `${config.displayName} with ID ${entityId} not found`,
+        { entityType, entityId, returnedId: returnedId == null ? null : String(returnedId) }
       );
     }
-    return list[0] as PinterestEntityMap[T];
+    return result as PinterestEntityMap[T];
   }
 
   async createEntity<T extends PinterestEntityType>(
@@ -164,8 +146,11 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
-    const data = (await this.httpClient.post(path, [body], context)) as { items?: unknown[] };
-    return (data?.items ?? [])[0] as PinterestEntityMap[T];
+    const data = await this.httpClient.post(path, [body], context);
+    if (!config.batchWrite) {
+      return data as PinterestEntityMap[T];
+    }
+    return unwrapBatchWriteItem(data, config.displayName, "create") as PinterestEntityMap[T];
   }
 
   async updateEntity<T extends PinterestEntityType>(
@@ -186,13 +171,18 @@ export class PinterestService {
       return this.httpClient.patch(path, updates, context) as Promise<PinterestEntityMap[T]>;
     }
 
-    // Bulk endpoints expect an array body and return { items: [...] }
-    const data = (await this.httpClient.patch(
+    // Batch endpoints expect an array body and return { items: [{ data, exceptions }] }
+    const data = await this.httpClient.patch(
       path,
       [{ id: entityId, ...(updates as object) }],
       context
-    )) as { items?: unknown[] };
-    return (data?.items ?? [])[0] as PinterestEntityMap[T];
+    );
+    return unwrapBatchWriteItem(
+      data,
+      config.displayName,
+      "update",
+      entityId
+    ) as PinterestEntityMap[T];
   }
 
   async deleteEntity(
@@ -354,10 +344,23 @@ export class PinterestService {
 
     for (const adjustment of adjustments) {
       try {
+        // `bidPrice` is in the advertiser's currency (major units, e.g. 1.5 =
+        // $1.50); Pinterest's `bid_in_micro_currency` is an integer in micros.
+        const bidMicros = currencyToMicros(adjustment.bidPrice);
+        if (bidMicros < 1) {
+          throw new McpError(
+            JsonRpcErrorCode.InvalidParams,
+            `bidPrice ${adjustment.bidPrice} is below the smallest representable bid (0.000001)`
+          );
+        }
+
         // Read current ad group state
         const entity = await this.getEntity("adGroup", filters, adjustment.adGroupId, context);
+        // Report the previous bid in the same unit as the input (currency, not micros).
         const previousBid =
-          entity.bid_in_micro_currency != null ? Number(entity.bid_in_micro_currency) : undefined;
+          entity.bid_in_micro_currency != null
+            ? microsToCurrency(Number(entity.bid_in_micro_currency))
+            : undefined;
 
         // Update bid
         await this.updateEntity(
@@ -365,7 +368,7 @@ export class PinterestService {
           filters,
           adjustment.adGroupId,
           {
-            bid_in_micro_currency: adjustment.bidPrice,
+            bid_in_micro_currency: bidMicros,
           },
           context
         );
@@ -537,4 +540,82 @@ export class PinterestService {
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
+}
+
+const MICROS_PER_UNIT = 1_000_000;
+
+/** Currency (major units) → integer micro-currency, e.g. `1.5` → `1500000`. */
+export function currencyToMicros(amount: number): number {
+  return Math.round(amount * MICROS_PER_UNIT);
+}
+
+/** Integer micro-currency → currency (major units), e.g. `1500000` → `1.5`. */
+export function microsToCurrency(micros: number): number | undefined {
+  return Number.isFinite(micros) ? micros / MICROS_PER_UNIT : undefined;
+}
+
+interface PinterestBatchException {
+  code?: number;
+  message?: string;
+}
+
+/**
+ * Unwrap the single item of a Pinterest batch write response.
+ *
+ * `POST`/`PATCH /v5/ad_accounts/{id}/{campaigns,ad_groups,ads}` answer HTTP 200
+ * with `{ items: [{ data, exceptions }] }` even when the item was rejected, so
+ * a 2xx alone says nothing about whether the write happened. Per the v5 spec
+ * `exceptions` is an array on campaigns/ad groups (`CampaignBatchItem`,
+ * `Pinterest.Lib.BatchItemException[]`) and a single object on ads
+ * (`AdBatchItem.exceptions: Pinterest.Lib.Error`) — both are handled.
+ *
+ * Throws when the item carries exceptions or the response lacks an item/data,
+ * so single-entity tools fail and bulk tools record a per-item error.
+ */
+export function unwrapBatchWriteItem(
+  response: unknown,
+  displayName: string,
+  operation: "create" | "update",
+  entityId?: string
+): Record<string, unknown> {
+  const subject = entityId ? `${displayName} ${entityId}` : displayName;
+  const items =
+    response &&
+    typeof response === "object" &&
+    Array.isArray((response as { items?: unknown }).items)
+      ? (response as { items: unknown[] }).items
+      : undefined;
+  const item = items?.[0];
+  if (!item || typeof item !== "object") {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Pinterest ${operation} of ${subject} returned no result item; the outcome is unknown — verify before retrying`,
+      { operation, entityId }
+    );
+  }
+
+  const { data, exceptions } = item as { data?: unknown; exceptions?: unknown };
+  const exceptionList: PinterestBatchException[] = (
+    Array.isArray(exceptions) ? exceptions : exceptions ? [exceptions] : []
+  ).filter((e): e is PinterestBatchException => !!e && typeof e === "object");
+
+  if (exceptionList.length > 0) {
+    const detail = exceptionList
+      .map((e) => (e.code != null ? `[${e.code}] ${e.message ?? ""}` : (e.message ?? "")).trim())
+      .join("; ");
+    throw new McpError(
+      JsonRpcErrorCode.ValidationError,
+      `Pinterest rejected ${operation} of ${subject}: ${detail || "unspecified error"}`,
+      { operation, entityId, exceptions: exceptionList }
+    );
+  }
+
+  if (!data || typeof data !== "object") {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Pinterest ${operation} of ${subject} returned an item with neither data nor exceptions; the outcome is unknown — verify before retrying`,
+      { operation, entityId }
+    );
+  }
+  return data as Record<string, unknown>;
 }

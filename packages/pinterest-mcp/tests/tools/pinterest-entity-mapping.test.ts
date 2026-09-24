@@ -27,6 +27,17 @@ describe("Pinterest Entity Mapping", () => {
       expect(getEntityConfig("creative").createPath).toBe("/v5/pins");
     });
 
+    // Pinterest v5 spec: campaigns/get, ad_groups/get, ads/get, pins/get.
+    it.each([
+      ["campaign", "/v5/ad_accounts/{adAccountId}/campaigns/{entityId}", true],
+      ["adGroup", "/v5/ad_accounts/{adAccountId}/ad_groups/{entityId}", true],
+      ["ad", "/v5/ad_accounts/{adAccountId}/ads/{entityId}", true],
+      ["creative", "/v5/pins/{entityId}", false],
+    ] as const)("%s has a direct GET-by-id path %s (batchWrite=%s)", (type, getPath, batch) => {
+      expect(getEntityConfig(type).getPath).toBe(getPath);
+      expect(getEntityConfig(type).batchWrite).toBe(batch);
+    });
+
     it("campaign idField is 'id' (not campaign_id)", () => {
       expect(getEntityConfig("campaign").idField).toBe("id");
     });

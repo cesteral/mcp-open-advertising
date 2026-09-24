@@ -17,11 +17,19 @@ export interface PinterestEntityConfig {
   /** Path template for list/get. {adAccountId} is substituted at runtime. */
   listPath: string;
   /**
-   * Path template for fetching a single entity by ID.
-   * If provided, used for direct GET by entity ID (e.g., "/v5/pins/{entityId}").
-   * If undefined, getEntity falls back to listing and filtering by ID.
+   * Path template for fetching a single entity by ID (direct GET), e.g.
+   * "/v5/ad_accounts/{adAccountId}/campaigns/{entityId}" or "/v5/pins/{entityId}".
+   * Every entity type has one — Pinterest v5's list endpoints take no `id`
+   * filter, so listing-and-taking-the-first-item returns the wrong entity.
    */
-  getPath?: string;
+  getPath: string;
+  /**
+   * True when create/update go through Pinterest's batch write endpoints
+   * (POST/PATCH `/v5/ad_accounts/{id}/{campaigns,ad_groups,ads}`), which take
+   * an array body and answer HTTP 200 with `{ items: [{ data, exceptions }] }`
+   * even when an item was rejected.
+   */
+  batchWrite: boolean;
   /** Path template for create (POST). */
   createPath: string;
   /** Path template for PATCH update (bulk). {adAccountId} substituted. */
@@ -43,6 +51,8 @@ export interface PinterestEntityConfig {
 const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   campaign: {
     listPath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    getPath: "/v5/ad_accounts/{adAccountId}/campaigns/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/campaigns",
     updatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
@@ -64,6 +74,8 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   },
   adGroup: {
     listPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    getPath: "/v5/ad_accounts/{adAccountId}/ad_groups/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
     updatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
@@ -85,6 +97,8 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   },
   ad: {
     listPath: "/v5/ad_accounts/{adAccountId}/ads",
+    getPath: "/v5/ad_accounts/{adAccountId}/ads/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/ads",
     updatePath: "/v5/ad_accounts/{adAccountId}/ads",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ads",
@@ -106,6 +120,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   creative: {
     listPath: "/v5/pins",
     getPath: "/v5/pins/{entityId}",
+    batchWrite: false,
     createPath: "/v5/pins",
     updatePath: "/v5/pins/{entityId}",
     statusUpdatePath: "/v5/pins/{entityId}",
