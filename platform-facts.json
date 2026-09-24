@@ -98,7 +98,7 @@
       "verifyBy": "2026-12-15",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/ttd-mcp/src/config/index.ts:30"]
+      "codeRefs": ["packages/ttd-mcp/src/config/index.ts:31"]
     },
     {
       "id": "msads.campaignmanagement_api_version",

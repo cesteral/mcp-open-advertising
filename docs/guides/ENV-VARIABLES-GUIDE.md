@@ -169,7 +169,8 @@ TTD_MCP_HOST=0.0.0.0
 
 # TTD API Configuration
 TTD_API_TOKEN=your-ttd-api-token
-TTD_API_BASE_URL=https://api.thetradedesk.com/v3
+# TTD_USE_SANDBOX=true                          # Optional: route REST + GraphQL to the Partner Sandbox
+# TTD_API_BASE_URL / TTD_GRAPHQL_URL            # Optional overrides; leave unset so they follow TTD_USE_SANDBOX
 TTD_RATE_LIMIT_PER_MINUTE=60
 
 # ---------- gads-mcp (Google Ads Server) ----------
