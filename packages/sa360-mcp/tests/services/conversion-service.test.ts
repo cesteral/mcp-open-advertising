@@ -189,7 +189,7 @@ describe("ConversionService", () => {
         },
       ]);
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:adv-123");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:adv-123");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -282,7 +282,7 @@ describe("ConversionService", () => {
         },
       ]);
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:adv-456");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:adv-456");
     });
 
     it("handles multiple conversion rows", async () => {

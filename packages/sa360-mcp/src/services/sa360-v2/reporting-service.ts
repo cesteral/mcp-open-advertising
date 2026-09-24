@@ -79,7 +79,9 @@ export class SA360ReportingService {
     reportRequest: ReportRequest,
     context?: RequestContext
   ): Promise<{ id: string }> {
-    await this.rateLimiter.consume(`sa360v2:reports`);
+    // Keys must match the limiter's `sa360:*` pattern. These were `sa360v2:…`,
+    // which matches nothing, so the v2 API was never throttled.
+    await this.rateLimiter.consume(`sa360:v2:reports`);
 
     this.logger.debug(
       { reportType: reportRequest.reportType, agencyId: reportRequest.reportScope.agencyId },
@@ -117,7 +119,7 @@ export class SA360ReportingService {
    * Returns: { id, isReportReady, rowCount?, files? }
    */
   async getReportStatus(reportId: string, context?: RequestContext): Promise<ReportStatus> {
-    await this.rateLimiter.consume(`sa360v2:reports`);
+    await this.rateLimiter.consume(`sa360:v2:reports`);
 
     this.logger.debug({ reportId }, "Checking SA360 report status");
 
@@ -147,7 +149,7 @@ export class SA360ReportingService {
       toolName: "sa360_download_report",
     });
 
-    await this.rateLimiter.consume(`sa360v2:reports`);
+    await this.rateLimiter.consume(`sa360:v2:reports`);
 
     this.logger.debug({ downloadUrl }, "Downloading SA360 report");
 

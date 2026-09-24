@@ -108,7 +108,9 @@ export class ConversionService {
     conversions: ConversionRow[],
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`sa360v2:${advertiserId}`);
+    // Keys must match the limiter's `sa360:*` pattern. These were `sa360v2:…`,
+    // which matches nothing, so the v2 API was never throttled.
+    await this.rateLimiter.consume(`sa360:v2:${advertiserId}`);
 
     this.logger.debug(
       { agencyId, advertiserId, count: conversions.length },
@@ -140,7 +142,7 @@ export class ConversionService {
     conversions: ConversionRow[],
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`sa360v2:${advertiserId}`);
+    await this.rateLimiter.consume(`sa360:v2:${advertiserId}`);
 
     this.logger.debug(
       { agencyId, advertiserId, count: conversions.length },

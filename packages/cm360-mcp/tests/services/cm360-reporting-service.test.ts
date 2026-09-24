@@ -87,7 +87,7 @@ describe("CM360ReportingService", () => {
       await service.createReport("12345", { name: "Test", type: "STANDARD" });
 
       expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:reporting:12345");
     });
 
     it("passes request context through", async () => {
@@ -159,7 +159,7 @@ describe("CM360ReportingService", () => {
 
       await service.checkReportFile("12345", "report-1", "file-1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:reporting:12345");
     });
   });
 

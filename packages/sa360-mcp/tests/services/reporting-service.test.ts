@@ -138,7 +138,7 @@ describe("SA360ReportingService", () => {
         reportScope: { agencyId: "agency-1" },
       });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -205,7 +205,7 @@ describe("SA360ReportingService", () => {
 
       await service.getReportStatus("report-1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -276,7 +276,7 @@ describe("SA360ReportingService", () => {
         "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0"
       );
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates fetch errors", async () => {

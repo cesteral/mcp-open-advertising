@@ -66,6 +66,16 @@ export type {
   CM360FloodlightConfiguration,
 };
 
+/**
+ * Rate-limit keys: the limiter is configured for `cm360:*`, so every key must
+ * carry the `cm360:` prefix — a bare `"cm360"` (what every call site used to
+ * pass) matches nothing and is silently unlimited. Trafficking calls are keyed
+ * per user profile (as dv360/gads/ttd key per advertiser/customer/partner) so
+ * one profile's bulk job does not starve other sessions on the instance;
+ * `userProfiles.list` has no profile yet and uses `cm360:global`. Reporting
+ * uses its own `cm360:reporting:{profileId}` bucket (see CM360ReportingService).
+ * Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
+ */
 export class CM360Service {
   constructor(
     private readonly logger: Logger,
@@ -74,7 +84,8 @@ export class CM360Service {
   ) {}
 
   async listUserProfiles(context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume("cm360");
+    // No profile yet — the one call that is not profile-scoped.
+    await this.rateLimiter.consume("cm360:global");
     this.logger.debug({ requestId: context?.requestId }, "Listing CM360 user profiles");
     return this.httpClient.fetch("/userprofiles", context);
   }
@@ -87,7 +98,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ entities: CM360EntityMap[T][]; nextPageToken?: string }> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
 
     const params = new URLSearchParams();
@@ -129,7 +140,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context) as Promise<CM360EntityMap[T]>;
@@ -141,7 +152,7 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
@@ -164,7 +175,7 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
@@ -189,7 +200,7 @@ export class CM360Service {
     patch: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
     const query = new URLSearchParams({ id: entityId }).toString();
     const path = `/userprofiles/${profileId}/${config.apiCollection}?${query}`;
@@ -208,7 +219,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ options: unknown[]; nextPageToken?: string }> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
 
     const params = new URLSearchParams();
     if (pageToken) params.set("pageToken", pageToken);
@@ -244,7 +255,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:${profileId}`);
     const config = getEntityConfig(entityType);
     if (!config.supportsDelete) {
       throw new McpError(
