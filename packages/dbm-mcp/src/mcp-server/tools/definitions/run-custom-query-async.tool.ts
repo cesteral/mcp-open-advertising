@@ -21,10 +21,37 @@ import {
   type RunCustomQueryInput,
 } from "./run-custom-query.tool.js";
 import { validateQueryParams } from "../utils/query-validation.js";
+import { mcpConfig } from "../../../config/index.js";
+import {
+  computeWorstCaseReportDurationMs,
+  type ReportTimingConfig,
+} from "../../../services/bid-manager/report-timing.js";
 
 // Hoisted to the fleet-standard module-level const so TOOL_NAME-based static
 // tooling (registry scans, manifest checks) resolves this tool like every other.
 const TOOL_NAME = "dbm_run_custom_query_async";
+
+/**
+ * Headroom on top of the summed sleeps for HTTP latency (create, run, every
+ * status poll, the CSV download) and for the client to collect the result.
+ */
+const TASK_TTL_HEADROOM_MS = 30 * 60 * 1000;
+
+/**
+ * Task TTL for the async custom query.
+ *
+ * The SDK's in-memory task store deletes a task when its TTL elapses
+ * *regardless of status*, and the shared helper's 5-minute default is far
+ * shorter than a Bid Manager report can legitimately take (~72 min with the
+ * default poll/retry config). With that default, a slow report finished into
+ * a task that no longer existed and the result was dropped with only a log
+ * line. The TTL is therefore derived from the configured worst case. The store
+ * restarts the TTL when the result is stored, so the result also stays
+ * retrievable for at least this long after completion.
+ */
+export function computeAsyncQueryTaskTtlMs(config: ReportTimingConfig = mcpConfig): number {
+  return computeWorstCaseReportDurationMs(config) + TASK_TTL_HEADROOM_MS;
+}
 
 export function registerRunCustomQueryAsyncTool(
   server: McpServer,
@@ -41,11 +68,13 @@ export function registerRunCustomQueryAsyncTool(
       title: "Run Custom Query (Async)",
       description:
         "Execute a custom Bid Manager API query asynchronously. Returns a task handle immediately — " +
-        "poll via tasks/getTask for status, retrieve results via tasks/getTaskResult when complete. " +
+        "poll via tasks/get for status, retrieve results via tasks/result when complete. " +
+        "Requires a client that supports MCP task-augmented tools/call; otherwise use dbm_run_custom_query. " +
         "Use this for large or complex queries that may take time to execute.\n\n" +
         "Accepts the same parameters as dbm_run_custom_query.",
       inputSchema: RunCustomQueryInputSchema,
       outputSchema: RunCustomQueryOutputSchema,
+      taskTtlMs: computeAsyncQueryTaskTtlMs(),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
