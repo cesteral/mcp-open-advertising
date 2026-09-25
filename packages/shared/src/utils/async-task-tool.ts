@@ -12,6 +12,15 @@
 import type { z } from "zod";
 import type { Logger } from "pino";
 import { extractZodShape } from "./zod-helpers.js";
+import {
+  TOOL_ERROR_UNTRUSTED_MARKER,
+  untrustedResultMeta,
+  assertValidUntrustedDeclaration,
+  successResultMarker,
+  toolListingMeta,
+  type ToolUntrustedDeclaration,
+} from "./untrusted-content.js";
+import { redactSecretsInText } from "./secret-redaction.js";
 
 const DEFAULT_TASK_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_POLL_INTERVAL_MS = 3000;
@@ -38,7 +47,12 @@ interface TaskStoreLike {
   storeTaskResult(
     taskId: string,
     status: "completed" | "failed",
-    result: { content: ContentBlock[]; structuredContent?: unknown; isError?: boolean }
+    result: {
+      content: ContentBlock[];
+      structuredContent?: unknown;
+      isError?: boolean;
+      _meta?: Record<string, unknown>;
+    }
   ): Promise<void>;
   getTask(taskId: string): Promise<unknown>;
   getTaskResult(taskId: string): Promise<unknown>;
@@ -56,6 +70,7 @@ interface ServerWithTasks {
           outputSchema?: z.ZodRawShape | z.ZodTypeAny;
           annotations?: ToolAnnotationsLike;
           execution?: { taskSupport: "required" | "optional" };
+          _meta?: Record<string, unknown>;
         },
         handlers: {
           createTask: (
@@ -88,6 +103,12 @@ export interface AsyncTaskToolConfig<TInput, TOutput> {
   inputSchema: z.ZodTypeAny;
   outputSchema?: z.ZodTypeAny;
   annotations?: ToolAnnotationsLike;
+  /**
+   * Where platform free text sits in a COMPLETED task's result (#204). Same
+   * contract as `ToolDefinitionForFactory.untrustedContent`; tasks bypass the
+   * tool factory, so it is applied here.
+   */
+  untrustedContent?: ToolUntrustedDeclaration;
   taskTtlMs?: number;
   taskPollIntervalMs?: number;
   /**
@@ -133,6 +154,9 @@ export function registerAsyncTaskTool<TInput, TOutput>(
   options: RegisterAsyncTaskToolOptions<TInput, TOutput>
 ): void {
   const { server, logger, sessionId, config, invalidParams } = options;
+  if (config.untrustedContent) {
+    assertValidUntrustedDeclaration(config.name, config.untrustedContent, !!config.outputSchema);
+  }
   const inputShape = extractZodShape(config.inputSchema);
   const outputShape = config.outputSchema ? extractZodShape(config.outputSchema) : undefined;
   const ttl = config.taskTtlMs ?? DEFAULT_TASK_TTL_MS;
@@ -147,6 +171,7 @@ export function registerAsyncTaskTool<TInput, TOutput>(
       outputSchema: outputShape,
       annotations: config.annotations,
       execution: { taskSupport: "required" },
+      ...(config.untrustedContent ? { _meta: toolListingMeta(config.untrustedContent) } : {}),
     },
     {
       createTask: async (args, { taskStore }) => {
@@ -196,18 +221,28 @@ async function runInBackground<TInput, TOutput>(
       requestId: `task-${taskId}`,
     });
     const content = config.formatContent(output, input);
+    const marker = config.untrustedContent
+      ? successResultMarker(config.untrustedContent)
+      : undefined;
     await taskStore.storeTaskResult(taskId, "completed", {
       content,
       structuredContent: output as unknown,
+      ...(marker ? { _meta: untrustedResultMeta(marker) } : {}),
     });
     logger.info({ taskId, tool: config.name }, "Async task completed");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    // Redacted here because this path bypasses ErrorHandler: an McpError is
+    // already redacted at construction, but a plain thrown Error is not.
+    const message = redactSecretsInText(error instanceof Error ? error.message : "Unknown error");
     logger.error({ taskId, tool: config.name, error: message }, "Async task failed");
     await taskStore
       .storeTaskResult(taskId, "failed", {
         content: [{ type: "text", text: `Task failed: ${message}` }],
         isError: true,
+        // #204: the message can embed the platform's response text, exactly as
+        // on the tool factory's error path. Tasks bypass that factory, so the
+        // marker is attached here too.
+        _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
       })
       .catch((err) => logger.error({ taskId, err }, "Failed to record async task failure result"));
   }

@@ -54,6 +54,9 @@ export function buildServerCardExtras(
       operations: [...t.operations],
       note: t.note,
     })),
+    // #204. Registry-sourced for the same reason; the declarations test checks
+    // it against the live tools/list in both directions.
+    untrustedPathReporting: entry.untrustedPathReporting,
     ...(overrides.vendor ? { vendor: overrides.vendor } : {}),
     ...(overrides.capabilities ? { capabilities: overrides.capabilities } : {}),
   };

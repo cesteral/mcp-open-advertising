@@ -210,17 +210,25 @@
       "server": "dv360-mcp",
       "platform": "dv360",
       "query": "permanently remove a campaign",
-      "expectInTopN": ["dv360_delete_entity"],
-      "n": 4,
-      "note": "Promoted from gaps[] when dv360_delete_entity's description began stating that deletion is permanent and cannot be undone (P1 fleet review). Still a lexical near-miss: it ranks #4, not #1 — dv360_get_pacing_status still wins on 'campaign'. Pinned so the delete tool does not fall back out of the top 4."
+      "expectTop": "dv360_delete_entity",
+      "outranks": ["dv360_get_pacing_status"],
+      "note": "Promoted from gaps. 'remove' shares no word with 'delete', so the delete tool used to score 1 and dv360_get_pacing_status won. The ranker now reads 'remove' as 'delete' (QUERY_SYNONYMS in tool-search.ts): dv360_delete_entity scores 11 and the pacing tool falls to 4."
     },
     {
-      "server": "dv360-mcp",
-      "platform": "dv360",
-      "query": "remove this line item permanently",
-      "expectInTopN": ["dv360_delete_entity"],
-      "n": 4,
-      "note": "Promoted from gaps[] when dv360_delete_entity's description began stating that deletion is permanent and cannot be undone (P1 fleet review). Still a lexical near-miss: it ranks #4, not #1 — dv360_adjust_line_item_bids still wins on 'line'+'item'. Pinned so the delete tool does not fall back out of the top 4."
+      "server": "ttd-mcp",
+      "platform": "ttd",
+      "query": "permanently remove a campaign",
+      "expectInTopN": ["ttd_delete_entity"],
+      "n": 2,
+      "note": "Promoted from gaps (the same synonym fix, on a second server). Pinned as top-2 rather than top-1 on purpose: ttd_delete_entity and ttd_delete_report_schedule tie at 10, and the tie goes to registry order, so asserting #1 would pin tools/list order instead of the ranker."
+    },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "delete an ad group",
+      "expectTop": "tiktok_delete_entity",
+      "outranks": ["tiktok_adjust_bids"],
+      "note": "Promoted from gaps. The query word 'ad' used to substring-match 'adjust', which gave tiktok_adjust_bids the full +5 name weight. Names are now split into words and a prefix match needs at least 3 characters, so 'ad' matches the word 'ad' and nothing inside 'adjust'."
     },
     {
       "server": "msads-mcp",
@@ -233,22 +241,13 @@
   ],
   "gaps": [
     {
-      "server": "ttd-mcp",
-      "platform": "ttd",
-      "query": "permanently remove a campaign",
-      "wanted": "ttd_delete_entity",
-      "actualTop": "ttd_get_pacing_status",
-      "wantedNotInTopN": 4,
-      "note": "Same synonym gap as dv360, on a second server — evidence it is a property of the ranker, not of one server's wording."
-    },
-    {
-      "server": "tiktok-mcp",
-      "platform": "tiktok",
-      "query": "delete an ad group",
-      "wanted": "tiktok_delete_entity",
-      "actualTop": "tiktok_adjust_bids",
+      "server": "dv360-mcp",
+      "platform": "dv360",
+      "query": "remove this line item permanently",
+      "wanted": "dv360_delete_entity",
+      "actualTop": "dv360_adjust_line_item_bids",
       "wantedNotInTopN": 1,
-      "note": "THE 2-CHARACTER SUBSTRING EDGE the issue predicted, demonstrated live. Name matching is substring-either-direction, so the query token 'ad' matches 'adjust' inside tiktok_adjust_bids and buys it the full +5 name weight. tiktok_delete_entity is #2."
+      "note": "The safety case #205 asks about. Narrowed but still open: 'remove' now reaches delete, so dv360_delete_entity went from outside the top 6 to #2 (12). dv360_adjust_line_item_bids still wins at 22, because 'line' and 'item' each match a word in its name for +5. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201. Beating an object noun that appears in a tool's name needs the query's operation to outweigh it, and rarity (IDF) weighting was tried and rejected: it broke 3 protected cases by amplifying repeated description words."
     },
     {
       "server": "amazon-dsp-mcp",

@@ -4,6 +4,7 @@
 import type { Logger } from "pino";
 import { buildReportCsvUri, REPORT_CSV_RESOURCE_SCHEME } from "./report-csv-store.js";
 import type { ReportCsvStore } from "./report-csv-store.js";
+import { REPORT_CSV_UNTRUSTED_MARKER, untrustedResourceMeta } from "./untrusted-content.js";
 
 /**
  * Minimal shape we need from `@modelcontextprotocol/sdk`'s `McpServer`
@@ -20,7 +21,12 @@ export interface McpServerResourceLike {
       variables: unknown,
       extra?: { sessionId?: string }
     ) => Promise<{
-      contents: Array<{ uri: string; mimeType: string; text: string }>;
+      contents: Array<{
+        uri: string;
+        mimeType: string;
+        text: string;
+        _meta?: Record<string, unknown>;
+      }>;
     }>
   ): void;
 }
@@ -142,7 +148,17 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
         throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
       }
       return {
-        contents: [{ uri: uri.href, mimeType: entry.mimeType, text: entry.csv }],
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: entry.mimeType,
+            text: entry.csv,
+            // #204: every header and cell is platform-supplied free text
+            // (campaign, ad and audience names included), so the whole body is
+            // marked. Its structure has nothing finer to point into.
+            _meta: untrustedResourceMeta(REPORT_CSV_UNTRUSTED_MARKER),
+          },
+        ],
       };
     }
   );

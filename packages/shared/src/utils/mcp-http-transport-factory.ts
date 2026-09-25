@@ -17,7 +17,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import type { Logger } from "pino";
-import { UNTRUSTED_CONTENT_DECLARATION } from "./untrusted-content.js";
+import { UNTRUSTED_CONTENT_DECLARATION, type UntrustedPathReporting } from "./untrusted-content.js";
 import { buildOperationalEnvelope, type TerminalOperation } from "./operational-envelope.js";
 import { resolveInteractionLogMode } from "./interaction-logger.js";
 import type { RateLimiter } from "./rate-limiter.js";
@@ -135,6 +135,14 @@ export interface ServerCardExtras {
    * the `cesteral` annotations rather than trusting it.
    */
   terminalOperations?: TerminalOperation[];
+  /**
+   * Whether this server reports, per result, where platform text sits (#204
+   * Tier 2). Sourced from `registry.json` via `buildServerCardExtras` and
+   * ratcheted against the live `tools/list` by
+   * `scripts/lib/untrusted-declarations.test.mjs`, so it cannot claim
+   * `per-response` while a tool is undeclared. Defaults to `unsupported`.
+   */
+  untrustedPathReporting?: UntrustedPathReporting;
 }
 
 /**
@@ -363,7 +371,10 @@ export function createMcpHttpTransport(
       // #204 Tier 1. Declared unconditionally: every server in this fleet
       // returns platform-authored free text, so a client must not have to
       // infer the boundary from which tools it happens to call.
-      untrusted_content: UNTRUSTED_CONTENT_DECLARATION,
+      untrusted_content: {
+        ...UNTRUSTED_CONTENT_DECLARATION,
+        path_reporting: extras?.untrustedPathReporting ?? "unsupported",
+      },
       // #201. The operational envelope a client needs BEFORE pointing this
       // server at a live ad account: how hard we hit their quota, what we
       // re-send after an ambiguous failure, which duplicate-write rails are

@@ -17,6 +17,7 @@ export interface RegistryServerEntry {
       readonly note: string;
     }[];
   };
+  readonly untrustedPathReporting: "unsupported" | "per-response";
 }
 
 export interface RegistryData {
@@ -44,7 +45,8 @@ export const REGISTRY_DATA: RegistryData = {
       },
       "operational": {
         "terminalOperations": []
-      }
+      },
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "dv360-mcp",
@@ -92,7 +94,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "ttd-mcp",
@@ -161,7 +164,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "The delete action removes a bid list. No tool on this server restores it. Terminal only for action=delete."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "gads-mcp",
@@ -202,7 +206,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts REMOVED, which Google Ads cannot reverse. Terminal only when the batch sets REMOVED; ENABLED/PAUSED batches are reversible."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "meta-mcp",
@@ -243,7 +248,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts ARCHIVED, which the tool documents as permanent and not reversible. Terminal only when the batch sets ARCHIVED."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "linkedin-mcp",
@@ -284,7 +290,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts ARCHIVED (documented by the tool as not reactivatable) and CANCELED. Terminal only when the batch sets one of those; ACTIVE/PAUSED/DRAFT are reversible."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "tiktok-mcp",
@@ -325,7 +332,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts DELETE, which the tool documents as irreversible. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "cm360-mcp",
@@ -373,7 +381,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts PERMANENTLY_ARCHIVED for placements, which cannot be undone. Terminal only for that value; ARCHIVED/ACTIVE/INACTIVE are reversible."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "snapchat-mcp",
@@ -400,7 +409,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Bulk entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "sa360-mcp",
@@ -419,7 +429,8 @@ export const REGISTRY_DATA: RegistryData = {
       },
       "operational": {
         "terminalOperations": []
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "pinterest-mcp",
@@ -460,7 +471,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "amazon-dsp-mcp",
@@ -501,7 +513,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "msads-mcp",
@@ -549,7 +562,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts Deleted (free-form status), which cannot be reversed. Terminal only when the batch sets Deleted; Active/Paused are reversible."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     }
   ]
 } as const;

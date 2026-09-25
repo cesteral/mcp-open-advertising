@@ -16,6 +16,7 @@ import { registerAsyncTaskTool, McpError, JsonRpcErrorCode } from "@cesteral/sha
 import {
   RunCustomQueryInputSchema,
   RunCustomQueryOutputSchema,
+  RUN_CUSTOM_QUERY_UNTRUSTED_CONTENT,
   runCustomQueryLogic,
   runCustomQueryResponseFormatter,
   type RunCustomQueryInput,
@@ -75,6 +76,7 @@ export function registerRunCustomQueryAsyncTool(
       inputSchema: RunCustomQueryInputSchema,
       outputSchema: RunCustomQueryOutputSchema,
       taskTtlMs: computeAsyncQueryTaskTtlMs(),
+      untrustedContent: RUN_CUSTOM_QUERY_UNTRUSTED_CONTENT,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

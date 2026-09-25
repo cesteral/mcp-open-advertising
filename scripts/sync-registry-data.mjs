@@ -38,6 +38,9 @@ const slim = {
     // through the same registry -> generated-module path as the rest of the
     // card's metadata rather than being restated per transport.
     operational: { terminalOperations: s.operational?.terminalOperations ?? [] },
+    // #204: whether every tool on this server reports where platform text sits
+    // in its results. Absent means "unsupported", which is always safe to claim.
+    untrustedPathReporting: s.untrustedContent?.pathReporting ?? "unsupported",
   })),
 };
 
@@ -61,6 +64,7 @@ const body = `export interface RegistryServerEntry {
       readonly note: string;
     }[];
   };
+  readonly untrustedPathReporting: "unsupported" | "per-response";
 }
 
 export interface RegistryData {
