@@ -58,9 +58,53 @@ describe("searchTools", () => {
     expect(out.results.every((r) => r.score === 0)).toBe(true);
   });
 
-  it("matches partial tokens via substring containment", () => {
+  it("matches a name word by prefix of 3+ characters", () => {
     const out = searchTools(fixtures, { query: "camp" }, "ttd_search_tools");
     expect(out.results[0].name).toBe("ttd_create_campaigns");
+  });
+
+  it("does not let a 2-character word match inside a longer name word", () => {
+    const tools = [
+      makeTool("x_adjust_bids", "Adjust bids"),
+      makeTool("x_delete_entity", "Delete an ad group or campaign"),
+    ];
+    const out = searchTools(tools, { query: "delete an ad group" }, "x_search_tools");
+    expect(out.results[0].name).toBe("x_delete_entity");
+    expect(out.results.find((r) => r.name === "x_adjust_bids")).toBeUndefined();
+  });
+
+  it("finds a tool when the query is that tool's exact name", () => {
+    // Names are split on `_`; the query must be too, or `ttd_download_report`
+    // is one token that equals no name word.
+    const out = searchTools(fixtures, { query: "ttd_download_report" }, "ttd_search_tools");
+    expect(out.results[0].name).toBe("ttd_download_report");
+  });
+
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])(
+    "does not throw on the query word %s",
+    (query) => {
+      // A bare index into the synonym object reads inherited Object members.
+      expect(() => searchTools(fixtures, { query }, "ttd_search_tools")).not.toThrow();
+    }
+  );
+
+  it("folds '-es' plurals, so 'statuses' matches a 'status' title", () => {
+    const tools = [
+      makeTool("x_bulk_update", "Change several things", "Update Statuses"),
+      makeTool("x_other", "Unrelated"),
+    ];
+    const out = searchTools(tools, { query: "status" }, "x_search_tools");
+    expect(out.results[0]?.name).toBe("x_bulk_update");
+  });
+
+  it("reads 'remove' as 'delete'", () => {
+    const tools = [
+      makeTool("x_get_pacing_status", "Pacing for a campaign"),
+      makeTool("x_delete_entity", "Delete an entity"),
+    ];
+    const out = searchTools(tools, { query: "remove a campaign" }, "x_search_tools");
+    expect(out.results[0].name).toBe("x_delete_entity");
+    expect(out.results[0].matchedTokens).toEqual(["remove"]);
   });
 });
 
