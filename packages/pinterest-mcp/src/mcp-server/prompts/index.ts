@@ -39,13 +39,11 @@ import {
   getPinterestEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
 import {
-  crossPlatformPerformancePrompt,
-  getCrossPlatformPerformanceMessage,
-} from "./definitions/cross-platform-performance.prompt.js";
-import {
   crossPlatformCampaignSetupPrompt,
+  crossPlatformPerformancePrompt,
   getCrossPlatformCampaignSetupMessage,
-} from "./definitions/cross-platform-campaign-setup.prompt.js";
+  getCrossPlatformPerformanceMessage,
+} from "@cesteral/shared";
 import {
   pinterestCreativeUploadWorkflowPrompt,
   getPinterestCreativeUploadWorkflowMessage,

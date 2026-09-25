@@ -79,6 +79,8 @@ Full discriminated union schemas exceed ~1MB (EPIPE on stdio). Solution: simplif
 
 On-demand workflow guidance for complex multi-step operations. Located in `src/mcp-server/prompts/`. Register in `prompts/index.ts` via the `promptRegistry` Map — each entry pairs a `Prompt` metadata object with a `generateMessage(args)` function that returns the prompt body.
 
+**The fleet-wide prompts (`cross_platform_campaign_setup`, `cross_platform_performance_comparison`) have one source: `@cesteral/shared`'s `utils/cross-platform-prompts.ts`.** Every server imports them into its `promptRegistry`; never keep a local copy. They used to be copy-pasted into 12 servers and drifted into 6 variants of each, disagreeing about money units (#235). `scripts/lib/cross-platform-prompts.test.mjs` boots every server and fails if any renders text that differs from the shared module, if a package source defines either prompt name itself, or if a server stops registering them. Prompt and resource text may only name registered tools or prompts (`scripts/lib/prompt-tool-references.test.mjs`).
+
 ## Auth Mode Configuration
 
 Each server has its own `MCP_AUTH_MODE` enum; the canonical list is in each package's `src/config/index.ts`. Common rules:

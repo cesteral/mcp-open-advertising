@@ -42,7 +42,9 @@ describe("MsAdsAccessTokenAdapter", () => {
   it("validates token via the user query endpoint", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ UserId: 12345, UserName: "testuser" }),
+      // basis: MicrosoftDocs/Advertising customer-management-service/getuser.md
+      // Response JSON — { User: { Id, UserName, ... }, CustomerRoles: [...] }.
+      json: async () => ({ User: { Id: 12345, UserName: "testuser" }, CustomerRoles: [] }),
     } as Response);
 
     await adapter.validate();

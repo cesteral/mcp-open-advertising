@@ -31,17 +31,15 @@ import {
   getBulkOperationsPromptMessage,
 } from "./definitions/bulk-operations.prompt.js";
 import {
+  crossPlatformCampaignSetupPrompt,
   crossPlatformPerformancePrompt,
+  getCrossPlatformCampaignSetupMessage,
   getCrossPlatformPerformanceMessage,
-} from "./definitions/cross-platform-performance.prompt.js";
+} from "@cesteral/shared";
 import {
   entityActivationPrompt,
   getEntityActivationPromptMessage,
 } from "./definitions/entity-activation.prompt.js";
-import {
-  crossPlatformCampaignSetupPrompt,
-  getCrossPlatformCampaignSetupMessage,
-} from "./definitions/cross-platform-campaign-setup.prompt.js";
 import {
   customBiddingWorkflowPrompt,
   getCustomBiddingWorkflowMessage,

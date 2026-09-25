@@ -60,3 +60,4 @@ export * from "./download-file-stream.js";
 export * from "./async-task-tool.js";
 export * from "./schema-size-guard.js";
 export * from "./tool-search.js";
+export * from "./cross-platform-prompts.js";
