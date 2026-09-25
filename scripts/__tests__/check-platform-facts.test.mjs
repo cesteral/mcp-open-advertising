@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -355,5 +356,22 @@ describe("where the freshness half runs", () => {
     // It said "19 facts" for a week after #210 added nine.
     const claude = readFileSync(join(ROOT, "CLAUDE.md"), "utf-8");
     expect(claude).toContain(`— ${ledger.facts.length} facts:`);
+  });
+});
+
+describe("command line", () => {
+  const script = join(ROOT, "scripts", "check-platform-facts.mjs");
+  const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: "utf-8" });
+
+  it("refuses --due-within without --freshness rather than running the structure check", () => {
+    // Exiting 0 there would read as a clean freshness result.
+    const r = run("--due-within", "30");
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/only applies with --freshness/);
+  });
+
+  it("refuses a --due-within value that is not a positive whole number", () => {
+    expect(run("--freshness", "--due-within", "soon").status).toBe(2);
+    expect(run("--freshness", "--due-within").status).toBe(2);
   });
 });

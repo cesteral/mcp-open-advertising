@@ -15,10 +15,11 @@
  *
  * Names are split into words on `_`; a query word matches a name word when it
  * equals it (after plural folding), is a synonym listed in QUERY_SYNONYMS, or
- * is a prefix of it at least MIN_PREFIX_LENGTH characters long. Titles match
- * on equality after plural folding; descriptions on exact equality with the
- * query word or a synonym. Rankings are pinned over the wire by
- * evals/tool-search-ranking.test.mjs.
+ * is a prefix of it at least MIN_PREFIX_LENGTH characters long. Queries are
+ * split on `_` like names, so a tool name used as a query finds that tool.
+ * Titles match on equality after plural folding of both sides; for
+ * descriptions only the query side is folded. Rankings are pinned over the
+ * wire by evals/tool-search-ranking.test.mjs.
  */
 
 import { z } from "zod";
@@ -108,21 +109,38 @@ function nameWords(name: string): string[] {
 }
 
 /**
- * Crude plural folding, enough that "campaigns"/"campaign" and
- * "entities"/"entity" compare equal. Not a real stemmer, and it does not need
- * to be — the registries it runs over are a few dozen tools.
+ * Crude plural folding, enough that "campaigns"/"campaign",
+ * "entities"/"entity" and "statuses"/"status" compare equal. Not a real
+ * stemmer, and it does not need to be — the registries it runs over are a few
+ * dozen tools.
  */
 function stem(token: string): string {
   if (token.length > 4 && token.endsWith("ies")) return `${token.slice(0, -3)}y`;
+  // "statuses", "addresses", "boxes", "searches": the plural adds "es".
+  if (token.length > 4 && /(ss|us|x|ch|sh)es$/.test(token)) return token.slice(0, -2);
   if (token.length >= 3 && token.endsWith("s") && !/(ss|us|is)$/.test(token)) {
     return token.slice(0, -1);
   }
   return token;
 }
 
-/** The forms a query token may match as: itself plus any synonym. */
+/**
+ * Split a query into words. Unlike descriptions, `_` separates words here too,
+ * so a query that is itself a tool name (`ttd_download_report`) matches that
+ * tool's name words instead of being one token that equals no name word.
+ */
+function queryWords(query: string): string[] {
+  return tokenize(query.replace(/_/g, " "));
+}
+
+/**
+ * The forms a query token may match as: its folded form plus any synonym.
+ * `Object.hasOwn`, not a bare index: the words "constructor" and "__proto__"
+ * would otherwise read inherited Object members and throw when spread.
+ */
 function queryForms(token: string): string[] {
-  return [stem(token), ...(QUERY_SYNONYMS[token] ?? [])];
+  const synonyms = Object.hasOwn(QUERY_SYNONYMS, token) ? QUERY_SYNONYMS[token] : [];
+  return [stem(token), ...synonyms];
 }
 
 function wordMatches(forms: string[], word: string): boolean {
@@ -169,9 +187,9 @@ function scoreTool(tool: ToolDefinitionForFactory, queryTokens: string[]): Score
         hit = true;
       }
     }
-    // Descriptions match the query word (or a synonym) exactly, without
-    // plural folding: folding here let "deletes" in one tool's prose count
-    // as "delete" and tie cm360's delete-a-campaign case.
+    // Description WORDS are not folded: folding them let "deletes" in one
+    // tool's prose count as "delete" and tie cm360's delete-a-campaign case.
+    // The query word is still folded, so "deletes" does match "delete".
     for (const dt of descTokens) {
       if (dt === qt || forms.includes(dt)) {
         score += DESCRIPTION_WEIGHT;
@@ -243,7 +261,7 @@ export function searchTools(
   input: SearchInput,
   selfName: string
 ): SearchOutput {
-  const queryTokens = tokenize(input.query);
+  const queryTokens = queryWords(input.query);
   const limit = input.limit ?? 10;
 
   const candidates = tools.filter((t) => t.name !== selfName);

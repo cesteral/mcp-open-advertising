@@ -341,12 +341,16 @@ describe("scoring weights and their documented quirks", () => {
     expect(run([tool("x_camp", "Zulu", "zulu")], "campaign")).toHaveLength(0);
   });
 
-  it("folds simple plurals in names and titles, but not descriptions", () => {
+  it("folds plurals in names and titles; in descriptions, only the query side", () => {
     expect(run([tool("x_create_entity", "Zulu", "zulu")], "entities")[0].score).toBe(5);
     expect(run([tool("x_zulu", "Campaigns", "zulu")], "campaign")[0].score).toBe(3);
-    // Folding descriptions let "deletes" in cm360_delete_report_schedule's prose
-    // count as "delete" and tie cm360's delete-a-campaign case, so it is off there.
+    // Folding description WORDS let "deletes" in cm360_delete_report_schedule's
+    // prose count as "delete" and tie cm360's delete-a-campaign case, so it is
+    // off there...
     expect(run([tool("x_zulu", "Zulu", "reports")], "report")).toHaveLength(0);
+    // ...but the QUERY word is still folded, so a plural query meets a
+    // singular description word.
+    expect(run([tool("x_zulu", "Zulu", "report")], "reports")[0].score).toBe(1);
   });
 
   it("reads a small set of query synonyms as the word tool names use", () => {

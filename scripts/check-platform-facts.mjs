@@ -27,15 +27,16 @@
 //   --freshness            Time-dependent. Reports facts whose refreshDue or
 //                          verifyBy has passed, and facts whose deadline is
 //                          parked further out than their class cadence allows.
-//                          Also the fleet release gate (release.yml).
+//                          NOT for the PR path — it would turn `main` red by
+//                          the mere passage of time, handing an outside system
+//                          (the calendar) a switch, which is the same reason
+//                          check-terraform-drift.mjs runs on a schedule. Wired
+//                          to .github/workflows/platform-facts.yml, and run as
+//                          the fleet release gate in release.yml.
 //
-//   --due-within <days>    With --freshness: also report a fact due within
+//   --due-within <days>    With --freshness only: also report a fact due within
 //                          <days>, so the weekly job warns BEFORE a deadline
-//                          starts failing releases. Not used by release.yml. NOT for the PR path — it would
-//                          turn `main` red by the mere passage of time, handing
-//                          an outside system (the calendar) a switch, which is
-//                          the same reason check-terraform-drift.mjs runs on a
-//                          schedule. Wired to .github/workflows/platform-facts.yml.
+//                          starts failing releases. Not used by release.yml.
 //
 // THE STRUCTURE CHECK IS THE ONE WITH TEETH TODAY
 //
@@ -280,6 +281,12 @@ function loadLedger() {
 
 function main() {
   const freshness = process.argv.includes("--freshness");
+  if (!freshness && process.argv.includes("--due-within")) {
+    // Silently running the structure check instead would read as a clean
+    // freshness result.
+    console.error("check:platform-facts: --due-within only applies with --freshness");
+    process.exit(EXIT_CANNOT_CHECK);
+  }
   const ledger = loadLedger();
 
   const structural = [...validateLedger(ledger), ...checkCodeRefs(ledger)];
@@ -334,7 +341,7 @@ function main() {
   for (const { fact, due, daysLeft } of dueSoon) {
     console.error(
       `DUE SOON${fact.loadBearing ? " (load-bearing)" : ""}: ${fact.id} — due ${due}, ` +
-        `${daysLeft} days from now.\n    ${fact.claim}\n    Source: ${fact.sourceUrl ?? "(none)"}`
+        `${daysLeft > 0 ? `${daysLeft} days from now` : "today"}.\n    ${fact.claim}\n    Source: ${fact.sourceUrl ?? "(none)"}`
     );
   }
 
