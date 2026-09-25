@@ -15,6 +15,11 @@
 import { describe, it, expect } from "vitest";
 import {
   UNTRUSTED_CONTENT_DECLARATION as D,
+  UNTRUSTED_RESULT_META_KEY,
+  TOOL_ERROR_UNTRUSTED_MARKER,
+  REPORT_CSV_UNTRUSTED_MARKER,
+  untrustedResultMeta,
+  untrustedResourceMeta,
   type UntrustedContentDeclaration,
 } from "../../src/utils/untrusted-content.js";
 
@@ -74,5 +79,66 @@ describe("UNTRUSTED_CONTENT_DECLARATION", () => {
       "path_reporting",
       "returns_third_party_content",
     ]);
+  });
+});
+
+describe("per-result untrusted marker (#204 Tier 2)", () => {
+  it("uses a vendor-prefixed _meta key, not an MCP-reserved one", () => {
+    // MCP reserves the modelcontextprotocol.io/ and mcp.dev/ prefixes.
+    expect(UNTRUSTED_RESULT_META_KEY).toBe("cesteral/untrusted");
+    expect(UNTRUSTED_RESULT_META_KEY).not.toMatch(/modelcontextprotocol|mcp\.dev/);
+  });
+
+  it("marks the error payload's text block, since errors carry no structuredContent", () => {
+    expect(TOOL_ERROR_UNTRUSTED_MARKER).toEqual({
+      v: 1,
+      structuredPaths: [],
+      contentBlocks: [0],
+      reason: "tool-error",
+    });
+  });
+
+  it("freezes the shared constant, arrays included", () => {
+    // Object.freeze is shallow; the arrays need their own freeze.
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER)).toBe(true);
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER.structuredPaths)).toBe(true);
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER.contentBlocks)).toBe(true);
+  });
+
+  it("hands each result its own copy, so one consumer cannot rewrite the next", () => {
+    // Over InMemoryTransport the client gets the handler's object by reference.
+    const first = untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)["cesteral/untrusted"];
+    first.contentBlocks.push(1);
+    first.structuredPaths.push("$.x");
+
+    const second = untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)["cesteral/untrusted"];
+    expect(second).toEqual({
+      v: 1,
+      structuredPaths: [],
+      contentBlocks: [0],
+      reason: "tool-error",
+    });
+    expect(second).not.toBe(TOOL_ERROR_UNTRUSTED_MARKER);
+  });
+
+  it("keeps path_reporting at unsupported while only errors are marked", () => {
+    // Success results are not yet marked on any server, so a client must not
+    // read a missing marker as "no untrusted content". Flip this per server
+    // only once every one of its tools declares.
+    expect(D.path_reporting).toBe("unsupported");
+  });
+});
+
+describe("resource marker (#204 Tier 2)", () => {
+  it("marks a report CSV whole, under the same key as the tool marker", () => {
+    expect(untrustedResourceMeta(REPORT_CSV_UNTRUSTED_MARKER)).toEqual({
+      [UNTRUSTED_RESULT_META_KEY]: { v: 1, whole: true, reason: "report-csv" },
+    });
+  });
+
+  it("is frozen, and each read gets its own copy", () => {
+    expect(Object.isFrozen(REPORT_CSV_UNTRUSTED_MARKER)).toBe(true);
+    const a = untrustedResourceMeta(REPORT_CSV_UNTRUSTED_MARKER)[UNTRUSTED_RESULT_META_KEY];
+    expect(a).not.toBe(REPORT_CSV_UNTRUSTED_MARKER);
   });
 });

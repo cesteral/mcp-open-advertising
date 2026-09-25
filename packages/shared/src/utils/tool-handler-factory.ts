@@ -26,6 +26,7 @@ import {
 } from "./interaction-logger.js";
 import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
 import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
+import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
 import {
   runWithRequestContext,
   getRequestContext,
@@ -529,6 +530,29 @@ export function truncateTextContent(
 }
 
 /**
+ * The validator the MCP SDK builds from a registered `outputSchema`, rebuilt
+ * here so the factory can run the same check inside its own try/catch (#204).
+ *
+ * Mirrors `normalizeObjectSchema` in the SDK's `server/zod-compat.js`: a raw
+ * shape (every value a zod schema) becomes `z.object(shape)`, a zod object is
+ * used as-is, and anything else gets no object validation. It must be built
+ * from the TRANSFORMED schema the SDK receives, not `tool.outputSchema`:
+ * `extractZodShape` drops `.refine()` / `.transform()` wrappers, so validating
+ * the original could reject results the SDK has always accepted.
+ */
+function sdkEquivalentOutputValidator(transformed: unknown): z.ZodTypeAny | undefined {
+  if (transformed instanceof z.ZodObject) return transformed;
+  if (transformed instanceof z.ZodType || !transformed || typeof transformed !== "object") {
+    return undefined;
+  }
+  const values = Object.values(transformed);
+  if (values.length > 0 && values.every((v) => v instanceof z.ZodType)) {
+    return z.object(transformed as z.ZodRawShape);
+  }
+  return undefined;
+}
+
+/**
  * Register all tools on an McpServer with standardized handling.
  *
  * This eliminates ~90 lines of duplicated boilerplate per server by
@@ -668,6 +692,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       transformedOutputSchema = transformSchema(tool.outputSchema);
       toolConfig.outputSchema = transformedOutputSchema;
     }
+    const outputValidator = sdkEquivalentOutputValidator(transformedOutputSchema);
 
     const schemaSizeLog: Record<string, unknown> = {
       toolName: tool.name,
@@ -951,6 +976,23 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             const result = await tool.logic(validatedInput, context, sdkContext);
+
+            // #204: validate output HERE, not only in the SDK. The SDK's own
+            // output-validation error quotes zod's message, which can quote the
+            // rejected value, and that value came from the platform. Built by
+            // the SDK, that error bypassed this factory's catch and went out
+            // without the untrusted marker. Thrown here, it is caught below,
+            // logged as a failure, and marked. Same schema, message and code
+            // as the SDK's check, so a result that passes here passes there.
+            if (outputValidator) {
+              const parsed = await outputValidator.safeParseAsync(result);
+              if (!parsed.success) {
+                throw new McpError(
+                  JsonRpcErrorCode.InvalidParams,
+                  `Output validation error: Invalid structured content for tool ${tool.name}: ${parsed.error.message}`
+                );
+              }
+            }
             setSpanAttribute("mcp.tool.execution.success", true);
 
             const durationMs = Date.now() - startTime;
@@ -1165,6 +1207,10 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 },
               ],
               isError: true,
+              // #204: `error` and `data` can embed the platform's own response
+              // text. Marked on every error result — see
+              // TOOL_ERROR_UNTRUSTED_MARKER for why not only upstream ones.
+              _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
             };
           }
         }); // end runWithRequestContext(toolAlsContext)

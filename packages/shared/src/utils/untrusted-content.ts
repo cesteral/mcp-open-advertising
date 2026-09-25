@@ -39,9 +39,11 @@
  *
  * `unsupported` is load-bearing and must not be conflated with "this server
  * returns no untrusted content" — a client that cannot tell those apart will
- * read silence as safety. Tier 2 (`_untrustedPaths`) is not implemented, so
- * every server currently declares `unsupported` while still declaring, above,
- * that untrusted content IS present.
+ * read silence as safety. Tier 2's per-result marker (`UNTRUSTED_RESULT_META_KEY`
+ * below) is so far attached only to error results, so every server still
+ * declares `unsupported` while declaring, above, that untrusted content IS
+ * present. A server flips to `per-response` only once every one of its tools
+ * reports.
  */
 export type UntrustedPathReporting = "unsupported" | "per-response";
 
@@ -76,3 +78,118 @@ export const UNTRUSTED_CONTENT_DECLARATION: UntrustedContentDeclaration = {
   ],
   path_reporting: "unsupported",
 };
+
+/**
+ * Per-result marker (#204, Tier 2): the `_meta` key under which a tool result
+ * reports where platform-supplied free text may sit in it.
+ *
+ * NO MARKER MEANS "NOT REPORTED", NEVER "TRUSTED". While a server's card says
+ * `path_reporting: "unsupported"`, its successful results carry entity names,
+ * ad copy and report cells with no marker at all. Only error results are marked
+ * so far. A client must key "is this safe?" off the card's declaration, not off
+ * the marker's absence.
+ *
+ * It lives in `_meta` rather than `structuredContent` or `outputSchema` on
+ * purpose. `outputSchema` is covered by `definitionHash`
+ * (`@cesteral/contract-hash`), so a field there would move the hash of every
+ * governed tool and force a fleet-wide re-attestation; `_meta` is explicitly
+ * outside the hash, and MCP's `CallToolResult` already allows it.
+ *
+ * `cesteral/` is a vendor prefix, not a reserved one. MCP reserves `_meta`
+ * prefixes whose second-to-last label is `modelcontextprotocol` or `mcp`
+ * (e.g. `modelcontextprotocol.io/`, `api.mcp.dev/`).
+ */
+export const UNTRUSTED_RESULT_META_KEY = "cesteral/untrusted" as const;
+
+/** Why a result was marked. Additive: new reasons may be added under `v: 1`. */
+export type UntrustedResultReason = "tool-error";
+
+export interface UntrustedResultMarker {
+  /** Marker format version. `v: 1` changes are additive only. */
+  v: 1;
+  /**
+   * JSONPath roots in `structuredContent` whose subtrees may hold untrusted
+   * text. A path marks the whole subtree, not one field.
+   */
+  structuredPaths: string[];
+  /** Indexes into `content` of the text blocks that embed untrusted text. */
+  contentBlocks: number[];
+  reason: UntrustedResultReason;
+}
+
+/**
+ * Marker for a failed tool call.
+ *
+ * Applied to EVERY error result the tool factory builds, not only to upstream
+ * failures. The factory cannot tell them apart reliably: `ErrorHandler`
+ * converts whatever was thrown into one `McpError`, and an upstream failure's
+ * message embeds the platform's response (`retryable-fetch` builds
+ * "<Platform> API request failed: <status> — <upstream summary>", and several
+ * clients put the platform's own message in the error text). Over-marking a
+ * locally-raised validation error costs nothing; under-marking an upstream one
+ * is the failure this exists to prevent.
+ *
+ * The error result has no `structuredContent`: its payload is the JSON text of
+ * block 0, `{ error, code, data }`, where `error` and `data` may carry upstream
+ * text and `code` is a JSON-RPC number.
+ */
+export const TOOL_ERROR_UNTRUSTED_MARKER: Readonly<UntrustedResultMarker> = Object.freeze({
+  v: 1,
+  structuredPaths: Object.freeze([]) as unknown as string[],
+  contentBlocks: Object.freeze([0]) as unknown as number[],
+  reason: "tool-error",
+});
+
+/**
+ * The `_meta` object to spread onto a tool result carrying `marker`.
+ *
+ * Returns a fresh copy each call. Over an in-process transport (`InMemoryTransport`,
+ * or any embedder) the client receives the very object the handler returned,
+ * so handing out the shared constant would let one consumer rewrite the marker
+ * on every later error result in the process.
+ */
+export function untrustedResultMeta(
+  marker: Readonly<UntrustedResultMarker>
+): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResultMarker> {
+  return {
+    [UNTRUSTED_RESULT_META_KEY]: {
+      v: marker.v,
+      structuredPaths: [...marker.structuredPaths],
+      contentBlocks: [...marker.contentBlocks],
+      reason: marker.reason,
+    },
+  };
+}
+
+/**
+ * Marker for a resource read whose ENTIRE text is platform-supplied (#204 Tier
+ * 2). Carried on each `contents[]` item's `_meta`, under the same key as the
+ * tool-result marker.
+ *
+ * A report CSV has no structure to point into: every header and cell is
+ * whatever the platform returned, including campaign, ad and audience names.
+ * So it is marked whole rather than by path.
+ */
+export interface UntrustedResourceMarker {
+  /** Marker format version. `v: 1` changes are additive only. */
+  v: 1;
+  /** The whole `text` of this content item may be untrusted. */
+  whole: true;
+  reason: "report-csv";
+}
+
+export const REPORT_CSV_UNTRUSTED_MARKER: Readonly<UntrustedResourceMarker> = Object.freeze({
+  v: 1,
+  whole: true,
+  reason: "report-csv",
+});
+
+/**
+ * The `_meta` object for a resource content item carrying `marker`. A fresh
+ * copy each call, for the same reason as `untrustedResultMeta`.
+ */
+export function untrustedResourceMeta(
+  marker: Readonly<UntrustedResourceMarker>
+): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResourceMarker> {
+  return { [UNTRUSTED_RESULT_META_KEY]: { ...marker } };
+}
