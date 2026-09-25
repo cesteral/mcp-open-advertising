@@ -459,11 +459,14 @@ describe("lexical control router", () => {
     expect(result.summary.unsafePicks).toBeGreaterThan(0);
   });
 
-  it("reproduces the Layer 1 tiktok 'ad' substring defect at Layer 2", () => {
-    // tool-search-ranking.json records `delete an ad group` -> tiktok_adjust_bids
-    // on tiktok-mcp alone. Merged across 13 servers the same 2-character
-    // substring rule sends it to another platform entirely — the Layer 1 gap
-    // becoming a cross-server error, which is exactly what Part 2 exists to see.
+  it("still misroutes the tiktok ad-group delete across servers, though Layer 1 fixed it", () => {
+    // tool-search-ranking.json used to record `delete an ad group` ->
+    // tiktok_adjust_bids on tiktok-mcp alone, because "ad" substring-matched
+    // "adjust". That Layer 1 defect is fixed and the entry is now a case. Merged
+    // across 13 servers the request still goes to another platform: words like
+    // "ad", "group" and "ads" are shared across the fleet, and the platform name
+    // is one query word among several. A lexical fix on one server's registry
+    // does not fix cross-server routing, which is what this layer exists to see.
     const row = result.caseResults.find((r) => r.id === "explicit-tiktok-delete");
     expect(row.verdict).toBe("wrong-platform");
     expect(row.picked).not.toBe("tiktok_delete_entity");

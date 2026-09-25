@@ -399,7 +399,7 @@
     {
       "id": "linkedin.rest_uses_cursor_pagination",
       "package": "linkedin-mcp",
-      "class": "unversioned-base-url",
+      "class": "behavioral-constraint",
       "claim": "AdAccounts, campaign groups, campaigns and creatives moved to cursor-based pagination at version 202401; this package still sends offset start/count",
       "value": null,
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaigns",

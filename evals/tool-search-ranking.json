@@ -1,9 +1,7 @@
 {
   "$comment": "Deterministic per-server ranker regression cases (#205, Part 1). Every expectation here was OBSERVED against the shipped ranker, never guessed: each case was run through the real {platform}_search_tools tool over the MCP wire before being written down. See evals/tool-search-ranking.test.mjs for how they are driven, and the README section in that file for what this does and does not prove.",
   "schemaVersion": 1,
-
   "$layer": "This covers Layer 1 only — packages/shared/src/utils/tool-search.ts, which searches ONE server's own registry and is a pure deterministic function of text we hand-edit. Layer 2 (a client's model choosing across the merged tools/list of several servers) is where genuine cross-server confusion lives, is not reachable from here, and needs a model-based harness on a schedule. Part 1 does not block on it.",
-
   "cases": [
     {
       "server": "ttd-mcp",
@@ -62,7 +60,6 @@
       "expectTop": "tiktok_download_report",
       "outranks": ["tiktok_get_report", "tiktok_get_report_breakdowns"]
     },
-
     {
       "server": "cm360-mcp",
       "platform": "cm360",
@@ -116,7 +113,6 @@
       "expectTop": "ttd_delete_entity",
       "outranks": ["ttd_delete_report_schedule"]
     },
-
     {
       "server": "cm360-mcp",
       "platform": "cm360",
@@ -166,7 +162,6 @@
       "expectTop": "tiktok_create_entity",
       "outranks": ["tiktok_bulk_create_entities"]
     },
-
     {
       "server": "dv360-mcp",
       "platform": "dv360",
@@ -196,7 +191,6 @@
       "outranks": ["meta_update_entity"],
       "note": "Deliberately pinned even though the generic update tool loses. A dedicated budget-schedule tool IS the better answer for a budget query, so this ordering is the one worth protecting — not an accident to be corrected."
     },
-
     {
       "server": "tiktok-mcp",
       "platform": "tiktok",
@@ -211,45 +205,41 @@
       "query": "archive a campaign",
       "expectTop": "ttd_archive_entities",
       "note": "TTD is the one server whose archive path has 'archive' in the tool name, so the lexical ranker finds it. Contrast dv360, whose archive path is bulk_update_status — see gaps."
-    }
-  ],
-
-  "gaps": [
+    },
     {
       "server": "dv360-mcp",
       "platform": "dv360",
       "query": "permanently remove a campaign",
-      "wanted": "dv360_delete_entity",
-      "actualTop": "dv360_get_pacing_status",
-      "wantedNotInTopN": 4,
-      "note": "SYNONYM GAP. The ranker is purely lexical: 'remove' shares no token with 'delete', so the delete tool collapses to score 1 while an unrelated read tool wins. Swap 'remove' for 'delete' and dv360_delete_entity is #1. Recorded so the gap is auditable, NOT endorsed."
+      "expectTop": "dv360_delete_entity",
+      "outranks": ["dv360_get_pacing_status"],
+      "note": "Promoted from gaps. 'remove' shares no word with 'delete', so the delete tool used to score 1 and dv360_get_pacing_status won. The ranker now reads 'remove' as 'delete' (QUERY_SYNONYMS in tool-search.ts): dv360_delete_entity scores 11 and the pacing tool falls to 4."
     },
     {
       "server": "ttd-mcp",
       "platform": "ttd",
       "query": "permanently remove a campaign",
-      "wanted": "ttd_delete_entity",
-      "actualTop": "ttd_get_pacing_status",
-      "wantedNotInTopN": 4,
-      "note": "Same synonym gap as dv360, on a second server — evidence it is a property of the ranker, not of one server's wording."
+      "expectInTopN": ["ttd_delete_entity"],
+      "n": 2,
+      "note": "Promoted from gaps (the same synonym fix, on a second server). Pinned as top-2 rather than top-1 on purpose: ttd_delete_entity and ttd_delete_report_schedule tie at 10, and the tie goes to registry order, so asserting #1 would pin tools/list order instead of the ranker."
     },
+    {
+      "server": "tiktok-mcp",
+      "platform": "tiktok",
+      "query": "delete an ad group",
+      "expectTop": "tiktok_delete_entity",
+      "outranks": ["tiktok_adjust_bids"],
+      "note": "Promoted from gaps. The query word 'ad' used to substring-match 'adjust', which gave tiktok_adjust_bids the full +5 name weight. Names are now split into words and a prefix match needs at least 3 characters, so 'ad' matches the word 'ad' and nothing inside 'adjust'."
+    }
+  ],
+  "gaps": [
     {
       "server": "dv360-mcp",
       "platform": "dv360",
       "query": "remove this line item permanently",
       "wanted": "dv360_delete_entity",
       "actualTop": "dv360_adjust_line_item_bids",
-      "wantedNotInTopN": 6,
-      "note": "The safety case #205 asks about, and it is worse than the issue guessed. A bid-adjustment tool wins because 'line' and 'item' each hit its name for +5; the delete tool never surfaces. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201, and no single query puts them together near the top."
-    },
-    {
-      "server": "tiktok-mcp",
-      "platform": "tiktok",
-      "query": "delete an ad group",
-      "wanted": "tiktok_delete_entity",
-      "actualTop": "tiktok_adjust_bids",
       "wantedNotInTopN": 1,
-      "note": "THE 2-CHARACTER SUBSTRING EDGE the issue predicted, demonstrated live. Name matching is substring-either-direction, so the query token 'ad' matches 'adjust' inside tiktok_adjust_bids and buys it the full +5 name weight. tiktok_delete_entity is #2."
+      "note": "The safety case #205 asks about. Narrowed but still open: 'remove' now reaches delete, so dv360_delete_entity went from outside the top 6 to #2 (12). dv360_adjust_line_item_bids still wins at 22, because 'line' and 'item' each match a word in its name for +5. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201. Beating an object noun that appears in a tool's name needs the query's operation to outweigh it, and rarity (IDF) weighting was tried and rejected: it broke 3 protected cases by amplifying repeated description words."
     },
     {
       "server": "msads-mcp",
