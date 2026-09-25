@@ -58,12 +58,16 @@ jobs:
       # attention) and 2 (could not check) are both reported through the
       # tracking issue rather than as a bare red X, so the reason survives past
       # log retention.
+      # --due-within 30: warn a month before a load-bearing deadline, because
+      # release.yml runs the same check WITHOUT that flag as a hard gate. With
+      # no lead time this job would open its first issue the same week fleet
+      # releases start failing.
       - name: Check platform-facts freshness
         id: check
         continue-on-error: true
         run: |
           set +e
-          node scripts/check-platform-facts.mjs --freshness 2>&1 | tee "$RUNNER_TEMP/facts.txt"
+          node scripts/check-platform-facts.mjs --freshness --due-within 30 2>&1 | tee "$RUNNER_TEMP/facts.txt"
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       # A clean run CLOSES the issue: a fact that has been re-verified must not
