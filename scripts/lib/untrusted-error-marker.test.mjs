@@ -21,12 +21,10 @@
 //     ... requires task augmentation" for a task-only tool called without task
 //     mode. The factory never sees these, and their text describes only the
 //     caller's own request. Asserted below so the boundary is written down.
-//   - KNOWN GAP, not marked: the SDK's own OUTPUT validation. When a handler
-//     returns structuredContent that fails its outputSchema, the SDK builds
-//     "MCP error -32602: Output validation error: ..." and zod's message can
-//     quote the rejected value, which came from the platform. The factory
-//     never sees that error either. Closing it means validating output inside
-//     the factory; tracked on #204, not done here.
+//   - The SDK's OUTPUT validation is no longer SDK-built: zod's message can
+//     quote a rejected value that came from the platform, so the factory now
+//     runs the same check first and the failure is a marked factory error
+//     (packages/shared/tests/utils/output-validation-untrusted.test.ts).
 //   - A failed async TASK is marked in async-task-tool.ts, not here: reaching
 //     it needs task mode and a live upstream failure, so it is covered by
 //     packages/shared/tests/utils/async-task-tool.test.ts instead.
