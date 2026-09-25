@@ -196,6 +196,21 @@ The card's `operational` block (#201) answers what a client needs before pointin
 
 **The ratchet keys on tool NAME _and_ annotation**, deliberately. Seven of the fleet's sixteen destructive tools declare `operation: ["bulk_job"]` or `["manage"]` rather than `delete` — `tiktok`/`pinterest`/`snapchat`/`msads`/`amazon_dsp` `_delete_entity` are `writeClass: "effect"` bulk deletes governed as one batch effect, which is correct for governance and useless for identifying destructiveness. An annotation-only rule would have silently exempted the tools that delete the most at once; the mutation test for this pairing is in the #201 PR.
 
+## Untrusted-Content Marking (#204)
+
+Platform text (entity names, ad copy, upstream error bodies, report cells) is attacker-controllable, so results say where it sits under `_meta["cesteral/untrusted"]` (`v: 1`, additive-only). `_meta` is outside `definitionHash`, so none of this moves an attested hash.
+
+| Where                             | Marker                                                                                   | Set by                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Any factory-built error result    | `reason: "tool-error"`, `contentBlocks: [0]`                                             | `tool-handler-factory.ts` catch path; `async-task-tool.ts` failures |
+| `report-csv://` resource contents | `{ whole: true, reason: "report-csv" }`                                                  | `report-csv-resource.ts`                                            |
+| A declaring tool's success result | `reason: "platform-content"` + its declared `structuredPaths` / `contentBlocks`          | the tool's `untrustedContent` field                                 |
+| The tool's entry in `tools/list`  | the declaration itself, so stdio clients learn it before calling (the card is HTTP-only) | same                                                                |
+
+**Three declaration states, never collapsed.** Paths (`{ structuredPaths: ["$.rows"], contentBlocks: [0] }`, whole subtrees, `[*]` allowed) = platform text is there. `NO_UNTRUSTED_CONTENT` = the tool returns none. **No field = "not reported", never "trusted".** A malformed declaration throws at registration.
+
+**`path_reporting` on the card is a ratcheted claim.** `registry.json` → `untrustedContent.pathReporting: "per-response"` is allowed only when **every** tool on that server declares; `scripts/lib/untrusted-declarations.test.mjs` boots each server and fails both ways (an undeclared tool under `per-response`, or a fully declared server still claiming `unsupported`). `dbm-mcp` is the first server switched — **a new dbm tool without `untrustedContent` fails CI.** Errors the SDK builds before the handler runs (input validation, task augmentation required) stay unmarked; their text is the caller's own request.
+
 ## Platform-Facts Ledger
 
 `platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 19 facts: the versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, and the behavioural constraints in Server-Specific Notes above. Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).

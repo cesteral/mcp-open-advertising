@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import { daysBetween } from "../../../utils/date.js";
 
 const TOOL_NAME = "dbm_get_pacing_status";
@@ -173,6 +174,9 @@ export const getPacingStatusTool: ToolDefinition<
   description: TOOL_DESCRIPTION,
   inputSchema: GetPacingStatusInputSchema,
   outputSchema: GetPacingStatusOutputSchema,
+  // #204: ids and currency are the caller's input, the rest are numbers,
+  // report dates and computed enums. No platform free text.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   annotations: {
     readOnlyHint: true,
     destructiveHint: false,

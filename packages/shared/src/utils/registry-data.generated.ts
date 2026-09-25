@@ -17,6 +17,7 @@ export interface RegistryServerEntry {
       readonly note: string;
     }[];
   };
+  readonly untrustedPathReporting: "unsupported" | "per-response";
 }
 
 export interface RegistryData {
@@ -44,7 +45,8 @@ export const REGISTRY_DATA: RegistryData = {
       },
       "operational": {
         "terminalOperations": []
-      }
+      },
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "dv360-mcp",
@@ -92,7 +94,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "ttd-mcp",
@@ -133,7 +136,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Deletes the schedule and its future runs. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "gads-mcp",
@@ -160,7 +164,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Google Ads REMOVED status is terminal — a removed entity cannot be re-enabled. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "meta-mcp",
@@ -187,7 +192,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "linkedin-mcp",
@@ -214,7 +220,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "tiktok-mcp",
@@ -241,7 +248,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Bulk entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "cm360-mcp",
@@ -275,7 +283,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Deletes the schedule and its future runs. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "snapchat-mcp",
@@ -302,7 +311,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Bulk entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "sa360-mcp",
@@ -321,7 +331,8 @@ export const REGISTRY_DATA: RegistryData = {
       },
       "operational": {
         "terminalOperations": []
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "pinterest-mcp",
@@ -348,7 +359,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Bulk entity removal. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "amazon-dsp-mcp",
@@ -375,7 +387,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Bulk removal of orders / line items. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     },
     {
       "package": "msads-mcp",
@@ -409,7 +422,8 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Deletes the schedule and its future runs. No tool on this server restores it."
           }
         ]
-      }
+      },
+      "untrustedPathReporting": "unsupported"
     }
   ]
 } as const;

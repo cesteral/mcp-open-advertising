@@ -26,7 +26,15 @@ import {
 } from "./interaction-logger.js";
 import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
 import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
-import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
+import {
+  TOOL_ERROR_UNTRUSTED_MARKER,
+  untrustedResultMeta,
+  assertValidUntrustedDeclaration,
+  successResultMarker,
+  toolListingMeta,
+  type ToolUntrustedDeclaration,
+  type UntrustedResultMarker,
+} from "./untrusted-content.js";
 import {
   runWithRequestContext,
   getRequestContext,
@@ -378,6 +386,14 @@ export interface ToolDefinitionForFactory {
    * by the cesteral-intelligence frontend for Anthropic API `input_examples`.
    */
   inputExamples?: ToolInputExample[];
+  /**
+   * Where platform-supplied free text may sit in this tool's SUCCESSFUL
+   * results (#204). Published in `tools/list` under `_meta` and attached to
+   * each successful result. Omitted means "not reported", which is not the
+   * same as `NO_UNTRUSTED_CONTENT`. Outside `annotations` on purpose, so it
+   * does not move `definitionHash`.
+   */
+  untrustedContent?: ToolUntrustedDeclaration;
   logic: (input: any, context: any, sdkContext?: any) => Promise<any>;
   responseFormatter?: (result: any, input: any) => McpTextContent[];
 }
@@ -392,6 +408,7 @@ interface ToolRegistrationConfig {
   inputSchema: any;
   outputSchema?: any;
   annotations?: ToolAnnotations;
+  _meta?: Record<string, unknown>;
 }
 
 /**
@@ -693,6 +710,16 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       toolConfig.outputSchema = transformedOutputSchema;
     }
     const outputValidator = sdkEquivalentOutputValidator(transformedOutputSchema);
+
+    // #204: a tool's own declaration of where platform text sits in its
+    // successful results. Validated here so a bad path fails at boot.
+    let successMarker: UntrustedResultMarker | undefined;
+    if (tool.untrustedContent) {
+      assertValidUntrustedDeclaration(tool.name, tool.untrustedContent, !!tool.outputSchema);
+      toolConfig._meta = toolListingMeta(tool.untrustedContent);
+      successMarker = successResultMarker(tool.untrustedContent);
+    }
+    const successMeta = () => (successMarker ? { _meta: untrustedResultMeta(successMarker) } : {});
 
     const schemaSizeLog: Record<string, unknown> = {
       toolName: tool.name,
@@ -1098,10 +1125,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               return {
                 content,
                 structuredContent: result,
+                ...successMeta(),
               };
             }
 
-            return { content };
+            return { content, ...successMeta() };
           } catch (error) {
             recordSpanError(error as Error);
             setSpanAttribute("mcp.tool.execution.success", false);

@@ -101,8 +101,14 @@ export const UNTRUSTED_CONTENT_DECLARATION: UntrustedContentDeclaration = {
  */
 export const UNTRUSTED_RESULT_META_KEY = "cesteral/untrusted" as const;
 
-/** Why a result was marked. Additive: new reasons may be added under `v: 1`. */
-export type UntrustedResultReason = "tool-error";
+/**
+ * Why a result was marked. Additive: new reasons may be added under `v: 1`.
+ *
+ * - `tool-error`: an error result; its text can quote the platform.
+ * - `platform-content`: a successful result from a tool that declared where
+ *   platform text sits in its output (`ToolUntrustedDeclaration`).
+ */
+export type UntrustedResultReason = "tool-error" | "platform-content";
 
 export interface UntrustedResultMarker {
   /** Marker format version. `v: 1` changes are additive only. */
@@ -192,4 +198,100 @@ export function untrustedResourceMeta(
   marker: Readonly<UntrustedResourceMarker>
 ): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResourceMarker> {
   return { [UNTRUSTED_RESULT_META_KEY]: { ...marker } };
+}
+
+/**
+ * What a tool declares about its SUCCESSFUL results (#204 Tier 2): where in
+ * them platform-supplied free text may sit.
+ *
+ * Both lists empty means "this tool returns no platform free text", which is
+ * a declaration, not an absence: a client can tell it apart from a tool that
+ * declares nothing at all (no `untrustedContent` field, no `_meta` in
+ * `tools/list`), which means "not reported". Use `NO_UNTRUSTED_CONTENT`.
+ *
+ * Paths are JSONPath-style roots into `structuredContent` and mark whole
+ * subtrees (`$.rows`, `$.entity`). `[*]` is allowed for array elements.
+ */
+export interface ToolUntrustedDeclaration {
+  structuredPaths: readonly string[];
+  contentBlocks: readonly number[];
+}
+
+/** The declaration for a tool whose output holds no platform free text. */
+export const NO_UNTRUSTED_CONTENT: Readonly<ToolUntrustedDeclaration> = Object.freeze({
+  structuredPaths: Object.freeze([]) as readonly string[],
+  contentBlocks: Object.freeze([]) as readonly number[],
+});
+
+const STRUCTURED_PATH = /^\$(\.[A-Za-z_][A-Za-z0-9_]*|\[\*\])*$/;
+
+/**
+ * Reject a malformed declaration at registration, so a typo fails the server
+ * at boot rather than shipping a marker that points at nothing.
+ */
+export function assertValidUntrustedDeclaration(
+  toolName: string,
+  declaration: ToolUntrustedDeclaration,
+  hasOutputSchema: boolean
+): void {
+  for (const path of declaration.structuredPaths) {
+    if (!STRUCTURED_PATH.test(path) || path === "$") {
+      throw new Error(
+        `${toolName}: untrustedContent path ${JSON.stringify(path)} must be a JSONPath root below "$", like "$.rows" or "$.items[*].name"`
+      );
+    }
+  }
+  if (declaration.structuredPaths.length > 0 && !hasOutputSchema) {
+    throw new Error(
+      `${toolName}: untrustedContent declares structuredPaths but the tool has no outputSchema, so its results carry no structuredContent`
+    );
+  }
+  const seen = new Set<number>();
+  for (const index of declaration.contentBlocks) {
+    if (!Number.isInteger(index) || index < 0 || seen.has(index)) {
+      throw new Error(
+        `${toolName}: untrustedContent contentBlocks must be distinct non-negative integers, got ${JSON.stringify(declaration.contentBlocks)}`
+      );
+    }
+    seen.add(index);
+  }
+}
+
+/**
+ * The marker for one successful result, or `undefined` when the tool declared
+ * that it returns no platform text.
+ */
+export function successResultMarker(
+  declaration: ToolUntrustedDeclaration
+): UntrustedResultMarker | undefined {
+  if (declaration.structuredPaths.length === 0 && declaration.contentBlocks.length === 0) {
+    return undefined;
+  }
+  return {
+    v: 1,
+    structuredPaths: [...declaration.structuredPaths],
+    contentBlocks: [...declaration.contentBlocks],
+    reason: "platform-content",
+  };
+}
+
+/**
+ * The tool-level `_meta` published in `tools/list`, so a client knows a tool's
+ * declaration before calling it. This is also how stdio clients, which never
+ * see the HTTP server card, learn it. Outside `definitionHash`, like all
+ * `_meta`.
+ */
+export function toolListingMeta(
+  declaration: ToolUntrustedDeclaration
+): Record<
+  typeof UNTRUSTED_RESULT_META_KEY,
+  { v: 1; structuredPaths: string[]; contentBlocks: number[] }
+> {
+  return {
+    [UNTRUSTED_RESULT_META_KEY]: {
+      v: 1,
+      structuredPaths: [...declaration.structuredPaths],
+      contentBlocks: [...declaration.contentBlocks],
+    },
+  };
 }

@@ -45,6 +45,7 @@
         "modes": ["google-headers", "jwt", "none"]
       },
       "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": []
       }
