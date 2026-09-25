@@ -19,7 +19,7 @@ export const pinterestTroubleshootEntityPrompt: Prompt = {
     },
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID",
+      description: "Pinterest ad account ID",
       required: true,
     },
   ],
@@ -32,9 +32,9 @@ export function getPinterestTroubleshootEntityMessage(args?: Record<string, stri
 
   return `# Pinterest Entity Troubleshoot Workflow
 
-## Target: ${entityType} ${entityId} (Advertiser: ${adAccountId})
+## Target: ${entityType} ${entityId} (ad account: ${adAccountId})
 
-## Step 1: Fetch Entity Details
+## Step 1: Fetch the entity
 
 \`\`\`json
 pinterest_get_entity({
@@ -44,66 +44,80 @@ pinterest_get_entity({
 })
 \`\`\`
 
-Check: operation_status, primary_status, secondary_status, and any rejection reasons.
+Check these fields:
 
-## Step 2: Check Recent Performance
+| Entity | Fields |
+|--------|--------|
+| campaign | \`status\` (the setting you control: \`ACTIVE\`, \`PAUSED\`, \`ARCHIVED\`, \`DRAFT\`, \`DELETED_DRAFT\`), \`summary_status\` (the delivery state: \`RUNNING\`, \`PAUSED\`, \`NOT_STARTED\`, \`COMPLETED\`, \`ADVERTISER_DISABLED\`, \`ARCHIVED\`, \`DRAFT\`, \`DELETED_DRAFT\`), \`start_time\` / \`end_time\` (Unix seconds), \`daily_spend_cap\` / \`lifetime_spend_cap\` (micros) |
+| adGroup | \`status\`, \`summary_status\` (same values as campaign), \`budget_in_micro_currency\`, \`bid_in_micro_currency\`, \`bid_strategy_type\`, \`targeting_spec\`, \`start_time\` / \`end_time\` |
+| ad | \`status\`, \`review_status\` (\`PENDING\`, \`APPROVED\`, \`REJECTED\`, \`OTHER\`), \`rejected_reasons\`, \`rejection_labels\`, \`summary_status\` (\`APPROVED\`, \`PAUSED\`, \`PENDING\`, \`REJECTED\`, \`ADVERTISER_DISABLED\`, \`ARCHIVED\`, \`DRAFT\`, \`DELETED_DRAFT\`), \`pin_id\` |
+| creative (Pin) | \`media\`, \`link\`, \`board_id\`. A Pin has no ad status. Check the ads that promote it. |
+
+## Step 2: Check recent performance
 
 \`\`\`json
 pinterest_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+  "type": "CAMPAIGN",
+  "columns": ["CAMPAIGN_ID", "IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "TOTAL_CONVERSIONS"],
+  "campaignIds": ["{campaign_id}"],
+  "granularity": "DAY",
+  "datePreset": "LAST_7_DAYS"
 })
 \`\`\`
 
-## Step 3: Check Parent Entity
+Use \`type: "AD_GROUP"\` with \`adGroupIds\`, or \`type: "AD"\` with \`adIds\`, to narrow to the entity itself.
 
-If ad group or ad, check parent entity status:
+## Step 3: Check the parents
+
+An ad group or ad only delivers when its parents do. Read the ad group (\`campaign_id\` is on it) and the campaign:
+
 \`\`\`json
 pinterest_get_entity({
   "entityType": "campaign",
   "adAccountId": "${adAccountId}",
-  "entityId": "{parentCampaignId}"
+  "entityId": "{campaign_id}"
 })
 \`\`\`
 
 ## Common Issues
 
-| Symptom | Likely Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| No delivery | Entity PAUSED | Use \`pinterest_bulk_update_status\` with operationStatus: "ACTIVE" |
-| No delivery, ACTIVE | Parent paused | Enable parent campaign or ad group |
-| No delivery, all ACTIVE | Budget exhausted | Increase budget |
-| No delivery, budget OK | Targeting too narrow | Check audience estimate |
-| Ad under review | Pinterest ad review in progress | Allow 24-48h for review |
-| Ad rejected | Policy violation | Review Pinterest creative guidelines |
-| Video not playing | Video upload incomplete | Check video status in Creative Library |
-| Low reach | Targeting too narrow | Broaden age, interests, or geos |
+| No delivery, \`status: PAUSED\` | Entity paused | Set \`status\` to \`ACTIVE\` |
+| No delivery, entity \`ACTIVE\` | Parent campaign or ad group paused | Activate the parent |
+| \`summary_status: NOT_STARTED\` | \`start_time\` is in the future | Wait, or move \`start_time\` |
+| \`summary_status: COMPLETED\` | \`end_time\` has passed or the lifetime budget is spent | Extend \`end_time\` or raise the budget |
+| \`summary_status: ADVERTISER_DISABLED\` | Account-level problem, such as billing | Resolve it in Pinterest Ads Manager. No tool here can fix it. |
+| Ad \`review_status: PENDING\` | Pinterest ad review in progress | Wait for review |
+| Ad \`review_status: REJECTED\` | Policy violation | Read \`rejected_reasons\` and \`rejection_labels\`, then fix the Pin or create a new ad |
+| Budget looks 1,000,000× too big or small | Micros misread | Money fields are micro-currency: \`50000000\` = 50.00 |
+| Low reach | Narrow \`targeting_spec\` | Check the delivery estimate (Step 4) and broaden it |
+| \`status: ARCHIVED\` | Entity was archived | Archiving is permanent. Duplicate the campaign or create a new entity. |
 
-## Step 4: Audience Estimate
+## Step 4: Delivery estimate
 
 \`\`\`json
 pinterest_get_delivery_estimate({
   "adAccountId": "${adAccountId}",
-  "targetingConfig": { ... targeting from adGroup ... }
+  "targetingConfig": { "LOCATION": ["US"], "AGE_BUCKET": ["25-34"], "GENDER": ["female"] }
 })
 \`\`\`
 
-## Step 5: Validate Entity Payload
+Pass the ad group's \`targeting_spec\` as \`targetingConfig\`. Keys are UPPERCASE.
+
+## Status changes
+
+Status is an ordinary field on Pinterest's PATCH endpoints, so either tool works:
 
 \`\`\`json
-pinterest_validate_entity({
+pinterest_update_entity({
   "entityType": "${entityType}",
-  "mode": "update",
-  "data": { ... current entity data ... }
+  "adAccountId": "${adAccountId}",
+  "entityId": "${entityId}",
+  "data": { "status": "ACTIVE" }
 })
 \`\`\`
-
-## Status Update Tool
-
-Pinterest uses a separate status endpoint — do NOT use \`pinterest_update_entity\` for status changes:
 
 \`\`\`json
 pinterest_bulk_update_status({
@@ -113,5 +127,7 @@ pinterest_bulk_update_status({
   "operationStatus": "ACTIVE"
 })
 \`\`\`
+
+These apply to campaigns, ad groups and ads. A Pin has no status.
 `;
 }

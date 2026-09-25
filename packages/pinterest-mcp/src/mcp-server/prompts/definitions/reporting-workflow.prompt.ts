@@ -6,16 +6,16 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const pinterestReportingWorkflowPrompt: Prompt = {
   name: "pinterest_reporting_workflow",
   description:
-    "Guide for submitting and retrieving Pinterest Ads async reports with dimensions, metrics, and breakdowns",
+    "Guide for Pinterest Ads async reports: report types, columns, granularity, targeting breakdowns and date-range limits",
   arguments: [
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID",
+      description: "Pinterest ad account ID",
       required: true,
     },
     {
-      name: "reportLevel",
-      description: "Report level: AUCTION, RESERVATION (default: AUCTION)",
+      name: "reportType",
+      description: "Report type: CAMPAIGN, AD_GROUP, AD, KEYWORD or ACCOUNT (default: CAMPAIGN)",
       required: false,
     },
   ],
@@ -23,70 +23,85 @@ export const pinterestReportingWorkflowPrompt: Prompt = {
 
 export function getPinterestReportingWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
-  const reportLevel = args?.reportLevel || "AUCTION";
+  const reportType = args?.reportType || "CAMPAIGN";
 
   return `# Pinterest Reporting Workflow
 
-Advertiser: \`${adAccountId}\`
-Report Level: \`${reportLevel}\`
+Ad account: \`${adAccountId}\`
+Report type: \`${reportType}\`
 
 ---
 
 ## Overview
 
-Pinterest reports are **async** — \`pinterest_get_report\` submits the job, polls for completion, and returns the results when ready.
+Pinterest reports are **async**. \`pinterest_get_report\` submits the report (\`POST /v5/ad_accounts/{id}/reports\`), polls until it is ready, and returns the rows. To manage the steps yourself, use \`pinterest_submit_report\`, \`pinterest_check_report_status\` and \`pinterest_download_report\`.
+
+A report has no free-form dimensions. The row level comes from \`type\`, the time buckets from \`granularity\`, and everything else is a \`columns\` value:
+
+| Parameter | Values |
+|-----------|--------|
+| \`type\` | \`CAMPAIGN\` (default), \`AD_GROUP\`, \`AD\` (Pinterest level \`PIN_PROMOTION\`), \`KEYWORD\`, \`ACCOUNT\` (Pinterest level \`ADVERTISER\`) |
+| \`granularity\` | \`DAY\` (default), \`TOTAL\`, \`HOUR\`, \`WEEK\`, \`MONTH\` |
+| Date range | \`startDate\` + \`endDate\` (YYYY-MM-DD), or \`datePreset\` |
+| Filters | \`campaignIds\`, \`adGroupIds\`, \`adIds\` |
 
 ---
 
-## Step 1: Basic Campaign Report
+## Step 1: Campaign report
 
 \`\`\`json
 pinterest_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc", "conversions", "cost_per_conversion"],
+  "type": "${reportType}",
+  "columns": ["CAMPAIGN_ID", "CAMPAIGN_NAME", "IMPRESSION_1", "CLICKTHROUGH_1", "CTR", "SPEND_IN_DOLLAR", "TOTAL_CONVERSIONS"],
+  "granularity": "DAY",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 2: Ad Group Level Report
+Set \`includeComputedMetrics: true\` to add computed CPA, ROAS, CPM, CTR and CPC.
+
+## Step 2: Ad group report for one campaign
 
 \`\`\`json
 pinterest_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["adgroup_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "video_play_actions", "video_watched_2s", "video_watched_6s"],
+  "type": "AD_GROUP",
+  "columns": ["AD_GROUP_ID", "IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CPM_IN_DOLLAR", "ECPC_IN_DOLLAR"],
+  "campaignIds": ["{campaign_id}"],
+  "granularity": "TOTAL",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 3: Breakdown Report
+## Step 3: Targeting breakdowns
 
-Add demographic and contextual breakdowns to your report:
+Pinterest breakdowns are not extra columns. Each one is a \`targeting_types\` value, and the report runs at the \`*_TARGETING\` variant of its type. KEYWORD reports cannot be broken down.
 
 \`\`\`json
 pinterest_get_report_breakdowns({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["campaign_id"],
-  "breakdowns": ["gender", "age"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
+  "type": "CAMPAIGN",
+  "columns": ["CAMPAIGN_ID", "IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
+  "breakdowns": ["GENDER", "AGE_BUCKET"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 4: Video Engagement Report
+You can pass up to 5 breakdowns, including \`APPTYPE\`, \`GENDER\`, \`AGE_BUCKET\`, \`AGE_BUCKET_AND_GENDER\`, \`COUNTRY\`, \`REGION\`, \`LOCATION\`, \`GEO\`, \`PLACEMENT\`, \`KEYWORD\`, \`TARGETED_INTEREST\`, \`PINNER_INTEREST\`, \`AUDIENCE_INCLUDE\` and \`MEDIA_TYPE\`. The tool's schema has the full list.
+
+## Step 4: Video report
 
 \`\`\`json
 pinterest_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["ad_id"],
-  "metrics": [
-    "impressions", "video_play_actions", "video_watched_2s",
-    "video_watched_6s", "video_views_p25", "video_views_p50",
-    "video_views_p75", "video_views_p100"
+  "type": "AD",
+  "columns": [
+    "PIN_PROMOTION_ID", "IMPRESSION_1", "VIDEO_MRC_VIEWS_1", "VIDEO_3SEC_VIEWS_1",
+    "VIDEO_P25_COMBINED_1", "VIDEO_P50_COMBINED_1", "VIDEO_P75_COMBINED_1", "VIDEO_P100_COMPLETE_1"
   ],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
@@ -95,39 +110,30 @@ pinterest_get_report({
 
 ## Resource References
 
-- Fetch \`reporting-reference://pinterest\` for full metrics and dimensions list
+- Fetch \`reporting-reference://pinterest\` for more columns
 - Fetch \`entity-hierarchy://pinterest/all\` for entity relationships
 
-## Common Dimensions
+## Common Columns
 
-| Dimension | Level |
-|-----------|-------|
-| \`campaign_id\` | Campaign |
-| \`adgroup_id\` | Ad Group |
-| \`ad_id\` | Ad |
-| \`stat_time_day\` | Daily breakdown |
-| \`stat_time_hour\` | Hourly breakdown |
+| Column | Meaning |
+|--------|---------|
+| \`CAMPAIGN_ID\`, \`AD_GROUP_ID\`, \`PIN_PROMOTION_ID\` | Entity IDs (a Pinterest ad is a pin promotion) |
+| \`IMPRESSION_1\`, \`TOTAL_IMPRESSION\` | Impressions |
+| \`CLICKTHROUGH_1\`, \`TOTAL_CLICKTHROUGH\` | Clicks |
+| \`CTR\` | Click-through rate |
+| \`SPEND_IN_DOLLAR\` / \`SPEND_IN_MICRO_DOLLAR\` | Spend. The \`MICRO\` form is in micros. |
+| \`CPM_IN_DOLLAR\`, \`ECPC_IN_DOLLAR\` | Cost per thousand impressions, effective cost per click |
+| \`TOTAL_CONVERSIONS\` | Conversions |
+| \`VIDEO_MRC_VIEWS_1\`, \`VIDEO_3SEC_VIEWS_1\` | Video views |
+| \`VIDEO_P25_COMBINED_1\` … \`VIDEO_P100_COMPLETE_1\` | Video quartiles and completions |
 
-## Common Metrics
+\`columns\` is a fixed enum in the Pinterest API (over 600 values), so use exact names. The tool does not check them, and Pinterest rejects a report with an unknown column.
 
-| Metric | Description |
-|--------|-------------|
-| \`impressions\` | Total impressions |
-| \`clicks\` | Total clicks |
-| \`spend\` | Total spend (account currency) |
-| \`ctr\` | Click-through rate |
-| \`cpc\` | Cost per click |
-| \`conversions\` | Total conversions |
-| \`cost_per_conversion\` | CPA |
-| \`video_play_actions\` | Video starts |
-| \`video_watched_2s\` | 2-second video views |
-| \`video_watched_6s\` | 6-second video views |
+## Date-range limits (Pinterest \`create_report\`)
 
-## Tips
+- **DAY, WEEK, MONTH, TOTAL**: data up to 914 days back, with at most 186 days per report
+- **HOUR**: data up to 8 days back, with at most 3 days per report
 
-- Reports may take **30 seconds to several minutes** depending on date range and data volume
-- Data has a **24-48 hour lag** for finalized metrics
-- Max date range per report is **180 days**
-- Budget and spend values are in **account currency** (not cents, not micros)
+Split longer ranges across several reports.
 `;
 }

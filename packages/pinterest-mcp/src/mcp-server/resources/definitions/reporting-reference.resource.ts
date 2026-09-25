@@ -11,133 +11,115 @@ let cachedContent: string | undefined;
 function formatReportingReferenceMarkdown(): string {
   return `# Pinterest Ads Reporting Reference
 
+Source: Pinterest Marketing API OpenAPI v5 (\`analytics/create_report\`, \`ReportingColumnAsync\`, \`BulkReportingJobStatus\`).
+
 ## Report Types
 
-| Report Type | Description |
-|-------------|-------------|
-| BASIC | Standard delivery and performance metrics |
-| AUDIENCE | Audience breakdown metrics (requires audience dimensions) |
-| PLAYABLE_MATERIAL | Playable ad performance metrics |
+The tools take \`type\` and map it to Pinterest's report \`level\`:
+
+| \`type\` | Pinterest \`level\` | With breakdowns |
+|--------|-------------------|-----------------|
+| \`CAMPAIGN\` (default) | \`CAMPAIGN\` | \`CAMPAIGN_TARGETING\` |
+| \`AD_GROUP\` | \`AD_GROUP\` | \`AD_GROUP_TARGETING\` |
+| \`AD\` | \`PIN_PROMOTION\` | \`PIN_PROMOTION_TARGETING\` |
+| \`KEYWORD\` | \`KEYWORD\` | Not supported |
+| \`ACCOUNT\` | \`ADVERTISER\` | \`ADVERTISER_TARGETING\` |
+
+\`granularity\`: \`DAY\` (default), \`TOTAL\`, \`HOUR\`, \`WEEK\`, \`MONTH\`.
 
 ## Async Reporting Flow
 
-1. **Submit**: POST \`/v5/ad_accounts/{ad_account_id}/reports\` → get \`token\`
-2. **Poll**: GET \`/v5/ad_accounts/{ad_account_id}/reports/{token}\` → check \`status\`
-3. **Download**: GET the \`download_url\` when status = "FINISHED"
+1. **Submit**: \`POST /v5/ad_accounts/{ad_account_id}/reports\` returns a \`token\`
+2. **Poll**: \`GET /v5/ad_accounts/{ad_account_id}/reports?token={token}\` returns \`report_status\`
+3. **Download**: fetch the returned \`url\` once \`report_status\` is \`FINISHED\`
 
-Status values: FINISHED | FAILED
+\`report_status\` values: \`IN_PROGRESS\`, \`FINISHED\`, \`FAILED\`, \`EXPIRED\`, \`CANCELLED\`, \`DOES_NOT_EXIST\`.
 
-Use \`pinterest_get_report\` or \`pinterest_get_report_breakdowns\` — these tools handle the full flow automatically.
+\`pinterest_get_report\` and \`pinterest_get_report_breakdowns\` run the whole flow. \`pinterest_submit_report\`, \`pinterest_check_report_status\` and \`pinterest_download_report\` run one step each.
 
-## Common Dimensions
+## Date-range limits
 
-### Time Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| stat_time_day | Daily breakdown (YYYY-MM-DD) |
-| stat_time_hour | Hourly breakdown |
+| Granularity | Data available | Max range per report |
+|-------------|----------------|----------------------|
+| \`DAY\`, \`WEEK\`, \`MONTH\`, \`TOTAL\` | 914 days back | 186 days |
+| \`HOUR\` | 8 days back | 3 days |
 
-### Entity Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| ad_account_id | Advertiser ID |
-| campaign_id | Campaign ID |
-| adgroup_id | Ad group ID |
-| ad_id | Ad ID |
+## Columns
 
-### Audience Dimensions (AUDIENCE report type)
-| Dimension | Description |
-|-----------|-------------|
-| gender | User gender breakdown |
-| age | User age group breakdown |
-| country_code | Country (ISO 2-letter code) |
-| province_id | Province/region ID |
-| platform | Operating system platform |
-| device_brand_id | Device brand |
-| interest_category | Interest category |
-| placement | Ad placement |
-| language | User language |
+There are no separate dimensions and metrics. Everything is a \`columns\` value from Pinterest's \`ReportingColumnAsync\` enum (over 600 values). Unknown names are rejected by Pinterest, not by the tool.
 
-## Common Metrics
-
-### Delivery Metrics
-| Metric | Description |
+### IDs and names
+| Column | Description |
 |--------|-------------|
-| impressions | Total impressions |
-| reach | Unique users reached |
-| frequency | Average impressions per user |
-| clicks | Total clicks |
-| ctr | Click-through rate (%) |
-| cpm | Cost per mille (per 1000 impressions) |
-| cpc | Cost per click |
-| spend | Total amount spent |
+| \`AD_ACCOUNT_ID\` | Ad account ID |
+| \`CAMPAIGN_ID\`, \`CAMPAIGN_NAME\` | Campaign |
+| \`AD_GROUP_ID\`, \`AD_GROUP_NAME\` | Ad group |
+| \`PIN_PROMOTION_ID\`, \`PIN_PROMOTION_NAME\` | Ad (a pin promotion) |
+| \`PIN_ID\` | Promoted Pin |
 
-### Video Metrics
-| Metric | Description |
+### Delivery and cost
+| Column | Description |
 |--------|-------------|
-| video_play_actions | Total video plays |
-| video_watched_2s | 2-second video views |
-| video_watched_6s | 6-second video views |
-| video_views_p25 | 25% video completion |
-| video_views_p50 | 50% video completion |
-| video_views_p75 | 75% video completion |
-| video_views_p100 | 100% completion (full views) |
-| average_video_play | Average play duration (seconds) |
+| \`IMPRESSION_1\`, \`TOTAL_IMPRESSION\` | Impressions |
+| \`CLICKTHROUGH_1\`, \`TOTAL_CLICKTHROUGH\` | Clicks |
+| \`CTR\` | Click-through rate |
+| \`SPEND_IN_DOLLAR\` | Spend |
+| \`SPEND_IN_MICRO_DOLLAR\` | Spend in micros |
+| \`CPM_IN_DOLLAR\` | Cost per thousand impressions |
+| \`ECPC_IN_DOLLAR\` | Effective cost per click |
 
-### Conversion Metrics
-| Metric | Description |
+### Video
+| Column | Description |
 |--------|-------------|
-| conversions | Total conversion events |
-| conversion_rate | Conversions / clicks (%) |
-| cost_per_conversion | Spend / conversions |
-| real_time_conversions | Real-time tracked conversions |
-| total_purchase_value | Total purchase value |
-| total_sales | Total sales count |
-| cost_per_1000_reached | CPM by unique reach |
+| \`VIDEO_MRC_VIEWS_1\` | MRC video views |
+| \`VIDEO_3SEC_VIEWS_1\` | 3-second video views |
+| \`VIDEO_P25_COMBINED_1\`, \`VIDEO_P50_COMBINED_1\`, \`VIDEO_P75_COMBINED_1\`, \`VIDEO_P95_COMBINED_1\` | Quartile views |
+| \`VIDEO_P100_COMPLETE_1\` | Completed views |
 
-### Engagement Metrics
-| Metric | Description |
+### Conversions
+| Column | Description |
 |--------|-------------|
-| profile_visits | Profile page visits |
-| follows | New followers gained |
-| likes | Likes on ads |
-| comments | Comments on ads |
-| shares | Shares of ads |
-| engaged_view | Engaged views (6s+ or interaction) |
+| \`TOTAL_CONVERSIONS\` | Conversions |
+| \`TOTAL_CHECKOUT\` | Checkouts |
+| \`TOTAL_CHECKOUT_VALUE_IN_MICRO_DOLLAR\` | Checkout value in micros |
+
+## Breakdowns (\`targeting_types\`)
+
+\`pinterest_get_report_breakdowns\` accepts up to 5 of: \`KEYWORD\`, \`APPTYPE\`, \`GENDER\`, \`LOCATION\`, \`PLACEMENT\`, \`COUNTRY\`, \`TARGETED_INTEREST\`, \`PINNER_INTEREST\`, \`AUDIENCE_INCLUDE\`, \`GEO\`, \`AGE_BUCKET\`, \`REGION\`, \`MEDIA_TYPE\`, \`AGE_BUCKET_AND_GENDER\`, \`AUDIENCE_MULTIPLIER\`, \`CREATIVE_ENHANCEMENTS\`, \`LOCAL_ADS_STORE_CODE\`.
 
 ## Example Report Configurations
 
-### Campaign Daily Delivery Report
+### Campaign daily delivery (\`pinterest_get_report\`)
 \`\`\`json
 {
   "adAccountId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc"],
+  "type": "CAMPAIGN",
+  "columns": ["CAMPAIGN_ID", "IMPRESSION_1", "CLICKTHROUGH_1", "CTR", "SPEND_IN_DOLLAR"],
+  "granularity": "DAY",
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
 \`\`\`
 
-### Ad Performance with Video Metrics
+### Ad video performance (\`pinterest_get_report\`)
 \`\`\`json
 {
   "adAccountId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["ad_id"],
-  "metrics": ["impressions", "spend", "video_play_actions", "video_views_p100", "average_video_play"],
+  "type": "AD",
+  "columns": ["PIN_PROMOTION_ID", "IMPRESSION_1", "SPEND_IN_DOLLAR", "VIDEO_MRC_VIEWS_1", "VIDEO_P100_COMPLETE_1"],
+  "granularity": "TOTAL",
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
 \`\`\`
 
-### Country Breakdown Report
+### Country breakdown (\`pinterest_get_report_breakdowns\`)
 \`\`\`json
 {
   "adAccountId": "1234567890",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "breakdowns": ["country_code"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
+  "type": "CAMPAIGN",
+  "columns": ["CAMPAIGN_ID", "IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "TOTAL_CONVERSIONS"],
+  "breakdowns": ["COUNTRY"],
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
@@ -149,7 +131,7 @@ export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://pinterest",
   name: "Pinterest Reporting Reference",
   description:
-    "Available dimensions, metrics, report types, and example configurations for Pinterest Ads reporting",
+    "Report types, columns, breakdowns, date-range limits and example configurations for Pinterest Ads reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

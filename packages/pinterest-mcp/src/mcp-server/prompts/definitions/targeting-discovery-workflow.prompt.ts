@@ -12,11 +12,11 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const pinterestTargetingDiscoveryWorkflowPrompt: Prompt = {
   name: "pinterest_targeting_discovery_workflow",
   description:
-    "Step-by-step guide for researching Pinterest audiences: search interest categories, browse behaviors, build targeting configs, and estimate audience size before ad group creation.",
+    "Step-by-step guide for researching Pinterest audiences: search and browse targeting options, build an ad group targeting_spec, and estimate audience size before ad group creation.",
   arguments: [
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID",
+      description: "Pinterest ad account ID",
       required: true,
     },
     {
@@ -43,111 +43,91 @@ Goal: \`${goal}\`
 
 ## Overview
 
-Before creating ad groups, you need to build a **targeting configuration** — the fields that define your Pinterest audience. This workflow helps you discover and validate targeting options.
+An ad group's audience is its \`targeting_spec\`: an object whose keys are Pinterest targeting types (\`AGE_BUCKET\`, \`GENDER\`, \`LOCATION\`, \`INTEREST\`, …) and whose values are arrays of option ids. This workflow finds valid ids, assembles a \`targeting_spec\`, and sizes the audience before you create the ad group.
 
 | Tool | Purpose | Use When |
 |------|---------|----------|
-| \`pinterest_search_targeting\` | Search by keyword | You know the audience you want |
-| \`pinterest_get_targeting_options\` | Browse available targeting | You want to explore what's available |
-| \`pinterest_get_delivery_estimate\` | Estimate audience size | Before committing to targeting |
+| \`pinterest_search_targeting\` | Find options of one type by keyword | You know what you want ("fitness", "Germany") |
+| \`pinterest_get_targeting_options\` | List every option of one type, or the list of types | You want to see what exists |
+| \`pinterest_get_delivery_estimate\` | Audience size for a \`targeting_spec\` | Before committing to targeting |
+
+Both targeting tools read \`GET /v5/resources/targeting/{targeting_type}\`. That endpoint has no search parameter, so the keyword match is done by this server over the full option list.
+
+**Targeting types:** \`APPTYPE\`, \`GENDER\`, \`LOCALE\`, \`AGE_BUCKET\`, \`LOCATION\`, \`GEO\`, \`INTEREST\`, \`KEYWORD\`, \`AUDIENCE_INCLUDE\`, \`AUDIENCE_EXCLUDE\`
 
 ---
 
 ## Step 1: Search Targeting Options
 
-Search for interest categories by keyword:
+Find interest ids by keyword:
 
 \`\`\`json
 {
   "tool": "pinterest_search_targeting",
   "params": {
     "adAccountId": "${adAccountId}",
-    "targetingType": "INTEREST_KEYWORD",
+    "targetingType": "INTEREST",
     "query": "fitness"
   }
 }
 \`\`\`
 
-Each result includes:
-- \`id\` — The targeting ID to use in your ad group
-- \`name\` — Human-readable label
-
-### Key Targeting Types
-
-| Targeting Type | What It Searches | Example |
-|----------------|-----------------|---------|
-| \`INTEREST_KEYWORD\` | Interest categories | "fitness", "gaming" |
-| \`BEHAVIOR\` | Behavioral segments | App engagement behaviors |
-| \`HASHTAG\` | Hashtag interest groups | "DIY", "travel" |
+Use each result's \`id\` in the \`targeting_spec\`. The same call with \`"targetingType": "LOCATION"\` finds country and metro codes.
 
 ---
 
-## Step 2: Browse Targeting Categories
+## Step 2: Browse Targeting Options
 
-To explore all available targeting options for your account:
+List the targeting types, then every option of one type:
 
 \`\`\`json
-{
-  "tool": "pinterest_get_targeting_options",
-  "params": {
-    "adAccountId": "${adAccountId}"
-  }
-}
+{ "tool": "pinterest_get_targeting_options", "params": { "adAccountId": "${adAccountId}" } }
 \`\`\`
 
-Filter by type:
-
 \`\`\`json
 {
   "tool": "pinterest_get_targeting_options",
-  "params": {
-    "adAccountId": "${adAccountId}",
-    "targetingType": "INTEREST"
-  }
+  "params": { "adAccountId": "${adAccountId}", "targetingType": "AGE_BUCKET" }
 }
 \`\`\`
 
 ---
 
-## Step 3: Build Ad Group Targeting
-
-Combine your research into an ad group payload:
+## Step 3: Build the targeting_spec
 
 \`\`\`json
 {
-  "age": ["AGE_18_24", "AGE_25_34", "AGE_35_44"],
-  "gender": ["GENDER_UNLIMITED"],
-  "location_ids": ["US", "GB"],
-  "interest_keyword_ids": ["123456", "789012"],
-  "operating_systems": ["IOS", "ANDROID"],
-  "placement_type": "PLACEMENT_TYPE_NORMAL",
-  "bid_type": "BID_TYPE_CUSTOM",
-  "bid_price": 0.5,
-  "optimize_goal": "CLICK"
+  "AGE_BUCKET": ["18-24", "25-34"],
+  "GENDER": ["female"],
+  "LOCATION": ["US"],
+  "INTEREST": ["935541271955"],
+  "APPTYPE": ["iphone", "android_mobile"]
 }
 \`\`\`
 
-### Key Targeting Fields
+### targeting_spec keys (Pinterest OpenAPI \`TargetingSpec\`)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| \`age\` | Array | Age groups: AGE_13_17 through AGE_55_PLUS |
-| \`gender\` | Array | GENDER_MALE, GENDER_FEMALE, GENDER_UNLIMITED |
-| \`location_ids\` | Array | Country codes or location IDs |
-| \`interest_keyword_ids\` | Array | Interest keyword IDs from search |
-| \`operating_systems\` | Array | IOS, ANDROID |
-| \`placement_type\` | String | PLACEMENT_TYPE_NORMAL (auto), PLACEMENT_TYPE_SEARCH |
-| \`bid_price\` | Number | Bid in account currency |
+| Key | Values |
+|-----|--------|
+| \`AGE_BUCKET\` | \`"18-24"\`, \`"25-34"\`, \`"35-44"\`, \`"45-49"\`, \`"50-54"\`, \`"55-64"\`, \`"65+"\` (also \`"19+"\`, \`"20+"\`, \`"21+"\`). Legacy: Pinterest recommends \`MINIMUM_AGE\` / \`MAXIMUM_AGE\` instead, and the two forms cannot be combined |
+| \`MINIMUM_AGE\` / \`MAXIMUM_AGE\` | Strings \`"18"\` … \`"65"\`; \`MAXIMUM_AGE\` also accepts \`"65+"\`. Use together |
+| \`GENDER\` | \`"female"\`, \`"male"\`, \`"unknown"\` |
+| \`LOCATION\` / \`LOCATION_EXCLUDE\` | ISO-3166 alpha-2 country codes (\`"US"\`) or metro codes (\`"501"\`) |
+| \`GEO\` / \`GEO_EXCLUDE\` | Region codes or postal codes |
+| \`LOCALE\` | ISO 639-1 language codes (\`"en"\`) |
+| \`INTEREST\` | Interest ids from Step 1 |
+| \`APPTYPE\` | \`"iphone"\`, \`"ipad"\`, \`"android_mobile"\`, \`"android_tablet"\`, \`"web"\`, \`"web_mobile"\` |
+| \`AUDIENCE_INCLUDE\` / \`AUDIENCE_EXCLUDE\` | Customer list ids (at least 100 Pinterest users each) |
 
-⚠️ **GOTCHA**: Age group values are enum strings — use exact values like \`AGE_18_24\`, not ranges like \`18-24\`.
+A missing key means "no restriction" for that dimension: no \`GENDER\` targets all genders.
 
-⚠️ **GOTCHA**: Location IDs can be country codes (e.g., "US") or numeric IDs for cities/regions — use \`pinterest_search_targeting\` to find valid values.
+⚠️ **GOTCHA**: Age buckets are range strings such as \`"18-24"\`. They are not enum names like \`AGE_18_24\`.
+
+⚠️ **GOTCHA**: Keys are UPPERCASE targeting types. Lower-case \`age\`, \`gender\` or \`location_ids\` are not Pinterest fields.
 
 ---
 
 ## Step 4: Estimate Audience Size
-
-Before creating the ad group, verify your targeting reaches a viable audience:
 
 \`\`\`json
 {
@@ -164,16 +144,13 @@ Before creating the ad group, verify your targeting reaches a viable audience:
 }
 \`\`\`
 
-Interpret results:
-- **Too narrow** (< 50K reach) → Broaden age groups or add more interests
-- **Too broad** (> 100M reach) → Add more specific interests or narrow demographics
-- **Sweet spot**: 1M–50M for most Pinterest campaigns
+This calls \`POST /v5/ad_accounts/{ad_account_id}/ad_groups/audience_sizing\` and returns \`audience_size_lower_bound\` / \`audience_size_upper_bound\`: estimated people reachable per month, not a delivery guarantee. Widen or narrow the spec until the range fits the budget.
 
 ---
 
-## Step 5: Apply to Ad Group
+## Step 5: Apply to an Ad Group
 
-Use the targeting when creating or updating an ad group:
+Pass the spec as \`targeting_spec\` when creating the ad group:
 
 \`\`\`json
 {
@@ -183,31 +160,33 @@ Use the targeting when creating or updating an ad group:
     "adAccountId": "${adAccountId}",
     "data": {
       "campaign_id": "{campaignId}",
-      "name": "US Fitness Enthusiasts 18-34",
-      "placement_type": "PLACEMENT_TYPE_NORMAL",
-      "daily_spend_cap": 50000000,
-      "schedule_type": "SCHEDULE_START_END",
-      "schedule_start_time": "2026-03-10 00:00:00",
-      "schedule_end_time": "2026-12-31 23:59:59",
-      "optimize_goal": "CLICK",
-      "bid_type": "BID_TYPE_CUSTOM",
-      "bid_price": 0.5,
-      "age": ["AGE_18_24", "AGE_25_34"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US"],
-      "interest_keyword_ids": ["123456"]
+      "name": "US Fitness 18-34",
+      "billable_event": "IMPRESSION",
+      "budget_type": "DAILY",
+      "budget_in_micro_currency": 50000000,
+      "bid_in_micro_currency": 2000000,
+      "status": "PAUSED",
+      "targeting_spec": {
+        "AGE_BUCKET": ["18-24", "25-34"],
+        "GENDER": ["female"],
+        "LOCATION": ["US"],
+        "INTEREST": ["935541271955"]
+      }
     }
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are in **account currency** — \`budget: 50\` means $50.00.
+⚠️ **GOTCHA**: Money fields are integers in **micro-currency**: \`50000000\` = 50.00 in the account currency.
+
+⚠️ **GOTCHA**: \`name\`, \`campaign_id\` and \`billable_event\` (\`IMPRESSION\`, \`CLICKTHROUGH\` or \`VIDEO_V_50_MRC\`) are required. \`bid_in_micro_currency\` is required for AWARENESS/IMPRESSION, CONSIDERATION/CLICKTHROUGH and CATALOG_SALES/CLICKTHROUGH, and \`budget_in_micro_currency\` for campaigns without campaign budget optimization.
+
+To change targeting later, \`pinterest_update_entity\` accepts either a whole new \`targeting_spec\` (it replaces the old one) or \`targeting_spec_operations\` for incremental changes.
 
 ---
 
 ## Related Resources
-- \`reporting-reference://pinterest\` — Reporting metrics and dimensions
-- \`entity-schema://pinterest/adGroup\` — Ad Group fields including all targeting parameters
-- \`entity-examples://pinterest/adGroup\` — Example ad group payloads with targeting
+- \`entity-schema://pinterest/adGroup\`: ad group fields, including \`targeting_spec\`
+- \`entity-examples://pinterest/adGroup\`: example ad group payloads
 `;
 }
