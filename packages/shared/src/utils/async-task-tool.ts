@@ -12,6 +12,7 @@
 import type { z } from "zod";
 import type { Logger } from "pino";
 import { extractZodShape } from "./zod-helpers.js";
+import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
 
 const DEFAULT_TASK_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_POLL_INTERVAL_MS = 3000;
@@ -38,7 +39,12 @@ interface TaskStoreLike {
   storeTaskResult(
     taskId: string,
     status: "completed" | "failed",
-    result: { content: ContentBlock[]; structuredContent?: unknown; isError?: boolean }
+    result: {
+      content: ContentBlock[];
+      structuredContent?: unknown;
+      isError?: boolean;
+      _meta?: Record<string, unknown>;
+    }
   ): Promise<void>;
   getTask(taskId: string): Promise<unknown>;
   getTaskResult(taskId: string): Promise<unknown>;
@@ -208,6 +214,10 @@ async function runInBackground<TInput, TOutput>(
       .storeTaskResult(taskId, "failed", {
         content: [{ type: "text", text: `Task failed: ${message}` }],
         isError: true,
+        // #204: the message can embed the platform's response text, exactly as
+        // on the tool factory's error path. Tasks bypass that factory, so the
+        // marker is attached here too.
+        _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
       })
       .catch((err) => logger.error({ taskId, err }, "Failed to record async task failure result"));
   }

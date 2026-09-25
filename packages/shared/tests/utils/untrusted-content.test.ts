@@ -15,6 +15,9 @@
 import { describe, it, expect } from "vitest";
 import {
   UNTRUSTED_CONTENT_DECLARATION as D,
+  UNTRUSTED_RESULT_META_KEY,
+  TOOL_ERROR_UNTRUSTED_MARKER,
+  untrustedResultMeta,
   type UntrustedContentDeclaration,
 } from "../../src/utils/untrusted-content.js";
 
@@ -74,5 +77,40 @@ describe("UNTRUSTED_CONTENT_DECLARATION", () => {
       "path_reporting",
       "returns_third_party_content",
     ]);
+  });
+});
+
+describe("per-result untrusted marker (#204 Tier 2)", () => {
+  it("uses a vendor-prefixed _meta key, not an MCP-reserved one", () => {
+    // MCP reserves the modelcontextprotocol.io/ and mcp.dev/ prefixes.
+    expect(UNTRUSTED_RESULT_META_KEY).toBe("cesteral/untrusted");
+    expect(UNTRUSTED_RESULT_META_KEY).not.toMatch(/modelcontextprotocol|mcp\.dev/);
+  });
+
+  it("marks the error payload's text block, since errors carry no structuredContent", () => {
+    expect(TOOL_ERROR_UNTRUSTED_MARKER).toEqual({
+      v: 1,
+      structuredPaths: [],
+      contentBlocks: [0],
+      reason: "tool-error",
+    });
+  });
+
+  it("cannot be mutated by one caller for every later result", () => {
+    // The marker is a shared constant spread onto every error result.
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER)).toBe(true);
+  });
+
+  it("wraps a marker under the key", () => {
+    expect(untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)).toEqual({
+      "cesteral/untrusted": TOOL_ERROR_UNTRUSTED_MARKER,
+    });
+  });
+
+  it("keeps path_reporting at unsupported while only errors are marked", () => {
+    // Success results are not yet marked on any server, so a client must not
+    // read a missing marker as "no untrusted content". Flip this per server
+    // only once every one of its tools declares.
+    expect(D.path_reporting).toBe("unsupported");
   });
 });

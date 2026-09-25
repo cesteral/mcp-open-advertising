@@ -26,6 +26,7 @@ import {
 } from "./interaction-logger.js";
 import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
 import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
+import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
 import {
   runWithRequestContext,
   getRequestContext,
@@ -1165,6 +1166,10 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 },
               ],
               isError: true,
+              // #204: `error` and `data` can embed the platform's own response
+              // text. Marked on every error result — see
+              // TOOL_ERROR_UNTRUSTED_MARKER for why not only upstream ones.
+              _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
             };
           }
         }); // end runWithRequestContext(toolAlsContext)

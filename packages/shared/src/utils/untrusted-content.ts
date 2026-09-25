@@ -76,3 +76,64 @@ export const UNTRUSTED_CONTENT_DECLARATION: UntrustedContentDeclaration = {
   ],
   path_reporting: "unsupported",
 };
+
+/**
+ * Per-result marker (#204, Tier 2): the `_meta` key a tool result carries when
+ * some of its content may be platform-supplied free text.
+ *
+ * It lives in `_meta` rather than `structuredContent` or `outputSchema` on
+ * purpose. `outputSchema` is covered by `definitionHash`
+ * (`@cesteral/contract-hash`), so a field there would move the hash of every
+ * governed tool and force a fleet-wide re-attestation; `_meta` is explicitly
+ * outside the hash, and MCP's `CallToolResult` already allows it.
+ *
+ * `cesteral/` is a vendor prefix, not a reserved one: MCP reserves only the
+ * `modelcontextprotocol.io/` and `mcp.dev/` prefixes.
+ */
+export const UNTRUSTED_RESULT_META_KEY = "cesteral/untrusted" as const;
+
+/** Why a result was marked. Additive: new reasons may be added under `v: 1`. */
+export type UntrustedResultReason = "tool-error";
+
+export interface UntrustedResultMarker {
+  /** Marker format version. `v: 1` changes are additive only. */
+  v: 1;
+  /**
+   * JSONPath roots in `structuredContent` whose subtrees may hold untrusted
+   * text. A path marks the whole subtree, not one field.
+   */
+  structuredPaths: string[];
+  /** Indexes into `content` of the text blocks that embed untrusted text. */
+  contentBlocks: number[];
+  reason: UntrustedResultReason;
+}
+
+/**
+ * Marker for a failed tool call.
+ *
+ * Applied to EVERY error result the tool factory builds, not only to upstream
+ * failures. The factory cannot tell them apart reliably: `ErrorHandler`
+ * converts whatever was thrown into one `McpError`, and an upstream failure's
+ * message embeds the platform's response (`retryable-fetch` builds
+ * "<Platform> API request failed: <status> — <upstream summary>", and several
+ * clients put the platform's own message in the error text). Over-marking a
+ * locally-raised validation error costs nothing; under-marking an upstream one
+ * is the failure this exists to prevent.
+ *
+ * The error result has no `structuredContent`: its payload is the JSON text of
+ * block 0, `{ error, code, data }`, where `error` and `data` may carry upstream
+ * text and `code` is a JSON-RPC number.
+ */
+export const TOOL_ERROR_UNTRUSTED_MARKER: UntrustedResultMarker = Object.freeze({
+  v: 1,
+  structuredPaths: [],
+  contentBlocks: [0],
+  reason: "tool-error",
+}) as UntrustedResultMarker;
+
+/** The `_meta` object to spread onto a tool result carrying `marker`. */
+export function untrustedResultMeta(
+  marker: UntrustedResultMarker
+): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResultMarker> {
+  return { [UNTRUSTED_RESULT_META_KEY]: marker };
+}
