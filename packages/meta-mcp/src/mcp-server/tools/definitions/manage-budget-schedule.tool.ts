@@ -259,4 +259,8 @@ export const manageBudgetScheduleTool = {
   ],
   logic: manageBudgetScheduleLogic,
   responseFormatter: manageBudgetScheduleResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

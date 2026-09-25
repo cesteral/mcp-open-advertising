@@ -399,6 +399,7 @@
         "social",
         "self-hosted"
       ],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {

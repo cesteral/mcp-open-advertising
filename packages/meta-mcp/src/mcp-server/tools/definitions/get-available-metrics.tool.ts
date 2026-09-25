@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import catalogJson from "../../../config/insights-catalog.json" with { type: "json" };
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_available_metrics";
 const TOOL_TITLE = "Get Meta Available Metrics & Breakdowns";
@@ -115,4 +116,5 @@ export const getAvailableMetricsTool = {
   ],
   logic: getAvailableMetricsLogic,
   responseFormatter: getAvailableMetricsResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

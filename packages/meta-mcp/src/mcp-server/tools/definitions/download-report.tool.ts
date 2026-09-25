@@ -144,4 +144,8 @@ export const downloadReportTool = {
   ],
   logic: downloadReportLogic,
   responseFormatter: downloadReportResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

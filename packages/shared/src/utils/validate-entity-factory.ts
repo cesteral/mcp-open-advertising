@@ -21,6 +21,7 @@ import {
   validateEntityResponseFormatter,
 } from "./client-validation-helpers.js";
 import type { RequestContext } from "./request-context.js";
+import { NO_UNTRUSTED_CONTENT } from "./untrusted-content.js";
 import type { SdkContext } from "../types/tool-types.js";
 
 const ValidationIssueSchema = z.object({
@@ -157,5 +158,8 @@ export function createValidateEntityTool<E extends string>(opts: ValidateEntityT
     inputExamples: opts.inputExamples ?? [],
     logic,
     responseFormatter: validateEntityResponseFormatter,
+    // Client-side only: every issue is built here or by the synchronous
+    // `extraValidate` hook from the caller's own payload; no platform call.
+    untrustedContent: NO_UNTRUSTED_CONTENT,
   };
 }
