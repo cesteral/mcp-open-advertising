@@ -34,6 +34,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 import { McpError, JsonRpcErrorCode, projectBulkCapacity } from "@cesteral/shared";
 import { rateLimiter } from "../../src/utils/platform.js";
+import { CM360ReportingService } from "../../src/services/cm360/cm360-reporting-service.js";
 import {
   CM360Service,
   cm360BulkCapacityCheck,
@@ -170,6 +171,19 @@ describe("cm360_bulk_update_status (GET + PUT per entity)", () => {
     const other = bulkUpdateStatusLogic(input(6) as any, ctx, sdk);
     await vi.advanceTimersByTimeAsync(120_000);
     expect((await other).updated).toBe(6);
+  });
+
+  it("counts the user's reporting calls against the same capacity", async () => {
+    const reporting = new CM360ReportingService(
+      rateLimiter,
+      { fetch: fetchMock } as any,
+      logger,
+      QUOTA_USER
+    );
+    for (let i = 0; i < 4; i++) await reporting.checkReportFile(PROFILE, "r", "f");
+    fetchMock.mockClear();
+    // 4 of 15 tokens used: 11 left, so 5 entities (10 tokens) fit and 6 do not.
+    await expectRefused(bulkUpdateStatusLogic(input(6) as any, ctx, sdk), 6, 5);
   });
 
   it("dry-run predicts the refusal as BULK_EXCEEDS_CAPACITY, and passes a batch that fits", async () => {

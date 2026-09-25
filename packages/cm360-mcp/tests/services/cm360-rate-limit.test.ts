@@ -105,7 +105,9 @@ describe("CM360 rate limiting (real limiter)", () => {
     expect(httpClient.fetch).toHaveBeenCalledTimes(12);
   });
 
-  it("gives reporting its own bucket, so report polls do not eat trafficking's budget", async () => {
+  it("counts reporting against the same per-user budget as trafficking", async () => {
+    // CM360 has one per-user quota for the whole API. A separate reporting
+    // bucket let one process send 2x the default per user.
     const reporting = new CM360ReportingService(
       limiter,
       httpClient as any,
@@ -115,9 +117,13 @@ describe("CM360 rate limiting (real limiter)", () => {
     const service = new CM360Service(createMockLogger(), limiter, httpClient as any, "user-a");
 
     for (let i = 0; i < LIMIT; i++) await reporting.checkReportFile("12345", "r", "f");
-    expect(limiter.getRemainingTokens("cm360:user:user-a:reporting")).toBe(0);
+    expect(limiter.getRemainingTokens("cm360:user:user-a")).toBe(0);
 
-    await service.getEntity("campaign", "12345", "c0");
+    const trafficking = service.getEntity("campaign", "12345", "c0");
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(httpClient.fetch).toHaveBeenCalledTimes(LIMIT);
+    await vi.advanceTimersByTimeAsync(1);
+    await trafficking;
     expect(httpClient.fetch).toHaveBeenCalledTimes(LIMIT + 1);
   });
 

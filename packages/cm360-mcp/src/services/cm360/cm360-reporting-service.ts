@@ -23,14 +23,16 @@ export interface CM360ReportConfig {
 }
 
 /**
- * Rate limiting: reporting calls (create, run, status polls, schedules) use a
- * per-user bucket of their own, `cm360:user:{quotaUser}:reporting`, separate
- * from trafficking's `cm360:user:{quotaUser}` — the same split amazon-dsp, pinterest,
- * snapchat and tiktok make. The limiter queues over-cap calls rather than
- * rejecting them, so `runReport`'s status polls are simply paced down to the
- * configured rate once the first few have used the window; keeping them in
- * their own bucket stops a long-running report from eating the budget of a
- * bulk write by the same user (and vice versa).
+ * Rate limiting: reporting calls (create, run, status polls, schedules) draw
+ * on the same per-user bucket as trafficking, `cm360:user:{quotaUser}`. CM360
+ * counts one per-user quota across its whole API, so a separate reporting
+ * bucket let one process send twice the default per user, and across the
+ * fleet's assumed 10 instances that exceeds the corroborated 60/min per user
+ * (platform-facts `cm360.rate_limit_default`). The cost is contention: a
+ * running report's status polls and a bulk write by the same user now queue
+ * behind each other. The limiter queues over-cap calls rather than rejecting
+ * them, so `runReport`'s polls are paced down to the configured rate, and the
+ * bulk capacity pre-check sees the polls already in the window.
  */
 export class CM360ReportingService {
   constructor(
@@ -48,7 +50,7 @@ export class CM360ReportingService {
     config: CM360ReportConfig,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     // Step 1: Create report
     const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
@@ -62,7 +64,7 @@ export class CM360ReportingService {
     this.logger.info({ reportId, requestId: context?.requestId }, "CM360 report created");
 
     // Step 2: Run report
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const file = (await this.httpClient.fetch(
       `/userprofiles/${profileId}/reports/${reportId}/run`,
       context,
@@ -92,7 +94,7 @@ export class CM360ReportingService {
     config: CM360ReportConfig,
     context?: RequestContext
   ): Promise<{ reportId: string; fileId: string }> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
       method: "POST",
@@ -103,7 +105,7 @@ export class CM360ReportingService {
     const reportId = report.id as string;
 
     // Run it (non-blocking — don't poll)
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const file = (await this.httpClient.fetch(
       `/userprofiles/${profileId}/reports/${reportId}/run`,
       context,
@@ -132,7 +134,7 @@ export class CM360ReportingService {
     file: Record<string, unknown>;
     downloadUrl?: string;
   }> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const file = (await this.httpClient.fetch(
       `/userprofiles/${profileId}/reports/${reportId}/files/${fileId}`,
@@ -155,7 +157,7 @@ export class CM360ReportingService {
     try {
       return await pollUntilComplete<Record<string, unknown>>({
         fetchStatus: async () => {
-          await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+          await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
           return (await this.httpClient.fetch(
             `/userprofiles/${profileId}/reports/${reportId}/files/${fileId}`,
             context
@@ -205,7 +207,7 @@ export class CM360ReportingService {
     config: CM360ReportConfig & { schedule: Record<string, unknown> },
     context?: RequestContext
   ): Promise<{ reportId: string; reportName: string; schedule: Record<string, unknown> }> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
       method: "POST",
@@ -233,7 +235,7 @@ export class CM360ReportingService {
     options: { maxResults?: number; pageToken?: string } = {},
     context?: RequestContext
   ): Promise<{ reports: Record<string, unknown>[]; nextPageToken?: string }> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const params = new URLSearchParams({ scope: "ALL" });
     if (options.maxResults) params.set("maxResults", String(options.maxResults));
@@ -264,7 +266,7 @@ export class CM360ReportingService {
     reportId: string,
     context?: RequestContext
   ): Promise<void> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}:reporting`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     await this.httpClient.fetch(`/userprofiles/${profileId}/reports/${reportId}`, context, {
       method: "DELETE",

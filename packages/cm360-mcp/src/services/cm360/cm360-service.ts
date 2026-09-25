@@ -121,8 +121,7 @@ export function cm360BulkCapacityCheck(
  * per-user quota across all of a user's profiles (see `cm360QuotaUser`);
  * the per-profile key this replaced let one user with N profiles run N times
  * the default, and still isolates one user's bulk job from other users on the
- * instance. Reporting uses its own `cm360:user:{quotaUser}:reporting` bucket
- * (see CM360ReportingService). Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
+ * instance. Reporting shares this bucket (see CM360ReportingService). Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
  */
 export class CM360Service {
   constructor(

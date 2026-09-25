@@ -291,7 +291,7 @@ No native batch API: bulk tools make one call per item (two per entity for statu
 
 ### Rate Limiting
 
-The server enforces a per-user rate limit (`CM360_RATE_LIMIT_PER_MINUTE`, default 5 requests/minute), keyed by the authenticated credential and shared across all of that user's profiles; reporting calls have a separate bucket of the same size. Over-limit calls queue for up to 2 minutes rather than fail. 429 responses are retried with exponential backoff, and a `Retry-After` longer than the retry budget is surfaced as `retryAfterMs` instead of being re-sent early.
+The server enforces a per-user rate limit (`CM360_RATE_LIMIT_PER_MINUTE`, default 5 requests/minute), keyed by the authenticated credential and shared across all of that user's profiles and by reporting and trafficking calls alike, so a running report's status polls count against the same budget as bulk writes. Over-limit calls queue for up to 2 minutes rather than fail. 429 responses are retried with exponential backoff, and a `Retry-After` longer than the retry budget is surfaced as `retryAfterMs` instead of being re-sent early.
 
 CM360's own quota could not be confirmed from a primary source. Search results give 60 queries/min per user and 50,000/day per project; see `cm360.rate_limit_default` in `platform-facts.json` before raising the default.
 
