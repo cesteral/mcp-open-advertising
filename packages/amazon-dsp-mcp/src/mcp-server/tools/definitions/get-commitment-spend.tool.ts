@@ -141,4 +141,8 @@ export const getCommitmentSpendTool = {
   ],
   logic: getCommitmentSpendLogic,
   responseFormatter: getCommitmentSpendResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.response"],
+    contentBlocks: [0],
+  },
 };

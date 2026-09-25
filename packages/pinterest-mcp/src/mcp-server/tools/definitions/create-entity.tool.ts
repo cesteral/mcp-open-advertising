@@ -231,4 +231,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // The dry run is symbolic over caller data (no read), so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.after"],
+    contentBlocks: [0],
+  },
 };

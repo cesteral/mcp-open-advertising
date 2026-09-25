@@ -242,4 +242,8 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.after"],
+    contentBlocks: [0],
+  },
 };

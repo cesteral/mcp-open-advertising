@@ -225,4 +225,9 @@ export const getReportBreakdownsTool = {
   ],
   logic: getReportBreakdownsLogic,
   responseFormatter: getReportBreakdownsResponseFormatter,
+  // appliedFields is caller input (fields + breakdowns) echoed back; metricContext is never set.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

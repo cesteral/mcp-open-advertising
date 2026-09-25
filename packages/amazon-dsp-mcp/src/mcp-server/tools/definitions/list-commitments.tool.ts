@@ -110,4 +110,8 @@ export const listCommitmentsTool = {
   ],
   logic: listCommitmentsLogic,
   responseFormatter: listCommitmentsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.commitments"],
+    contentBlocks: [0],
+  },
 };

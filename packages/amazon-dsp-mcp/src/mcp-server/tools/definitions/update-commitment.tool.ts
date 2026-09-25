@@ -289,4 +289,9 @@ export const updateCommitmentTool = {
   ],
   logic: updateCommitmentLogic,
   responseFormatter: updateCommitmentResponseFormatter,
+  // Formatter prints only commitmentId and symbolic validation text over caller input, so no content block carries platform text.
+  untrustedContent: {
+    structuredPaths: ["$.commitment", "$.dryRun", "$.before", "$.after"],
+    contentBlocks: [],
+  },
 };

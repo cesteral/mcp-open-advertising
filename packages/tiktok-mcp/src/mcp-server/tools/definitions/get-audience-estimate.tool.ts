@@ -108,4 +108,9 @@ export const getAudienceEstimateTool = {
   ],
   logic: getAudienceEstimateLogic,
   responseFormatter: getAudienceEstimateResponseFormatter,
+  // Mostly numeric, but an open record filled from a raw platform response.
+  untrustedContent: {
+    structuredPaths: ["$.estimate"],
+    contentBlocks: [0],
+  },
 };

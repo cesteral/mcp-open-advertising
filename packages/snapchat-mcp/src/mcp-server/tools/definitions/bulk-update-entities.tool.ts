@@ -334,4 +334,9 @@ export const bulkUpdateEntitiesTool = {
   ],
   logic: bulkUpdateEntitiesLogic,
   responseFormatter: bulkUpdateEntitiesResponseFormatter,
+  // Service never fills results[].entity today, but the schema slot is open and error is platform text.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

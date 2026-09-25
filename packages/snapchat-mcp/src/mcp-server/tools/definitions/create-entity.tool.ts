@@ -247,4 +247,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // dryRun not declared: runSnapchatCreateDryRun is purely symbolic over caller data (no read).
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.after"],
+    contentBlocks: [0],
+  },
 };

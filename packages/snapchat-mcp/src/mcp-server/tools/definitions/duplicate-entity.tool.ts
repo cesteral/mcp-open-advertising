@@ -203,4 +203,8 @@ export const duplicateEntityTool = {
   ],
   logic: duplicateEntityLogic,
   responseFormatter: duplicateEntityResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.newEntity", "$.dryRun", "$.after"],
+    contentBlocks: [0],
+  },
 };
