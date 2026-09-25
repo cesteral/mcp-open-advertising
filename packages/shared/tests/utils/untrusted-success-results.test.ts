@@ -234,7 +234,8 @@ describe("the server card's path_reporting", () => {
     expect(buildServerCardExtras("dbm-mcp").untrustedPathReporting).toBe("per-response");
     expect(buildServerCardExtras("ttd-mcp").untrustedPathReporting).toBe("per-response");
     expect(buildServerCardExtras("meta-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("tiktok-mcp").untrustedPathReporting).toBe("unsupported");
+    expect(buildServerCardExtras("tiktok-mcp").untrustedPathReporting).toBe("per-response");
+    expect(buildServerCardExtras("gads-mcp").untrustedPathReporting).toBe("unsupported");
   });
 
   async function cardFor(serverCard: TransportFactoryConfig["serverCard"]) {

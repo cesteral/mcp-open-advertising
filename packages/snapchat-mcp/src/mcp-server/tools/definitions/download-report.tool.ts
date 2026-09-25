@@ -132,4 +132,9 @@ export const downloadReportTool = {
   ],
   logic: downloadReportLogic,
   responseFormatter: downloadReportResponseFormatter,
+  // Mirrors meta; spill.error is our own GCS error (not platform) and is also copied into warnings; rawCsvResourceUri body is marked by report-csv-resource.ts.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

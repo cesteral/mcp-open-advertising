@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope } from "@cesteral/shared";
+import { assertAccountScope, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import {
   downloadFileToBuffer,
   McpError,
@@ -307,4 +307,6 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // mediaStatus is Pinterest's media_processing_record.status enum (succeeded/processing), not free text.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

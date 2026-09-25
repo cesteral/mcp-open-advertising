@@ -108,4 +108,8 @@ export const listAdAccountsTool = {
   ],
   logic: listAdAccountsLogic,
   responseFormatter: listAdAccountsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.advertisers"],
+    contentBlocks: [0],
+  },
 };

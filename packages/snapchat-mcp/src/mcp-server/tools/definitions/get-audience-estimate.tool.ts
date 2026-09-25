@@ -131,4 +131,8 @@ export const getAudienceEstimateTool = {
   ],
   logic: getAudienceEstimateLogic,
   responseFormatter: getAudienceEstimateResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.estimate"],
+    contentBlocks: [0],
+  },
 };

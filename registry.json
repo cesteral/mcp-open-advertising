@@ -545,6 +545,7 @@
         "modes": ["tiktok-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "tiktok", "campaign-management", "social", "video"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -692,6 +693,7 @@
         "modes": ["snapchat-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "snapchat", "campaign-management", "social", "video"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -821,6 +823,7 @@
         "modes": ["pinterest-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -897,6 +900,7 @@
         "modes": ["amazon-dsp-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {

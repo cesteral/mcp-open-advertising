@@ -15,6 +15,7 @@ import {
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
   assertAccountScope,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -319,4 +320,6 @@ export const uploadImageTool = {
   ],
   logic: uploadImageLogic,
   responseFormatter: uploadImageResponseFormatter,
+  // mediaStatus is Snapchat's media_status enum (READY/PENDING); media name is not returned.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

@@ -1,4 +1,136 @@
 {
+  "amazon-dsp-mcp": {
+    "amazon_dsp_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_check_report_status": {
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
+    },
+    "amazon_dsp_create_commitment": {
+      "structuredPaths": ["$.commitment", "$.after"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_delete_entity": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_ad_preview": {
+      "structuredPaths": ["$.preview"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_campaign_forecast": {
+      "structuredPaths": ["$.response"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_commitment": {
+      "structuredPaths": ["$.commitment"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_commitment_spend": {
+      "structuredPaths": ["$.response"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_commitments": {
+      "structuredPaths": ["$.response"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "amazon_dsp_get_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_get_report_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_list_advertisers": {
+      "structuredPaths": ["$.advertisers"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_list_commitments": {
+      "structuredPaths": ["$.commitments"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "amazon_dsp_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "amazon_dsp_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "amazon_dsp_update_commitment": {
+      "structuredPaths": ["$.commitment", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "amazon_dsp_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "amazon_dsp_upload_video": {
+      "structuredPaths": ["$.asset"],
+      "contentBlocks": []
+    },
+    "amazon_dsp_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
   "dbm-mcp": {
     "dbm_get_campaign_delivery": {
       "structuredPaths": [],
@@ -162,6 +294,362 @@
       "contentBlocks": [0]
     },
     "meta_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
+  "pinterest-mcp": {
+    "pinterest_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_check_report_status": {
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
+    },
+    "pinterest_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "pinterest_delete_entity": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "pinterest_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_ad_preview": {
+      "structuredPaths": ["$.preview"],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_delivery_estimate": {
+      "structuredPaths": ["$.estimate"],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "pinterest_get_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_report_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "pinterest_get_targeting_options": {
+      "structuredPaths": ["$.options"],
+      "contentBlocks": [0]
+    },
+    "pinterest_list_ad_accounts": {
+      "structuredPaths": ["$.advertisers"],
+      "contentBlocks": [0]
+    },
+    "pinterest_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "pinterest_search_targeting": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "pinterest_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "pinterest_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "pinterest_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "pinterest_upload_video": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "pinterest_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
+  "snapchat-mcp": {
+    "snapchat_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_check_report_status": {
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
+    },
+    "snapchat_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "snapchat_delete_entity": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "snapchat_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_ad_preview": {
+      "structuredPaths": ["$.preview"],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_audience_estimate": {
+      "structuredPaths": ["$.estimate"],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "snapchat_get_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_report_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "snapchat_get_targeting_options": {
+      "structuredPaths": ["$.options"],
+      "contentBlocks": [0]
+    },
+    "snapchat_list_ad_accounts": {
+      "structuredPaths": ["$.advertisers"],
+      "contentBlocks": [0]
+    },
+    "snapchat_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "snapchat_search_targeting": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "snapchat_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "snapchat_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "snapchat_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "snapchat_upload_image": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "snapchat_upload_video": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "snapchat_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
+  "tiktok-mcp": {
+    "tiktok_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "tiktok_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "tiktok_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "tiktok_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "tiktok_check_report_status": {
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
+    },
+    "tiktok_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "tiktok_delete_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "tiktok_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "tiktok_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_ad_preview": {
+      "structuredPaths": ["$.preview"],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_audience_estimate": {
+      "structuredPaths": ["$.estimate"],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "tiktok_get_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_report_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "tiktok_get_targeting_options": {
+      "structuredPaths": ["$.options"],
+      "contentBlocks": [0]
+    },
+    "tiktok_list_advertisers": {
+      "structuredPaths": ["$.advertisers"],
+      "contentBlocks": [0]
+    },
+    "tiktok_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "tiktok_search_targeting": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "tiktok_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "tiktok_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "tiktok_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "tiktok_upload_image": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "tiktok_upload_video": {
+      "structuredPaths": ["$.videoName"],
+      "contentBlocks": [0]
+    },
+    "tiktok_validate_entity": {
       "structuredPaths": [],
       "contentBlocks": []
     }

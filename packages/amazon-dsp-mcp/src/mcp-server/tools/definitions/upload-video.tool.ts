@@ -255,4 +255,9 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // Formatter prints only the assetId (and caller mediaUrl on dry-run), so no content block carries platform text.
+  untrustedContent: {
+    structuredPaths: ["$.asset"],
+    contentBlocks: [],
+  },
 };

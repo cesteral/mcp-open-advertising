@@ -216,4 +216,9 @@ export const getReportTool = {
   ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
+  // metricContext is never set; taskId is an id.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

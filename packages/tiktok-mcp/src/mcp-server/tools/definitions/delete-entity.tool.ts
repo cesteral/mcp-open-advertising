@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope } from "@cesteral/shared";
+import { assertAccountScope, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkDeleteConfirmation,
@@ -268,4 +268,6 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // Unlike meta, the TikTok delete dry run is symbolic (no read), and the delete response is discarded.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

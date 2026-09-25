@@ -249,7 +249,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "cm360-mcp",
@@ -312,7 +312,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "sa360-mcp",
@@ -360,7 +360,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "amazon-dsp-mcp",
@@ -388,7 +388,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "msads-mcp",

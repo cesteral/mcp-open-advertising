@@ -96,4 +96,8 @@ export const getCommitmentTool = {
   ],
   logic: getCommitmentLogic,
   responseFormatter: getCommitmentResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.commitment"],
+    contentBlocks: [0],
+  },
 };
