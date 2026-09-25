@@ -125,7 +125,7 @@ Unlike the other tools, \`bidPrice\` is in the account currency (1.5 = 1.50). Th
 ## Tips for Bulk Operations
 
 1. **List first**: use \`pinterest_list_entities\` to get entity IDs.
-2. **Try one first**: create a single entity with \`pinterest_create_entity\` before a bulk create, so a payload mistake fails once instead of 50 times.
+2. **Validate first**: run \`pinterest_validate_entity\` on one item. It checks the required fields, enum values, micro-currency, Unix-second times and \`targeting_spec\` keys locally. Then create a single entity with \`pinterest_create_entity\` before the batch, so a mistake the local check can't see fails once instead of 50 times.
 3. **One request per item**: the bulk tools send each item separately, at most 5 at a time.
 4. **Max 50 items per call**: split larger sets across several calls.
 5. **Partial failures**: some items can succeed while others fail. Pinterest answers a rejected item with HTTP 200 and per-item \`exceptions\`, and the tools report those as failures. Check \`results\` before assuming success.

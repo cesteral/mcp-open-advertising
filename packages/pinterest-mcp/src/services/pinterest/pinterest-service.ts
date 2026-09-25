@@ -190,10 +190,13 @@ export class PinterestService {
       return this.httpClient.patch(path, updates, context) as Promise<PinterestEntityMap[T]>;
     }
 
-    // Batch endpoints expect an array body and return { items: [{ data, exceptions }] }
+    // Batch endpoints expect an array body and return { items: [{ data, exceptions }] }.
+    // `id` is spread last: an `id` inside `updates` must not redirect the PATCH
+    // to a different entity than the one the caller named (and governance
+    // authorized) as `entityId`.
     const data = await this.httpClient.patch(
       path,
-      [{ id: entityId, ...(updates as object) }],
+      [{ ...(updates as object), id: entityId }],
       context
     );
     return unwrapBatchWriteItem(

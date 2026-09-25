@@ -36,17 +36,16 @@ const TOOL_DESCRIPTION = `Batch update multiple Pinterest Ads entities of the sa
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Each item must include an \`entityId\` and a \`data\` object with fields to update.
-Updates are applied concurrently (max concurrency 5). ad_account_id is automatically injected.
+Each item must include an \`entityId\` and a \`data\` object with the fields to update, as \`pinterest_update_entity\` takes them: money is integer micro-currency (50.00 = \`50000000\`) and times are integer Unix seconds. The ad account comes from \`adAccountId\`.
 
-Max 50 items per call.`;
+Updates are sent one request each, at most 5 at a time. Max 50 items per call.`;
 
 const EFFECT_KIND = "entities_updated";
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     items: z
       .array(
         z.object({
@@ -328,8 +327,8 @@ export const bulkUpdateEntitiesTool = {
         entityType: "campaign",
         adAccountId: "1234567890",
         items: [
-          { entityId: "1800111111111", data: { budget: 150 } },
-          { entityId: "1800222222222", data: { budget: 250 } },
+          { entityId: "1800111111111", data: { daily_spend_cap: 150000000 } },
+          { entityId: "1800222222222", data: { daily_spend_cap: 250000000 } },
         ],
       },
     },

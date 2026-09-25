@@ -192,6 +192,21 @@ describe("PinterestService", () => {
       );
     });
 
+    it("sends entityId as the item id even when the patch carries its own id", async () => {
+      mockPatch.mockResolvedValueOnce({ items: [{ data: { id: "687201361754" } }] });
+
+      await service.updateEntity("campaign", filters, "687201361754", {
+        id: "999999999999",
+        status: "PAUSED",
+      });
+
+      expect(mockPatch).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/campaigns",
+        [{ id: "687201361754", status: "PAUSED" }],
+        undefined
+      );
+    });
+
     it("returns items[0].data from the batch response", async () => {
       const updated = { id: "687201361754", name: "Updated" };
       mockPatch.mockResolvedValueOnce({ items: [{ data: updated, exceptions: [] }] });

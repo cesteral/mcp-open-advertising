@@ -10,6 +10,7 @@ import {
   symbolicValidate,
 } from "../utils/dry-run.js";
 import { McpError, JsonRpcErrorCode, assertAccountScope } from "@cesteral/shared";
+import { BILLABLE_EVENTS, ENTITY_STATUSES, OBJECTIVE_TYPES } from "../utils/pinterest-fields.js";
 import { snapshotFromPinterestEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
@@ -30,21 +31,26 @@ const TOOL_DESCRIPTION = `Create a new Pinterest Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-**Key requirements by entity type:**
-- **campaign**: requires \`campaign_name\`, \`objective_type\` (e.g., TRAFFIC, APP_INSTALLS), \`budget_mode\` (BUDGET_MODE_DAY or BUDGET_MODE_TOTAL), \`budget\`
-- **adGroup**: requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget_mode\`, \`budget\`, \`schedule_type\`, \`optimize_goal\`
-- **ad**: requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative fields (image_ids or video_id)
-- **creative**: requires \`display_name\`, creative content (image_ids or video_id)
+Campaigns, ad groups and ads are sent to Pinterest's batch create endpoints (\`POST /v5/ad_accounts/{adAccountId}/{campaigns|ad_groups|ads}\`) as a one-item batch; the ad account comes from \`adAccountId\`, not from \`data\`. A creative is a Pin, created with \`POST /v5/pins\`.
+
+**Required fields (Pinterest v5 OpenAPI):**
+- **campaign**: \`name\`, \`objective_type\` (${OBJECTIVE_TYPES.join(", ")})
+- **adGroup**: \`name\`, \`campaign_id\`, \`billable_event\` (${BILLABLE_EVENTS.join(", ")}). \`budget_in_micro_currency\` is also required unless the campaign uses campaign budget optimization.
+- **ad**: \`ad_group_id\`, \`creative_type\` (e.g. REGULAR for an image Pin, VIDEO for a video Pin), \`pin_id\`
+- **creative** (Pin): the spec requires nothing, but a Pin needs \`board_id\` and \`media_source\`: \`{"source_type": "image_url", "url": …}\`, or \`{"source_type": "video_id", "media_id": …}\` with the \`mediaId\` from \`pinterest_upload_video\`
 
 **Gotchas:**
-- Budget values are in the advertiser's account currency
-- All status values use prefix format (e.g., CAMPAIGN_STATUS_ENABLE)
-- ad_account_id is automatically injected`;
+- Money is integer micro-currency: 50.00 is \`50000000\` (\`daily_spend_cap\`, \`lifetime_spend_cap\`, \`budget_in_micro_currency\`, \`bid_in_micro_currency\`)
+- \`start_time\` and \`end_time\` are integer Unix seconds
+- \`targeting_spec\` keys are UPPERCASE (\`LOCATION\`, \`AGE_BUCKET\`, \`GENDER\`, \`INTEREST\`, …)
+- \`status\` is one of ${ENTITY_STATUSES.join(", ")}. Create PAUSED and activate after review.
+- Pinterest answers a rejected item with HTTP 200 and per-item exceptions; the tool raises them as an error
+- Check a payload first with \`pinterest_validate_entity\`. \`dry_run: true\` only checks \`status\` and the budget values.`;
 
 export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     data: z.record(z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
@@ -198,15 +204,15 @@ export const createEntityTool = {
   },
   inputExamples: [
     {
-      label: "Create a traffic campaign",
+      label: "Create a paused awareness campaign (50.00/day cap)",
       input: {
         entityType: "campaign",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          objective_type: "AWARENESS",
+          status: "PAUSED",
+          daily_spend_cap: 50000000,
         },
       },
     },
@@ -216,15 +222,33 @@ export const createEntityTool = {
         entityType: "adGroup",
         adAccountId: "1234567890",
         data: {
-          campaign_id: "1800123456789",
-          adgroup_name: "US 25-44 Interest Targeting",
-          placement_type: "PLACEMENT_TYPE_NORMAL",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 50,
-          schedule_type: "SCHEDULE_START_END",
-          schedule_start_time: "2026-01-01 00:00:00",
-          schedule_end_time: "2026-12-31 23:59:59",
-          optimize_goal: "CLICK",
+          name: "US 25-44 Interest Targeting",
+          campaign_id: "626736533506",
+          billable_event: "IMPRESSION",
+          status: "PAUSED",
+          budget_in_micro_currency: 20000000,
+          budget_type: "DAILY",
+          bid_strategy_type: "AUTOMATIC_BID",
+          start_time: 1775001600,
+          end_time: 1798761599,
+          targeting_spec: {
+            LOCATION: ["US"],
+            AGE_BUCKET: ["25-34", "35-44"],
+          },
+        },
+      },
+    },
+    {
+      label: "Create an ad for an existing Pin",
+      input: {
+        entityType: "ad",
+        adAccountId: "1234567890",
+        data: {
+          ad_group_id: "2680060704746",
+          creative_type: "REGULAR",
+          pin_id: "1234567890123",
+          name: "Summer Sale Pin",
+          status: "PAUSED",
         },
       },
     },

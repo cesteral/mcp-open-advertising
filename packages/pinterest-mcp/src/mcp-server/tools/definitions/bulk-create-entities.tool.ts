@@ -34,17 +34,16 @@ const TOOL_DESCRIPTION = `Batch create multiple Pinterest Ads entities of the sa
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Creates entities sequentially (with concurrency). Each item follows the same
-schema as \`pinterest_create_entity\`.
+Each item is the \`data\` object \`pinterest_create_entity\` takes, with the same required fields: a campaign needs \`name\` and \`objective_type\`, an ad group \`name\`, \`campaign_id\` and \`billable_event\`, an ad \`ad_group_id\`, \`creative_type\` and \`pin_id\`. Money is integer micro-currency (50.00 = \`50000000\`) and times are integer Unix seconds. The ad account comes from \`adAccountId\`; do not repeat it per item.
 
-Max 50 items per call. ad_account_id is automatically injected per item.`;
+Items are sent one request each, at most 5 at a time. Max 50 items per call. Some items can succeed while others fail: Pinterest answers a rejected item with HTTP 200 and per-item exceptions, which are reported as that item's failure.`;
 
 const EFFECT_KIND = "entities_created";
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -293,22 +292,22 @@ export const bulkCreateEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "Bulk create campaigns",
+      label: "Bulk create paused campaigns",
       input: {
         entityType: "campaign",
         adAccountId: "1234567890",
         items: [
           {
-            campaign_name: "Campaign A",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            name: "Campaign A",
+            objective_type: "AWARENESS",
+            status: "PAUSED",
+            daily_spend_cap: 100000000,
           },
           {
-            campaign_name: "Campaign B",
-            objective_type: "APP_INSTALLS",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 200,
+            name: "Campaign B",
+            objective_type: "WEB_CONVERSION",
+            status: "PAUSED",
+            daily_spend_cap: 200000000,
           },
         ],
       },
