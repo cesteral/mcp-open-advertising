@@ -50,6 +50,18 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
+      # #202: a stale load-bearing platform fact blocks a fleet release. The
+      # fleet tag is a claim that these servers work against their platforms
+      # today, and a fact past its `verifyBy` / `refreshDue` is not current.
+      # Deliberately here and not on the PR path, where the calendar alone would
+      # turn `main` red (see platform-facts.yml). Hermetic: plain node, no
+      # install, so it runs first and fails in seconds. To release past it,
+      # re-verify the fact, or mark it `superseded` / move its deadline in a
+      # reviewed commit that says why. Being unable to check is not a reason.
+      # Not in the contract lane: neither contract library relies on a platform fact.
+      - name: Platform facts are current
+        run: node scripts/check-platform-facts.mjs --freshness
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

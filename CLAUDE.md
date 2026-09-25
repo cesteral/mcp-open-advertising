@@ -198,18 +198,21 @@ The card's `operational` block (#201) answers what a client needs before pointin
 
 ## Platform-Facts Ledger
 
-`platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 19 facts: the versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, and the behavioural constraints in Server-Specific Notes above. Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).
+`platform-facts.json` records every load-bearing claim this repo makes about an external platform it does not own — 28 facts: the 14 versioned and unversioned API base URLs, the LinkedIn `YYYYMM` header pin, and 13 behavioural constraints (the ones in Server-Specific Notes above, plus the LinkedIn `/v2/` → `/rest/` endpoint claims from #210). Each entry carries the claim, the source URL, where the code relies on it, and when it was last checked (#202).
 
 Two of these have already rotted. `linkedin-mcp` pinned `LinkedIn-Version: 202409` for roughly a year past sunset with every call erroring and nothing detecting it (#206/#209); Google's v4 Discovery rev 20260608 removed campaign + insertion-order assigned targeting and broke all CI (PR #79). One was caught loudly, the other was silent for a year, and the difference was luck about which fact happened to be fetched at build time.
 
 **Two modes, because they have different failure politics:**
 
-| Mode                                  | Where                                                           | What it does                                                                                                                                                                   |
-| ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm check:platform-facts`           | **CI, PR-blocking**                                             | Hermetic. Ledger shape, plus every `codeRef` still existing _and still containing the value the ledger claims_. Can only fail because of something in the commit under review. |
-| `pnpm check:platform-facts:freshness` | **Scheduled** (`.github/workflows/platform-facts.yml`, Mondays) | Time-dependent. Reports expired facts and opens/updates a tracking issue.                                                                                                      |
+| Mode                                                   | Where                                                           | What it does                                                                                                                                                                   |
+| ------------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm check:platform-facts`                            | **CI, PR-blocking**                                             | Hermetic. Ledger shape, plus every `codeRef` still existing _and still containing the value the ledger claims_. Can only fail because of something in the commit under review. |
+| `check-platform-facts.mjs --freshness --due-within 30` | **Scheduled** (`.github/workflows/platform-facts.yml`, Mondays) | Time-dependent. Reports expired facts, and facts due within 30 days, and opens/updates a tracking issue.                                                                       |
+| `check-platform-facts.mjs --freshness`                 | **Fleet release** (`release.yml`, first step of the `v*` lane)  | Same check, as a gate: a stale load-bearing fact fails the release before anything is built or published.                                                                      |
 
-The freshness half is deliberately **not** PR-blocking, for the same reason as `check-terraform-drift.mjs`: it would turn `main` red by the passage of the calendar, on a commit that changed nothing.
+The freshness half is deliberately **not** PR-blocking, for the same reason as `check-terraform-drift.mjs`: it would turn `main` red by the passage of the calendar, on a commit that changed nothing. It **does** block a fleet release, because a `v*` tag claims the servers work against their platforms today. The contract-library lane is exempt, since neither library relies on a platform fact. To release past an expired fact, re-verify it, or mark it `superseded` / move its deadline in a reviewed commit that says why. Being unable to check is not a reason. The release job checks out the **tagged** commit, so unblocking needs that commit on `main` and a fresh tag.
+
+**A moved deadline is capped at one cadence from today** (`REFRESH_DAYS`: 90 days for versioned base URLs and the LinkedIn version header; 180 for unversioned base URLs, behavioural constraints and auth requirements). A `verifyBy` further out is reported as `DEADLINE PARKED` and fails the release like an expired fact. Without the cap the escape hatch would accept `2099-01-01` as readily as a real extension. The weekly job's 30-day warning exists so the first alert does not land the same week releases start failing.
 
 **The hermetic half is the one with teeth today.** Bumping a pinned version without updating the ledger fails CI with the file, line, and both values — verified by actually editing `gads-mcp`'s config from `v23` to `v24` and watching it fail.
 
@@ -231,15 +234,16 @@ The freshness half is deliberately **not** PR-blocking, for the same reason as `
 
 ### Ranker facts worth knowing before editing a tool description
 
-| Fact                                                                       | Consequence                                                                                                             |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Weights: name **5**, title **3**, description **1**                        | Name dominates; a description edit moves things by single points                                                        |
-| `tokenize` splits on `/[^a-z0-9_]+/` — **`_` is a word character**         | A whole tool name is **ONE token**, not `["ttd","download","report"]`                                                   |
-| Name match is substring **either direction**, over that single token       | Query `ad` matches `meta_download_report` (inside "downlo**ad**") and `ttd_upload_video`. Far wider than `ad`→`adgroup` |
-| The `break` in the name loop                                               | **Dead code** — there is never a second name token to reach                                                             |
-| Name weight accumulates per **query** token, not per name token            | A 2-word query matching the name twice scores 10                                                                        |
-| Title/description matches accumulate; description capped at **400 tokens** | Long descriptions have their tails silently ignored                                                                     |
-| Ties resolve by **registry order** (stable sort)                           | Reordering `allTools` silently reorders results with no scoring change                                                  |
+| Fact                                                                                                      | Consequence                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Weights: name **5**, title **3**, description **1**                                                       | Name dominates; a description edit moves things by single points                                                            |
+| Names and queries are split into words on `_`; descriptions keep `_` as a word character                  | `ttd_download_report` is `["ttd","download","report"]`, but an enum like `SINGLE_IMAGE_AD` in a description stays one token |
+| A query word matches a name word by equality, plural folding, a synonym, or a **prefix of 3+ characters** | `camp` reaches `campaigns`; `ad` no longer matches inside `adjust`/`download`/`upload`                                      |
+| `QUERY_SYNONYMS`: remove/erase/destroy → delete, delete → remove, edit/modify/change → update             | Every entry widens what a query reaches; add one only for words meaning the same operation                                  |
+| Description **words** are not plural-folded; the query word still is                                      | Folding description words made "deletes" count as "delete" and tied cm360's delete-a-campaign case                          |
+| Name weight counts once per **query** word                                                                | A 2-word query matching two name words scores 10; a name repeating a word still scores 5                                    |
+| Title/description matches accumulate; description capped at **400 tokens**                                | Long descriptions have their tails silently ignored                                                                         |
+| Ties resolve by **registry order** (stable sort)                                                          | Reordering `allTools` silently reorders results with no scoring change                                                      |
 
 **Margins are thin.** `cm360_delete_entity` beats `cm360_delete_report_schedule` for "delete a campaign" by **one point**; on `msads-mcp` the same pair is the wrong way round. Adding two sentences to a neighbouring tool's description is enough to invert it — verified by mutation.
 
