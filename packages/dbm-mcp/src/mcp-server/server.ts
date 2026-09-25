@@ -3,6 +3,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { InMemoryTaskStore } from "@modelcontextprotocol/sdk/experimental/tasks/stores/in-memory.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
@@ -41,6 +42,13 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
+  // dbm_run_custom_query_async is a task tool (taskSupport: "required"). The
+  // SDK only installs its tasks/get + tasks/result handlers when a taskStore is
+  // passed, and throws "No task store provided." on every call otherwise (#245).
+  // One store per server instance = one per MCP session, so a task is only
+  // visible to the session that created it. It is in-memory: after a Cloud Run
+  // scale-out, a tasks/get that lands on another instance finds nothing.
+  const taskStore = new InMemoryTaskStore();
   const server = new McpServer(
     {
       name: "dbm-mcp",
@@ -51,7 +59,9 @@ export async function createMcpServer(
     {
       capabilities: {
         logging: {},
+        tasks: { requests: { tools: { call: {} } } },
       },
+      taskStore,
       instructions:
         "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
         "Start with dbm_get_campaign_delivery or dbm_get_pacing_status. Use dbm_run_custom_query for advanced Bid Manager reports. " +
@@ -159,6 +169,13 @@ export async function createMcpServer(
 
   // Register task-based tools
   registerRunCustomQueryAsyncTool(server, logger, sessionId);
+
+  // Release the store's TTL timers with the session.
+  const previousOnClose = server.server.onclose;
+  server.server.onclose = () => {
+    taskStore.cleanup();
+    previousOnClose?.();
+  };
 
   return server;
 }

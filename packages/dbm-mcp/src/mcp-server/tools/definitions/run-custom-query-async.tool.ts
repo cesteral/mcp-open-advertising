@@ -42,7 +42,7 @@ export function registerRunCustomQueryAsyncTool(
       title: "Run Custom Query (Async)",
       description:
         "Execute a custom Bid Manager API query asynchronously. Returns a task handle immediately — " +
-        "poll via tasks/getTask for status, retrieve results via tasks/getTaskResult when complete. " +
+        "poll via tasks/get for status, retrieve results via tasks/result when complete. " +
         "Use this for large or complex queries that may take time to execute.\n\n" +
         "Accepts the same parameters as dbm_run_custom_query.",
       inputSchema: RunCustomQueryInputSchema,
