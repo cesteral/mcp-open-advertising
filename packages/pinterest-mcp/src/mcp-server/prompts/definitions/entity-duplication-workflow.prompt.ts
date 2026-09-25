@@ -13,7 +13,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const pinterestEntityDuplicationWorkflowPrompt: Prompt = {
   name: "pinterest_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating a Pinterest Ads campaign with pinterest_duplicate_entity: only campaigns can be copied, the copy keeps the source status unless overridden, and ad groups and ads are not copied.",
+    "Step-by-step guide for duplicating a Pinterest Ads campaign with pinterest_duplicate_entity: only campaigns can be copied, the copy is always created PAUSED, and ad groups and ads are not copied.",
   arguments: [
     {
       name: "entityType",
@@ -54,9 +54,9 @@ Ad account ID: \`${adAccountId}\`
 
 Pinterest v5 has no copy API, so the server reads the source campaign, drops the system fields (\`id\`, \`created_time\`, \`updated_time\`, \`ad_account_id\`) and creates a new campaign from the rest. Anything in \`options\` is merged over the copy before it is created.
 
-The copy keeps the campaign's objective, spend caps, schedule and status. **Its ad groups and ads are not copied.** The new campaign starts empty, and you build its ad groups and ads yourself.
+The copy keeps the campaign's objective, spend caps and schedule. **Its ad groups and ads are not copied.** The new campaign starts empty, and you build its ad groups and ads yourself.
 
-⚠️ **CRITICAL GOTCHA: the copy keeps the source's status.** Duplicating an ACTIVE campaign creates an ACTIVE campaign. Pass \`"status": "PAUSED"\` in \`options\` unless you want it live immediately.
+**The copy is always created \`PAUSED\`**, whatever the source's status, so it cannot spend until you activate it (Step 5). A \`status\` in \`options\` is ignored.
 
 ---
 
@@ -77,7 +77,7 @@ Confirm it is the right campaign. Note its \`objective_type\`, spend caps and \`
 
 ---
 
-## Step 2: Duplicate it, paused
+## Step 2: Duplicate it
 
 \`\`\`json
 {
@@ -87,14 +87,13 @@ Confirm it is the right campaign. Note its \`objective_type\`, spend caps and \`
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}",
     "options": {
-      "name": "Copy of campaign ${entityId}",
-      "status": "PAUSED"
+      "name": "Copy of campaign ${entityId}"
     }
   }
 }
 \`\`\`
 
-\`options\` keys are Pinterest campaign field names and go into the create request as they are, so only use real fields (\`name\`, \`status\`, \`daily_spend_cap\`, \`lifetime_spend_cap\`, \`start_time\`, \`end_time\`, …). The response includes the new campaign and its id.
+\`options\` keys are Pinterest campaign field names and go into the create request as they are, so only use real fields (\`name\`, \`daily_spend_cap\`, \`lifetime_spend_cap\`, \`start_time\`, \`end_time\`, …). The response includes the new campaign and its id.
 
 Run it with \`"dry_run": true\` first to see the projected copy without creating anything.
 
@@ -179,7 +178,7 @@ You don't need a new campaign. Create a Pin with the alternative image or video 
 ## Success Criteria
 
 - [ ] Source campaign reviewed before duplication
-- [ ] Copy created with \`"status": "PAUSED"\` (it keeps the source's status otherwise)
+- [ ] Copy created (always \`PAUSED\`)
 - [ ] Copy renamed to distinguish it from the original
 - [ ] Schedule and spend caps checked on the copy
 - [ ] Ad groups and ads rebuilt under the copy, paused

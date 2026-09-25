@@ -18,6 +18,7 @@ import {
   interpolatePath,
   type PinterestEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import { buildPinterestDuplicateCopy } from "../../mcp-server/tools/utils/duplicate-copy.js";
 import type { Logger } from "pino";
 import type { components } from "../../generated/types.js";
 
@@ -339,7 +340,8 @@ export class PinterestService {
     }
 
     // Pinterest v5 has no native copy/duplicate endpoint — implement as client-side read+create.
-    // Read source entity, strip system-managed fields, then create a new one.
+    // buildPinterestDuplicateCopy strips read-only fields, applies `options`
+    // and forces status PAUSED; the dry run projects the same body.
     const source = (await this.getEntity(
       entityType,
       filters,
@@ -347,25 +349,13 @@ export class PinterestService {
       context
     )) as unknown as Record<string, unknown>;
 
-    const SYSTEM_FIELDS = [
-      "id",
-      "created_time",
-      "updated_time",
-      "ad_account_id",
-      "pin_count",
-      "view_tags",
-    ] as const;
-    const body: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(source)) {
-      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
-        body[key] = val;
-      }
+    const { body, ignoredStatus } = buildPinterestDuplicateCopy(entityType, source, options);
+    if (ignoredStatus !== undefined) {
+      this.logger.warn(
+        { entityType, requestedStatus: ignoredStatus },
+        "Ignoring status override on duplicate; copies are always created PAUSED"
+      );
     }
-
-    // Caller may override name or other fields
-    if (options?.name) body.name = options.name;
-    if (options?.campaign_name) body.campaign_name = options.campaign_name;
-    Object.assign(body, options);
 
     return this.createEntity(entityType, filters, body, context);
   }

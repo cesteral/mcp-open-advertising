@@ -228,6 +228,70 @@ describe("PinterestService", () => {
     });
   });
 
+  describe("duplicateEntity()", () => {
+    const SOURCE = {
+      id: "687201361754",
+      ad_account_id: "549755813599",
+      name: "Spring",
+      status: "ACTIVE",
+      objective_type: "AWARENESS",
+      daily_spend_cap: 50000000,
+      created_time: 1775001600,
+      updated_time: 1775001600,
+      summary_status: "RUNNING",
+      type: "campaign",
+      is_carting: false,
+    };
+
+    beforeEach(() => {
+      mockGet.mockResolvedValue(SOURCE);
+      mockPost.mockResolvedValue({ items: [{ data: { id: "999", status: "PAUSED" } }] });
+      mockLogger.warn.mockClear();
+    });
+
+    it("creates an ACTIVE source's copy as PAUSED, without read-only fields", async () => {
+      await service.duplicateEntity("campaign", filters, "687201361754");
+
+      expect(mockPost).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/campaigns",
+        [
+          {
+            name: "Spring",
+            status: "PAUSED",
+            objective_type: "AWARENESS",
+            daily_spend_cap: 50000000,
+          },
+        ],
+        undefined
+      );
+    });
+
+    it("applies options but ignores (and logs) a status override", async () => {
+      await service.duplicateEntity("campaign", filters, "687201361754", {
+        name: "Copy of Spring",
+        status: "ACTIVE",
+        id: "123",
+      });
+
+      const [item] = mockPost.mock.calls[0][1];
+      expect(item).toMatchObject({ name: "Copy of Spring", status: "PAUSED" });
+      expect(item).not.toHaveProperty("id");
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { entityType: "campaign", requestedStatus: "ACTIVE" },
+        expect.stringMatching(/always created PAUSED/)
+      );
+    });
+
+    it.each(["ARCHIVED", "DRAFT", "DELETED_DRAFT"])(
+      "creates a %s source's copy as PAUSED",
+      async (status) => {
+        mockGet.mockResolvedValue({ ...SOURCE, status });
+        await service.duplicateEntity("campaign", filters, "687201361754");
+        expect(mockPost.mock.calls[0][1][0].status).toBe("PAUSED");
+      }
+    );
+  });
+
   describe("deleteEntity()", () => {
     // Pinterest v5 has no DELETE on campaigns/ad_groups/ads (GET/POST/PATCH only):
     // removal is a PATCH to status ARCHIVED.
