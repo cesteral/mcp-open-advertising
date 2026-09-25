@@ -151,4 +151,8 @@ export const listReportTemplatesTool = {
   ],
   logic: listReportTemplatesLogic,
   responseFormatter: listReportTemplatesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.templates"],
+    contentBlocks: [0],
+  },
 };

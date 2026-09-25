@@ -166,4 +166,8 @@ export const getReportTool = {
   ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.execution"],
+    contentBlocks: [0],
+  },
 };

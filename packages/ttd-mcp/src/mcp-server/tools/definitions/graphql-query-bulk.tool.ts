@@ -10,6 +10,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   McpTextContent,
@@ -289,4 +290,5 @@ export const graphqlQueryBulkTool = {
   ],
   logic: graphqlQueryBulkLogic,
   responseFormatter: graphqlQueryBulkResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

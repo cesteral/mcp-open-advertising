@@ -137,7 +137,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "gads-mcp",

@@ -116,4 +116,10 @@ export const getAdPreviewTool = {
   ],
   logic: getAdPreviewLogic,
   responseFormatter: getAdPreviewResponseFormatter,
+  // previewUrl and adFormat look platform-generated, but the TTDCreativeResponse
+  // field names they are read from are unverified, so they are marked too.
+  untrustedContent: {
+    structuredPaths: ["$.creativeName", "$.clickUrl", "$.previewUrl", "$.adFormat"],
+    contentBlocks: [0],
+  },
 };

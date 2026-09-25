@@ -11,6 +11,11 @@
  */
 import { z } from "zod";
 import type { ToolDefinitionForFactory, ToolSdkContext } from "./tool-handler-factory.js";
+// Every conformance tool declares NO_UNTRUSTED_CONTENT: they echo the caller's
+// own arguments or elicitation answers, never platform text. Declared so a
+// server whose card claims per-response path reporting stays truthful with
+// MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+import { NO_UNTRUSTED_CONTENT } from "./untrusted-content.js";
 
 // ---------------------------------------------------------------------------
 // echo — general connectivity test
@@ -22,6 +27,7 @@ const echoInputSchema = z.object({
 
 export const echoTool: ToolDefinitionForFactory = {
   name: "echo",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Echo",
   description:
     "Echoes back the provided message. Used for connectivity testing and conformance validation.",
@@ -40,6 +46,7 @@ export const echoTool: ToolDefinitionForFactory = {
 
 export const testSimpleTextTool: ToolDefinitionForFactory = {
   name: "test_simple_text",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Test Simple Text",
   description: "Returns a fixed text response. Used by MCP conformance tests.",
   inputSchema: z.object({}),
@@ -59,6 +66,7 @@ export const testSimpleTextTool: ToolDefinitionForFactory = {
 
 export const testToolWithLoggingTool: ToolDefinitionForFactory = {
   name: "test_tool_with_logging",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Test Tool With Logging",
   description:
     "Sends structured log notifications during execution. Used by MCP conformance tests.",
@@ -101,6 +109,7 @@ const testElicitationInputSchema = z.object({
 
 export const testElicitationTool: ToolDefinitionForFactory = {
   name: "test_elicitation",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Test Elicitation",
   description: "Requests user input via MCP elicitation. Used by MCP conformance tests.",
   inputSchema: testElicitationInputSchema,
@@ -141,6 +150,7 @@ export const testElicitationTool: ToolDefinitionForFactory = {
 
 export const testElicitationSep1034DefaultsTool: ToolDefinitionForFactory = {
   name: "test_elicitation_sep1034_defaults",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Test Elicitation SEP-1034 Defaults",
   description:
     "Tests elicitation with default values for all primitive types. Used by MCP conformance tests.",
@@ -183,6 +193,7 @@ export const testElicitationSep1034DefaultsTool: ToolDefinitionForFactory = {
 
 export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
   name: "test_elicitation_sep1330_enums",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
   title: "Test Elicitation SEP-1330 Enums",
   description: "Tests all 5 enum variants in elicitation schemas. Used by MCP conformance tests.",
   inputSchema: z.object({}),

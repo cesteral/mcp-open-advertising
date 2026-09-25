@@ -10,6 +10,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   McpTextContent,
@@ -237,4 +238,5 @@ export const graphqlCancelBulkJobTool = {
   ],
   logic: graphqlCancelBulkJobLogic,
   responseFormatter: graphqlCancelBulkJobResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

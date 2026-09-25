@@ -115,4 +115,8 @@ export const listReportTypesTool = {
   ],
   logic: listReportTypesLogic,
   responseFormatter: listReportTypesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.reportTypes"],
+    contentBlocks: [0],
+  },
 };

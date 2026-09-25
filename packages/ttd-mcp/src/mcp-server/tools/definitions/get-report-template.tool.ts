@@ -186,4 +186,8 @@ export const getReportTemplateTool = {
   ],
   logic: getReportTemplateLogic,
   responseFormatter: getReportTemplateResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.name", "$.resultSets", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

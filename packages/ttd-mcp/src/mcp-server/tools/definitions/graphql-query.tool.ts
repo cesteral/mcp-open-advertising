@@ -233,4 +233,8 @@ export const graphqlQueryTool = {
   ],
   logic: graphqlQueryLogic,
   responseFormatter: graphqlQueryResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.data", "$.errors"],
+    contentBlocks: [0],
+  },
 };

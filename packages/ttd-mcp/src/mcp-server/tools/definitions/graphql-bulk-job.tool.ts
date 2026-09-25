@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -156,4 +156,5 @@ export const graphqlBulkJobTool = {
   ],
   logic: graphqlBulkJobLogic,
   responseFormatter: graphqlBulkJobResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

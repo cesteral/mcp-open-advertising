@@ -8,6 +8,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   McpTextContent,
@@ -338,4 +339,5 @@ export const createReportScheduleTool = {
   ],
   logic: createReportScheduleLogic,
   responseFormatter: createReportScheduleResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

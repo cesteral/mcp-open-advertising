@@ -460,4 +460,8 @@ export const createTemplateScheduleTool = {
   ],
   logic: createTemplateScheduleLogic,
   responseFormatter: createTemplateScheduleResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.errors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };
