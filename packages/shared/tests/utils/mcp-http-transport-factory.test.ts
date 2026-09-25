@@ -66,7 +66,7 @@ interface Harness {
   shutdown: () => Promise<void>;
 }
 
-function makeHarness(opts: { maxSessions?: number } = {}): Harness {
+function makeHarness(opts: { maxSessions?: number; authMode?: string } = {}): Harness {
   const logger = pino({ level: "silent" });
   const store = new SessionServiceStore<{ svc: string }>(opts.maxSessions ?? 1000);
 
@@ -93,7 +93,7 @@ function makeHarness(opts: { maxSessions?: number } = {}): Harness {
     nodeEnv: "test",
     port: 0,
     host: "127.0.0.1",
-    mcpAuthMode: "fake",
+    mcpAuthMode: opts.authMode ?? "fake",
     mcpStatefulSessionTimeoutMs: 60_000,
   };
 
@@ -140,6 +140,37 @@ describe("createMcpHttpTransport — auth & session binding", () => {
     const body = await res.json();
     expect(body.hint).toBe("provide X-Fake-Cred");
     expect(active.createSessionForAuth).not.toHaveBeenCalled();
+  });
+
+  it("omits WWW-Authenticate on a 401 for a custom-header auth mode", async () => {
+    active = makeHarness(); // "fake": credentials travel in X-Fake-Cred, not Bearer
+    const res = await post(active.app, {});
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toBeNull();
+  });
+
+  it("sends a Bearer challenge on a 401 for a platform bearer mode (#246)", async () => {
+    active = makeHarness({ authMode: "meta-bearer" });
+    const res = await post(active.app, {});
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toBe('Bearer realm="mcp"');
+  });
+
+  it("points a jwt-mode 401 at the protected resource metadata (#246)", async () => {
+    active = makeHarness({ authMode: "jwt" });
+    const res = await post(active.app, {});
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toBe(
+      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource"'
+    );
+  });
+
+  it("challenges on a credential-mismatch 401 too, not only on missing credentials", async () => {
+    active = makeHarness({ authMode: "jwt" });
+    active.store.set(VICTIM_SID, { svc: "victim" }, "fp-victim");
+    const res = await post(active.app, { "mcp-session-id": VICTIM_SID, "x-fake-cred": "mallory" });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toMatch(/^Bearer realm="mcp"/);
   });
 
   it("creates a new session bound to the caller's fingerprint (server-generated id)", async () => {

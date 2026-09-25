@@ -13,7 +13,7 @@ import { readFileSync } from "fs";
 
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { type ServerType, serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import type { Logger } from "pino";
@@ -41,6 +41,8 @@ import {
   extractHeadersMap,
   validateSessionReuse,
   oauthProtectedResourceBody,
+  warnIfProtectedResourceMetadataIncomplete,
+  wwwAuthenticateChallenge,
   SessionManager,
 } from "./mcp-transport-helpers.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../auth/auth-strategy.js";
@@ -243,6 +245,18 @@ export function createMcpHttpTransport(
   const sessionTransports = new Map<string, McpSessionTransport>();
   const { sessionServiceStore, authStrategy } = platformConfig;
 
+  warnIfProtectedResourceMetadataIncomplete(config.mcpAuthMode, logger);
+
+  // Every 401 from /mcp carries a WWW-Authenticate challenge where the auth
+  // mode has one (RFC 6750 §3; RFC 9728 §5.1 `resource_metadata` in jwt mode),
+  // so MCP clients can discover how to authenticate instead of parsing a
+  // bespoke JSON body (#246).
+  const unauthorized = (c: Context, body: Record<string, unknown>): Response => {
+    const challenge = wwwAuthenticateChallenge(config.mcpAuthMode, c.req.url);
+    if (challenge) c.header("WWW-Authenticate", challenge);
+    return c.json(body, 401);
+  };
+
   let pkg: { version: string };
   try {
     pkg = JSON.parse(readFileSync(platformConfig.packageJsonPath, "utf-8"));
@@ -295,7 +309,7 @@ export function createMcpHttpTransport(
       origin: allowedOrigin,
       allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
       allowHeaders: platformConfig.corsAllowHeaders,
-      exposeHeaders: ["Mcp-Session-Id"],
+      exposeHeaders: ["Mcp-Session-Id", "WWW-Authenticate"],
       credentials: true,
     })
   );
@@ -429,7 +443,7 @@ export function createMcpHttpTransport(
         ? await authStrategy.getCredentialFingerprint(headers)
         : undefined;
     } catch {
-      return c.json({ error: "Authentication required for session termination" }, 401);
+      return unauthorized(c, { error: "Authentication required for session termination" });
     }
 
     const storedFingerprint = sessionServiceStore.getFingerprint(sessionId);
@@ -438,7 +452,7 @@ export function createMcpHttpTransport(
         { sessionId, event: "unauthorized_session_termination" },
         "Session termination rejected - credential mismatch"
       );
-      return c.json({ error: "Session credential mismatch" }, 401);
+      return unauthorized(c, { error: "Session credential mismatch" });
     }
 
     logger.info({ sessionId }, "Session termination requested");
@@ -525,7 +539,7 @@ export function createMcpHttpTransport(
             },
             reuseResult.reason ?? "Session credential mismatch"
           );
-          return c.json({ error: "Session credential mismatch" }, 401);
+          return unauthorized(c, { error: "Session credential mismatch" });
         }
         // Extend idle timeout on every request from an existing session
         sessions.touchSession(providedSessionId);
@@ -563,13 +577,10 @@ export function createMcpHttpTransport(
           const message = error instanceof Error ? error.message : "Authentication failed";
           recordAuthValidation(config.mcpAuthMode, "failure");
           logger.warn({ error: message }, "Authentication failed");
-          return c.json(
-            {
-              error: message,
-              hint: platformConfig.authErrorHint,
-            },
-            401
-          );
+          return unauthorized(c, {
+            error: message,
+            hint: platformConfig.authErrorHint,
+          });
         }
 
         if (!sessionId) {
@@ -585,6 +596,9 @@ export function createMcpHttpTransport(
         );
 
         if (result.error) {
+          if (result.error.status === 401) {
+            return unauthorized(c, { error: result.error.message });
+          }
           return c.json({ error: result.error.message }, result.error.status);
         }
 
