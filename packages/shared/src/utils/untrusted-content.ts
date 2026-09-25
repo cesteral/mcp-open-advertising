@@ -39,9 +39,11 @@
  *
  * `unsupported` is load-bearing and must not be conflated with "this server
  * returns no untrusted content" — a client that cannot tell those apart will
- * read silence as safety. Tier 2 (`_untrustedPaths`) is not implemented, so
- * every server currently declares `unsupported` while still declaring, above,
- * that untrusted content IS present.
+ * read silence as safety. Tier 2's per-result marker (`UNTRUSTED_RESULT_META_KEY`
+ * below) is so far attached only to error results, so every server still
+ * declares `unsupported` while declaring, above, that untrusted content IS
+ * present. A server flips to `per-response` only once every one of its tools
+ * reports.
  */
 export type UntrustedPathReporting = "unsupported" | "per-response";
 
@@ -78,8 +80,14 @@ export const UNTRUSTED_CONTENT_DECLARATION: UntrustedContentDeclaration = {
 };
 
 /**
- * Per-result marker (#204, Tier 2): the `_meta` key a tool result carries when
- * some of its content may be platform-supplied free text.
+ * Per-result marker (#204, Tier 2): the `_meta` key under which a tool result
+ * reports where platform-supplied free text may sit in it.
+ *
+ * NO MARKER MEANS "NOT REPORTED", NEVER "TRUSTED". While a server's card says
+ * `path_reporting: "unsupported"`, its successful results carry entity names,
+ * ad copy and report cells with no marker at all. Only error results are marked
+ * so far. A client must key "is this safe?" off the card's declaration, not off
+ * the marker's absence.
  *
  * It lives in `_meta` rather than `structuredContent` or `outputSchema` on
  * purpose. `outputSchema` is covered by `definitionHash`
@@ -87,8 +95,9 @@ export const UNTRUSTED_CONTENT_DECLARATION: UntrustedContentDeclaration = {
  * governed tool and force a fleet-wide re-attestation; `_meta` is explicitly
  * outside the hash, and MCP's `CallToolResult` already allows it.
  *
- * `cesteral/` is a vendor prefix, not a reserved one: MCP reserves only the
- * `modelcontextprotocol.io/` and `mcp.dev/` prefixes.
+ * `cesteral/` is a vendor prefix, not a reserved one. MCP reserves `_meta`
+ * prefixes whose second-to-last label is `modelcontextprotocol` or `mcp`
+ * (e.g. `modelcontextprotocol.io/`, `api.mcp.dev/`).
  */
 export const UNTRUSTED_RESULT_META_KEY = "cesteral/untrusted" as const;
 
@@ -124,16 +133,30 @@ export interface UntrustedResultMarker {
  * block 0, `{ error, code, data }`, where `error` and `data` may carry upstream
  * text and `code` is a JSON-RPC number.
  */
-export const TOOL_ERROR_UNTRUSTED_MARKER: UntrustedResultMarker = Object.freeze({
+export const TOOL_ERROR_UNTRUSTED_MARKER: Readonly<UntrustedResultMarker> = Object.freeze({
   v: 1,
-  structuredPaths: [],
-  contentBlocks: [0],
+  structuredPaths: Object.freeze([]) as unknown as string[],
+  contentBlocks: Object.freeze([0]) as unknown as number[],
   reason: "tool-error",
-}) as UntrustedResultMarker;
+});
 
-/** The `_meta` object to spread onto a tool result carrying `marker`. */
+/**
+ * The `_meta` object to spread onto a tool result carrying `marker`.
+ *
+ * Returns a fresh copy each call. Over an in-process transport (`InMemoryTransport`,
+ * or any embedder) the client receives the very object the handler returned,
+ * so handing out the shared constant would let one consumer rewrite the marker
+ * on every later error result in the process.
+ */
 export function untrustedResultMeta(
-  marker: UntrustedResultMarker
+  marker: Readonly<UntrustedResultMarker>
 ): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResultMarker> {
-  return { [UNTRUSTED_RESULT_META_KEY]: marker };
+  return {
+    [UNTRUSTED_RESULT_META_KEY]: {
+      v: marker.v,
+      structuredPaths: [...marker.structuredPaths],
+      contentBlocks: [...marker.contentBlocks],
+      reason: marker.reason,
+    },
+  };
 }

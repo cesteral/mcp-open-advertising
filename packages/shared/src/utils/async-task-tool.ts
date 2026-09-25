@@ -13,6 +13,7 @@ import type { z } from "zod";
 import type { Logger } from "pino";
 import { extractZodShape } from "./zod-helpers.js";
 import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
+import { redactSecretsInText } from "./secret-redaction.js";
 
 const DEFAULT_TASK_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_POLL_INTERVAL_MS = 3000;
@@ -208,7 +209,9 @@ async function runInBackground<TInput, TOutput>(
     });
     logger.info({ taskId, tool: config.name }, "Async task completed");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    // Redacted here because this path bypasses ErrorHandler: an McpError is
+    // already redacted at construction, but a plain thrown Error is not.
+    const message = redactSecretsInText(error instanceof Error ? error.message : "Unknown error");
     logger.error({ taskId, tool: config.name, error: message }, "Async task failed");
     await taskStore
       .storeTaskResult(taskId, "failed", {

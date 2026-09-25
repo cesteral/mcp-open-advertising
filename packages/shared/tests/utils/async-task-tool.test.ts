@@ -71,6 +71,19 @@ describe("async task results", () => {
     });
   });
 
+  it("redacts secrets from a plain Error's message", async () => {
+    // This path bypasses ErrorHandler. An McpError is redacted at
+    // construction; a plain Error (a TypeError, say) is not.
+    const canary = "1//0eXaMpLeCaNaRyRefreshTokenValue";
+    const { run } = setup(() =>
+      Promise.reject(new Error(`refresh failed: {"refresh_token":"${canary}"}`))
+    );
+    const { result } = await run();
+
+    expect(result.content[0].text).toMatch(/^Task failed: /);
+    expect(result.content[0].text).not.toContain(canary);
+  });
+
   it("does not mark a completed task as an error", async () => {
     const { run } = setup(() => Promise.resolve({ rows: 1 }));
     const { status, result } = await run();

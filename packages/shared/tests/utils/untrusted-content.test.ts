@@ -96,15 +96,27 @@ describe("per-result untrusted marker (#204 Tier 2)", () => {
     });
   });
 
-  it("cannot be mutated by one caller for every later result", () => {
-    // The marker is a shared constant spread onto every error result.
+  it("freezes the shared constant, arrays included", () => {
+    // Object.freeze is shallow; the arrays need their own freeze.
     expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER)).toBe(true);
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER.structuredPaths)).toBe(true);
+    expect(Object.isFrozen(TOOL_ERROR_UNTRUSTED_MARKER.contentBlocks)).toBe(true);
   });
 
-  it("wraps a marker under the key", () => {
-    expect(untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)).toEqual({
-      "cesteral/untrusted": TOOL_ERROR_UNTRUSTED_MARKER,
+  it("hands each result its own copy, so one consumer cannot rewrite the next", () => {
+    // Over InMemoryTransport the client gets the handler's object by reference.
+    const first = untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)["cesteral/untrusted"];
+    first.contentBlocks.push(1);
+    first.structuredPaths.push("$.x");
+
+    const second = untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER)["cesteral/untrusted"];
+    expect(second).toEqual({
+      v: 1,
+      structuredPaths: [],
+      contentBlocks: [0],
+      reason: "tool-error",
     });
+    expect(second).not.toBe(TOOL_ERROR_UNTRUSTED_MARKER);
   });
 
   it("keeps path_reporting at unsupported while only errors are marked", () => {

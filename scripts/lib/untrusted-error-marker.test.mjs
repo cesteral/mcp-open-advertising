@@ -5,10 +5,12 @@
 // `tool-handler-factory.ts` attaches `_meta["cesteral/untrusted"]` to every
 // error result it builds, because an upstream failure's message embeds the
 // platform's own response text. A unit test can prove the factory sets it. It
-// cannot prove the marker reaches a client: the MCP SDK re-serializes the
-// handler's return value, and a result field it did not recognise would be
-// dropped without a sound. So this boots every built server and reads what a
-// real client receives.
+// cannot prove the SDK's tools/call path passes it on: the SDK wraps the
+// handler (task routing, output validation) and a field it rebuilt the result
+// without would vanish silently. So this boots every built server and reads
+// what an in-process client receives. `InMemoryTransport` hands objects over
+// by reference, so JSON serialization is NOT exercised here; the marker is
+// plain JSON data, so that is low risk, but it is not what this proves.
 //
 // WHAT IS AND IS NOT MARKED
 //
@@ -18,8 +20,13 @@
 //     -32602: Input validation error" for bad arguments, and "MCP error -32601:
 //     ... requires task augmentation" for a task-only tool called without task
 //     mode. The factory never sees these, and their text describes only the
-//     caller's own request, so it holds no platform text. Asserted below so the
-//     boundary is written down, not assumed.
+//     caller's own request. Asserted below so the boundary is written down.
+//   - KNOWN GAP, not marked: the SDK's own OUTPUT validation. When a handler
+//     returns structuredContent that fails its outputSchema, the SDK builds
+//     "MCP error -32602: Output validation error: ..." and zod's message can
+//     quote the rejected value, which came from the platform. The factory
+//     never sees that error either. Closing it means validating output inside
+//     the factory; tracked on #204, not done here.
 //   - A failed async TASK is marked in async-task-tool.ts, not here: reaching
 //     it needs task mode and a live upstream failure, so it is covered by
 //     packages/shared/tests/utils/async-task-tool.test.ts instead.
