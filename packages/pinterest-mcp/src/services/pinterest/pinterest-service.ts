@@ -22,9 +22,12 @@ import { buildPinterestDuplicateCopy } from "../../mcp-server/tools/utils/duplic
 import type { Logger } from "pino";
 import type { components } from "../../generated/types.js";
 
-type PinterestCampaign = components["schemas"]["CampaignResponse"];
-type PinterestAdGroup = components["schemas"]["AdGroupResponse"];
-type PinterestAd = components["schemas"]["AdResponse"];
+// The schemas the v5 GET endpoints return (`GET /ad_accounts/{id}/campaigns/{campaign_id}`
+// → `Campaign`, `…/ad_groups/{ad_group_id}` → `AdGroup`, `…/ads/{ad_id}` → `Ad`,
+// `/pins/{pin_id}` → `Pin`). Before spec 5.28.0 they were named `*Response`.
+type PinterestCampaign = components["schemas"]["Campaign"];
+type PinterestAdGroup = components["schemas"]["AdGroup"];
+type PinterestAd = components["schemas"]["Ad"];
 type PinterestPin = components["schemas"]["Pin"];
 
 interface PinterestEntityMap {

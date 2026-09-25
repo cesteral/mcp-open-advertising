@@ -7,10 +7,11 @@
  *
  * Source: Pinterest REST API OpenAPI **v5.28.0**
  * (`pinterest/api-description`, `v5/openapi.json`). Each constant names the
- * schema it was copied from. The committed `src/generated/types.ts` predates
- * that version (its `ObjectiveType` lacks SALES, APP_INSTALL and
- * CTV_CONSIDERATION, and `CreativeType` lacks APP), so these are not derived
- * from it.
+ * schema it was copied from, and every enum is checked at compile time
+ * against `src/generated/types.ts` (see the `SameAs` checks at the end), so a
+ * regeneration that adds or removes a value fails `tsc` until this file
+ * follows. The arrays stay hand-written because the runtime needs values and
+ * the generated file has only types.
  *
  * Required fields are those of the batch create items (`CampaignCreateItem`,
  * `AdGroupCreateRequest`, `AdCreateRequest`). `PinCreate` marks nothing
@@ -19,6 +20,7 @@
 
 import type { FieldRule, ValidationIssue } from "@cesteral/shared";
 import type { PinterestEntityType } from "./entity-mapping.js";
+import type { components } from "../../../generated/types.js";
 
 /** `ObjectiveType` */
 export const OBJECTIVE_TYPES = [
@@ -41,7 +43,7 @@ export const BILLABLE_EVENTS = ["CLICKTHROUGH", "IMPRESSION", "VIDEO_V_50_MRC"] 
 /** `BudgetType` */
 export const BUDGET_TYPES = ["DAILY", "LIFETIME", "CBO_ADGROUP"] as const;
 
-/** `AdGroupCommon.bid_strategy_type` (inline enum) */
+/** `BidStrategyType` (nullable in the spec; null is not a value a caller sends) */
 export const BID_STRATEGY_TYPES = ["AUTOMATIC_BID", "MAX_BID", "TARGET_AVG"] as const;
 
 /** `PacingDeliveryType` */
@@ -130,14 +132,18 @@ const SCALAR_TARGETING_KEYS = new Set<string>(["MAXIMUM_AGE", "MINIMUM_AGE"]);
  * besides `source_type` (`PinMediaSourceImageBase64`, `…ImageURL`, `…VideoID`,
  * `…ImagesBase64`, `…ImagesURL`, `…PinURL`).
  */
-export const PIN_MEDIA_SOURCES: Readonly<Record<string, readonly string[]>> = {
+const PIN_MEDIA_SOURCE_REQUIRED = {
   image_base64: ["content_type", "data"],
   image_url: ["url"],
   video_id: ["media_id"],
   multiple_image_base64: ["items"],
   multiple_image_urls: ["items"],
   pin_url: [],
-};
+} as const;
+
+/** `PinMediaSource` variants, by `source_type`. */
+export const PIN_MEDIA_SOURCES: Readonly<Record<string, readonly string[]>> =
+  PIN_MEDIA_SOURCE_REQUIRED;
 
 /** Required create fields, per entity type. Enum-valued ones carry their values. */
 export const REQUIRED_CREATE_FIELDS: Record<PinterestEntityType, FieldRule[]> = {
@@ -407,3 +413,54 @@ function mediaSourceIssues(source: unknown): ValidationIssue[] {
     severity: "error" as const,
   }));
 }
+
+// ─── Compile-time checks against the generated OpenAPI types ──────────────
+// Each line fails to compile when a hand-written list and the spec disagree in
+// either direction: a value missing here, or one the spec no longer has.
+
+type Schemas = components["schemas"];
+type SameAs<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Values<T extends readonly unknown[]> = T[number];
+
+const _objectiveTypes: SameAs<Values<typeof OBJECTIVE_TYPES>, Schemas["ObjectiveType"]> = true;
+const _entityStatuses: SameAs<Values<typeof ENTITY_STATUSES>, Schemas["EntityStatus"]> = true;
+const _billableEvents: SameAs<Values<typeof BILLABLE_EVENTS>, Schemas["ActionType"]> = true;
+const _budgetTypes: SameAs<Values<typeof BUDGET_TYPES>, Schemas["BudgetType"]> = true;
+const _bidStrategyTypes: SameAs<
+  Values<typeof BID_STRATEGY_TYPES>,
+  NonNullable<Schemas["BidStrategyType"]>
+> = true;
+const _pacingDeliveryTypes: SameAs<
+  Values<typeof PACING_DELIVERY_TYPES>,
+  Schemas["PacingDeliveryType"]
+> = true;
+const _placementGroups: SameAs<
+  Values<typeof PLACEMENT_GROUPS>,
+  Schemas["PlacementGroupType"]
+> = true;
+const _creativeTypes: SameAs<Values<typeof CREATIVE_TYPES>, Schemas["CreativeType"]> = true;
+const _ctaTypes: SameAs<
+  Values<typeof CTA_TYPES>,
+  NonNullable<Schemas["CustomizableCTAType"]>
+> = true;
+const _targetingSpecKeys: SameAs<
+  Values<typeof TARGETING_SPEC_KEYS>,
+  keyof Schemas["TargetingSpec"]
+> = true;
+const _pinMediaSourceTypes: SameAs<
+  keyof typeof PIN_MEDIA_SOURCE_REQUIRED,
+  Schemas["PinMediaSource"]["source_type"]
+> = true;
+void [
+  _objectiveTypes,
+  _entityStatuses,
+  _billableEvents,
+  _budgetTypes,
+  _bidStrategyTypes,
+  _pacingDeliveryTypes,
+  _placementGroups,
+  _creativeTypes,
+  _ctaTypes,
+  _targetingSpecKeys,
+  _pinMediaSourceTypes,
+];

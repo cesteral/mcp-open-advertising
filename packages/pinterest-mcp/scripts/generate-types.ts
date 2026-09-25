@@ -18,6 +18,7 @@ import { execSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import * as prettier from "prettier";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
@@ -74,6 +75,21 @@ async function main(): Promise<void> {
 
   await fs.unlink(TEMP_SPEC_PATH);
   console.log(`  Temp spec removed.`);
+
+  // src/generated/ is in .prettierignore because generators emit unformatted
+  // code, so a formatted commit would be undone by the next regeneration. This
+  // generator formats at emit time instead (with the repo's prettier config),
+  // so `pnpm run generate` reproduces the committed file and a regeneration's
+  // diff shows spec changes rather than whitespace.
+  const generated = await fs.readFile(TYPES_PATH, "utf-8");
+  const header = `// Generated from the Pinterest REST API OpenAPI spec, info.version ${infoVersion ?? "(unknown)"}.\n// Regenerate with \`pnpm run generate\`.\n`;
+  const prettierConfig = (await prettier.resolveConfig(TYPES_PATH)) ?? {};
+  const formatted = await prettier.format(header + generated, {
+    ...prettierConfig,
+    filepath: TYPES_PATH,
+  });
+  await fs.writeFile(TYPES_PATH, formatted, "utf-8");
+  console.log(`  Formatted with prettier.`);
 
   console.log(`\nDone! Types written to: src/generated/types.ts`);
 }
