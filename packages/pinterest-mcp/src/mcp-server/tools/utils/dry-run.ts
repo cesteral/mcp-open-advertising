@@ -29,6 +29,8 @@ import {
   ENTITY_KIND_MAP,
   type PinterestServiceLike,
 } from "./capture-snapshot.js";
+import { buildPinterestDuplicateCopy } from "./duplicate-copy.js";
+import type { PinterestEntityType } from "./entity-mapping.js";
 
 export type { PinterestServiceLike };
 
@@ -237,17 +239,16 @@ export interface PinterestDuplicateDryRunArgs {
   adAccountId: string;
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
-  /** Copy overrides forwarded to the create call (may rename or re-state the copy). */
+  /** Copy overrides forwarded to the create call. A `status` here is ignored: copies are created PAUSED. */
   options?: Record<string, unknown>;
 }
 
 /**
  * Symbolic dry-run for `pinterest_duplicate_entity`. The copy does not exist
  * yet (no `before`). Pinterest has no native copy API — the service re-creates
- * the entity as `{ ...source(minus system fields), ...options }`, so the copy
- * KEEPS the source status unless the caller overrides it via `options` (there
- * is no forced pause). The expected post-state reads the source, applies the
- * caller's `options` overlay, and emits it with an empty `platformEntityId`.
+ * the entity from `buildPinterestDuplicateCopy` (source minus read-only fields,
+ * `options` applied, status forced to PAUSED). The expected post-state is that
+ * same body, normalized with an empty `platformEntityId`.
  * Out-of-scope kinds are token-gated but not snapshot-governed.
  */
 export async function runPinterestDuplicateDryRun(
@@ -268,7 +269,12 @@ export async function runPinterestDuplicateDryRun(
       context
     )) as Record<string, unknown> | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildPinterestSnapshot(args.entityType, "", source, args.options ?? {});
+      const { body } = buildPinterestDuplicateCopy(
+        args.entityType as PinterestEntityType,
+        source,
+        args.options
+      );
+      const snapshot = buildPinterestSnapshot(args.entityType, "", body, {});
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

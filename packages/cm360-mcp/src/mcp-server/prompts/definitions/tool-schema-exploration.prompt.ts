@@ -59,7 +59,7 @@ Fetch these resources for detailed schema information:
 
 ### Write Operations
 - \`cm360_create_entity\` — Create entity
-- \`cm360_update_entity\` — Update entity (PUT semantics — full object required)
+- \`cm360_update_entity\` — Update entity (PATCH semantics — send only changed fields)
 - \`cm360_delete_entity\` — Delete entity (creative, floodlightActivity only)
 
 ### Reporting (Async)

@@ -3,7 +3,8 @@ import { InsertConversionsInputSchema } from "../../src/mcp-server/tools/definit
 
 describe("InsertConversionsInputSchema", () => {
   const validConversion = {
-    gclid: "EAIaIQobChMI...",
+    clickId: "EAIaIQobChMI...",
+    conversionId: "order-1",
     conversionTimestamp: "1700000000000",
     segmentationType: "FLOODLIGHT",
   };
@@ -62,7 +63,8 @@ describe("InsertConversionsInputSchema", () => {
 
   it("rejects more than 200 conversions", () => {
     const conversions = Array.from({ length: 201 }, (_, i) => ({
-      gclid: `gclid-${i}`,
+      clickId: `click-${i}`,
+      conversionId: `order-${i}`,
       conversionTimestamp: "1700000000000",
       segmentationType: "FLOODLIGHT",
     }));
@@ -77,7 +79,8 @@ describe("InsertConversionsInputSchema", () => {
 
   it("accepts 200 conversions (max)", () => {
     const conversions = Array.from({ length: 200 }, (_, i) => ({
-      gclid: `gclid-${i}`,
+      clickId: `click-${i}`,
+      conversionId: `order-${i}`,
       conversionTimestamp: "1700000000000",
       segmentationType: "FLOODLIGHT",
     }));
@@ -90,11 +93,23 @@ describe("InsertConversionsInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("requires conversionId on each conversion (advertiser-provided per the v2 schema)", () => {
+    const { conversionId: _, ...withoutId } = validConversion;
+    const result = InsertConversionsInputSchema.safeParse({
+      agencyId: "12345",
+      advertiserId: "67890",
+      conversions: [withoutId],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("requires conversionTimestamp on each conversion", () => {
     const result = InsertConversionsInputSchema.safeParse({
       agencyId: "12345",
       advertiserId: "67890",
-      conversions: [{ gclid: "gclid-1", segmentationType: "FLOODLIGHT" }],
+      conversions: [
+        { clickId: "click-1", conversionId: "order-1", segmentationType: "FLOODLIGHT" },
+      ],
     });
     expect(result.success).toBe(false);
   });
@@ -103,7 +118,9 @@ describe("InsertConversionsInputSchema", () => {
     const result = InsertConversionsInputSchema.parse({
       agencyId: "12345",
       advertiserId: "67890",
-      conversions: [{ gclid: "gclid-1", conversionTimestamp: "1700000000000" }],
+      conversions: [
+        { clickId: "click-1", conversionId: "order-1", conversionTimestamp: "1700000000000" },
+      ],
     });
     expect(result.conversions[0].segmentationType).toBe("FLOODLIGHT");
   });
@@ -115,14 +132,14 @@ describe("InsertConversionsInputSchema", () => {
       conversions: [
         {
           clickId: "click-1",
-          gclid: "EAIaIQobChMI...",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           revenueMicros: "5000000",
           currencyCode: "USD",
           quantityMillis: "1000",
           segmentationType: "FLOODLIGHT",
           segmentationName: "Purchase",
-          floodlightActivityId: "11111",
+          segmentationId: "11111",
           type: "TRANSACTION",
           state: "ACTIVE",
           customMetric: [{ name: "metric1", value: 42 }],
@@ -139,7 +156,8 @@ describe("InsertConversionsInputSchema", () => {
       advertiserId: "67890",
       conversions: [
         {
-          gclid: "gclid-1",
+          clickId: "click-1",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
           customMetric: [{ name: "metric1", value: "not-a-number" }],

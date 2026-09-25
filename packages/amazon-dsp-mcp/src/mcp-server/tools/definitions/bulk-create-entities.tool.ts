@@ -4,8 +4,14 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertAmazonDspBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getCreatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
   assertGovernedEffectDryRun,
@@ -28,18 +34,18 @@ const TOOL_NAME = "amazon_dsp_bulk_create_entities";
 const TOOL_TITLE = "AmazonDsp Bulk Create Entities";
 const TOOL_DESCRIPTION = `Batch create multiple AmazonDsp Ads entities of the same type.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getCreatableEntityTypeEnum().join(", ")} (creatives cannot be created here — see \`amazon_dsp_create_entity\`).
 
 Creates entities sequentially (with concurrency). Each item follows the same
 schema as \`amazon_dsp_create_entity\`.
 
-Max 50 items per call. profile_id is automatically injected per item.`;
+Max 50 items per call. The session profile is sent as the Amazon-Advertising-API-Scope header on every request.`;
 
 const EFFECT_KIND = "entities_created";
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    entityType: z.enum(getCreatableEntityTypeEnum()).describe("Type of entities to create"),
     profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     items: z
       .array(z.record(z.any()))
@@ -97,7 +103,10 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM, "items")
+    );
     return {
       totalRequested: 0,
       successCount: 0,
@@ -119,6 +128,10 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the first
+  // write. One 3-token amazon_dsp:write per item.
+  assertAmazonDspBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
   const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.profileId, boundProfileId, "profileId");

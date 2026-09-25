@@ -133,7 +133,7 @@ Inspect the output, then iterate with more specific calls.
 ### Ad Previews (1 tool)
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| \`dv360_get_ad_preview\` | Get preview URL for a creative | Returns previewUrl + dimensions |
+| \`dv360_get_ad_preview\` | Get preview details for a creative | Third-party tag / VAST URL, dimensions, review status (DV360 has no preview URL) |
 
 ### Media Upload (2 tools)
 | Tool | Purpose | Notes |
@@ -144,8 +144,8 @@ Inspect the output, then iterate with more specific calls.
 ### Specialized (3 tools)
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| \`dv360_duplicate_entity\` | Duplicate an IO or line item | Copy-on-read with optional rename |
-| \`dv360_get_delivery_estimate\` | Get delivery/targeting info | Line item config or defaults |
+| \`dv360_duplicate_entity\` | Duplicate an IO or line item | Line items: native \`lineItems:duplicate\`; IOs: copy-on-read as DRAFT; optional rename |
+| \`dv360_get_delivery_estimate\` | Get delivery/targeting info | Line item config + assigned targeting (lineItemId required) |
 | \`dv360_get_pacing_status\` | Real-time pacing calc for a line item | Reads delivery + budget |
 
 ### Discovery (1 tool)

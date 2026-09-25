@@ -7,10 +7,11 @@
  * Implements the shared AuthStrategy interface for TikTok Ads.
  * Supports two credential flows:
  * 1. Static Bearer token (Authorization header) — for pre-generated tokens
- * 2. Refresh token flow (X-TikTok-App-Id/Secret/Refresh-Token headers) —
- *    auto-refreshes access tokens (recommended for production, 24h token expiry)
+ * 2. Refresh token headers (X-TikTok-App-Id/Secret/Refresh-Token) — rejected
+ *    with a clear Unauthorized error, because TikTok documents no refresh
+ *    endpoint (see TIKTOK_REFRESH_UNSUPPORTED_MESSAGE in tiktok-auth-adapter).
  *
- * Falls back to static token if refresh credentials are not provided.
+ * Uses the static token when refresh headers are not provided.
  *
  * TikTok-specific: also extracts X-TikTok-Advertiser-Id from headers, which is
  * required for all API calls and included in the credential fingerprint.

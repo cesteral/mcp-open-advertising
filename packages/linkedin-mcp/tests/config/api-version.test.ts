@@ -16,6 +16,8 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   LINKEDIN_API_VERSION,
   LINKEDIN_API_VERSION_VERIFIED_AT,
@@ -106,6 +108,27 @@ describe("version classification", () => {
     for (const bad of ["2026-08", "20268", "2026013", "abcdef", "", "201412", "202613"]) {
       expect(isValidLinkedInApiVersion(bad), bad).toBe(false);
       expect(() => monthsSinceVersion(bad)).toThrow(/YYYYMM/);
+    }
+  });
+});
+
+describe(".env.example", () => {
+  // `.env.example` used to set LINKEDIN_API_VERSION=202501. Config reads the env
+  // var ahead of the pin, so anyone who copied the example silently overrode
+  // 202608 with a version past its support window — #206 again, one file over.
+  it("does not override the pinned LinkedIn-Version with a stale literal", () => {
+    const envExample = readFileSync(
+      fileURLToPath(new URL("../../.env.example", import.meta.url)),
+      "utf-8"
+    );
+    const assignments = envExample
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("LINKEDIN_API_VERSION="));
+    for (const line of assignments) {
+      expect(line, "an active assignment must equal the pin, or be commented out").toBe(
+        `LINKEDIN_API_VERSION=${LINKEDIN_API_VERSION}`
+      );
     }
   });
 });

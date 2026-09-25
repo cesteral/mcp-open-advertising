@@ -3,7 +3,12 @@
 
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { fetchWithTimeout, executeWithRetry, type RetryConfig } from "@cesteral/shared";
+import {
+  assertSafeDownloadUrl,
+  fetchWithTimeout,
+  executeWithRetry,
+  type RetryConfig,
+} from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { withCM360ApiSpan } from "../../utils/platform.js";
 
@@ -14,6 +19,9 @@ export const RETRY_CONFIG: RetryConfig = {
   timeoutMs: 10_000,
   platformName: "CM360",
 };
+
+/** Hosts that may receive the bearer token on an absolute (raw) fetch. */
+export const CM360_DOWNLOAD_HOST_SUFFIXES = ["googleapis.com"] as const;
 
 export class CM360HttpClient {
   constructor(
@@ -50,6 +58,14 @@ export class CM360HttpClient {
     context?: RequestContext,
     options?: RequestInit
   ): Promise<Response> {
+    // fetchRaw attaches the user's Google bearer token to an absolute URL that
+    // arrives from the MCP client (cm360_download_report). Only Google API
+    // hosts may receive it — File.urls.apiUrl is on googleapis.com.
+    assertSafeDownloadUrl(url, {
+      allowedHostSuffixes: CM360_DOWNLOAD_HOST_SUFFIXES,
+      toolName: "cm360_download_report",
+    });
+
     const method = options?.method || "GET";
     const maxRetries = 3;
 

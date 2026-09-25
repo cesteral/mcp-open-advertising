@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import type {
   RequestContext,
@@ -152,8 +153,23 @@ export async function adjustLineItemBidsLogic(
     canonicalEntityKind: null,
   };
 
+  // Per adjustment: GET the line item (1 token) then PATCH it with the fetched
+  // entity passed through, so no second GET (1 token) — both on
+  // `dv360:${advertiserId}` (DV360Service.getEntity / updateEntity). Items are
+  // grouped by advertiser; one whose advertiserId is still to be elicited
+  // cannot be projected and is not counted.
+  const { dv360Service } = resolveSessionServices(sdkContext);
+  const capacityChecks = dv360Service.bulkCapacityChecks(
+    TOOL_NAME,
+    input.adjustments.map((a) => a.advertiserId?.trim() || undefined),
+    [1, 1]
+  );
+
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      bulkCapacityDryRunErrors(capacityChecks)
+    );
     return {
       confirmed: true,
       successful: [],
@@ -173,6 +189,10 @@ export async function adjustLineItemBidsLogic(
   const adjustmentReasons = [
     ...new Set(input.adjustments.map((a) => a.reason).filter((r): r is string => Boolean(r))),
   ];
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt, any field elicitation, and any upstream call.
+  assertBulkCapacityAll(capacityChecks);
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -197,8 +217,6 @@ export async function adjustLineItemBidsLogic(
       dispatchedCapability,
     };
   }
-
-  const { dv360Service } = resolveSessionServices(sdkContext);
 
   const successful: Array<{
     advertiserId: string;
@@ -356,9 +374,10 @@ export async function adjustLineItemBidsLogic(
  * here, so both axes are symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustLineItemBidsInput["adjustments"]
+  adjustments: AdjustLineItemBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   adjustments.forEach((a, i) => {
     if (!Number.isInteger(a.newBidMicros) || a.newBidMicros <= 0) {
       validationErrors.push({

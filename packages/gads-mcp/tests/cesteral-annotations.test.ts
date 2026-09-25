@@ -2,6 +2,8 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { describe, expect, it } from "vitest";
+import { resolveTokenMode } from "@cesteral/shared";
+import { allTools } from "../src/mcp-server/tools/index.js";
 import { updateEntityTool } from "../src/mcp-server/tools/definitions/update-entity.tool.js";
 import { getEntityTool } from "../src/mcp-server/tools/definitions/get-entity.tool.js";
 
@@ -70,5 +72,37 @@ describe("gads-mcp cesteral.* annotations (round 2)", () => {
     expect(shape).toHaveProperty("dryRun");
     expect(shape).toHaveProperty("before");
     expect(shape).toHaveProperty("after");
+  });
+});
+
+describe("gads-mcp contract namespace (#235)", () => {
+  const governed = allTools.flatMap((tool) => {
+    const cesteral = (tool.annotations as { cesteral?: Record<string, unknown> } | undefined)
+      ?.cesteral;
+    return cesteral ? [{ name: tool.name, cesteral }] : [];
+  });
+
+  it("puts every governed tool under google_ads, including duplicate and the uploads", () => {
+    expect(governed.map((t) => t.name)).toEqual(
+      expect.arrayContaining(["gads_duplicate_entity", "gads_upload_image", "gads_upload_video"])
+    );
+    for (const { name, cesteral } of governed) {
+      expect(cesteral.contractPlatformSlug, name).toBe("google_ads");
+      expect(cesteral.contractId, name).toBe(
+        `google_ads.${cesteral.contractToolSlug}.v${cesteral.schemaVersion}`
+      );
+    }
+  });
+
+  it("GOVERNANCE_TOKEN_MODE_GOOGLE_ADS reaches every governed gads tool", () => {
+    // The per-server override is keyed on the contractId's slug. Under the old
+    // split namespace this left gads_duplicate_entity, gads_upload_image and
+    // gads_upload_video on the global mode ("warn" here).
+    const env = { GOVERNANCE_TOKEN_MODE: "warn", GOVERNANCE_TOKEN_MODE_GOOGLE_ADS: "enforce" };
+    for (const { name, cesteral } of governed) {
+      expect(resolveTokenMode({ contractId: cesteral.contractId as string, env }), name).toBe(
+        "enforce"
+      );
+    }
   });
 });

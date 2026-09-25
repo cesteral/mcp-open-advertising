@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertSnapchatBulkCapacity,
+  snapchatBulkCost,
+  snapchatBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -124,7 +129,15 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      snapchatBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        snapchatBulkCost.bulkUpdate(input.entityType),
+        "items"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -136,6 +149,14 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/write.
+  assertSnapchatBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    snapchatBulkCost.bulkUpdate(input.entityType)
+  );
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -205,8 +226,11 @@ export async function bulkUpdateEntitiesLogic(
  * projects the would-be effect (an N-item update of one entity kind). Snapchat
  * has no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
       validationErrors.push({

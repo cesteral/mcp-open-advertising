@@ -6,7 +6,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return { ...actual, fetchWithTimeout: vi.fn() };
 });
 
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, JsonRpcErrorCode } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import { MetaGraphApiClient } from "../../src/services/meta/meta-graph-api-client.js";
@@ -146,6 +146,32 @@ describe("MetaGraphApiClient", () => {
       await expect(client.get("/me")).rejects.toThrow("Invalid parameter");
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
+
+    it("retries a GET that Meta throttles with HTTP 400 + code 341", async () => {
+      // Meta signals throttling in the body, not with 429. 4/17/341 are the codes
+      // facebook-php-business-sdk maps to ThrottleException.
+      mockErrorResponse(400, {
+        error: { message: "Application limit reached", type: "OAuthException", code: 341 },
+      });
+      mockOkResponse({ retried: true });
+
+      const result = await client.get("/me");
+      expect(result).toEqual({ retried: true });
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([4, 17, 32, 341, 613, 80001, 80004])(
+      "maps HTTP 400 + throttle code %i to RateLimited (POST is not re-sent on 400)",
+      async (code) => {
+        mockErrorResponse(400, {
+          error: { message: "Throttled", type: "OAuthException", code },
+        });
+
+        const err = await client.post("/act_1/campaigns", { name: "x" }).catch((e) => e);
+        expect(err.code).toBe(JsonRpcErrorCode.RateLimited);
+        expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+      }
+    );
 
     it("does NOT retry on 401 Unauthorized", async () => {
       mockErrorResponse(401, {

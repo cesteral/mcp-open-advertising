@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { BulkResult, RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityCheck, BulkResult, RateLimiter } from "@cesteral/shared";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -66,15 +66,74 @@ export type {
   CM360FloodlightConfiguration,
 };
 
+/**
+ * Rate-limit cost of ONE item of each bulk method, on `cm360:user:{quotaUser}` —
+ * one entry per `consume` the item makes, in order (see the bulk methods at
+ * the bottom of {@link CM360Service}):
+ *
+ * - `create`: {@link CM360Service.createEntity} (POST) — 1 token.
+ * - `update`: {@link CM360Service.patchEntity} (PATCH) — 1 token.
+ * - `status`: read-modify-write — {@link CM360Service.getEntity} (GET) then
+ *   {@link CM360Service.updateEntity} (PUT), 1 token each.
+ *
+ * CM360 has no native bulk endpoint, so none of these batch: cost is linear in
+ * item count. At the 5/min default a 120s queue budget admits 15 tokens — 15
+ * creates/updates or 7 status changes — so a 50-item batch would otherwise
+ * queue for up to ~10 minutes, past client and Cloud Run request timeouts.
+ * Keep in step with the consume calls below.
+ */
+export const CM360_BULK_COST_PER_ITEM = {
+  create: [1],
+  update: [1],
+  status: [1, 1],
+} as const satisfies Record<string, readonly number[]>;
+
+export type CM360BulkOperation = keyof typeof CM360_BULK_COST_PER_ITEM;
+
+/**
+ * The {@link BulkCapacityCheck} for a CM360 bulk batch, for
+ * `assertBulkCapacity` / `projectBulkCapacity`. `rateLimiter` must be the
+ * limiter the session's {@link CM360Service} consumes from (the package's
+ * `rateLimiter` from `utils/platform.ts`, which both transports hand to
+ * `createSessionServices`), and `quotaUser` that service's
+ * {@link CM360Service.quotaUser}.
+ */
+export function cm360BulkCapacityCheck(
+  rateLimiter: RateLimiter,
+  toolName: string,
+  operation: CM360BulkOperation,
+  quotaUser: string,
+  itemCount: number
+): BulkCapacityCheck {
+  return {
+    rateLimiter,
+    toolName,
+    itemCount,
+    buckets: [{ key: `cm360:user:${quotaUser}`, costPerItem: CM360_BULK_COST_PER_ITEM[operation] }],
+  };
+}
+
+/**
+ * Rate-limit keys: the limiter is configured for `cm360:*`, so every key must
+ * carry the `cm360:` prefix — a bare `"cm360"` (what every call site used to
+ * pass) matches nothing and is silently unlimited. Every trafficking call is
+ * keyed per quota user, `cm360:user:{quotaUser}`, because CM360 counts its
+ * per-user quota across all of a user's profiles (see `cm360QuotaUser`);
+ * the per-profile key this replaced let one user with N profiles run N times
+ * the default, and still isolates one user's bulk job from other users on the
+ * instance. Reporting shares this bucket (see CM360ReportingService). Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
+ */
 export class CM360Service {
   constructor(
     private readonly logger: Logger,
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: CM360HttpClient
+    private readonly httpClient: CM360HttpClient,
+    /** Per-user quota key segment — see `cm360QuotaUser` (quota-user.ts). */
+    readonly quotaUser: string
   ) {}
 
   async listUserProfiles(context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     this.logger.debug({ requestId: context?.requestId }, "Listing CM360 user profiles");
     return this.httpClient.fetch("/userprofiles", context);
   }
@@ -87,7 +146,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ entities: CM360EntityMap[T][]; nextPageToken?: string }> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
 
     const params = new URLSearchParams();
@@ -129,7 +188,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context) as Promise<CM360EntityMap[T]>;
@@ -141,7 +200,7 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
@@ -151,19 +210,52 @@ export class CM360Service {
     }) as Promise<CM360EntityMap[T]>;
   }
 
+  /**
+   * Full replacement — dfareporting v5 `{collection}.update`
+   * (`PUT userprofiles/{profileId}/{collection}`, entity id in the body).
+   * Any field absent from `data` is reset by CM360, so this is only safe with
+   * a complete entity object (e.g. the read-modify-write in
+   * {@link bulkUpdateStatus}). Partial updates must use {@link patchEntity}.
+   */
   async updateEntity<T extends CM360EntityType>(
     entityType: T,
     profileId: string,
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+    }) as Promise<CM360EntityMap[T]>;
+  }
+
+  /**
+   * Partial update — dfareporting v5 `{collection}.patch`
+   * (`PATCH userprofiles/{profileId}/{collection}?id={entityId}`, `id` a
+   * required query parameter on all 8 entity types). Only the fields present
+   * in `patch` change; everything else on the entity is preserved. The id is
+   * also written into the body so it can never disagree with the query.
+   * Returns the full updated entity.
+   */
+  async patchEntity<T extends CM360EntityType>(
+    entityType: T,
+    profileId: string,
+    entityId: string,
+    patch: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<CM360EntityMap[T]> {
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
+    const config = getEntityConfig(entityType);
+    const query = new URLSearchParams({ id: entityId }).toString();
+    const path = `/userprofiles/${profileId}/${config.apiCollection}?${query}`;
+    return this.httpClient.fetch(path, context, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...patch, id: entityId }),
     }) as Promise<CM360EntityMap[T]>;
   }
 
@@ -175,7 +267,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ options: unknown[]; nextPageToken?: string }> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const params = new URLSearchParams();
     if (pageToken) params.set("pageToken", pageToken);
@@ -211,7 +303,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume("cm360");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     if (!config.supportsDelete) {
       throw new McpError(
@@ -252,8 +344,7 @@ export class CM360Service {
   > {
     const bulkResults = await executeBulkConcurrent(
       items,
-      (item) =>
-        this.updateEntity(entityType, profileId, { ...item.data, id: item.entityId }, context),
+      (item) => this.patchEntity(entityType, profileId, item.entityId, item.data, context),
       { logger: this.logger }
     );
     return bulkResults.map((r, i) => ({
@@ -265,10 +356,11 @@ export class CM360Service {
   }
 
   /**
-   * Read-modify-write status update. CM360's PUT semantics replace the entire
-   * resource, so each status flip needs a fresh GET to avoid clobbering other
-   * fields. The caller provides the per-entity-type status mapping via the
-   * `applyStatus` transform.
+   * Read-modify-write status update: GET the full entity, flip its status
+   * fields, then PUT the complete object back via {@link updateEntity}. The PUT
+   * is a full replacement, which is safe here only because the body is the
+   * whole entity just read. The caller provides the per-entity-type status
+   * mapping via the `applyStatus` transform.
    */
   async bulkUpdateStatus<T extends CM360EntityType>(
     entityType: T,

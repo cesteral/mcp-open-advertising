@@ -80,9 +80,10 @@ describe("SnapchatService", () => {
       { name: "New", status: "ACTIVE" }
     );
 
+    // ad_account_id is injected into the body from the route's ad account.
     expect(mockHttpClient.post).toHaveBeenCalledWith(
       "/v1/adaccounts/acct_456/campaigns",
-      { campaigns: [{ name: "New", status: "ACTIVE" }] },
+      { campaigns: [{ name: "New", status: "ACTIVE", ad_account_id: "acct_456" }] },
       undefined
     );
     expect((result as any).id).toBe("new_c");
@@ -163,11 +164,18 @@ describe("SnapchatService", () => {
     );
   });
 
-  it("deletes entities with entity-specific DELETE routes", async () => {
+  it("deletes entities with entity-specific DELETE routes after an ownership pre-read", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      campaigns: [
+        { sub_request_status: "SUCCESS", campaign: { id: "c1", ad_account_id: "acct_456" } },
+      ],
+    });
     mockHttpClient.delete.mockResolvedValueOnce({ request_status: "SUCCESS" });
 
     await service.deleteEntity("campaign", "c1");
 
+    expect(mockHttpClient.get).toHaveBeenCalledWith("/v1/campaigns/c1", undefined, undefined);
     expect(mockHttpClient.delete).toHaveBeenCalledWith("/v1/campaigns/c1", undefined, undefined);
   });
 
@@ -193,9 +201,16 @@ describe("SnapchatService", () => {
   });
 
   it("fetches creative previews from the documented creative_preview endpoint", async () => {
-    mockHttpClient.get.mockResolvedValueOnce({
-      creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=cr_1",
-    });
+    mockHttpClient.get
+      .mockResolvedValueOnce({
+        request_status: "SUCCESS",
+        creatives: [
+          { sub_request_status: "SUCCESS", creative: { id: "cr_1", ad_account_id: "acct_456" } },
+        ],
+      })
+      .mockResolvedValueOnce({
+        creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=cr_1",
+      });
 
     await service.getCreativePreview("cr_1");
 

@@ -5,6 +5,7 @@ const mockState = vi.hoisted(() => ({
     getEntity: vi.fn(),
     createEntity: vi.fn(),
     updateEntity: vi.fn(),
+    patchEntity: vi.fn(),
     deleteEntity: vi.fn(),
     listEntities: vi.fn(),
     listUserProfiles: vi.fn(),
@@ -55,10 +56,11 @@ describe("bulkUpdateEntitiesLogic", () => {
         const out: any[] = [];
         for (const item of items) {
           try {
-            const entity = await mockState.cm360Service.updateEntity(
+            const entity = await mockState.cm360Service.patchEntity(
               entityType,
               profileId,
-              { ...item.data, id: item.entityId },
+              item.entityId,
+              item.data,
               context
             );
             out.push({ entityId: item.entityId, success: true, entity });
@@ -76,7 +78,7 @@ describe("bulkUpdateEntitiesLogic", () => {
   });
 
   it("all succeed: updated === items.length, failed === 0", async () => {
-    mockState.cm360Service.updateEntity
+    mockState.cm360Service.patchEntity
       .mockResolvedValueOnce({ id: "1", name: "A" })
       .mockResolvedValueOnce({ id: "2", name: "B" });
 
@@ -99,8 +101,8 @@ describe("bulkUpdateEntitiesLogic", () => {
     expect(result.results[1].success).toBe(true);
   });
 
-  it("injects entityId as data.id", async () => {
-    mockState.cm360Service.updateEntity.mockResolvedValue({ id: "e-1" });
+  it("hands the service each partial item unchanged (the service PATCHes it at ?id=entityId)", async () => {
+    mockState.cm360Service.patchEntity.mockResolvedValue({ id: "e-1" });
 
     await bulkUpdateEntitiesLogic(
       {
@@ -111,16 +113,25 @@ describe("bulkUpdateEntitiesLogic", () => {
       mockContext
     );
 
-    expect(mockState.cm360Service.updateEntity).toHaveBeenCalledWith(
+    expect(mockState.cm360Service.bulkUpdateEntities).toHaveBeenCalledWith(
       "campaign",
       "prof-1",
-      { name: "Test", id: "e-1" },
+      [{ entityId: "e-1", data: { name: "Test" } }],
       mockContext
     );
+    expect(mockState.cm360Service.patchEntity).toHaveBeenCalledWith(
+      "campaign",
+      "prof-1",
+      "e-1",
+      { name: "Test" },
+      mockContext
+    );
+    // Never a full-replacement PUT with the partial object.
+    expect(mockState.cm360Service.updateEntity).not.toHaveBeenCalled();
   });
 
   it("partial failure handling", async () => {
-    mockState.cm360Service.updateEntity
+    mockState.cm360Service.patchEntity
       .mockResolvedValueOnce({ id: "1", name: "OK" })
       .mockRejectedValueOnce(new Error("Update failed"))
       .mockResolvedValueOnce({ id: "3", name: "OK" });
@@ -145,7 +156,7 @@ describe("bulkUpdateEntitiesLogic", () => {
   });
 
   it("propagates error messages", async () => {
-    mockState.cm360Service.updateEntity.mockRejectedValue(new Error("Rate limit exceeded"));
+    mockState.cm360Service.patchEntity.mockRejectedValue(new Error("Rate limit exceeded"));
 
     const result = await bulkUpdateEntitiesLogic(
       {

@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
-import { AMAZON_DSP_V1_PATHS } from "./amazon-dsp-v1-api-contract.js";
+import { AMAZON_ADS_V1_HEADERS, AMAZON_DSP_V1_PATHS } from "./amazon-dsp-v1-api-contract.js";
 import {
   DSPCommitmentSuccessResponseSchema,
   DSPCommitmentMultiStatusResponseSchema,
@@ -116,14 +116,22 @@ export class AmazonDspV1Service {
     return this.unwrapSingleCommitmentResult(raw, "update");
   }
 
+  /**
+   * `DSPRetrieveCampaignForecast` requires the `Amazon-Ads-AccountId` header
+   * (the DSP advertiser ID) in addition to `Amazon-Ads-ClientId`.
+   */
   async retrieveCampaignForecast(
     body: DSPRetrieveCampaignForecastRequestT,
+    accountId: string,
     context?: RequestContext
   ): Promise<DSPCampaignForecastMultiStatusResponseT> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
       body as unknown as Record<string, unknown>,
-      context
+      context,
+      undefined,
+      undefined,
+      { [AMAZON_ADS_V1_HEADERS.accountId]: accountId }
     );
     return DSPCampaignForecastMultiStatusResponseSchema.parse(raw);
   }

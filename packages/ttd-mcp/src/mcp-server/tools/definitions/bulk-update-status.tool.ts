@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -37,7 +38,7 @@ const TOOL_DESCRIPTION = `Batch update the availability status for multiple The 
 
 Use this tool for batch pause/resume operations across campaigns or ad groups.
 
-**Note:** This uses a read-modify-write pattern (GET → PUT). Concurrent modifications to the same entity may cause one update to overwrite the other. Avoid running multiple status updates for the same entity in parallel.`;
+**Note:** Each entity gets one partial PUT containing only its ID and \`Availability\` — no other field is read or written. TTD has no optimistic locking, so the last write wins; avoid running multiple status updates for the same entity in parallel.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -103,8 +104,13 @@ export async function bulkUpdateStatusLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
+  // One partial PUT per id, one token each on `ttd:${partnerId}`
+  // (TtdService.bulkUpdateStatus → updateAvailability).
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.entityIds.length, [1]);
+
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors([capacityCheck]));
     return {
       confirmed: true,
       entityType: input.entityType,
@@ -118,6 +124,10 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -140,8 +150,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.bulkUpdateStatus(
     input.entityType as TtdEntityType,
@@ -185,8 +193,11 @@ export async function bulkUpdateStatusLogic(
  * status change to one target status). TTD has no native bulk validate, so both
  * axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkStatusInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkStatusInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((id, i) => {
     if (!id || id.trim().length === 0) {
       validationErrors.push({

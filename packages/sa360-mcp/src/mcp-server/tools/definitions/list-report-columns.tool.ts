@@ -13,7 +13,7 @@ const TOOL_DESCRIPTION = `List SA360 Reporting API fields for a given resource (
 
 Uses the live \`searchAds360Fields\` endpoint when credentials are available; falls back to a static catalog when the live call fails so callers always get a usable discovery surface.
 
-**resource:** one of \`account\`, \`campaign\`, \`ad_group\`, \`ad_group_ad\`, \`ad_group_criterion\`, \`campaign_budget\`, \`conversion\`, \`conversion_action\`, \`customer\`, or a top-level prefix like \`metrics\` or \`segments\`. When omitted, the tool returns the full fallback catalog grouping.
+**resource:** one of \`campaign\`, \`ad_group\`, \`ad_group_ad\`, \`ad_group_criterion\`, \`campaign_budget\`, \`conversion\`, \`conversion_action\`, \`customer\`, or a top-level prefix like \`metrics\` or \`segments\`. When omitted, the tool returns the full fallback catalog grouping.
 
 **includeMetrics / includeSegments:** when true (default) and a specific resource is supplied, the response also includes the canonical \`metrics.*\` and \`segments.*\` field groups so you can build a full SELECT clause.
 
@@ -124,7 +124,12 @@ export async function listReportColumnsLogic(
   if (resource && input.preferLive !== false) {
     try {
       const { sa360Service } = resolveSessionServices(sdkContext);
-      const result = await sa360Service.searchFields(buildLiveQuery(resource, 1000), 1000, context);
+      const result = await sa360Service.searchFields(
+        buildLiveQuery(resource, 1000),
+        1000,
+        undefined,
+        context
+      );
       const liveFields = result.fields as Record<string, unknown>[];
       if (liveFields.length > 0) {
         return {

@@ -33,6 +33,12 @@ export interface AmazonDspEntityContract {
   createMediaType?: string;
   /** Vendor media type required on PUT {updatePath}. See createMediaType. */
   updateMediaType?: string;
+  /**
+   * Set when this server cannot create this entity type. Create tools omit the
+   * type from their `entityType` enum and the service rejects it (covering
+   * duplicate, which creates via the same path).
+   */
+  createUnsupportedReason?: string;
   idField: string;
   responseKey: string;
   listFilterParam: string;
@@ -111,6 +117,8 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     getPath: "/dsp/creatives/{entityId}",
     createPath: "/dsp/creatives",
     updatePath: "/dsp/creatives/{entityId}",
+    createUnsupportedReason:
+      "Amazon DSP has no plain POST /dsp/creatives endpoint — creative writes are subtype-routed (/dsp/creatives/image, /video, /thirdParty, /rec) with their own vendor media types, which this server does not implement. Create creatives in the Amazon DSP console (or upload video assets with amazon_dsp_upload_video) and link them with a creativeAssociation.",
     idField: "creativeId",
     responseKey: "creatives",
     listFilterParam: "advertiserId",
@@ -189,27 +197,37 @@ export const AMAZON_DSP_CANONICAL_ENTITY_TYPES = Object.keys(
 ) as AmazonDspCanonicalEntityType[];
 
 /**
- * Amazon DSP Reporting API contract (the legacy `/dsp/reports` surface).
+ * Amazon DSP Reporting API contract (DSP reports v3, account-scoped).
+ *
+ * Source: Amazon's official Postman collection,
+ * github.com/amzn/ads-advanced-tools-docs `postman/Amazon_Ads_API.postman_collection.json`
+ * → Reporting / DSP report ("Request DSP report", "DSP report status"; doc link
+ * advertising.amazon.com/API/docs/en-us/dsp-reports-beta-3p/#/Reports):
+ *   POST {api_url}/accounts/{dspAccountId}/dsp/reports
+ *     Accept: application/vnd.dspcreatereports.v3+json, Content-Type: application/json
+ *     body { startDate: "2023-02-21", endDate: "2023-02-27", type: "CAMPAIGN",
+ *            dimensions: ["ORDER","LINE_ITEM","CREATIVE"], metrics: ["impressions", …] }
+ *   GET  {api_url}/accounts/{dspAccountId}/dsp/reports/{reportId}
+ *     Accept: application/vnd.dspgetreports.v3+json
+ * The 2026-05-15 live run (docs/plans/2026-05-15-amazon-dsp-live-test-findings.md)
+ * also recorded `POST /accounts/{accountId}/dsp/reports` with the create
+ * media type returning 202, and that `accountId` is the DSP advertiser ID
+ * (not the profile ID).
  *
  * NOT to be confused with the Sponsored Ads v3 Reporting API at
  * `/reporting/reports` — that endpoint uses a `configuration{adProduct,
  * reportTypeId, groupBy, columns, format}` envelope and does NOT accept DSP
- * report types. The DSP equivalent at `/dsp/reports` has a completely
- * different request shape (flat body, `type`+`dimensions`+`metrics`,
- * `YYYYMMDD` dates, plain `application/json`).
- *
- * Discovered empirically on 2026-05-15 — see
- * `docs/plans/2026-05-15-amazon-dsp-live-test-findings.md` for the full probe
- * trail. The previous contract here targeted the Sponsored Ads v3 endpoint
- * and never worked against a live DSP account.
+ * report types.
  */
 export const AMAZON_DSP_REPORTING_CONTRACT = {
-  submitPathTemplate: "/dsp/reports",
-  statusPathTemplate: "/dsp/reports/{reportId}",
-  /** Status values the live API actually returns (legacy DSP shape). */
+  submitPathTemplate: "/accounts/{accountId}/dsp/reports",
+  statusPathTemplate: "/accounts/{accountId}/dsp/reports/{reportId}",
+  submitAccept: "application/vnd.dspcreatereports.v3+json",
+  statusAccept: "application/vnd.dspgetreports.v3+json",
+  /** Status values (Postman examples show IN_PROGRESS and SUCCESS). */
   statuses: ["IN_PROGRESS", "SUCCESS", "FAILURE"] as const,
   defaultTimeUnit: "DAILY" as const,
-  /** Allowed `type` values for /dsp/reports (discovered via 422 error message). */
+  /** Allowed `type` values (one Postman example per type). */
   reportTypes: [
     "CAMPAIGN",
     "INVENTORY",
@@ -219,21 +237,66 @@ export const AMAZON_DSP_REPORTING_CONTRACT = {
     "GEOGRAPHY",
     "CONVERSION_SOURCE",
   ] as const,
-  /** Allowed `dimensions` values per report type (incomplete — extend as discovered). */
+  /**
+   * `dimensions` values as used in Amazon's Postman example for each type.
+   * Examples, not an exhaustive catalog.
+   */
   dimensionsByType: {
     CAMPAIGN: ["ORDER", "LINE_ITEM", "CREATIVE"] as const,
+    INVENTORY: ["SUPPLY", "DEAL"] as const,
+    AUDIENCE: ["ORDER", "LINE_ITEM"] as const,
+    PRODUCTS: ["ORDER", "LINE_ITEM"] as const,
+    TECHNOLOGY: [
+      "ORDER",
+      "LINE_ITEM",
+      "OPERATING_SYSTEM",
+      "BROWSER_TYPE",
+      "BROWSER_VERSION",
+      "DEVICE_TYPE",
+      "ENVIRONMENT_TYPE",
+    ] as const,
+    GEOGRAPHY: [
+      "ORDER",
+      "LINE_ITEM",
+      "COUNTRY",
+      "STATE_COUNTY_REGION",
+      "CITY",
+      "DMA",
+      "POSTAL_CODE",
+    ] as const,
+    CONVERSION_SOURCE: ["ORDER", "LINE_ITEM", "CREATIVE"] as const,
   },
   /**
-   * Confirmed-valid metric names (4 sampled live for CAMPAIGN type — the API
-   * surfaces an authoritative invalid-list in 422 errors, so use that for
-   * runtime validation rather than hardcoding the full catalog here).
+   * A sample of metric names present in Amazon's Postman CAMPAIGN example
+   * (which lists 432). The API surfaces an authoritative invalid-list in 422
+   * errors, so use that for runtime validation rather than this list.
    */
-  knownMetrics: ["impressions", "totalCost", "viewableImpressions", "viewabilityRate"],
+  knownMetrics: [
+    "impressions",
+    "clickThroughs",
+    "totalCost",
+    "viewableImpressions",
+    "viewabilityRate",
+    "eCPM",
+    "eCPC",
+    "videoStart",
+    "videoFirstQuartile",
+    "videoMidpoint",
+    "videoThirdQuartile",
+    "videoComplete",
+    "dpv14d",
+    "purchases14d",
+    "sales14d",
+    "newToBrandPurchases14d",
+    "totalPurchases14d",
+    "totalSales14d",
+  ],
   notes: [
-    "POST /dsp/reports body shape: { startDate (YYYYMMDD), endDate (YYYYMMDD), type (one of reportTypes), dimensions?: string[], metrics?: string (comma-separated), timeUnit?: 'DAILY' }.",
-    "Returns 202 with { reportId, type, format, status:'IN_PROGRESS', location:'', expiration } — poll GET /dsp/reports/{reportId} until status === 'SUCCESS' (returns presigned S3 download `location`) or 'FAILURE'.",
-    "Plain application/json Content-Type works — no vendor media type required (unlike entity writes).",
-    "Endpoint is NOT account-scoped — `accountId` is not part of the URL path. The Amazon-Advertising-API-Scope header still identifies the profile.",
+    "POST /accounts/{accountId}/dsp/reports body shape: { startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), type (one of reportTypes), dimensions?: string[], metrics?: string[], timeUnit?: 'DAILY' | 'SUMMARY' }.",
+    "`accountId` in the path is the DSP advertiser ID (`advertiserId` from amazon_dsp_list_advertisers) — not the profile ID sent in Amazon-Advertising-API-Scope.",
+    "Send Accept: application/vnd.dspcreatereports.v3+json on submit and Accept: application/vnd.dspgetreports.v3+json on status; Content-Type is plain application/json.",
+    "Returns 202 with { reportId, type, format:'JSON', status:'IN_PROGRESS', location:'', expiration } — poll GET /accounts/{accountId}/dsp/reports/{reportId} until status === 'SUCCESS' (returns presigned S3 download `location`) or 'FAILURE'.",
+    "`timeUnit` does not appear in Amazon's Postman DSP report examples; this server sends DAILY unless SUMMARY is requested.",
   ],
 } as const;
 

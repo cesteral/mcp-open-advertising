@@ -225,9 +225,9 @@ describe("amazon_dsp_create_entity governance contract", () => {
   });
 
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
-    mockCreateEntity.mockResolvedValue({ creativeId: "cr_1" });
+    mockCreateEntity.mockResolvedValue({ targetId: "t_1" });
     const result = await createEntityLogic(
-      { entityType: "creative", profileId: "1", data: { name: "Test" } } as any,
+      { entityType: "target", profileId: "1", data: { lineItemId: "li_1" } } as any,
       ctx,
       sdk
     );
@@ -238,7 +238,7 @@ describe("amazon_dsp_create_entity governance contract", () => {
   it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
     mockCreateEntity.mockClear();
     const result = await createEntityLogic(
-      { entityType: "creative", profileId: "1", data: {}, dry_run: true } as any,
+      { entityType: "target", profileId: "1", data: {}, dry_run: true } as any,
       ctx,
       sdk
     );
@@ -247,5 +247,44 @@ describe("amazon_dsp_create_entity governance contract", () => {
     expect(result.dryRun).toBeDefined();
     expect(result.dryRun?.expectedPostState).toBeUndefined();
     expect(result.dryRun?.expectedStateSource).toBe("none");
+  });
+});
+
+describe("create input schemas exclude creative (not creatable via this server)", () => {
+  it("amazon_dsp_create_entity rejects entityType creative and accepts order", () => {
+    expect(
+      CreateEntityInputSchema.safeParse({
+        entityType: "creative",
+        profileId: "1",
+        data: { name: "x" },
+      }).success
+    ).toBe(false);
+    expect(
+      CreateEntityInputSchema.safeParse({
+        entityType: "order",
+        profileId: "1",
+        data: { name: "x" },
+      }).success
+    ).toBe(true);
+  });
+
+  it("amazon_dsp_bulk_create_entities rejects entityType creative", async () => {
+    const { BulkCreateEntitiesInputSchema } = await import(
+      "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js"
+    );
+    expect(
+      BulkCreateEntitiesInputSchema.safeParse({
+        entityType: "creative",
+        profileId: "1",
+        items: [{ name: "x" }],
+      }).success
+    ).toBe(false);
+    expect(
+      BulkCreateEntitiesInputSchema.safeParse({
+        entityType: "target",
+        profileId: "1",
+        items: [{ lineItemId: "li" }],
+      }).success
+    ).toBe(true);
   });
 });

@@ -17,6 +17,17 @@ export const TIKTOK_RETRY_CONFIG: RetryConfig = {
   tokenExpiryHint: "TikTok token expired. Regenerate in TikTok Business Center.",
 };
 
+/**
+ * Upstream auth header. TikTok's Business API takes the token in an
+ * `Access-Token` header, not `Authorization: Bearer` — every one of the 202
+ * OpenAPI specs in the official SDK (github.com/tiktok/tiktok-business-api-sdk)
+ * declares `name: Access-Token, required: true`, and the Python/JS/Java clients
+ * all send `header_params['Access-Token']` with no other auth scheme configured.
+ * (Inbound MCP clients still authenticate to *this* server with
+ * `Authorization: Bearer`; that is unrelated.)
+ */
+export const TIKTOK_ACCESS_TOKEN_HEADER = "Access-Token";
+
 /** TikTok standard API response shape */
 interface TikTokApiResponse {
   code: number;
@@ -25,18 +36,43 @@ interface TikTokApiResponse {
   request_id?: string;
 }
 
-/** TikTok error codes that indicate token expiry or auth failure */
-const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
+/*
+ * TikTok return codes, from the vendor's own table in the official SDK
+ * (python_sdk/business_api_client/tiktok_business/tiktok_code.py,
+ * `NumericErrorCodes`). The previous sets were guessed and wrong in ways that
+ * mattered: 40002 is PARAM_ERROR (every validation failure surfaced as
+ * Unauthorized with a "renew the token" hint), 40013 is
+ * SANDBOX_ADV_NOT_EXIST, 40101 is INVALID_PARTNER (was retried as a rate
+ * limit), and 40105 is INVALID_ACCESS_TOKEN (was given an advertiser hint).
+ */
 
-/** TikTok error codes that indicate rate limiting */
-const RATE_LIMIT_CODES = new Set([40100, 40101]);
+/** Access-token failures: 40102 ACCESS_TOKEN_EXPIRE, 40104 EMPTY_ACCESS_TOKEN, 40105 INVALID_ACCESS_TOKEN. */
+const AUTH_ERROR_CODES = new Set([40102, 40104, 40105]);
+
+/** Authenticated but not allowed: 40001 PERMISSION_ERROR, 40003 FORBIDDEN, 40130 SCOPE_NOT_AUTHORIZED. */
+const PERMISSION_ERROR_CODES = new Set([40001, 40003, 40130]);
+
+/** Request rejected as invalid: 40000 INVALID_PARAMS, 40002 PARAM_ERROR. */
+const INVALID_PARAM_CODES = new Set([40000, 40002]);
+
+/** Throttling: 40100 REQUEST_TOO_FREQUENT, 40132 REQUEST_FREQUENCY_LIMITED. */
+const RATE_LIMIT_CODES = new Set([40100, 40132]);
+
+/** Advertiser problems: 40300 ADVERTISER_NOT_EXIST, 40301 ADVERTISER_ROLE_ERROR, 40013 SANDBOX_ADV_NOT_EXIST. */
+const ADVERTISER_ERROR_CODES = new Set([40013, 40300, 40301]);
 
 function mapTikTokErrorToJsonRpc(tiktokCode: number, httpStatus: number): JsonRpcErrorCode {
   if (AUTH_ERROR_CODES.has(tiktokCode)) {
     return JsonRpcErrorCode.Unauthorized;
   }
+  if (PERMISSION_ERROR_CODES.has(tiktokCode)) {
+    return JsonRpcErrorCode.Forbidden;
+  }
   if (RATE_LIMIT_CODES.has(tiktokCode)) {
     return JsonRpcErrorCode.RateLimited;
+  }
+  if (INVALID_PARAM_CODES.has(tiktokCode)) {
+    return JsonRpcErrorCode.InvalidParams;
   }
   if (tiktokCode >= 50000) {
     return JsonRpcErrorCode.ServiceUnavailable;
@@ -51,10 +87,10 @@ function buildTikTokEnvelopeNextAction(tiktokCode: number, message: string): str
   if (RATE_LIMIT_CODES.has(tiktokCode)) {
     return "Back off and retry with exponential delay. TikTok rate limits are per-app and per-advertiser; reduce concurrent requests.";
   }
-  if (tiktokCode === 40105 || /advertiser/i.test(message)) {
+  if (ADVERTISER_ERROR_CODES.has(tiktokCode) || /advertiser/i.test(message)) {
     return "Verify the advertiser_id with tiktok_list_advertisers; the authenticated user may not have access to this advertiser.";
   }
-  if (tiktokCode === 40002 || /permission/i.test(message)) {
+  if (PERMISSION_ERROR_CODES.has(tiktokCode) || /permission/i.test(message)) {
     return "Verify the token has Ads Management scopes and the user has manager-level access in TikTok Business Center.";
   }
   return undefined;
@@ -103,7 +139,7 @@ function validateTikTokEnvelope(body: unknown): unknown {
 /**
  * HTTP client for TikTok Marketing API requests.
  *
- * Handles authentication via Bearer token, automatic advertiser_id injection,
+ * Handles authentication via the `Access-Token` header, automatic advertiser_id injection,
  * retry with exponential backoff, and TikTok-specific error parsing.
  *
  * Key TikTok patterns:
@@ -230,7 +266,7 @@ export class TikTokHttpClient {
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {
-            Authorization: `Bearer ${accessToken}`,
+            [TIKTOK_ACCESS_TOKEN_HEADER]: accessToken,
             "Content-Type": contentType,
           };
         },
@@ -273,7 +309,7 @@ export class TikTokHttpClient {
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           const headers: Record<string, string> = {
-            Authorization: `Bearer ${accessToken}`,
+            [TIKTOK_ACCESS_TOKEN_HEADER]: accessToken,
           };
           // Only include Content-Type for requests with a body (POST/DELETE)
           if (options?.body) {

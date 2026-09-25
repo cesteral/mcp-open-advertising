@@ -34,7 +34,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   tiktokAccessToken: z.string().optional(),
   tiktokAdvertiserId: z.string().optional(),
 
-  // Refresh token flow: app credentials + refresh token (recommended for production)
+  // Refresh token flow: NOT supported upstream (no documented refresh endpoint) — rejected at auth
   tiktokAppId: z.string().optional(),
   tiktokAppSecret: z.string().optional(),
   tiktokRefreshToken: z.string().optional(),

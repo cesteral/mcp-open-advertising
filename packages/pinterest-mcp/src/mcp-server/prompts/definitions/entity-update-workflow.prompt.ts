@@ -27,7 +27,7 @@ export const pinterestEntityUpdateWorkflowPrompt: Prompt = {
     },
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID",
+      description: "Pinterest ad account ID",
       required: true,
     },
   ],
@@ -42,7 +42,7 @@ export function getPinterestEntityUpdateWorkflowMessage(args?: Record<string, st
 
 Entity Type: \`${entityType}\`
 Entity ID: \`${entityId}\`
-Advertiser ID: \`${adAccountId}\`
+Ad account ID: \`${adAccountId}\`
 
 ---
 
@@ -69,7 +69,7 @@ Review the current values. Save the current state for rollback reference.
 
 ## Step 2: Update Entity Fields
 
-Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, targeting):
+\`pinterest_update_entity\` sends a PATCH with only the fields you provide, using Pinterest's own field names (OpenAPI v5). The entity id and ad account are added for you.
 
 ### Campaign Updates
 
@@ -82,11 +82,13 @@ Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, target
     "entityId": "${entityId}",
     "data": {
       "name": "Updated Campaign Name",
-      "daily_spend_cap": 100000000
+      "end_time": 1798761599
     }
   }
 }
 \`\`\`
+
+Campaign fields include \`name\`, \`status\`, \`start_time\` / \`end_time\` (Unix seconds), \`daily_spend_cap\` / \`lifetime_spend_cap\` (only one can be set, and one is required for campaign budget optimization) and \`tracking_urls\`. \`objective_type\` can only be changed on some campaigns.
 
 ### Ad Group Updates
 
@@ -99,15 +101,20 @@ Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, target
     "entityId": "${entityId}",
     "data": {
       "name": "Updated Ad Group",
-      "budget": 100,
-      "bid_price": 0.8,
-      "age": ["AGE_25_34", "AGE_35_44"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US", "GB"]
+      "budget_in_micro_currency": 100000000,
+      "bid_in_micro_currency": 800000,
+      "targeting_spec": {
+        "AGE_BUCKET": ["25-34", "35-44"],
+        "LOCATION": ["US", "GB"]
+      }
     }
   }
 }
 \`\`\`
+
+\`targeting_spec\` replaces the whole spec, so include every dimension you want to keep. Use \`targeting_spec_operations\` for incremental changes instead. See \`pinterest_targeting_discovery_workflow\` for the keys.
+
+To change bids across several ad groups, prefer \`pinterest_adjust_bids\`. It takes bids in account currency (\`1.5\` = 1.50), converts them to micros for you, and reports the previous bid.
 
 ### Ad Updates
 
@@ -119,22 +126,21 @@ Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, target
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}",
     "data": {
-      "ad_name": "Updated Ad Name",
-      "ad_text": "New ad copy (max 100 chars)",
-      "call_to_action": "SHOP_NOW",
-      "landing_page_url": "https://example.com/new-page"
+      "name": "Updated Ad Name",
+      "destination_url": "https://example.com/new-page",
+      "customizable_cta_type": "SHOP_NOW"
     }
   }
 }
 \`\`\`
 
+An ad's image, video and text come from its Pin (\`pin_id\`), not from fields on the ad. To change the copy, edit or replace the Pin.
+
 ---
 
-## Step 3: Update Status (Separate Endpoint)
+## Step 3: Update Status
 
-⚠️ **CRITICAL GOTCHA**: Pinterest uses a **separate endpoint** for status changes. Do NOT include \`operation_status\` in \`pinterest_update_entity\` — it won't work.
-
-Use \`pinterest_bulk_update_status\` for all status changes:
+Status is an ordinary field on the same PATCH, so \`pinterest_update_entity\` with \`{"status": "PAUSED"}\` works. For one or many entities, \`pinterest_bulk_update_status\` is simpler, and it reports a result for each id:
 
 \`\`\`json
 {
@@ -143,12 +149,14 @@ Use \`pinterest_bulk_update_status\` for all status changes:
     "entityType": "${entityType}",
     "adAccountId": "${adAccountId}",
     "entityIds": ["${entityId}"],
-    "operationStatus": "ACTIVE"
+    "operationStatus": "PAUSED"
   }
 }
 \`\`\`
 
-Valid status values: \`"ACTIVE"\`, \`"PAUSED"\`, \`"ARCHIVED"\`
+Valid values: \`"ACTIVE"\`, \`"PAUSED"\`, \`"ARCHIVED"\`.
+
+⚠️ **ARCHIVED is Pinterest's soft delete, and no tool on this server unarchives.** Treat it as permanent. Use PAUSED to stop delivery reversibly.
 
 ---
 
@@ -171,11 +179,10 @@ After the update call succeeds, verify the changes:
 
 ## Gotchas
 
-- **Status changes use a different tool**: Never use \`pinterest_update_entity\` for enabling/disabling entities — use \`pinterest_bulk_update_status\`.
-- **Budget values are in account currency**: \`budget: 100\` means $100.00 (not cents, not micros).
-- **Targeting replaces on ad group**: When updating targeting fields on an ad group, include all targeting you want to keep.
-- **Video IDs are immutable**: You cannot change the video on an existing ad. Delete and recreate instead.
-- **Ad review re-triggered**: Updating ad copy or creative may trigger a new review cycle (24-48h).
+- **Money is in micro-currency** in \`pinterest_update_entity\`: \`budget_in_micro_currency: 100000000\` = 100.00 in the account currency. Only \`pinterest_adjust_bids\` takes plain currency units.
+- **Times are Unix seconds** (\`start_time\`, \`end_time\`), not date strings.
+- **Rejections come back as HTTP 200.** Pinterest returns per-item \`exceptions\`, and the tools report them as errors, so read the result rather than assuming success.
+- **billable_event** can only be changed on a draft ad group.
 
 ---
 
@@ -197,6 +204,6 @@ If an update causes issues, reverse it by sending the original values:
 }
 \`\`\`
 
-Report the rollback hint (original values) whenever you make a change so the user can revert if needed.
+Report the rollback hint (original values) whenever you make a change so the user can revert if needed. An ARCHIVED entity cannot be rolled back this way.
 `;
 }

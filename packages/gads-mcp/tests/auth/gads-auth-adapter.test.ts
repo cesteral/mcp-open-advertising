@@ -5,6 +5,7 @@ import {
   getGAdsCredentialFingerprint,
   type GAdsCredentials,
 } from "../../src/auth/gads-auth-adapter.js";
+import { JsonRpcErrorCode } from "@cesteral/shared";
 
 const VALID_CREDENTIALS: GAdsCredentials = {
   clientId: "test-client-id.apps.googleusercontent.com",
@@ -127,8 +128,43 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 
       await expect(adapter.getAccessToken()).rejects.toThrow(
-        "Google OAuth2 token exchange failed: 401"
+        "Google Ads token refresh failed: 401"
       );
+    });
+
+    it("maps a dead grant (invalid_grant) to Unauthorized", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: vi.fn().mockResolvedValue(
+          JSON.stringify({
+            error: "invalid_grant",
+            error_description: "Token has been expired or revoked.",
+          })
+        ),
+      });
+
+      const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
+
+      await expect(adapter.getAccessToken()).rejects.toMatchObject({
+        code: JsonRpcErrorCode.Unauthorized,
+      });
+    });
+
+    it("keeps a transient token-endpoint failure as InternalError", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        statusText: "Service Unavailable",
+        text: vi.fn().mockResolvedValue("upstream unavailable"),
+      });
+
+      const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
+
+      await expect(adapter.getAccessToken()).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
     });
   });
 
@@ -152,7 +188,7 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 
-      await expect(adapter.validate()).rejects.toThrow("Google OAuth2 token exchange failed: 401");
+      await expect(adapter.validate()).rejects.toThrow("Google Ads token refresh failed: 401");
     });
 
     it("caches token — validate + getAccessToken = 1 fetch total", async () => {

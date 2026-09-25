@@ -3,7 +3,12 @@
 
 import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
-import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
+import {
+  executeWithRetry,
+  fetchWithTimeout,
+  mapHttpStatusToJsonRpc,
+  type JsonRpcErrorCode,
+} from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withGAdsApiSpan } from "../../utils/platform.js";
 
@@ -72,11 +77,14 @@ function parseGAdsErrors(body: string): string {
   }
 }
 
+/**
+ * Google Ads uses standard HTTP semantics, so the fleet-wide mapping applies
+ * unchanged: 401 → Unauthorized (so the tool factory's `onAuthError` hook can
+ * drop the dead session), 404 → NotFound. A former local mapper sent both to
+ * InvalidRequest, which hid dead credentials behind a generic request error.
+ */
 function mapGAdsStatusCode(status: number): JsonRpcErrorCode {
-  if (status >= 500) return JsonRpcErrorCode.ServiceUnavailable;
-  if (status === 429) return JsonRpcErrorCode.RateLimited;
-  if (status === 403) return JsonRpcErrorCode.Forbidden;
-  return JsonRpcErrorCode.InvalidRequest;
+  return mapHttpStatusToJsonRpc(status);
 }
 
 function buildGAdsNextAction(

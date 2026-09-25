@@ -40,7 +40,11 @@ const snapchatService = {
   adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
-  searchTargeting: vi.fn(async () => ({ results: [{ id: "targeting-1" }] })),
+  searchTargeting: vi.fn(async () => ({
+    results: [{ id: "targeting-1" }],
+    pagesScanned: 1,
+    searchedAllPages: true,
+  })),
   getTargetingOptions: vi.fn(async () => ({ results: [{ id: "targeting-option-1" }] })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getCreativePreview: vi.fn(async () => ({

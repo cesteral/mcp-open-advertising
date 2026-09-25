@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertSnapchatBulkCapacity,
+  snapchatBulkCost,
+  snapchatBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import {
   elicitBidChangeConfirmation,
@@ -104,7 +109,15 @@ export async function adjustBidsLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      snapchatBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.adjustments.length,
+        snapchatBulkCost.adjustBids(),
+        "adjustments"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -116,6 +129,10 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/write.
+  assertSnapchatBulkCapacity(TOOL_NAME, input.adjustments.length, snapchatBulkCost.adjustBids());
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -179,9 +196,10 @@ export async function adjustBidsLogic(
  * symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"]
+  adjustments: AdjustBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   adjustments.forEach((a, i) => {
     if (!Number.isFinite(a.bidPrice) || a.bidPrice <= 0) {
       validationErrors.push({

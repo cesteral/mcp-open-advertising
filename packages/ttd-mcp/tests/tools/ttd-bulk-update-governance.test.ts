@@ -1,3 +1,4 @@
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices, mockElicit } = vi.hoisted(() => ({
@@ -33,12 +34,29 @@ const baseInput = {
   ],
 };
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see ttd-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityCheck = (
+  toolName: string,
+  itemCount: number,
+  costPerItem: readonly number[]
+) => ({
+  rateLimiter: new RateLimiter(),
+  toolName,
+  itemCount,
+  buckets: [{ key: "ttd:test", costPerItem }],
+});
+
 describe("ttd_bulk_update_entities governance contract (effect class)", () => {
-  let svc: { bulkUpdateEntities: ReturnType<typeof vi.fn> };
+  let svc: {
+    bulkUpdateEntities: ReturnType<typeof vi.fn>;
+    bulkCapacityCheck: typeof unlimitedBulkCapacityCheck;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      bulkCapacityCheck: unlimitedBulkCapacityCheck,
       bulkUpdateEntities: vi.fn().mockResolvedValue({
         results: [
           { success: true, entity: { Id: "camp456def" } },

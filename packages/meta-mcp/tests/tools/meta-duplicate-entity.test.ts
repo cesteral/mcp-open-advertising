@@ -13,6 +13,7 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
 }));
 
 import {
+  DuplicateEntityInputSchema,
   duplicateEntityLogic,
   duplicateEntityResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
@@ -70,6 +71,52 @@ describe("meta_duplicate_entity governance contract", () => {
         entityType: "campaign",
         entityId: "camp-SRC-1",
         statusOption: "ACTIVE",
+        dry_run: true,
+      } as any,
+      ctx(),
+      sdk()
+    );
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
+  });
+
+  it("statusOption uses Meta's /copies enum: INHERITED_FROM_SOURCE, not INHERITED", () => {
+    // facebook-python-business-sdk (v26.0) Campaign/AdSet/Ad.StatusOption:
+    // ACTIVE | INHERITED_FROM_SOURCE | PAUSED.
+    const base = { entityType: "campaign", entityId: "camp-SRC-1" };
+    expect(
+      DuplicateEntityInputSchema.safeParse({ ...base, statusOption: "INHERITED_FROM_SOURCE" })
+        .success
+    ).toBe(true);
+    expect(
+      DuplicateEntityInputSchema.safeParse({ ...base, statusOption: "INHERITED" }).success
+    ).toBe(false);
+  });
+
+  it("execute sends status_option=INHERITED_FROM_SOURCE to /copies", async () => {
+    svc.getEntity.mockResolvedValue(undefined);
+    await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        entityId: "camp-SRC-1",
+        statusOption: "INHERITED_FROM_SOURCE",
+      } as any,
+      ctx(),
+      sdk()
+    );
+    expect(svc.duplicateEntity).toHaveBeenCalledWith(
+      "camp-SRC-1",
+      { status_option: "INHERITED_FROM_SOURCE" },
+      expect.any(Object)
+    );
+  });
+
+  it("dry_run with statusOption INHERITED_FROM_SOURCE keeps the source status", async () => {
+    svc.getEntity.mockResolvedValue({ name: "Src", status: "ACTIVE", account_id: "act-1" });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        entityId: "camp-SRC-1",
+        statusOption: "INHERITED_FROM_SOURCE",
         dry_run: true,
       } as any,
       ctx(),

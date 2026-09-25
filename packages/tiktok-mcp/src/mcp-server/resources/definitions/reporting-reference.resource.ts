@@ -19,15 +19,14 @@ function formatReportingReferenceMarkdown(): string {
 | AUDIENCE | Audience breakdown metrics (requires audience dimensions) |
 | PLAYABLE_MATERIAL | Playable ad performance metrics |
 
-## Async Reporting Flow
+## Reporting Endpoints
 
-1. **Submit**: POST \`/open_api/v1.3/report/task/create/\` → get \`task_id\`
-2. **Poll**: GET \`/open_api/v1.3/report/task/check/?task_id={id}\` → check \`status\`
-3. **Download**: GET the \`download_url\` when status = "DONE"
+- **Synchronous** (\`tiktok_get_report\`, \`tiktok_get_report_breakdowns\`): GET \`/open_api/v1.3/report/integrated/get/\` — rows come back directly, paged (\`page\`, \`page_size\` up to 1000).
+- **Async task** (\`tiktok_submit_report\` + \`tiktok_check_report_status\`): POST \`/open_api/v1.3/report/task/create/\` → \`task_id\`, then GET \`/open_api/v1.3/report/task/check/\`. TikTok's documented check response carries only \`status\` and \`message\` — no download URL.
 
-Status values: PENDING → RUNNING → DONE | FAILED
+Both take \`report_type\`, \`service_type\` (default AUCTION) and \`data_level\` (e.g. AUCTION_CAMPAIGN).
 
-Use \`tiktok_get_report\` or \`tiktok_get_report_breakdowns\` — these tools handle the full flow automatically.
+Task statuses this server recognizes: PENDING, RUNNING, DONE, FAILED. Any other value is reported as failed (terminal) with the raw status, never as pending.
 
 ## Common Dimensions
 

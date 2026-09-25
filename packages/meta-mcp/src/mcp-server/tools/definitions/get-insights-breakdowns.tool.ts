@@ -3,10 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetaRowMetrics } from "../utils/computed-metrics.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
-  computeMetrics,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -100,36 +100,7 @@ export async function getInsightsBreakdownsLogic(
 
   let rows = result.data as Record<string, unknown>[];
   if (input.includeComputedMetrics) {
-    rows = rows.map((row) => {
-      const cost = Number(row.spend || 0);
-      const impressions = Number(row.impressions || 0);
-      const clicks = Number(row.clicks || 0);
-      const isConversionAction = (actionType: string) =>
-        actionType.startsWith("offsite_conversion") ||
-        actionType === "purchase" ||
-        actionType === "complete_registration" ||
-        actionType === "lead";
-      const conversions = Array.isArray(row.actions)
-        ? (row.actions as Array<{ action_type?: string; value?: unknown }>)
-            .filter((a) => isConversionAction(a.action_type ?? ""))
-            .reduce((sum, a) => sum + Number(a.value || 0), 0)
-        : 0;
-      const conversionValue = Array.isArray(row.action_values)
-        ? (row.action_values as Array<{ action_type?: string; value?: unknown }>)
-            .filter((a) => isConversionAction(a.action_type ?? ""))
-            .reduce((sum, a) => sum + Number(a.value || 0), 0)
-        : 0;
-      return {
-        ...row,
-        computedMetrics: computeMetrics({
-          cost,
-          impressions,
-          clicks,
-          conversions,
-          conversionValue,
-        }),
-      };
-    });
+    rows = rows.map((row) => ({ ...row, computedMetrics: computeMetaRowMetrics(row) }));
   }
 
   return {

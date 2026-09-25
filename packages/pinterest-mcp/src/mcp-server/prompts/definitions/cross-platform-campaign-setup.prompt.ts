@@ -218,7 +218,7 @@ Use the \`snapchat_campaign_setup_workflow\` prompt for detailed guidance.
 Key steps:
 1. Create Campaign with objective and budget
 2. Create Ad Squad (Ad Group) with targeting and placement
-3. Upload creative via \`snapchat_upload_media\`
+3. Upload creative via \`snapchat_upload_image\` or \`snapchat_upload_video\`
 4. Create Ads referencing the creative
 5. Activate via \`snapchat_bulk_update_status\`
 

@@ -66,7 +66,8 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
           adapter,
           { baseUrl: (appConfig as AppConfig).cm360ApiBaseUrl },
           log,
-          rateLimiter
+          rateLimiter,
+          authResult.credentialFingerprint
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };

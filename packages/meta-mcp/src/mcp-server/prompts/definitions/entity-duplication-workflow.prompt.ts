@@ -106,7 +106,7 @@ Confirm this is the right entity and note its current state.
 |--------|----------|
 | \`PAUSED\` | Copy is created paused (safest — review before activating) |
 | \`ACTIVE\` | Copy starts delivering immediately |
-| \`INHERITED\` | Copy inherits the source entity's status |
+| \`INHERITED_FROM_SOURCE\` | Copy inherits the source entity's status |
 
 ⚠️ **GOTCHA**: Always use \`PAUSED\` unless you intentionally want the copy to start spending immediately.
 

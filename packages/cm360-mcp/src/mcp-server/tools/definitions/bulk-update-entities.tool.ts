@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
@@ -27,7 +28,7 @@ const TOOL_NAME = "cm360_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update CM360 Entities";
 const TOOL_DESCRIPTION = `Batch update multiple CM360 entities of the same type.
 
-Each item must include the id field (CM360 uses PUT/replace semantics). Loops individual update calls with rate limiting. Max 50 items per call.`;
+Items are partial updates (CM360 PATCH semantics): send only the fields to change in \`data\`; omitted fields keep their current values. CM360 has no batch endpoint: each item is one PATCH call, paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 15 items fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 items.`;
 
 const EFFECT_KIND = "entities_updated";
 
@@ -39,7 +40,9 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(
         z.object({
           entityId: z.string().min(1).describe("Entity ID to update"),
-          data: z.record(z.any()).describe("Full entity data including id field"),
+          data: z
+            .record(z.any())
+            .describe("Fields to change (PATCH semantics — omitted fields are preserved)"),
         })
       )
       .min(1)
@@ -100,10 +103,14 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user rate-limit key comes from the session, so resolve it before
+  // the capacity projection (dry-run and execute alike).
+  const { cm360Service } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, cm360Service.quotaUser);
     return {
       confirmed: true,
       updated: 0,
@@ -115,11 +122,16 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
+  // One PATCH per item on `cm360:user:{quotaUser}`. Refuse a batch that cannot
+  // clear the rate limit within the queue budget before prompting the user or
+  // sending anything.
+  assertCM360BulkCapacity(TOOL_NAME, "update", cm360Service.quotaUser, input.items.length);
+
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
-    summary: "Applying field updates across multiple CM360 entities (PUT/replace semantics).",
+    summary: "Applying partial field updates (PATCH) across multiple CM360 entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
     sdkContext,
@@ -135,8 +147,6 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
-
-  const { cm360Service } = resolveSessionServices(sdkContext);
 
   const bulkResults = await cm360Service.bulkUpdateEntities(
     input.entityType as CM360EntityType,
@@ -186,9 +196,14 @@ export async function bulkUpdateEntitiesLogic(
  * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
  * item must target a non-empty entityId and carry a non-empty data payload) and
  * projects the would-be effect (an N-item update of one entity kind). CM360 has
- * no native bulk validate, so both axes are symbolic. Pure (no I/O).
+ * no native bulk validate, so both axes are symbolic. Also projects the batch
+ * against the rate limiter (read-only) so a batch the execute path would refuse
+ * as `BULK_EXCEEDS_CAPACITY` fails here too. No I/O.
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  quotaUser: string
+): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
@@ -206,6 +221,15 @@ function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResu
       });
     }
   });
+  // Parity with the execute path's assertCM360BulkCapacity refusal.
+  const capacityError = cm360BulkCapacityDryRunError(
+    TOOL_NAME,
+    "update",
+    quotaUser,
+    input.items.length,
+    "items"
+  );
+  if (capacityError) validationErrors.push(capacityError);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,
@@ -308,11 +332,11 @@ export const bulkUpdateEntitiesTool = {
         items: [
           {
             entityId: "111",
-            data: { id: "111", name: "Campaign A - Updated", advertiserId: "789" },
+            data: { name: "Campaign A - Updated" },
           },
           {
             entityId: "222",
-            data: { id: "222", name: "Campaign B - Updated", advertiserId: "789" },
+            data: { name: "Campaign B - Updated" },
           },
         ],
       },

@@ -24,7 +24,6 @@ const ConfigSchema = BaseConfigSchema.extend({
 
   // Snapchat API Configuration
   snapchatApiBaseUrl: z.string().url().default("https://adsapi.snapchat.com"),
-  snapchatApiVersion: z.string().default("v1"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via SNAPCHAT_RATE_LIMIT_PER_MINUTE for different scaling profiles.
@@ -64,7 +63,6 @@ export function parseConfig(): AppConfig {
 
     // Snapchat API
     snapchatApiBaseUrl: process.env.SNAPCHAT_API_BASE_URL,
-    snapchatApiVersion: process.env.SNAPCHAT_API_VERSION,
     snapchatRateLimitPerMinute: process.env.SNAPCHAT_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.SNAPCHAT_RATE_LIMIT_PER_MINUTE)
       : undefined,

@@ -11,136 +11,95 @@ let cachedContent: string | undefined;
 function formatReportingReferenceMarkdown(): string {
   return `# Snapchat Ads Reporting Reference
 
-## Report Types
-
-| Report Type | Description |
-|-------------|-------------|
-| BASIC | Standard delivery and performance metrics |
-| AUDIENCE | Audience breakdown metrics (requires audience dimensions) |
-| PLAYABLE_MATERIAL | Playable ad performance metrics |
+Snapchat reporting is ad-account stats, requested asynchronously and returned as CSV.
+There are no report "types" and no dimension list: you choose **metric fields**, a **time
+granularity**, and optionally an **entity breakdown**.
 
 ## Async Reporting Flow
 
-1. **Submit**: POST \`/v1/adaccounts/{ad_account_id}/stats/async_reporting\` → get \`report_id\`
-2. **Poll**: GET \`/v1/adaccounts/{ad_account_id}/stats/async_reports/{report_id}\` → check \`status\`
-3. **Download**: GET the \`download_url\` when status = "COMPLETE"
+1. **Submit**: GET \`/v1/adaccounts/{ad_account_id}/stats?async=true&async_format=csv&fields=…&granularity=…&start_time=…&end_time=…[&breakdown=…]\`
+   → \`async_stats_reports[0].async_stats_report.report_run_id\`
+2. **Poll**: GET \`/v1/adaccounts/{ad_account_id}/stats_report?report_run_id={id}\` → \`async_status\`
+3. **Download**: GET the \`result\` URL once the report is complete
 
-Status values: PENDING → RUNNING → COMPLETE | FAILED
+Snapchat \`async_status\` is normalized by the tools to: PENDING → RUNNING (\`STARTED\`/\`RUNNING\`) → COMPLETE (\`COMPLETED\`) | FAILED.
 
-Use \`snapchat_get_report\` or \`snapchat_get_report_breakdowns\` — these tools handle the full flow automatically.
+- \`snapchat_get_report\` / \`snapchat_get_report_breakdowns\` run the whole flow and wait.
+- \`snapchat_submit_report\` → \`snapchat_check_report_status\` → \`snapchat_download_report\` is the non-blocking path.
 
-## Common Dimensions
+## Tool Parameters
 
-### Time Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| stat_time_day | Daily breakdown (YYYY-MM-DD) |
-| stat_time_hour | Hourly breakdown |
+| Parameter | Values | Sent to Snapchat as |
+|-----------|--------|---------------------|
+| \`fields\` | metric names (see below) | \`fields\` (comma-separated) |
+| \`granularity\` | \`TOTAL\`, \`DAY\` (default), \`HOUR\`, \`LIFETIME\` | \`granularity\` |
+| \`dimensionType\` | \`CAMPAIGN\`, \`AD_SQUAD\`, \`AD\` (omit for the account total) | \`breakdown\` = \`campaign\` / \`adsquad\` / \`ad\` |
+| \`startTime\` / \`endTime\` | ISO 8601 timestamps | \`start_time\` / \`end_time\` |
+| \`datePreset\` | e.g. \`LAST_7_DAYS\` (instead of start/end) | resolved to UTC-midnight \`start_time\` and \`…T23:59:59Z\` \`end_time\` |
+| \`breakdowns\` (\`snapchat_get_report_breakdowns\` only) | extra names | **appended to \`fields\`** |
 
-### Entity Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| ad_account_id | Advertiser ID |
-| campaign_id | Campaign ID |
-| adgroup_id | Ad group ID |
-| ad_id | Ad ID |
+**Time boundaries (unverified):** Snapchat is reported to require \`DAY\`-granularity
+\`start_time\`/\`end_time\` on day boundaries in the **ad account's timezone**. \`datePreset\`
+produces UTC boundaries, which only line up for UTC accounts. For a non-UTC account, pass
+explicit \`startTime\`/\`endTime\` with the account's offset (e.g. \`2026-03-01T00:00:00-08:00\`);
+the account's \`timezone\` is returned by \`snapchat_list_ad_accounts\`.
 
-### Audience Dimensions (AUDIENCE report type)
-| Dimension | Description |
-|-----------|-------------|
-| gender | User gender breakdown |
-| age | User age group breakdown |
-| country_code | Country (ISO 2-letter code) |
-| province_id | Province/region ID |
-| platform | Operating system platform |
-| device_brand_id | Device brand |
-| interest_category | Interest category |
-| placement | Ad placement |
-| language | User language |
+**Demographic / geo splits (unverified):** \`snapchat_get_report_breakdowns\` sends its
+\`breakdowns\` inside \`fields\`. Snapchat is reported to take demographic and geo splits through
+a separate \`report_dimension\` parameter, which these tools do not send yet — if Snapchat
+rejects a breakdown name as an unknown field, that is why.
 
-## Common Metrics
+## Metric Fields Used by These Tools
 
-### Delivery Metrics
-| Metric | Description |
-|--------|-------------|
-| impressions | Total impressions |
-| reach | Unique users reached |
-| frequency | Average impressions per user |
-| clicks | Total clicks |
-| ctr | Click-through rate (%) |
-| cpm | Cost per mille (per 1000 impressions) |
-| cpc | Cost per click |
-| spend | Total amount spent |
+| Field | Description |
+|-------|-------------|
+| \`impressions\` | Impressions |
+| \`swipes\` | Swipe-ups (Snapchat's click) |
+| \`spend\` | Spend, in **micro-currency** (1,000,000 = 1.00 of the account currency) |
+| \`video_views\` | Video views |
+| \`conversion_purchases\` | Purchase conversions |
+| \`conversion_purchases_value\` | Purchase value, in micro-currency |
 
-### Video Metrics
-| Metric | Description |
-|--------|-------------|
-| video_play_actions | Total video plays |
-| video_watched_2s | 2-second video views |
-| video_watched_6s | 6-second video views |
-| video_views_p25 | 25% video completion |
-| video_views_p50 | 50% video completion |
-| video_views_p75 | 75% video completion |
-| video_views_p100 | 100% completion (full views) |
-| average_video_play | Average play duration (seconds) |
-
-### Conversion Metrics
-| Metric | Description |
-|--------|-------------|
-| conversions | Total conversion events |
-| conversion_rate | Conversions / clicks (%) |
-| cost_per_conversion | Spend / conversions |
-| real_time_conversions | Real-time tracked conversions |
-| total_purchase_value | Total purchase value |
-| total_sales | Total sales count |
-| cost_per_1000_reached | CPM by unique reach |
-
-### Engagement Metrics
-| Metric | Description |
-|--------|-------------|
-| profile_visits | Profile page visits |
-| follows | New followers gained |
-| likes | Likes on ads |
-| comments | Comments on ads |
-| shares | Shares of ads |
-| engaged_view | Engaged views (6s+ or interaction) |
+With \`includeComputedMetrics: true\`, \`snapchat_get_report\` and
+\`snapchat_get_report_breakdowns\` append \`computed_cpa\`, \`computed_roas\`, \`computed_cpm\`,
+\`computed_ctr\` and \`computed_cpc\`, with \`spend\` and \`conversion_purchases_value\` converted
+from micro-currency to account currency first. \`swipes\` is used as clicks.
 
 ## Example Report Configurations
 
 ### Campaign Daily Delivery Report
 \`\`\`json
-{
+snapchat_get_report({
   "adAccountId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc"],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
+  "fields": ["impressions", "swipes", "spend"],
+  "granularity": "DAY",
+  "dimensionType": "CAMPAIGN",
+  "startTime": "2026-03-01T00:00:00Z",
+  "endTime": "2026-03-08T00:00:00Z"
+})
 \`\`\`
 
-### Ad Performance with Video Metrics
+### Ad Performance with Video and Purchases
 \`\`\`json
-{
+snapchat_get_report({
   "adAccountId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["ad_id"],
-  "metrics": ["impressions", "spend", "video_play_actions", "video_views_p100", "average_video_play"],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
+  "fields": ["impressions", "spend", "video_views", "conversion_purchases", "conversion_purchases_value"],
+  "granularity": "TOTAL",
+  "dimensionType": "AD",
+  "datePreset": "LAST_7_DAYS",
+  "includeComputedMetrics": true
+})
 \`\`\`
 
-### Country Breakdown Report
+### Non-blocking Ad Squad Report
 \`\`\`json
-{
+snapchat_submit_report({
   "adAccountId": "1234567890",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "breakdowns": ["country_code"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
+  "fields": ["impressions", "swipes", "spend"],
+  "granularity": "DAY",
+  "dimensionType": "AD_SQUAD",
+  "datePreset": "LAST_30_DAYS"
+})
 \`\`\`
 `;
 }
@@ -149,7 +108,7 @@ export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://snapchat",
   name: "Snapchat Reporting Reference",
   description:
-    "Available dimensions, metrics, report types, and example configurations for Snapchat Ads reporting",
+    "Snapchat Ads reporting: async stats flow, tool parameters, metric fields and example configurations",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

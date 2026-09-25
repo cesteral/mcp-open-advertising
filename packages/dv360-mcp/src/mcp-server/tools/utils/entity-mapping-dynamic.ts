@@ -51,6 +51,22 @@ interface EntityApiMetadata {
   filterParamIds?: string[]; // IDs that become filter expressions (e.g., ["campaignId"] for insertionOrders)
   isReadOnly?: boolean; // If true, only GET/LIST operations allowed
   supportsFilter?: boolean; // Whether LIST supports filtering
+  /**
+   * Whether DV360 exposes a DELETE method for this resource. Defaults to
+   * `!isReadOnly`. Set `false` for writable resources that v4 Discovery gives
+   * no `delete` method (customBiddingAlgorithms, inventorySources,
+   * advertisers.locationLists) — offering delete for them only 404s after the
+   * confirmation prompt.
+   */
+  supportsDelete?: boolean;
+  /**
+   * DV360 rejects deleting this resource unless its `entityStatus` is
+   * `ENTITY_STATUS_ARCHIVED`. v4 Discovery states it on `campaigns.delete`,
+   * `insertionOrders.delete`, `lineItems.delete` and `creatives.delete`
+   * ("should be archived first, i.e. set entity_status to
+   * `ENTITY_STATUS_ARCHIVED`, to be able to delete it").
+   */
+  requiresArchiveBeforeDelete?: boolean;
 }
 
 /**
@@ -74,18 +90,21 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/advertisers/{advertiserId}/campaigns",
     parentResourceIds: ["advertiserId"],
     supportsFilter: true,
+    requiresArchiveBeforeDelete: true,
   },
   insertionOrder: {
     apiPathTemplate: "/advertisers/{advertiserId}/insertionOrders",
     parentResourceIds: ["advertiserId"],
     filterParamIds: ["campaignId"], // campaignId is optional filter, not required parent
     supportsFilter: true,
+    requiresArchiveBeforeDelete: true,
   },
   lineItem: {
     apiPathTemplate: "/advertisers/{advertiserId}/lineItems",
     parentResourceIds: ["advertiserId"],
     filterParamIds: ["insertionOrderId"], // insertionOrderId is optional filter, not required parent
     supportsFilter: true,
+    requiresArchiveBeforeDelete: true,
   },
   adGroup: {
     apiPathTemplate: "/advertisers/{advertiserId}/adGroups",
@@ -102,6 +121,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/advertisers/{advertiserId}/creatives",
     parentResourceIds: ["advertiserId"],
     supportsFilter: true,
+    requiresArchiveBeforeDelete: true,
   },
   customBiddingAlgorithm: {
     // DV360 requires partnerId OR advertiserId on every customBiddingAlgorithm
@@ -111,6 +131,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     parentResourceIds: [],
     queryParamIds: ["partnerId", "advertiserId"],
     supportsFilter: true,
+    supportsDelete: false, // v4 has no customBiddingAlgorithms.delete — archive via patch
   },
   inventorySource: {
     // DV360 requires partnerId OR advertiserId as a top-level query param;
@@ -119,6 +140,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     parentResourceIds: [],
     queryParamIds: ["partnerId", "advertiserId"],
     supportsFilter: true,
+    supportsDelete: false, // v4 has no inventorySources.delete
   },
   inventorySourceGroup: {
     apiPathTemplate: "/inventorySourceGroups",
@@ -130,6 +152,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/advertisers/{advertiserId}/locationLists",
     parentResourceIds: ["advertiserId"],
     supportsFilter: false,
+    supportsDelete: false, // v4 has no advertisers.locationLists.delete
   },
 };
 
@@ -309,7 +332,7 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
     filterParamIds: apiMetadata.filterParamIds || [],
     supportsCreate: !apiMetadata.isReadOnly,
     supportsUpdate: !apiMetadata.isReadOnly,
-    supportsDelete: !apiMetadata.isReadOnly,
+    supportsDelete: apiMetadata.supportsDelete ?? !apiMetadata.isReadOnly,
     supportsFilter: apiMetadata.supportsFilter ?? false,
     filterFields,
     relationships: buildEntityRelationships(entityType, apiMetadata),
@@ -414,6 +437,26 @@ export function getUpdatableEntityTypesDynamic(): string[] {
     .filter(([, config]) => config.supportsUpdate)
     .map(([entityType]) => entityType)
     .sort();
+}
+
+/**
+ * Entity types DV360 v4 can delete (a `delete` method exists in Discovery).
+ * Drives the delete tool's `entityType` enum so it never advertises a delete
+ * the API has no method for.
+ */
+export function getDeletableEntityTypesDynamic(): string[] {
+  return Array.from(getAllEntityConfigs().entries())
+    .filter(([, config]) => config.supportsDelete)
+    .map(([entityType]) => entityType)
+    .sort();
+}
+
+/**
+ * Whether DV360 requires `entityStatus: ENTITY_STATUS_ARCHIVED` before this
+ * entity type can be deleted (campaign, insertionOrder, lineItem, creative).
+ */
+export function requiresArchiveBeforeDelete(entityType: string): boolean {
+  return getEntityApiMetadata(entityType)?.requiresArchiveBeforeDelete === true;
 }
 
 /**

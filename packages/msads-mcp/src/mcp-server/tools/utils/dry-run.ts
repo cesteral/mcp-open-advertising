@@ -24,7 +24,13 @@ import type {
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import { buildMsAdsSnapshot, ENTITY_KIND_MAP, type MsAdsServiceLike } from "./capture-snapshot.js";
+import {
+  buildMsAdsSnapshot,
+  ENTITY_KIND_MAP,
+  resolveMsAdsCurrency,
+  type MsAdsServiceLike,
+} from "./capture-snapshot.js";
+import { MSADS_DUPLICATE_COPY_STATUS } from "../../../services/msads/msads-service.js";
 
 export type { MsAdsServiceLike };
 
@@ -55,8 +61,12 @@ const PAUSED_STATUSES = new Set([
   "Expired",
 ]);
 
-/** Budget-bearing field names on the patch payload. */
-const BUDGET_FIELDS = ["Amount", "DailyBudget", "MonthlyBudget"];
+/**
+ * Budget-bearing field names on the patch payload: shared Budget `Amount` and
+ * Campaign `DailyBudget` (v13 has no `MonthlyBudget`; a lifetime campaign
+ * budget is `DailyBudget` with `BudgetType: LifetimeBudgetStandard`).
+ */
+const BUDGET_FIELDS = ["Amount", "DailyBudget"];
 
 /** Symbolic validation of the requested patch. Pure (no I/O). */
 export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
@@ -94,14 +104,20 @@ export function symbolicValidate(data: Record<string, unknown>): DryRunValidatio
  * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
  * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
  * mirrors what the dry-run handler does in-tool.
+ *
+ * `currency` is the account's ISO 4217 code. It defaults to "USD" only to keep
+ * this published testkit signature backward compatible — the fixtures are
+ * authored against a USD account. Runtime paths always pass the currency
+ * resolved from the account.
  */
 export function applyMsAdsPatch(
   entityType: string,
   entityId: string,
   preState: Record<string, unknown>,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  currency: string = "USD"
 ): NormalizedEntitySnapshot | undefined {
-  const snapshot = buildMsAdsSnapshot(entityType, entityId, preState, data);
+  const snapshot = buildMsAdsSnapshot(entityType, entityId, preState, data, currency);
   return snapshot ?? undefined;
 }
 
@@ -164,8 +180,9 @@ export interface MsAdsDuplicateDryRunArgs {
 
 /**
  * Symbolic dry-run for `msads_duplicate_entity`. Reads the source entity and
- * projects the would-be copy (source fields with any `options` overlaid, empty
- * new ID) as the expected post-state. Duplicate has no `before`. A read failure
+ * projects the would-be copy (source fields with any `options` overlaid, then
+ * `Status` forced to `Paused` exactly as the execute path does, empty new ID)
+ * as the expected post-state. Duplicate has no `before`. A read failure
  * on an in-scope kind fails the governed call via `assertGovernedDryRunResult`.
  */
 export async function runMsAdsDuplicateDryRun(
@@ -187,7 +204,17 @@ export async function runMsAdsDuplicateDryRun(
     );
     const source = (entities[0] ?? {}) as Record<string, unknown>;
     if (Object.keys(source).length > 0) {
-      const snapshot = buildMsAdsSnapshot(input.entityType, "", source, input.options ?? {});
+      const currency = await resolveMsAdsCurrency(service, context);
+      const snapshot = buildMsAdsSnapshot(
+        input.entityType,
+        "",
+        source,
+        {
+          ...(input.options ?? {}),
+          Status: MSADS_DUPLICATE_COPY_STATUS,
+        },
+        currency
+      );
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";
@@ -216,19 +243,21 @@ export interface MsAdsCreateDryRunArgs {
  * Add operations, so both axes are symbolic: validation runs the same business
  * rules as update; the expected post-state is the would-be-created entity
  * (symbolic apply of the create payload over an empty base — create has no
- * `before`). Pure (no I/O).
+ * `before`). The only I/O is the (memoized) account-currency lookup for the
+ * snapshot's money fields.
  */
 export async function runMsAdsCreateDryRun(
   input: MsAdsCreateDryRunArgs,
-  _service: MsAdsServiceLike,
-  _context: RequestContext
+  service: MsAdsServiceLike,
+  context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[input.entityType]) {
-    const snapshot = buildMsAdsSnapshot(input.entityType, "", {}, input.data);
+    const currency = await resolveMsAdsCurrency(service, context);
+    const snapshot = buildMsAdsSnapshot(input.entityType, "", {}, input.data, currency);
     if (snapshot) {
       expectedPostState = snapshot;
       expectedStateSource = "server_symbolic_apply";
@@ -281,7 +310,14 @@ export async function runMsAdsUpdateDryRun(
     );
     const current = entities?.[0] as Record<string, unknown> | undefined;
     if (current && typeof current === "object") {
-      const snapshot = buildMsAdsSnapshot(input.entityType, input.entityId, current, input.data);
+      const currency = await resolveMsAdsCurrency(service, context);
+      const snapshot = buildMsAdsSnapshot(
+        input.entityType,
+        input.entityId,
+        current,
+        input.data,
+        currency
+      );
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

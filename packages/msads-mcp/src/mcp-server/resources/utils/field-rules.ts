@@ -11,6 +11,15 @@
  *
  * Microsoft Advertising REST API v13 enum reference:
  *   https://learn.microsoft.com/en-us/advertising/campaign-management-service/
+ *
+ * `msads_validate_entity` treats a value outside `suggestedValues` as an
+ * error, so every list must be the complete documented enumeration. Each one is
+ * the `xs:enumeration` list of the named simple type in the MicrosoftDocs/
+ * Advertising source (`advertising/bingads-13/campaign-management-service/`):
+ * CampaignStatus, BudgetLimitType, CampaignType, AdGroupStatus, Network,
+ * AdStatus, AdType, MatchType, KeywordStatus. The shared Budget's BudgetType
+ * is narrower: `budget.md` — "The only valid budget type that you can set is
+ * DailyBudgetStandard".
  */
 
 import type { FieldRule } from "@cesteral/shared";
@@ -35,11 +44,7 @@ export const MSADS_ENUMS_BY_ENTITY: Partial<Record<MsAdsEntityType, FieldRule[]>
       field: "BudgetType",
       expectedType: "string",
       hint: "Budget type",
-      suggestedValues: [
-        "DailyBudgetStandard",
-        "DailyBudgetAccelerated",
-        "MonthlyBudgetSpendUntilDepleted",
-      ],
+      suggestedValues: ["DailyBudgetStandard", "DailyBudgetAccelerated", "LifetimeBudgetStandard"],
     },
     {
       field: "CampaignType",
@@ -52,7 +57,8 @@ export const MSADS_ENUMS_BY_ENTITY: Partial<Record<MsAdsEntityType, FieldRule[]>
         "Audience",
         "PerformanceMax",
         "Hotel",
-        "DisplayNetwork",
+        "App",
+        "ObjectiveBased",
       ],
     },
   ],
@@ -70,7 +76,7 @@ export const MSADS_ENUMS_BY_ENTITY: Partial<Record<MsAdsEntityType, FieldRule[]>
         "OwnedAndOperatedAndSyndicatedSearch",
         "OwnedAndOperatedOnly",
         "SyndicatedSearchOnly",
-        "ContentOnly",
+        "InHousePromotion",
       ],
     },
   ],
@@ -78,19 +84,21 @@ export const MSADS_ENUMS_BY_ENTITY: Partial<Record<MsAdsEntityType, FieldRule[]>
     {
       field: "Status",
       expectedType: "string",
-      suggestedValues: ["Active", "Paused", "Deleted", "Disapproved"],
+      suggestedValues: ["Active", "Paused", "Deleted", "Inactive"],
     },
     {
       field: "Type",
       expectedType: "string",
       suggestedValues: [
         "Text",
+        "Image",
         "Product",
         "AppInstall",
         "ExpandedText",
         "DynamicSearch",
         "ResponsiveAd",
         "ResponsiveSearch",
+        "Hotel",
       ],
     },
   ],
@@ -99,19 +107,20 @@ export const MSADS_ENUMS_BY_ENTITY: Partial<Record<MsAdsEntityType, FieldRule[]>
       field: "MatchType",
       expectedType: "string",
       hint: "Keyword match type",
-      suggestedValues: ["Exact", "Phrase", "Broad", "Content"],
+      suggestedValues: ["Exact", "Phrase", "Broad"],
     },
     {
       field: "Status",
       expectedType: "string",
-      suggestedValues: ["Active", "Paused", "Deleted"],
+      suggestedValues: ["Active", "Paused", "Deleted", "Inactive"],
     },
   ],
   budget: [
     {
       field: "BudgetType",
       expectedType: "string",
-      suggestedValues: ["DailyBudgetStandard", "DailyBudgetAccelerated"],
+      hint: "Shared budgets accept only DailyBudgetStandard",
+      suggestedValues: ["DailyBudgetStandard"],
     },
   ],
 };

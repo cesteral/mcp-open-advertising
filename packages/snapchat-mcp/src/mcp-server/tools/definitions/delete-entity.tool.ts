@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertSnapchatBulkCapacity,
+  snapchatBulkCost,
+  snapchatBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
 import {
@@ -29,8 +34,10 @@ const TOOL_DESCRIPTION = `Delete one or more Snapchat Ads entities.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Snapchat delete uses a POST to the /delete/ endpoint with an array of entity IDs.
-Deleted entities cannot be recovered. Consider using \`snapchat_bulk_update_status\` with DISABLE first.`;
+Each ID is deleted with its own \`DELETE /v1/{entity}s/{id}\` request (after a read that
+confirms the entity belongs to this session's ad account); per-ID results are reported.
+Deleted entities cannot be recovered. To stop delivery reversibly, use
+\`snapchat_bulk_update_status\` with \`PAUSED\` instead.`;
 
 const EFFECT_KIND = "entities_deleted";
 
@@ -100,7 +107,15 @@ export async function deleteEntityLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      snapchatBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.entityIds.length,
+        snapchatBulkCost.delete(input.entityType),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       deleted: false,
@@ -114,6 +129,14 @@ export async function deleteEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/delete.
+  assertSnapchatBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    snapchatBulkCost.delete(input.entityType)
+  );
 
   const confirmed = await elicitBulkDeleteConfirmation({
     count: input.entityIds.length,
@@ -188,8 +211,11 @@ export async function deleteEntityLogic(
  * and projects the would-be effect (an N-item delete of one entity kind).
  * Snapchat has no native bulk validate, so both axes are symbolic. Pure.
  */
-function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: DeleteEntityInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((entityId, i) => {
     if (!entityId || entityId.trim().length === 0) {
       validationErrors.push({

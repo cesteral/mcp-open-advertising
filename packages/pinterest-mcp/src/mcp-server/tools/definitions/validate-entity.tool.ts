@@ -5,93 +5,55 @@
  * pinterest_validate_entity — Client-side schema validation for Pinterest Ads entities.
  *
  * Pinterest Marketing API does not have a dry-run mode, so this tool
- * validates payloads against known required-field rules before hitting the API.
+ * validates payloads against the Pinterest v5 OpenAPI facts in
+ * `../utils/pinterest-fields.ts` before hitting the API.
  * It is purely local — no API calls, no session services needed.
  */
 
 import { z } from "zod";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
-import { type FieldRule, createValidateEntityTool, buildNextAction } from "@cesteral/shared";
-
-const REQUIRED_FIELDS_CREATE: Record<PinterestEntityType, FieldRule[]> = {
-  campaign: [
-    { field: "campaign_name", expectedType: "string" },
-    {
-      field: "objective_type",
-      expectedType: "string",
-      hint: "e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS",
-    },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number", hint: "budget amount in account currency" },
-  ],
-  adGroup: [
-    { field: "campaign_id", expectedType: "string" },
-    { field: "adgroup_name", expectedType: "string" },
-    {
-      field: "placement_type",
-      expectedType: "string",
-      hint: "e.g., PLACEMENT_TYPE_NORMAL, PLACEMENT_TYPE_SEARCH",
-    },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number" },
-    {
-      field: "schedule_type",
-      expectedType: "string",
-      hint: "SCHEDULE_START_END or SCHEDULE_ALWAYS",
-    },
-    { field: "optimize_goal", expectedType: "string", hint: "e.g., CLICK, CONVERT, SHOW, REACH" },
-  ],
-  ad: [
-    { field: "adgroup_id", expectedType: "string" },
-    { field: "ad_name", expectedType: "string" },
-    {
-      field: "creative_type",
-      expectedType: "string",
-      hint: "e.g., SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL",
-    },
-  ],
-  creative: [{ field: "display_name", expectedType: "string" }],
-};
-
-const READ_ONLY_FIELDS = [
-  "campaign_id",
-  "adgroup_id",
-  "ad_id",
-  "creative_id",
-  "created_time",
-  "modify_time",
-];
+import {
+  createValidateEntityTool,
+  buildNextAction,
+  validateEnumFieldsStructured,
+} from "@cesteral/shared";
+import {
+  OPTIONAL_ENUM_FIELDS,
+  READ_ONLY_FIELDS,
+  REQUIRED_CREATE_FIELDS,
+  pinterestFieldIssues,
+} from "../utils/pinterest-fields.js";
 
 export const validateEntityTool = createValidateEntityTool<PinterestEntityType>({
   toolName: "pinterest_validate_entity",
   toolTitle: "Pinterest Ads Entity Validation (Client-Side)",
-  toolDescription: `Validate an entity payload against known Pinterest Ads requirements without calling the API.
-
-Checks required fields, data types, and common configuration mistakes.
+  toolDescription: `Validate a Pinterest Ads entity payload against the Pinterest v5 OpenAPI without calling the API.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-This is a pure client-side check — it catches missing required fields and
-obvious type errors. The Pinterest API may still reject payloads for business-rule
-reasons (e.g., invalid objective/placement combinations).`,
+**create** requires, per type:
+- **campaign**: \`name\`, \`objective_type\`
+- **adGroup**: \`name\`, \`campaign_id\`, \`billable_event\`
+- **ad**: \`ad_group_id\`, \`creative_type\`, \`pin_id\`
+- **creative** (Pin): nothing is required by the spec; a missing \`board_id\` or \`media_source\` is a warning
+
+**Both modes** check enum values when present (\`status\`, \`objective_type\`, \`billable_event\`, \`budget_type\`, \`bid_strategy_type\`, \`pacing_delivery_type\`, \`placement_group\`, \`creative_type\`, \`customizable_cta_type\`), integer micro-currency money, integer Unix-second times, UPPERCASE \`targeting_spec\` keys and the Pin \`media_source\` shape.
+
+**update** also warns on read-only fields and on fields only a draft can change (a campaign's \`objective_type\`, an ad group's \`billable_event\`, an ad's \`pin_id\`).
+
+This is a pure client-side check. Pinterest may still reject a payload for business rules, such as a bid that the objective and billable event require.`,
   entityTypeEnum: getEntityTypeEnum() as readonly [PinterestEntityType, ...PinterestEntityType[]],
-  rulesByEntity: REQUIRED_FIELDS_CREATE,
-  readOnlyFields: READ_ONLY_FIELDS,
+  getRules: (entityType) => REQUIRED_CREATE_FIELDS[entityType],
+  getReadOnlyFields: (entityType) => READ_ONLY_FIELDS[entityType],
   extraInputSchema: {
-    adAccountId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
+    adAccountId: z
+      .string()
+      .optional()
+      .describe("Pinterest ad account ID. Optional; the check does not use it."),
   },
   extraValidate: ({ entityType, mode, data, issues }) => {
-    if (mode === "create" && entityType === "ad") {
-      if (!data.image_ids && !data.video_id) {
-        issues.push({
-          field: "image_ids",
-          code: "missing",
-          message: 'Ad creative requires either "image_ids" (array) or "video_id" (string)',
-          suggestedValues: ["image_ids", "video_id"],
-          severity: "warning",
-        });
-      }
-    }
+    issues.push(...validateEnumFieldsStructured(data, OPTIONAL_ENUM_FIELDS[entityType]));
+    issues.push(...pinterestFieldIssues(entityType, mode, data));
 
     if (mode === "update" && Object.keys(data).length === 0) {
       issues.push({
@@ -102,28 +64,9 @@ reasons (e.g., invalid objective/placement combinations).`,
       });
     }
 
-    const budgetValue = data.budget;
-    if (typeof budgetValue === "number" && budgetValue <= 0) {
-      issues.push({
-        field: "budget",
-        code: "invalidValue",
-        message: 'Field "budget" must be a positive number',
-        severity: "error",
-      });
-    }
-
     const errorIssues = issues.filter((i) => i.severity !== "warning");
     if (errorIssues.length === 0) return;
 
-    if (errorIssues.some((i) => i.field === "ad_account_id")) {
-      return {
-        nextAction: buildNextAction({
-          kind: "discover-account",
-          tool: "pinterest_list_ad_accounts",
-          field: "ad_account_id",
-        }),
-      };
-    }
     const parentField = errorIssues.find((i) => ["campaign_id", "ad_group_id"].includes(i.field));
     return {
       nextAction: parentField
@@ -147,10 +90,10 @@ reasons (e.g., invalid objective/placement combinations).`,
         mode: "create",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          objective_type: "AWARENESS",
+          status: "PAUSED",
+          daily_spend_cap: 100000000,
         },
       },
     },
@@ -160,7 +103,7 @@ reasons (e.g., invalid objective/placement combinations).`,
         entityType: "adGroup",
         mode: "create",
         adAccountId: "1234567890",
-        data: { adgroup_name: "Test Ad Group" },
+        data: { name: "Test Ad Group" },
       },
     },
   ],

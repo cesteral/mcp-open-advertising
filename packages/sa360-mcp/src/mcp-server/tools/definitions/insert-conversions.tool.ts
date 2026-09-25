@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  JsonRpcErrorCode,
+  McpError,
   elicitConversionUploadConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -23,16 +25,18 @@ import type {
 import {
   validateConversionFields,
   summarizeConversionOutcome,
+  findDuplicateConversionIds,
 } from "../utils/conversion-governance.js";
 
 const TOOL_NAME = "sa360_insert_conversions";
 const TOOL_TITLE = "Insert SA360 Conversions";
 const TOOL_DESCRIPTION = `Insert offline conversions into SA360 via the legacy v2 API (DoubleClick Search).
 
-Upload offline conversion data to attribute conversions to SA360-tracked clicks. Requires a click ID (clickId or gclid) and conversion timestamp for each conversion.
+Upload offline conversion data to attribute conversions to SA360-tracked clicks. Each conversion needs a clickId, an advertiser-chosen conversionId, a conversionTimestamp, and the Floodlight activity (segmentationId or segmentationName).
 
 **Important:**
 - Uses the legacy v2 API endpoint, not the Reporting API
+- conversionId is chosen by you: unique within the request, and (conversionId, conversionTimestamp) unique within the advertiser. Keep it — updates identify the conversion by it
 - Maximum 200 conversions per request
 - conversionTimestamp must be epoch milliseconds as a string
 - revenueMicros is in the advertiser's currency (1,000,000 = 1 unit)`;
@@ -40,15 +44,26 @@ Upload offline conversion data to attribute conversions to SA360-tracked clicks.
 const EFFECT_KIND = "conversions_inserted";
 
 const ConversionRowSchema = z.object({
-  clickId: z.string().optional().describe("SA360 click ID"),
-  gclid: z.string().optional().describe("Google click ID"),
+  clickId: z.string().optional().describe("DS click ID for the conversion (v2 `clickId`)"),
+  conversionId: z
+    .string()
+    .min(1)
+    .describe(
+      "Advertiser-provided conversion ID (any ID meaningful to you). Must be unique within the request; (conversionId, conversionTimestamp) must be unique within the advertiser. Reuse it to update the conversion later."
+    ),
   conversionTimestamp: z.string().describe("Conversion timestamp (epoch milliseconds as string)"),
   revenueMicros: z.string().optional().describe("Revenue in micros (1,000,000 = 1 currency unit)"),
   currencyCode: z.string().optional().describe("ISO 4217 currency code"),
   quantityMillis: z.string().optional().describe("Conversion quantity in millis (1000 = 1)"),
   segmentationType: z.string().default("FLOODLIGHT").describe("Segment type (default: FLOODLIGHT)"),
-  segmentationName: z.string().optional().describe("Floodlight activity name"),
-  floodlightActivityId: z.string().optional().describe("Floodlight activity ID"),
+  segmentationName: z
+    .string()
+    .optional()
+    .describe("Friendly segmentation identifier, e.g. Floodlight activity name"),
+  segmentationId: z
+    .string()
+    .optional()
+    .describe("Numeric segmentation identifier, e.g. Floodlight activity ID"),
   type: z.string().optional().describe("Conversion type (e.g., ACTION, TRANSACTION)"),
   state: z.string().optional().describe("Conversion state (ACTIVE or REMOVED)"),
   customMetric: z
@@ -134,12 +149,20 @@ export async function insertConversionsLogic(
     };
   }
 
+  // v2 requires a unique conversionId per conversion in a request; refuse
+  // before prompting or spending an API call.
+  const duplicates = findDuplicateConversionIds(input.conversions);
+  if (duplicates.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      duplicates.map((d) => `conversion[${d.index}]: ${d.message}`).join("; ")
+    );
+  }
+
   const confirmed = await elicitConversionUploadConfirmation({
     count: input.conversions.length,
     operation: "insert",
-    impactPreview: input.conversions.map(
-      (c) => c.clickId ?? c.gclid ?? c.segmentationName ?? "(unidentified)"
-    ),
+    impactPreview: input.conversions.map((c) => c.conversionId),
     sdkContext,
   });
   if (!confirmed) {
@@ -171,7 +194,7 @@ export async function insertConversionsLogic(
   // Effect emitted ONLY when SA360 accepted at least one row. A fully-rejected
   // upload is not a completed conversion write — emitting an effect would record
   // a governance action that did not happen. The summary is scalar-only and
-  // non-PII (no gclid/clickId/revenue rows or raw API payloads).
+  // non-PII (no clickId/conversionId/revenue rows or raw API payloads).
   const effect: EffectResult | undefined =
     outcome.succeeded > 0
       ? {
@@ -217,6 +240,13 @@ function buildEffectDryRun(input: InsertConversionsInput): EffectDryRunResult {
       });
     }
   });
+  for (const dup of findDuplicateConversionIds(input.conversions)) {
+    validationErrors.push({
+      code: dup.code,
+      message: `conversion[${dup.index}]: ${dup.message}`,
+      field: `conversions[${dup.index}].${dup.field}`,
+    });
+  }
 
   const requested = input.conversions.length;
   const expectedEffect: EffectResult = {
@@ -321,12 +351,13 @@ export const insertConversionsTool = {
         advertiserId: "67890",
         conversions: [
           {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
+            conversionId: "order-10001",
             conversionTimestamp: "1700000000000",
             revenueMicros: "5000000",
             currencyCode: "USD",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
             type: "TRANSACTION",
           },
         ],

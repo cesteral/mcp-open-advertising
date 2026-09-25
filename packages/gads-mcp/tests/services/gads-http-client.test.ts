@@ -13,7 +13,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 import { GAdsHttpClient } from "../../src/services/gads/gads-http-client.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, JsonRpcErrorCode } from "@cesteral/shared";
 import type { GAdsAuthAdapter } from "../../src/auth/gads-auth-adapter.js";
 
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
@@ -156,6 +156,41 @@ describe("GAdsHttpClient", () => {
       // 1 initial + 3 retries = 4 total calls
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(4);
     }, 30_000);
+  });
+
+  describe("status code mapping", () => {
+    it("maps 401 to Unauthorized so the session-drop hook can fire", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce(
+        mockResponse(401, { error: { message: "Request had invalid authentication credentials." } })
+      );
+
+      await expect(client.fetch("/test")).rejects.toMatchObject({
+        code: JsonRpcErrorCode.Unauthorized,
+      });
+    });
+
+    it("maps 404 to NotFound", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce(
+        mockResponse(404, { error: { message: "Not found" } })
+      );
+
+      await expect(client.fetch("/test")).rejects.toMatchObject({
+        code: JsonRpcErrorCode.NotFound,
+      });
+    });
+
+    it("keeps 400 as InvalidRequest and 403 as Forbidden", async () => {
+      mockFetchWithTimeout
+        .mockResolvedValueOnce(mockResponse(400, { error: { message: "Bad request" } }))
+        .mockResolvedValueOnce(mockResponse(403, { error: { message: "Forbidden" } }));
+
+      await expect(client.fetch("/test")).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InvalidRequest,
+      });
+      await expect(client.fetch("/test")).rejects.toMatchObject({
+        code: JsonRpcErrorCode.Forbidden,
+      });
+    });
   });
 
   describe("error parsing", () => {

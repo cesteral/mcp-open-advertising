@@ -25,6 +25,8 @@ import type {
   RequestContext,
 } from "@cesteral/shared";
 import { buildTtdSnapshot, ENTITY_KIND_MAP, type TtdServiceLike } from "./capture-snapshot.js";
+import type { TtdEntityType } from "./entity-mapping.js";
+import { buildDuplicateCreateBody } from "../../../services/ttd/ttd-service.js";
 
 export type { TtdServiceLike };
 
@@ -155,7 +157,14 @@ export async function runTtdDuplicateDryRun(
       | Record<string, unknown>
       | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildTtdSnapshot(input.entityType, "", source, input.options ?? {});
+      // Project exactly the body the execute path would POST (allowlisted
+      // source fields + options), not the whole source.
+      const createBody = buildDuplicateCreateBody(
+        input.entityType as TtdEntityType,
+        source,
+        input.options
+      );
+      const snapshot = buildTtdSnapshot(input.entityType, "", {}, createBody);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

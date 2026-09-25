@@ -106,6 +106,7 @@ Required-field tables, enum suggestions, and read-only field lists per entity ty
           name: "Summer Sale 2025",
           objective: "OUTCOME_AWARENESS",
           special_ad_categories: [],
+          is_adset_budget_sharing_enabled: false,
         },
       },
     },

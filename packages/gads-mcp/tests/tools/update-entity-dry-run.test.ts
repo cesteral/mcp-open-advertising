@@ -29,8 +29,10 @@ function campaignRow(overrides: Record<string, unknown> = {}) {
       id: "222",
       name: "Sample Campaign",
       status: "ENABLED",
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
+      // v23 Campaign carries the flight as startDateTime / endDateTime;
+      // startDate / endDate were removed (v23 Discovery, Campaign resource).
+      startDateTime: "2026-01-01 00:00:00",
+      endDateTime: "2026-12-31 23:59:59",
       ...overrides,
     },
   };
@@ -257,7 +259,30 @@ describe("unwrapResource / captureGAdsSnapshot", () => {
       ctx
     );
     expect(snapshot!.status.canonical).toBe("paused");
-    expect(snapshot!.schedule).toEqual({ startAt: "2026-01-01", endAt: "2026-12-31" });
+    expect(snapshot!.schedule).toEqual({
+      startAt: "2026-01-01 00:00:00",
+      endAt: "2026-12-31 23:59:59",
+    });
+  });
+
+  it("does not read the v22 date-only startDate / endDate fields", async () => {
+    const snapshot = await captureGAdsSnapshot(
+      {
+        getEntity: async () => ({
+          campaign: {
+            id: "222",
+            status: "ENABLED",
+            startDate: "2026-01-01",
+            endDate: "2026-12-31",
+          },
+        }),
+      },
+      "campaign",
+      "111",
+      "222",
+      ctx
+    );
+    expect(snapshot!.schedule).toEqual({ startAt: null, endAt: null });
   });
 
   it("returns undefined (best-effort) when the read throws", async () => {

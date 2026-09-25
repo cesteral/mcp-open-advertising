@@ -88,6 +88,26 @@ describe("searchTargetingLogic", () => {
     expect(query).toBe("New York");
   });
 
+  it("forwards targetingClass to the service as the /search class", async () => {
+    await searchTargetingLogic(
+      { type: "adTargetingCategory", query: "parents", targetingClass: "life_events" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    const call = mockMetaTargetingService.searchTargeting.mock.calls[0];
+    expect(call[5]).toBe("life_events");
+  });
+
+  it("does not advertise `adbehavior`, which is not a Meta /search type", async () => {
+    // Absent from TargetingSearchTypes in both facebook-python-business-sdk and
+    // facebook-php-business-sdk (v26.0).
+    const { searchTargetingTool } = await import(
+      "../../src/mcp-server/tools/definitions/search-targeting.tool.js"
+    );
+    expect(searchTargetingTool.description).not.toContain("adbehavior");
+  });
+
   it("passes optional limit to service", async () => {
     await searchTargetingLogic(
       { type: "adinterest", query: "fitness", limit: 10 },

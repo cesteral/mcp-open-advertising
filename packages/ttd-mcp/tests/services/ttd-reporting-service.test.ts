@@ -74,6 +74,22 @@ describe("TtdReportingService", () => {
   // ==========================================================================
 
   describe("runReport", () => {
+    // Polling runs on /myreports/reportexecution/query/advertisers, which is
+    // advertiser-scoped. A schedule created without AdvertiserFilters used to
+    // be POSTed first and only then fail, orphaning it in the TTD account.
+    it.each([
+      ["missing", undefined],
+      ["empty", []],
+    ])(
+      "refuses a config with %s AdvertiserFilters before creating any schedule",
+      async (_label, filters) => {
+        const config = { ...sampleReportConfig(), AdvertiserFilters: filters } as TtdReportConfig;
+
+        await expect(service.runReport(config)).rejects.toThrow(/at least one advertiser/);
+        expect(httpClient.fetch).not.toHaveBeenCalled();
+      }
+    );
+
     it("creates report schedule via POST to /myreports/reportschedule", async () => {
       const config = sampleReportConfig();
 

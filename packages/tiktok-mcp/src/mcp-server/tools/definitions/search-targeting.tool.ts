@@ -9,52 +9,61 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_search_targeting";
 const TOOL_TITLE = "TikTok Search Targeting Options";
-const TOOL_DESCRIPTION = `Search TikTok location-style targeting tags using TikTok's official \`/tool/targeting/search/\` endpoint.
+const TOOL_DESCRIPTION = `Search TikTok location targeting tags (countries, regions, cities, DMAs, zip/postal codes) using TikTok's \`/tool/targeting/search/\` endpoint.
 
-This endpoint is for targeting-tag discovery, not general interest/language browsing.
-Use \`tiktok_get_targeting_options\` for official list endpoints such as languages, carriers,
-interest categories, device models, and geographic options.
+TikTok requires \`placements\` and \`objectiveType\` for every search. \`searchType\` selects the mode:
+- \`FUZZY_SEARCH\` (default) — one keyword, up to 100 results, any country
+- \`BATCH_REGION_SEARCH\` — up to 1,000 keywords, US/CA locations (set \`regionCodes\`)
+- \`BATCH_ZIPCODE_SEARCH\` — up to 1,000 exact zip/postal codes, US/CA (set \`regionCodes\`)
 
-**Common scenes:**
-- \`GEO\` — Geo targeting tags such as regions, zip codes, or postal codes
-- \`ISP\` — Internet service provider targeting tags`;
+For ISP tags, languages, carriers, interest categories and device models use \`tiktok_get_targeting_options\`.`;
+
+const SEARCH_TYPES = ["FUZZY_SEARCH", "BATCH_REGION_SEARCH", "BATCH_ZIPCODE_SEARCH"] as const;
+const GEO_TYPES = ["COUNTRY", "PROVINCE", "CITY", "DISTRICT", "DMA", "ZIP_CODE"] as const;
 
 export const SearchTargetingInputSchema = z
   .object({
     advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
-    query: z.string().min(1).describe("Search keyword passed to TikTok targeting search"),
-    scene: z
-      .enum(["GEO", "ISP"])
+    query: z
+      .union([z.string().min(1), z.array(z.string().min(1)).min(1).max(1000)])
+      .describe(
+        "Keyword(s) to search, sent as TikTok's `keywords` array. One keyword for FUZZY_SEARCH; up to 1,000 for the batch search types."
+      ),
+    searchType: z
+      .enum(SEARCH_TYPES)
       .optional()
-      .default("GEO")
-      .describe("Targeting tag scene to search"),
+      .default("FUZZY_SEARCH")
+      .describe("TikTok search_type (default FUZZY_SEARCH)"),
     placements: z
       .array(z.string())
-      .optional()
-      .describe("Placements required by TikTok for GEO searches, e.g. ['PLACEMENT_TIKTOK']"),
+      .min(1)
+      .describe("Placements (required by TikTok), e.g. ['PLACEMENT_TIKTOK']"),
     objectiveType: z
       .string()
-      .optional()
-      .describe(
-        "Objective type required by TikTok for GEO searches, e.g. TRAFFIC or APP_PROMOTION"
-      ),
+      .min(1)
+      .describe("Campaign objective (required by TikTok), e.g. TRAFFIC, REACH or APP_PROMOTION"),
     promotionType: z
       .string()
       .optional()
-      .describe("Promotion type used for GEO searches when required by the selected objective"),
-    operatingSystem: z
-      .enum(["ANDROID", "IOS"])
+      .describe(
+        "Promotion type; TikTok requires it unless objectiveType is REACH, VIDEO_VIEWS or ENGAGEMENT"
+      ),
+    operatingSystem: z.enum(["ANDROID", "IOS"]).optional().describe("Optional OS filter"),
+    geoTypes: z.array(z.enum(GEO_TYPES)).optional().describe("Filter results by location type"),
+    regionCodes: z
+      .array(z.string())
       .optional()
-      .describe("Optional OS filter for GEO searches"),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(1000)
-      .optional()
-      .default(20)
-      .describe("Maximum number of results to request from TikTok"),
+      .describe(
+        "Country/region codes to filter by; required ('US' or 'CA') for the batch search types"
+      ),
   })
+  .refine(
+    (d) => d.searchType !== "FUZZY_SEARCH" || !Array.isArray(d.query) || d.query.length === 1,
+    {
+      message: "FUZZY_SEARCH accepts exactly one keyword",
+      path: ["query"],
+    }
+  )
   .describe("Parameters for searching TikTok targeting options");
 
 export const SearchTargetingOutputSchema = z
@@ -77,27 +86,31 @@ export async function searchTargetingLogic(
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
+  // Body per TikTok's tool_targeting_search spec: required
+  // [advertiser_id, placements, objective_type, keywords, search_type]
+  // (advertiser_id is injected by the HTTP client).
+  const keywords = Array.isArray(input.query) ? input.query : [input.query];
   const results = (await tiktokService.searchTargeting(
     {
-      keyword: input.query,
-      scene: input.scene,
-      ...(input.placements ? { placements: input.placements } : {}),
-      ...(input.objectiveType ? { objective_type: input.objectiveType } : {}),
+      keywords,
+      search_type: input.searchType,
+      placements: input.placements,
+      objective_type: input.objectiveType,
       ...(input.promotionType ? { promotion_type: input.promotionType } : {}),
       ...(input.operatingSystem ? { operating_system: input.operatingSystem } : {}),
-      page_size: input.limit,
+      ...(input.geoTypes ? { geo_types: input.geoTypes } : {}),
+      ...(input.regionCodes ? { region_codes: input.regionCodes } : {}),
     },
     context
-  )) as Record<string, unknown>[] | { list?: Record<string, unknown>[] };
+  )) as { targeting_tag_list?: Record<string, unknown>[] } | undefined;
 
-  const list = Array.isArray(results)
-    ? results
-    : ((results as { list?: Record<string, unknown>[] }).list ?? []);
+  // The spec's response rule maps results to `targeting_tag_list`.
+  const list = results?.targeting_tag_list ?? [];
 
   return {
     results: list,
     count: list.length,
-    targetingType: input.scene,
+    targetingType: input.searchType,
     timestamp: new Date().toISOString(),
   };
 }
@@ -125,23 +138,23 @@ export const searchTargetingTool = {
   },
   inputExamples: [
     {
-      label: "Search geo targeting tags",
+      label: "Fuzzy-search a city",
       input: {
         advertiserId: "1234567890",
         query: "stockholm",
-        scene: "GEO",
         placements: ["PLACEMENT_TIKTOK"],
-        objectiveType: "TRAFFIC",
-        limit: 20,
+        objectiveType: "REACH",
       },
     },
     {
-      label: "Search ISP targeting tags",
+      label: "Batch-search US zip codes",
       input: {
         advertiserId: "1234567890",
-        query: "telia",
-        scene: "ISP",
-        limit: 30,
+        query: ["10001", "10002"],
+        searchType: "BATCH_ZIPCODE_SEARCH",
+        placements: ["PLACEMENT_TIKTOK"],
+        objectiveType: "REACH",
+        regionCodes: ["US"],
       },
     },
   ],

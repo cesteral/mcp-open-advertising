@@ -111,8 +111,9 @@ export interface GoogleAdsCampaignRow {
   advertising_channel_type?: GoogleAdsAdvertisingChannelType;
   bidding_strategy_type?: GoogleAdsBiddingStrategyType;
   campaign_budget?: string;
-  start_date?: string;
-  end_date?: string;
+  /** "yyyy-MM-dd HH:mm:ss" (customer time zone). v23 removed date-only start_date/end_date. */
+  start_date_time?: string;
+  end_date_time?: string;
 }
 
 export interface GoogleAdsAdGroupRow {
@@ -301,8 +302,9 @@ export interface CreateGoogleAdsCampaignRequest {
   status?: GoogleAdsCampaignStatus;
   advertising_channel_type: GoogleAdsAdvertisingChannelType;
   campaign_budget: string;
-  start_date?: string;
-  end_date?: string;
+  /** "yyyy-MM-dd HH:mm:ss" (customer time zone). v23 removed date-only start_date/end_date. */
+  start_date_time?: string;
+  end_date_time?: string;
   manual_cpc?: Record<string, unknown>;
   maximize_conversions?: Record<string, unknown>;
   target_cpa?: Record<string, unknown>;

@@ -2,7 +2,12 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { MsAdsAuthAdapter } from "../../auth/msads-auth-adapter.js";
-import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  executeWithRetry,
+  JsonRpcErrorCode,
+  mapHttpStatusToJsonRpc,
+} from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withMsAdsApiSpan } from "../../utils/platform.js";
 
@@ -30,6 +35,66 @@ export const MSADS_RETRY_CONFIG: RetryConfig = {
  * - Response is plain JSON (no wrapper envelope)
  * - Errors: { TrackingId, Type, Message, ErrorCode }
  */
+/**
+ * Microsoft Advertising throttle codes and their DOCUMENTED waits
+ * (MicrosoftDocs/Advertising guides/services-protocol.md "Handle Throttling"
+ * and handle-service-errors-exceptions.md):
+ *   - 117 CallRateExceeded (Campaign Management, Ad Insight): "resubmit the
+ *     request under the limit after waiting 60 seconds".
+ *   - 4204 BulkServiceNoMoreCallsPermittedForTheTimePeriod (Bulk): "resubmit
+ *     your request after waiting up to 15 minutes".
+ * Both arrive in the JSON error body (ApplicationFault OperationErrors / Errors),
+ * not as an HTTP 429, so they must be read from the body.
+ */
+const MSADS_THROTTLE_WAITS: ReadonlyArray<{ code: number; symbol: string; waitMs: number }> = [
+  { code: 117, symbol: "CallRateExceeded", waitMs: 60_000 },
+  { code: 4204, symbol: "BulkServiceNoMoreCallsPermittedForTheTimePeriod", waitMs: 15 * 60_000 },
+];
+
+function collectErrorCodes(node: unknown, out: Array<string | number>): void {
+  if (Array.isArray(node)) {
+    for (const child of node) collectErrorCodes(child, out);
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+  for (const [key, value] of Object.entries(node)) {
+    if (
+      (key === "Code" || key === "ErrorCode") &&
+      (typeof value === "number" || typeof value === "string")
+    ) {
+      out.push(value);
+    } else if (typeof value === "object") {
+      collectErrorCodes(value, out);
+    }
+  }
+}
+
+/** The documented wait for a Microsoft Advertising throttle error body, else undefined. */
+export function msadsThrottleDelayMs(_status: number, errorBody: string): number | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(errorBody);
+  } catch {
+    return undefined;
+  }
+  const codes: Array<string | number> = [];
+  collectErrorCodes(parsed, codes);
+  let wait: number | undefined;
+  for (const { code, symbol, waitMs } of MSADS_THROTTLE_WAITS) {
+    if (codes.some((c) => c === code || c === String(code) || c === symbol)) {
+      wait = Math.max(wait ?? 0, waitMs);
+    }
+  }
+  return wait;
+}
+
+/** Throttle bodies map to RateLimited whatever their HTTP status; the rest use the fleet default. */
+export function mapMsAdsStatusCode(status: number, errorBody: string): JsonRpcErrorCode {
+  return msadsThrottleDelayMs(status, errorBody) !== undefined
+    ? JsonRpcErrorCode.RateLimited
+    : mapHttpStatusToJsonRpc(status);
+}
+
 export class MsAdsHttpClient {
   constructor(
     private readonly authAdapter: MsAdsAuthAdapter,
@@ -124,6 +189,8 @@ export class MsAdsHttpClient {
         context,
         logger: this.logger,
         fetchFn: fetchWithTimeout,
+        mapStatusCode: mapMsAdsStatusCode,
+        throttleDelayMs: msadsThrottleDelayMs,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {
