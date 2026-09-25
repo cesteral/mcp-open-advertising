@@ -293,4 +293,8 @@ export const bulkManageBidListsTool = {
   ],
   logic: bidListBulkLogic,
   responseFormatter: bidListBulkResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

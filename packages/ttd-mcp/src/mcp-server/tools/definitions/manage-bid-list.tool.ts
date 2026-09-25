@@ -323,4 +323,8 @@ export const manageBidListTool = {
   ],
   logic: bidListLogic,
   responseFormatter: bidListResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

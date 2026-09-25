@@ -326,4 +326,8 @@ export const executeEntityReportTool = {
   ],
   logic: executeEntityReportLogic,
   responseFormatter: executeEntityReportResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.userErrors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

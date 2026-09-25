@@ -413,4 +413,9 @@ export const createReportTemplateTool = {
   ],
   logic: createReportTemplateLogic,
   responseFormatter: createReportTemplateResponseFormatter,
+  // The effect summary carries the template name TTD returns.
+  untrustedContent: {
+    structuredPaths: ["$.templateData", "$.templateName", "$.errors", "$.rawResponse", "$.effect"],
+    contentBlocks: [0],
+  },
 };

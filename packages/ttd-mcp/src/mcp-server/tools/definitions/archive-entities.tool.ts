@@ -274,4 +274,8 @@ export const archiveEntitiesTool = {
   ],
   logic: archiveEntitiesLogic,
   responseFormatter: archiveEntitiesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

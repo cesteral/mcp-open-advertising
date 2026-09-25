@@ -297,4 +297,8 @@ export const updateReportScheduleTool = {
   ],
   logic: updateReportScheduleLogic,
   responseFormatter: updateReportScheduleResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.errors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

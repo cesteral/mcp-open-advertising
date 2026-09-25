@@ -134,4 +134,8 @@ export const getContextTool = {
   ],
   logic: getContextLogic,
   responseFormatter: getContextResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.partners"],
+    contentBlocks: [0],
+  },
 };

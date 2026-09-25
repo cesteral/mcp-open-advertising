@@ -175,4 +175,8 @@ export const getEntityReportTypesTool = {
   ],
   logic: getEntityReportTypesLogic,
   responseFormatter: getEntityReportTypesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.reportTypes", "$.userErrors"],
+    contentBlocks: [0],
+  },
 };

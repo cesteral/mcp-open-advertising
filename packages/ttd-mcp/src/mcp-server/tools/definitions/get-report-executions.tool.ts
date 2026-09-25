@@ -321,4 +321,8 @@ export const getReportExecutionsTool = {
   ],
   logic: getReportExecutionsLogic,
   responseFormatter: getReportExecutionsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.schedule", "$.schedules", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

@@ -473,4 +473,8 @@ export const manageSeedTool = {
   ],
   logic: manageSeedLogic,
   responseFormatter: manageSeedResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

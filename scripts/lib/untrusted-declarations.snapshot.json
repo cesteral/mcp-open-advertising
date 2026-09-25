@@ -1,0 +1,238 @@
+{
+  "dbm-mcp": {
+    "dbm_get_campaign_delivery": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dbm_get_historical_metrics": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dbm_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dbm_get_performance_metrics": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dbm_run_custom_query": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "dbm_run_custom_query_async": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    }
+  },
+  "ttd-mcp": {
+    "ttd_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_archive_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_bulk_manage_bid_lists": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "ttd_cancel_report_execution": {
+      "structuredPaths": ["$.errors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_check_report_status": {
+      "structuredPaths": ["$.execution", "$.errors"],
+      "contentBlocks": [0]
+    },
+    "ttd_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "ttd_create_report_schedule": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_create_report_template": {
+      "structuredPaths": [
+        "$.templateData",
+        "$.templateName",
+        "$.errors",
+        "$.rawResponse",
+        "$.effect"
+      ],
+      "contentBlocks": [0]
+    },
+    "ttd_create_template_schedule": {
+      "structuredPaths": ["$.errors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_delete_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "ttd_delete_report_schedule": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "ttd_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "ttd_execute_entity_report": {
+      "structuredPaths": ["$.userErrors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_ad_preview": {
+      "structuredPaths": ["$.creativeName", "$.clickUrl", "$.previewUrl", "$.adFormat"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_context": {
+      "structuredPaths": ["$.partners"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_entity_report_types": {
+      "structuredPaths": ["$.reportTypes", "$.userErrors"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_get_report": {
+      "structuredPaths": ["$.execution"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_report_executions": {
+      "structuredPaths": ["$.schedule", "$.schedules", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_report_schedule": {
+      "structuredPaths": ["$.schedule", "$.raw"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_report_template": {
+      "structuredPaths": ["$.name", "$.resultSets", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_get_report_type_schema": {
+      "structuredPaths": ["$.reportTypeName", "$.fields", "$.metrics"],
+      "contentBlocks": [0]
+    },
+    "ttd_graphql_bulk_job": {
+      "structuredPaths": ["$.gqlErrors"],
+      "contentBlocks": [0]
+    },
+    "ttd_graphql_cancel_bulk_job": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_graphql_mutation_bulk": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_graphql_query": {
+      "structuredPaths": ["$.data", "$.errors"],
+      "contentBlocks": [0]
+    },
+    "ttd_graphql_query_bulk": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "ttd_list_report_schedules": {
+      "structuredPaths": ["$.schedules", "$.raw"],
+      "contentBlocks": [0]
+    },
+    "ttd_list_report_templates": {
+      "structuredPaths": ["$.templates"],
+      "contentBlocks": [0]
+    },
+    "ttd_list_report_types": {
+      "structuredPaths": ["$.reportTypes"],
+      "contentBlocks": [0]
+    },
+    "ttd_manage_bid_list": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "ttd_manage_seed": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "ttd_rerun_report_schedule": {
+      "structuredPaths": ["$.newExecutionData", "$.errors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "ttd_update_entity": {
+      "structuredPaths": ["$.entity", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "ttd_update_report_schedule": {
+      "structuredPaths": ["$.errors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_update_report_template": {
+      "structuredPaths": ["$.templateData", "$.errors", "$.rawResponse"],
+      "contentBlocks": [0]
+    },
+    "ttd_upload_video": {
+      "structuredPaths": ["$.creative"],
+      "contentBlocks": []
+    },
+    "ttd_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  }
+}

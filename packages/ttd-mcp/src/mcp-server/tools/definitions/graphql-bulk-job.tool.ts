@@ -250,4 +250,10 @@ export const graphqlBulkJobTool = {
   ],
   logic: graphqlBulkJobLogic,
   responseFormatter: graphqlBulkJobResponseFormatter,
+  // `gqlErrors` is TTD's own error text for the job, echoed in the structured
+  // result and in the text block.
+  untrustedContent: {
+    structuredPaths: ["$.gqlErrors"],
+    contentBlocks: [0],
+  },
 };

@@ -269,4 +269,9 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // The text names only the new creative's ID.
+  untrustedContent: {
+    structuredPaths: ["$.creative"],
+    contentBlocks: [],
+  },
 };
