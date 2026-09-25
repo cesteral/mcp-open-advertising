@@ -28,12 +28,10 @@ import {
 } from "./definitions/troubleshoot-entity.prompt.js";
 import {
   crossPlatformCampaignSetupPrompt,
-  getCrossPlatformCampaignSetupMessage,
-} from "./definitions/cross-platform-campaign-setup.prompt.js";
-import {
   crossPlatformPerformancePrompt,
+  getCrossPlatformCampaignSetupMessage,
   getCrossPlatformPerformanceMessage,
-} from "./definitions/cross-platform-performance.prompt.js";
+} from "@cesteral/shared";
 
 export interface PromptDefinition {
   prompt: Prompt;

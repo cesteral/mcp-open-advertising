@@ -1053,7 +1053,9 @@
         "msads_reporting_workflow",
         "msads_google_import_workflow",
         "msads_bulk_operations_workflow",
-        "msads_troubleshoot_entity"
+        "msads_troubleshoot_entity",
+        "cross_platform_performance_comparison",
+        "cross_platform_campaign_setup"
       ],
       "auth": {
         "modes": ["msads-bearer", "jwt", "none"]
