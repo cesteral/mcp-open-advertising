@@ -10,7 +10,7 @@ import {
   ReportViewOutputSchema,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext, ToolDefinition } from "@cesteral/shared";
+import type { SdkContext, ToolDefinition, ToolUntrustedDeclaration } from "@cesteral/shared";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
@@ -103,6 +103,18 @@ export const RunCustomQueryInputSchema = z
     addQueryValidationIssues(ctx, input);
   })
   .describe("Parameters for executing a custom Bid Manager query");
+
+/**
+ * #204: where platform free text sits in a custom query's result. Report rows
+ * carry line item, insertion order and creative names typed into DV360, and
+ * headers, selected columns and warnings are built from the report's own
+ * columns. The text block renders a preview of those rows. Shared with the
+ * async variant, which returns the same shape.
+ */
+export const RUN_CUSTOM_QUERY_UNTRUSTED_CONTENT: ToolUntrustedDeclaration = {
+  structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+  contentBlocks: [0],
+};
 
 /**
  * Output schema
@@ -226,6 +238,7 @@ export const runCustomQueryTool: ToolDefinition<
   description: TOOL_DESCRIPTION,
   inputSchema: RunCustomQueryInputSchema,
   outputSchema: RunCustomQueryOutputSchema,
+  untrustedContent: RUN_CUSTOM_QUERY_UNTRUSTED_CONTENT,
   annotations: {
     readOnlyHint: true,
     destructiveHint: false,

@@ -12,7 +12,14 @@
 import type { z } from "zod";
 import type { Logger } from "pino";
 import { extractZodShape } from "./zod-helpers.js";
-import { TOOL_ERROR_UNTRUSTED_MARKER, untrustedResultMeta } from "./untrusted-content.js";
+import {
+  TOOL_ERROR_UNTRUSTED_MARKER,
+  untrustedResultMeta,
+  assertValidUntrustedDeclaration,
+  successResultMarker,
+  toolListingMeta,
+  type ToolUntrustedDeclaration,
+} from "./untrusted-content.js";
 import { redactSecretsInText } from "./secret-redaction.js";
 
 const DEFAULT_TASK_TTL_MS = 5 * 60 * 1000;
@@ -63,6 +70,7 @@ interface ServerWithTasks {
           outputSchema?: z.ZodRawShape | z.ZodTypeAny;
           annotations?: ToolAnnotationsLike;
           execution?: { taskSupport: "required" | "optional" };
+          _meta?: Record<string, unknown>;
         },
         handlers: {
           createTask: (
@@ -95,6 +103,12 @@ export interface AsyncTaskToolConfig<TInput, TOutput> {
   inputSchema: z.ZodTypeAny;
   outputSchema?: z.ZodTypeAny;
   annotations?: ToolAnnotationsLike;
+  /**
+   * Where platform free text sits in a COMPLETED task's result (#204). Same
+   * contract as `ToolDefinitionForFactory.untrustedContent`; tasks bypass the
+   * tool factory, so it is applied here.
+   */
+  untrustedContent?: ToolUntrustedDeclaration;
   taskTtlMs?: number;
   taskPollIntervalMs?: number;
   /**
@@ -140,6 +154,9 @@ export function registerAsyncTaskTool<TInput, TOutput>(
   options: RegisterAsyncTaskToolOptions<TInput, TOutput>
 ): void {
   const { server, logger, sessionId, config, invalidParams } = options;
+  if (config.untrustedContent) {
+    assertValidUntrustedDeclaration(config.name, config.untrustedContent, !!config.outputSchema);
+  }
   const inputShape = extractZodShape(config.inputSchema);
   const outputShape = config.outputSchema ? extractZodShape(config.outputSchema) : undefined;
   const ttl = config.taskTtlMs ?? DEFAULT_TASK_TTL_MS;
@@ -154,6 +171,7 @@ export function registerAsyncTaskTool<TInput, TOutput>(
       outputSchema: outputShape,
       annotations: config.annotations,
       execution: { taskSupport: "required" },
+      ...(config.untrustedContent ? { _meta: toolListingMeta(config.untrustedContent) } : {}),
     },
     {
       createTask: async (args, { taskStore }) => {
@@ -203,9 +221,13 @@ async function runInBackground<TInput, TOutput>(
       requestId: `task-${taskId}`,
     });
     const content = config.formatContent(output, input);
+    const marker = config.untrustedContent
+      ? successResultMarker(config.untrustedContent)
+      : undefined;
     await taskStore.storeTaskResult(taskId, "completed", {
       content,
       structuredContent: output as unknown,
+      ...(marker ? { _meta: untrustedResultMeta(marker) } : {}),
     });
     logger.info({ taskId, tool: config.name }, "Async task completed");
   } catch (error) {

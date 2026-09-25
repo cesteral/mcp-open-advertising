@@ -12,6 +12,7 @@ import type { z } from "zod";
 import type { RequestContext } from "../utils/request-context.js";
 import type { ToolInputExample } from "../utils/tool-handler-factory.js";
 import type { CesteralToolAnnotations } from "./cesteral-annotations.js";
+import type { ToolUntrustedDeclaration } from "../utils/untrusted-content.js";
 
 /**
  * Structural subset of ElicitResult from the MCP SDK.
@@ -56,6 +57,11 @@ export interface ToolDefinition<
     cesteral?: CesteralToolAnnotations;
   };
   inputExamples?: ToolInputExample[];
+  /**
+   * Where platform free text sits in this tool's successful results (#204).
+   * See `ToolDefinitionForFactory.untrustedContent`.
+   */
+  untrustedContent?: ToolUntrustedDeclaration;
   logic: (
     input: z.infer<TInputSchema>,
     context: RequestContext,
