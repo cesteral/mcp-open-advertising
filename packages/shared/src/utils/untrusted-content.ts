@@ -160,3 +160,36 @@ export function untrustedResultMeta(
     },
   };
 }
+
+/**
+ * Marker for a resource read whose ENTIRE text is platform-supplied (#204 Tier
+ * 2). Carried on each `contents[]` item's `_meta`, under the same key as the
+ * tool-result marker.
+ *
+ * A report CSV has no structure to point into: every header and cell is
+ * whatever the platform returned, including campaign, ad and audience names.
+ * So it is marked whole rather than by path.
+ */
+export interface UntrustedResourceMarker {
+  /** Marker format version. `v: 1` changes are additive only. */
+  v: 1;
+  /** The whole `text` of this content item may be untrusted. */
+  whole: true;
+  reason: "report-csv";
+}
+
+export const REPORT_CSV_UNTRUSTED_MARKER: Readonly<UntrustedResourceMarker> = Object.freeze({
+  v: 1,
+  whole: true,
+  reason: "report-csv",
+});
+
+/**
+ * The `_meta` object for a resource content item carrying `marker`. A fresh
+ * copy each call, for the same reason as `untrustedResultMeta`.
+ */
+export function untrustedResourceMeta(
+  marker: Readonly<UntrustedResourceMarker>
+): Record<typeof UNTRUSTED_RESULT_META_KEY, UntrustedResourceMarker> {
+  return { [UNTRUSTED_RESULT_META_KEY]: { ...marker } };
+}

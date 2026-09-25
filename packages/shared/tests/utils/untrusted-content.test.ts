@@ -17,7 +17,9 @@ import {
   UNTRUSTED_CONTENT_DECLARATION as D,
   UNTRUSTED_RESULT_META_KEY,
   TOOL_ERROR_UNTRUSTED_MARKER,
+  REPORT_CSV_UNTRUSTED_MARKER,
   untrustedResultMeta,
+  untrustedResourceMeta,
   type UntrustedContentDeclaration,
 } from "../../src/utils/untrusted-content.js";
 
@@ -124,5 +126,19 @@ describe("per-result untrusted marker (#204 Tier 2)", () => {
     // read a missing marker as "no untrusted content". Flip this per server
     // only once every one of its tools declares.
     expect(D.path_reporting).toBe("unsupported");
+  });
+});
+
+describe("resource marker (#204 Tier 2)", () => {
+  it("marks a report CSV whole, under the same key as the tool marker", () => {
+    expect(untrustedResourceMeta(REPORT_CSV_UNTRUSTED_MARKER)).toEqual({
+      [UNTRUSTED_RESULT_META_KEY]: { v: 1, whole: true, reason: "report-csv" },
+    });
+  });
+
+  it("is frozen, and each read gets its own copy", () => {
+    expect(Object.isFrozen(REPORT_CSV_UNTRUSTED_MARKER)).toBe(true);
+    const a = untrustedResourceMeta(REPORT_CSV_UNTRUSTED_MARKER)[UNTRUSTED_RESULT_META_KEY];
+    expect(a).not.toBe(REPORT_CSV_UNTRUSTED_MARKER);
   });
 });
