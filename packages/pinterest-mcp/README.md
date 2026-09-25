@@ -224,9 +224,9 @@ Duplicate a campaign, ad group, or ad.
 - `entityId` (string, required): ID of the entity to duplicate
 - `options` (object, optional): Duplication options (e.g., rename prefix/suffix)
 
-#### 19. `pinterest_get_audience_estimate`
+#### 19. `pinterest_get_delivery_estimate`
 
-Get estimated audience size for a targeting configuration.
+Get the potential audience size (monthly lower/upper bound) for a Pinterest `targeting_spec`.
 
 **Parameters:**
 

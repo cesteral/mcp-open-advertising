@@ -73,7 +73,7 @@ Fetch these resources for detailed schema information:
 
 ### Specialized
 - \`pinterest_duplicate_entity\` — Copy campaigns, ad groups, ads
-- \`pinterest_get_audience_estimate\` — Audience size estimation
+- \`pinterest_get_delivery_estimate\` — Audience size estimate for a targeting spec
 - \`pinterest_get_ad_preview\` — Ad preview for video/image ads
 - \`pinterest_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 

@@ -967,7 +967,6 @@
         "cross_platform_campaign_setup",
         "amazon_dsp_entity_update_workflow",
         "amazon_dsp_entity_duplication_workflow",
-        "amazon_dsp_targeting_discovery_workflow",
         "amazon_dsp_creative_upload_workflow"
       ],
       "auth": {

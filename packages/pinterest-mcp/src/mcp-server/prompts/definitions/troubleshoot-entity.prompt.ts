@@ -85,7 +85,7 @@ pinterest_get_entity({
 ## Step 4: Audience Estimate
 
 \`\`\`json
-pinterest_get_audience_estimate({
+pinterest_get_delivery_estimate({
   "adAccountId": "${adAccountId}",
   "targetingConfig": { ... targeting from adGroup ... }
 })

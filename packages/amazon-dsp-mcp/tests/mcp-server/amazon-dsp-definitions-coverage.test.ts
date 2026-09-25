@@ -155,8 +155,10 @@ describe("Amazon DSP MCP definitions coverage", () => {
     // +6 conformance when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
     expect(allTools).toHaveLength(conformanceEnabled ? 34 : 28);
     expect(allResources.length).toBeGreaterThan(4);
-    expect(getAllPrompts()).toHaveLength(11);
-    expect(promptRegistry.size).toBe(11);
+    // 10: the TikTok-copied targeting-discovery prompt was removed (#235) — Amazon DSP
+    // has no targeting search, options or audience-estimate tool for it to call.
+    expect(getAllPrompts()).toHaveLength(10);
+    expect(promptRegistry.size).toBe(10);
     expect(getPromptDefinition("amazon_dsp_campaign_setup_workflow")).toBeDefined();
   });
 

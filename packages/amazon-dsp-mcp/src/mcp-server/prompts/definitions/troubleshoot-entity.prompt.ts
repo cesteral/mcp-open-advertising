@@ -80,22 +80,13 @@ amazon_dsp_get_entity({
 | No delivery | Entity paused | Use \`amazon_dsp_bulk_update_status\` with state: "delivering" |
 | No delivery, delivering | Parent paused | Set parent order or line item to "delivering" |
 | No delivery, all ENABLE | Budget exhausted | Increase budget |
-| No delivery, budget OK | Targeting too narrow | Check audience estimate |
+| No delivery, budget OK | Targeting too narrow | Check the forecast and its warnings with \`amazon_dsp_get_campaign_forecast\` |
 | Ad under review | AmazonDsp ad review in progress | Allow 24-48h for review |
 | Ad rejected | Policy violation | Review AmazonDsp creative guidelines |
 | Video not playing | Video upload incomplete | Check video status in Creative Library |
 | Low reach | Targeting too narrow | Broaden age, interests, or geos |
 
-## Step 4: Audience Estimate
-
-\`\`\`json
-amazon_dsp_get_audience_estimate({
-  "profileId": "${profileId}",
-  "targetingConfig": { ... targeting from adGroup ... }
-})
-\`\`\`
-
-## Step 5: Validate Entity Payload
+## Step 4: Validate Entity Payload
 
 \`\`\`json
 amazon_dsp_validate_entity({

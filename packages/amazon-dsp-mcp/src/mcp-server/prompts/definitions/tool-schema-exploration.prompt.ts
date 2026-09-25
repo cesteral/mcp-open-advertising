@@ -67,13 +67,9 @@ Fetch these resources for detailed schema information:
 - \`amazon_dsp_bulk_update_entities\` — Batch updates (up to 50)
 - \`amazon_dsp_adjust_bids\` — Batch adjust ad group bid prices
 
-### Targeting
-- \`amazon_dsp_search_targeting\` — Search interest categories, behaviors, demographics
-- \`amazon_dsp_get_targeting_options\` — Browse targeting categories
-
 ### Specialized
 - \`amazon_dsp_duplicate_entity\` — Copy campaigns, ad groups, ads
-- \`amazon_dsp_get_audience_estimate\` — Audience size estimation
+- \`amazon_dsp_get_campaign_forecast\` — Delivery forecast for one campaign, with forecast warnings
 - \`amazon_dsp_get_ad_preview\` — Ad preview for video/image ads
 - \`amazon_dsp_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
@@ -88,7 +84,6 @@ Fetch these resources for detailed schema information:
 | Task | Prompt |
 |------|--------|
 | Create a full campaign structure | \`amazon_dsp_campaign_setup_workflow\` |
-| Research audiences & build targeting | \`amazon_dsp_targeting_discovery_workflow\` |
 | Update entities safely | \`amazon_dsp_entity_update_workflow\` |
 | Duplicate campaigns/ad groups/ads | \`amazon_dsp_entity_duplication_workflow\` |
 | Bulk create/update/status/bids | \`amazon_dsp_bulk_operations_workflow\` |

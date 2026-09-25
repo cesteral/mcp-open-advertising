@@ -49,7 +49,7 @@ Before creating ad groups, you need to build a **targeting configuration** — t
 |------|---------|----------|
 | \`pinterest_search_targeting\` | Search by keyword | You know the audience you want |
 | \`pinterest_get_targeting_options\` | Browse available targeting | You want to explore what's available |
-| \`pinterest_get_audience_estimate\` | Estimate audience size | Before committing to targeting |
+| \`pinterest_get_delivery_estimate\` | Estimate audience size | Before committing to targeting |
 
 ---
 
@@ -151,14 +151,14 @@ Before creating the ad group, verify your targeting reaches a viable audience:
 
 \`\`\`json
 {
-  "tool": "pinterest_get_audience_estimate",
+  "tool": "pinterest_get_delivery_estimate",
   "params": {
     "adAccountId": "${adAccountId}",
     "targetingConfig": {
-      "age": ["AGE_18_24", "AGE_25_34"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US"],
-      "interest_keyword_ids": ["123456"]
+      "AGE_BUCKET": ["18-24", "25-34"],
+      "GENDER": ["female"],
+      "LOCATION": ["US"],
+      "INTEREST": ["935541271955"]
     }
   }
 }

@@ -31,10 +31,6 @@ import {
   getAmazonDspEntityUpdateWorkflowMessage,
 } from "./definitions/entity-update-workflow.prompt.js";
 import {
-  amazonDspTargetingDiscoveryWorkflowPrompt,
-  getAmazonDspTargetingDiscoveryWorkflowMessage,
-} from "./definitions/targeting-discovery-workflow.prompt.js";
-import {
   amazonDspEntityDuplicationWorkflowPrompt,
   getAmazonDspEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
@@ -97,13 +93,6 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: amazonDspEntityUpdateWorkflowPrompt,
       generateMessage: getAmazonDspEntityUpdateWorkflowMessage,
-    },
-  ],
-  [
-    amazonDspTargetingDiscoveryWorkflowPrompt.name,
-    {
-      prompt: amazonDspTargetingDiscoveryWorkflowPrompt,
-      generateMessage: getAmazonDspTargetingDiscoveryWorkflowMessage,
     },
   ],
   [

@@ -112,7 +112,7 @@ Pinterest uses cursor-based pagination (NOT page-number based):
 | \`pinterest_search_targeting\` | Search targeting options | |
 | \`pinterest_get_targeting_options\` | Browse targeting categories | |
 | \`pinterest_duplicate_entity\` | Duplicate campaign/adGroup/ad | |
-| \`pinterest_get_audience_estimate\` | Audience size estimation | |
+| \`pinterest_get_delivery_estimate\` | Audience size estimate for a targeting spec | |
 | \`pinterest_get_ad_preview\` | Ad preview data | |
 | \`pinterest_validate_entity\` | Client-side payload validation | |
 

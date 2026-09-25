@@ -30,7 +30,7 @@ export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): 
 
 ## Prerequisites
 - Ad Account ID: \`${adAccountId}\`
-- Verify access: \`pinterest_list_advertisers\`
+- Verify access: \`pinterest_list_ad_accounts\`
 
 ## Step 1: Create Campaign
 
