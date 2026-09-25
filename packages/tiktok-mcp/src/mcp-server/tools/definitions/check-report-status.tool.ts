@@ -128,9 +128,11 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
-  // errors is never filled by the status mapper today; declared so a future failure reason is covered.
+  // `message` is TikTok's own task text. mapTikTokReportTaskStatus copies it
+  // into `errors` for a FAILED or unrecognized status, and the failed-state
+  // formatter prints `errors` into block 0.
   untrustedContent: {
-    structuredPaths: ["$.errors"],
-    contentBlocks: [],
+    structuredPaths: ["$.errors", "$.message"],
+    contentBlocks: [0],
   },
 };

@@ -552,8 +552,8 @@
       "contentBlocks": [0]
     },
     "tiktok_check_report_status": {
-      "structuredPaths": ["$.errors"],
-      "contentBlocks": []
+      "structuredPaths": ["$.errors", "$.message"],
+      "contentBlocks": [0]
     },
     "tiktok_create_entity": {
       "structuredPaths": ["$.entity", "$.after"],
