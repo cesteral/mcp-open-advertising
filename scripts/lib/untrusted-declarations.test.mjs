@@ -19,18 +19,33 @@
 //   - its shape is valid (v: 1, two arrays);
 //   - each structured path's first segment is a real top-level property of the
 //     tool's published outputSchema, so a path cannot point at nothing;
-//   - every OPEN top-level property (`z.record(z.any())`, `z.any()`, or an
-//     array of either) is declared. An open field is how a raw platform object
-//     passes through, so an undeclared one is almost always an omission, and
-//     this catches a path deleted by mistake. The one exemption is `effect`:
-//     its shape is contract-schema's `EffectResult`, a scalar audit summary of
-//     ids, counts and caller input. A tool whose summary does carry platform
-//     text (ttd_create_report_template's `template_name`) declares it anyway.
+//   - no undeclared top-level property is OPEN anywhere inside it: a record,
+//     `any`, `.passthrough()` / `.catchall()` object, or an array of any of
+//     these, at any depth, following `$ref`s. An open schema is how a raw
+//     platform object passes through, so an undeclared one is almost always an
+//     omission. The one exemption is a property named `summary`: that is
+//     contract-schema's `EffectResult.summary` (on `effect` and on
+//     `dryRun.expectedEffect`), a scalar audit summary of ids, counts and
+//     caller input. A tool whose summary carries platform text
+//     (ttd_create_report_template's `template_name`) declares it anyway.
+//
+// A schema heuristic cannot protect a path to a plain string (`$.creativeName`,
+// `$.errors`): nothing distinguishes it from a server-built string. So every
+// per-response server's declarations are also pinned in
+// untrusted-declarations.snapshot.json, and removing or changing any path, or
+// adding a tool, needs a visible edit to that file in review. Regenerate it
+// with `pnpm sync:untrusted-declarations` after checking the change is right.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import {
+  OPEN_EXEMPT_PROPERTIES,
+  SNAPSHOT_PATH,
+  declarationsOf,
+  isOpen,
+} from "./untrusted-declarations.mjs";
 
 const KEY = "cesteral/untrusted";
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -44,17 +59,47 @@ const claimFor = (pkg) =>
 
 const firstSegment = (path) => /^\$\.([A-Za-z_][A-Za-z0-9_]*)/.exec(path)?.[1];
 
-/** Open-schema fields that may stay undeclared; see the header. */
-const OPEN_FIELD_EXEMPT = new Set(["effect"]);
+const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, "utf8"));
 
-/** True for a JSON Schema that admits arbitrary platform-shaped data. */
-function isOpen(schema) {
-  if (!schema || typeof schema !== "object") return true;
-  if (schema.anyOf) return schema.anyOf.some(isOpen);
-  if (schema.type === "array") return isOpen(schema.items);
-  if (schema.type === "object") return !schema.properties;
-  return schema.type === undefined && schema.enum === undefined && schema.const === undefined;
-}
+describe("isOpen recognises every open JSON Schema shape", () => {
+  const closed = { type: "object", properties: { id: { type: "string" } } };
+  it.each([
+    ["z.any()", {}],
+    ["z.record(z.any())", { type: "object", additionalProperties: {} }],
+    ["an object with no properties", { type: "object" }],
+    ["array of any", { type: "array" }],
+    ["array of records", { type: "array", items: { type: "object", additionalProperties: {} } }],
+    [".passthrough()", { ...closed, additionalProperties: true }],
+    [".catchall(z.any())", { ...closed, additionalProperties: {} }],
+    ["nullable record as anyOf", { anyOf: [{ type: "object" }, { type: "null" }] }],
+    ["nullable record as a type array", { type: ["object", "null"] }],
+    [
+      "an open field nested in a closed object",
+      { type: "object", properties: { entity: { type: "object", additionalProperties: {} } } },
+    ],
+    [
+      "a $ref to an open schema",
+      { type: "object", properties: { a: { type: "object" }, b: { $ref: "#/properties/a" } } },
+    ],
+  ])("open: %s", (_label, schema) => {
+    expect(isOpen(schema)).toBe(true);
+  });
+
+  it.each([
+    ["a string", { type: "string" }],
+    ["an enum", { enum: ["A", "B"] }],
+    ["a closed object", { ...closed, additionalProperties: false }],
+    ["a closed object, additionalProperties unset", closed],
+    ["an array of strings", { type: "array", items: { type: "string" } }],
+    [
+      "an open EffectResult summary",
+      { type: "object", properties: { summary: { type: "object", additionalProperties: {} } } },
+    ],
+    ["a self-referencing $ref", { type: "object", properties: { next: { $ref: "#" } } }],
+  ])("closed: %s", (_label, schema) => {
+    expect(isOpen(schema)).toBe(false);
+  });
+});
 
 describe("untrusted-content declarations match each server's claim (#204)", () => {
   it("registry claims are one of the two allowed values", () => {
@@ -99,7 +144,10 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
 
         const declared = new Set(declaration.structuredPaths.map(firstSegment));
         const openUndeclared = properties.filter(
-          (p) => isOpen(schemaProps[p]) && !declared.has(p) && !OPEN_FIELD_EXEMPT.has(p)
+          (p) =>
+            !declared.has(p) &&
+            !OPEN_EXEMPT_PROPERTIES.has(p) &&
+            isOpen(schemaProps[p], tool.outputSchema)
         );
         expect(
           openUndeclared,
@@ -112,7 +160,15 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
           undeclared,
           `${pkg} claims per-response, but these tools declare nothing; add untrustedContent`
         ).toEqual([]);
+        expect(
+          declarationsOf(tools),
+          `${pkg}: declarations differ from untrusted-declarations.snapshot.json. If the change is intended, run \`pnpm sync:untrusted-declarations\``
+        ).toEqual(snapshot[pkg]);
       } else {
+        expect(
+          snapshot[pkg],
+          `${pkg} is pinned in untrusted-declarations.snapshot.json but does not claim per-response`
+        ).toBeUndefined();
         expect(
           undeclared.length,
           `${pkg}: every tool declares; set untrustedContent.pathReporting to "per-response" in registry.json`
