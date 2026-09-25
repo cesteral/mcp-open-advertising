@@ -23,10 +23,12 @@
 //     `any`, `.passthrough()` / `.catchall()` object, or an array of any of
 //     these, at any depth, following `$ref`s. An open schema is how a raw
 //     platform object passes through, so an undeclared one is almost always an
-//     omission. The one exemption is a property named `summary`: that is
-//     contract-schema's `EffectResult.summary` (on `effect` and on
+//     omission. The one exemption is contract-schema's `EffectResult.summary`
+//     (a `summary` beside an `effectKind`, on `effect` and on
 //     `dryRun.expectedEffect`), a scalar audit summary of ids, counts and
-//     caller input. A tool whose summary carries platform text
+//     caller input. Any other `summary` is checked like any field. An open
+//     field that is not platform data at all goes in OPEN_FIELD_ALLOWLIST
+//     (untrusted-declarations.mjs) with its reason; a stale entry fails. A tool whose summary carries platform text
 //     (ttd_create_report_template's `template_name`) declares it anyway.
 //
 // A schema heuristic cannot protect a path to a plain string (`$.creativeName`,
@@ -41,7 +43,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
 import {
-  OPEN_EXEMPT_PROPERTIES,
+  OPEN_FIELD_ALLOWLIST,
   SNAPSHOT_PATH,
   declarationsOf,
   isOpen,
@@ -78,6 +80,10 @@ describe("isOpen recognises every open JSON Schema shape", () => {
       { type: "object", properties: { entity: { type: "object", additionalProperties: {} } } },
     ],
     [
+      "a summary that is not an EffectResult's",
+      { type: "object", properties: { summary: { type: "object", additionalProperties: {} } } },
+    ],
+    [
       "a $ref to an open schema",
       { type: "object", properties: { a: { type: "object" }, b: { $ref: "#/properties/a" } } },
     ],
@@ -93,7 +99,13 @@ describe("isOpen recognises every open JSON Schema shape", () => {
     ["an array of strings", { type: "array", items: { type: "string" } }],
     [
       "an open EffectResult summary",
-      { type: "object", properties: { summary: { type: "object", additionalProperties: {} } } },
+      {
+        type: "object",
+        properties: {
+          effectKind: { type: "string" },
+          summary: { type: "object", additionalProperties: {} },
+        },
+      },
     ],
     ["a self-referencing $ref", { type: "object", properties: { next: { $ref: "#" } } }],
   ])("closed: %s", (_label, schema) => {
@@ -122,6 +134,7 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
       expect(tools.length, `${pkg} lists no tools`).toBeGreaterThan(0);
 
       const undeclared = [];
+      const allowlistHits = new Set();
       for (const tool of tools) {
         const declaration = tool._meta?.[KEY];
         if (declaration === undefined) {
@@ -143,17 +156,27 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
         }
 
         const declared = new Set(declaration.structuredPaths.map(firstSegment));
-        const openUndeclared = properties.filter(
-          (p) =>
-            !declared.has(p) &&
-            !OPEN_EXEMPT_PROPERTIES.has(p) &&
-            isOpen(schemaProps[p], tool.outputSchema)
-        );
+        const openUndeclared = properties.filter((p) => {
+          if (declared.has(p) || !isOpen(schemaProps[p], tool.outputSchema)) return false;
+          const key = `${tool.name}.${p}`;
+          if (!(key in OPEN_FIELD_ALLOWLIST)) return true;
+          allowlistHits.add(key);
+          return false;
+        });
         expect(
           openUndeclared,
           `${tool.name}: open outputSchema fields can carry raw platform objects; declare them`
         ).toEqual([]);
       }
+
+      const names = new Set(tools.map((t) => t.name));
+      const stale = Object.keys(OPEN_FIELD_ALLOWLIST).filter(
+        (key) => names.has(key.split(".")[0]) && !allowlistHits.has(key)
+      );
+      expect(
+        stale,
+        "OPEN_FIELD_ALLOWLIST entries that no longer name an open, undeclared field; remove them"
+      ).toEqual([]);
 
       if (claimFor(pkg) === "per-response") {
         expect(

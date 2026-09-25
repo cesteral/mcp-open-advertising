@@ -242,4 +242,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // The dry run reads the current entity. The text names only the entity type and ID.
+  untrustedContent: {
+    structuredPaths: ["$.dryRun", "$.before", "$.after"],
+    contentBlocks: [],
+  },
 };

@@ -217,4 +217,15 @@ export const getInsightsTool = {
   ],
   logic: getInsightsLogic,
   responseFormatter: getInsightsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: [
+      "$.headers",
+      "$.selectedColumns",
+      "$.rows",
+      "$.previewRows",
+      "$.warnings",
+      "$.summary",
+    ],
+    contentBlocks: [0],
+  },
 };

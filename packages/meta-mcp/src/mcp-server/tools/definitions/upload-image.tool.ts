@@ -272,4 +272,9 @@ export const uploadImageTool = {
   ],
   logic: uploadImageLogic,
   responseFormatter: uploadImageResponseFormatter,
+  // Meta echoes the image name back; it may differ from the caller's.
+  untrustedContent: {
+    structuredPaths: ["$.name"],
+    contentBlocks: [0],
+  },
 };

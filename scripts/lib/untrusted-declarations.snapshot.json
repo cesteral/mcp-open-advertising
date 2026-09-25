@@ -37,6 +37,135 @@
       "contentBlocks": [0]
     }
   },
+  "meta-mcp": {
+    "meta_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "meta_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "meta_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "meta_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "meta_check_report_status": {
+      "structuredPaths": ["$.errors", "$.errorMessage", "$.errorUserTitle", "$.errorUserMsg"],
+      "contentBlocks": [0]
+    },
+    "meta_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "meta_delete_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "meta_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "meta_duplicate_entity": {
+      "structuredPaths": ["$.result", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "meta_get_ad_preview": {
+      "structuredPaths": ["$.previews"],
+      "contentBlocks": [0]
+    },
+    "meta_get_available_metrics": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "meta_get_delivery_estimate": {
+      "structuredPaths": ["$.estimate"],
+      "contentBlocks": [0]
+    },
+    "meta_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "meta_get_insights": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings",
+        "$.summary"
+      ],
+      "contentBlocks": [0]
+    },
+    "meta_get_insights_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "meta_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "meta_get_targeting_options": {
+      "structuredPaths": ["$.options"],
+      "contentBlocks": [0]
+    },
+    "meta_list_ad_accounts": {
+      "structuredPaths": ["$.accounts"],
+      "contentBlocks": [0]
+    },
+    "meta_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "meta_manage_budget_schedule": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "meta_search_targeting": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "meta_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "meta_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "meta_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "meta_upload_image": {
+      "structuredPaths": ["$.name"],
+      "contentBlocks": [0]
+    },
+    "meta_upload_video": {
+      "structuredPaths": ["$.title"],
+      "contentBlocks": [0]
+    },
+    "meta_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
   "ttd-mcp": {
     "ttd_adjust_bids": {
       "structuredPaths": ["$.results"],
