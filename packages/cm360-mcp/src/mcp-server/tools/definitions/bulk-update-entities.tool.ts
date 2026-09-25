@@ -28,7 +28,7 @@ const TOOL_NAME = "cm360_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update CM360 Entities";
 const TOOL_DESCRIPTION = `Batch update multiple CM360 entities of the same type.
 
-Items are partial updates (CM360 PATCH semantics): send only the fields to change in \`data\`; omitted fields keep their current values. Loops individual PATCH calls with rate limiting. Max 50 items per call.`;
+Items are partial updates (CM360 PATCH semantics): send only the fields to change in \`data\`; omitted fields keep their current values. CM360 has no batch endpoint: each item is one PATCH call, paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 15 items fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 items.`;
 
 const EFFECT_KIND = "entities_updated";
 

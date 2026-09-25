@@ -30,12 +30,12 @@ const TOOL_TITLE = "Bulk Update CM360 Entity Status";
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_DESCRIPTION = `Batch update the status of multiple CM360 entities.
 
-Each entity is fetched first then updated (CM360 uses PUT/replace semantics). Loops individual GET+PUT calls with rate limiting. At ~1 QPS, 50 items takes ~100 seconds.
+Each entity is fetched and then written back whole (GET + PUT, because CM360's PUT replaces the entity), so every entity costs two calls. Calls are paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 7 entities fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 IDs.
 
 Supported mappings:
 - campaign: ACTIVE, ARCHIVED
 - ad, creative: ACTIVE, ARCHIVED
-- placement: ACTIVE, INACTIVE, ARCHIVED, PERMANENTLY_ARCHIVED`;
+- placement: ACTIVE, INACTIVE (or PAUSED), ARCHIVED, PERMANENTLY_ARCHIVED (irreversible)`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({

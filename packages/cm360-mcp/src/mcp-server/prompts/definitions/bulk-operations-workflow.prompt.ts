@@ -89,7 +89,7 @@ Each item is a **partial update** (PATCH semantics) — send only the fields to 
 
 | Issue | Solution |
 |-------|----------|
-| Max 50 items per request | Split into batches |
+| Max 50 items per request, but at the default rate limit (5/min per user) only 15 creates/updates or 7 status changes fit | Run with \`dry_run\` first; when a batch is refused, split it by the error's \`itemsThatFit\` |
 | Partial failures possible | Check results array for individual errors |
 | Arrays are replaced by PATCH, not merged | Fetch the entity and send the full array when changing one element |
 | Status cascading | Deactivating parent affects children |

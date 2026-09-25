@@ -27,7 +27,7 @@ const TOOL_NAME = "cm360_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create CM360 Entities";
 const TOOL_DESCRIPTION = `Batch create multiple CM360 entities of the same type.
 
-Loops individual create calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds. Max 50 items per call.`;
+CM360 has no batch endpoint: each item is one create call, paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 15 items fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 items.`;
 
 const EFFECT_KIND = "entities_created";
 

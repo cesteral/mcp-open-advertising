@@ -32,12 +32,25 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, projectBulkCapacity } from "@cesteral/shared";
 import { rateLimiter } from "../../src/utils/platform.js";
-import { CM360Service } from "../../src/services/cm360/cm360-service.js";
-import { bulkUpdateStatusLogic } from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
-import { bulkUpdateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
-import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
+import {
+  CM360Service,
+  cm360BulkCapacityCheck,
+  type CM360BulkOperation,
+} from "../../src/services/cm360/cm360-service.js";
+import {
+  bulkUpdateStatusLogic,
+  bulkUpdateStatusTool,
+} from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
+import {
+  bulkUpdateEntitiesLogic,
+  bulkUpdateEntitiesTool,
+} from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
+import {
+  bulkCreateEntitiesLogic,
+  bulkCreateEntitiesTool,
+} from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -101,6 +114,24 @@ describe("cm360 default limiter", () => {
     expect(rateLimiter.describeLimits()).toEqual([
       { pattern: "cm360:*", limit: 5, windowMs: 60_000, maxWaitMs: 120_000 },
     ]);
+  });
+
+  // The descriptions used to promise "~1 QPS, 50 items takes ~50 seconds"
+  // long after the limiter made a 50-item batch impossible at the default.
+  // Tie the number each description states to the live projection.
+  it.each<[string, { description: string }, CM360BulkOperation, string]>([
+    ["cm360_bulk_create_entities", bulkCreateEntitiesTool, "create", "items"],
+    ["cm360_bulk_update_entities", bulkUpdateEntitiesTool, "update", "items"],
+    ["cm360_bulk_update_status", bulkUpdateStatusTool, "status", "entities"],
+  ])("%s states the batch size that fits at the default limit", (name, tool, operation, noun) => {
+    const { itemsThatFit } = projectBulkCapacity(
+      cm360BulkCapacityCheck(rateLimiter, name, operation, "idle-user", 50)
+    );
+    expect(tool.description).toContain(
+      `At the default limit, ${itemsThatFit} ${noun} fit when nothing else is queued.`
+    );
+    expect(tool.description).toContain("default 5/min");
+    expect(tool.description).not.toMatch(/QPS|\d+ seconds/);
   });
 });
 

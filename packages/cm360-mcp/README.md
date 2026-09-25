@@ -188,7 +188,7 @@ CM360 reports are asynchronous. Two workflows available:
 
 ### Bulk Operations
 
-No native batch API -- bulk tools loop individual calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds.
+No native batch API: bulk tools make one call per item (two per entity for status changes), paced by the per-user rate limit. A batch that cannot clear the limit within the 2-minute queue budget is refused before anything is sent, with `itemsThatFit` and `retryAfterMs`. At the default 5/min, that is 15 creates/updates or 7 status changes. Use `dry_run` to check first.
 
 | Tool                         | Description                      | Key Parameters                                     |
 | ---------------------------- | -------------------------------- | -------------------------------------------------- |
@@ -291,7 +291,9 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 
 ### Rate Limiting
 
-CM360 API quota: ~50K requests/day (~1 QPS sustained). The server enforces a configurable rate limit (default: 50 requests/minute) with automatic retry on 429 responses using exponential backoff.
+The server enforces a per-user rate limit (`CM360_RATE_LIMIT_PER_MINUTE`, default 5 requests/minute), keyed by the authenticated credential and shared across all of that user's profiles; reporting calls have a separate bucket of the same size. Over-limit calls queue for up to 2 minutes rather than fail. 429 responses are retried with exponential backoff, and a `Retry-After` longer than the retry budget is surfaced as `retryAfterMs` instead of being re-sent early.
+
+CM360's own quota could not be confirmed from a primary source. Search results give 60 queries/min per user and 50,000/day per project; see `cm360.rate_limit_default` in `platform-facts.json` before raising the default.
 
 ---
 
