@@ -112,4 +112,9 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
+  // errors is never filled by the Snapchat status mapper today; declared so a future failure reason is covered.
+  untrustedContent: {
+    structuredPaths: ["$.errors"],
+    contentBlocks: [],
+  },
 };

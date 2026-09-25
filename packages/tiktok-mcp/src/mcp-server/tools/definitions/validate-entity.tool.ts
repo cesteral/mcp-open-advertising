@@ -19,6 +19,7 @@ import {
   validateEnumFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -337,4 +338,6 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  // Written by hand, not built by createValidateEntityTool, so it needs its own declaration. It is purely local.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

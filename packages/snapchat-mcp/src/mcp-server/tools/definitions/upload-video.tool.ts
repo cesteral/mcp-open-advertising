@@ -15,6 +15,7 @@ import {
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
   assertAccountScope,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -317,4 +318,6 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // mediaStatus is Snapchat's media_status enum; on poll timeout the tool returns without mediaStatus.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

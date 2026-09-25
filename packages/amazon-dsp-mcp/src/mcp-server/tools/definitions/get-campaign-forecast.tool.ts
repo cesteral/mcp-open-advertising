@@ -174,4 +174,8 @@ export const getCampaignForecastTool = {
   ],
   logic: getCampaignForecastLogic,
   responseFormatter: getCampaignForecastResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.response"],
+    contentBlocks: [0],
+  },
 };

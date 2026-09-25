@@ -363,4 +363,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // The dry run does not read the entities; only per-id platform error messages carry platform text.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

@@ -332,4 +332,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // Unlike meta, dryRun here never reads the entity (symbolic id check) and there is no before/after.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

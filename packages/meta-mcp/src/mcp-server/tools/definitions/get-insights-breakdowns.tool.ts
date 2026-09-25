@@ -181,4 +181,8 @@ export const getInsightsBreakdownsTool = {
   ],
   logic: getInsightsBreakdownsLogic,
   responseFormatter: getInsightsBreakdownsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

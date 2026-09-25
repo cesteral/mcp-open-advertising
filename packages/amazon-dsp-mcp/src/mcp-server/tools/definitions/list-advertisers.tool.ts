@@ -115,4 +115,8 @@ export const listAdvertisersTool = {
   ],
   logic: listAdvertisersLogic,
   responseFormatter: listAdvertisersResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.advertisers"],
+    contentBlocks: [0],
+  },
 };

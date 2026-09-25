@@ -128,4 +128,8 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.errors", "$.errorMessage", "$.errorUserTitle", "$.errorUserMsg"],
+    contentBlocks: [0],
+  },
 };

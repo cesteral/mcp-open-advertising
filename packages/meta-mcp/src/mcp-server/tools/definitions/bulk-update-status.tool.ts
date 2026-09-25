@@ -303,4 +303,8 @@ export const bulkUpdateStatusTool = {
   ],
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

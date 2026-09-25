@@ -146,4 +146,8 @@ export const searchTargetingTool = {
   ],
   logic: searchTargetingLogic,
   responseFormatter: searchTargetingResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

@@ -364,4 +364,9 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // Without a caller title, the title comes from Meta's upload response.
+  untrustedContent: {
+    structuredPaths: ["$.title"],
+    contentBlocks: [0],
+  },
 };

@@ -329,4 +329,8 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

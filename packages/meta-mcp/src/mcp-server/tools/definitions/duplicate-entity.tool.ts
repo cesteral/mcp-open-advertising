@@ -231,4 +231,9 @@ export const duplicateEntityTool = {
   ],
   logic: duplicateEntityLogic,
   responseFormatter: duplicateEntityResponseFormatter,
+  // The dry run reads the source entity, so its expected post-state carries platform text.
+  untrustedContent: {
+    structuredPaths: ["$.result", "$.dryRun", "$.after"],
+    contentBlocks: [0],
+  },
 };

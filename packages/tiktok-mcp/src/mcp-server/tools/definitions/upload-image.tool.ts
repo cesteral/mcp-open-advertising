@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope } from "@cesteral/shared";
+import { assertAccountScope, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import {
   downloadFileToBuffer,
   McpError,
@@ -272,4 +272,5 @@ export const uploadImageTool = {
   ],
   logic: uploadImageLogic,
   responseFormatter: uploadImageResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

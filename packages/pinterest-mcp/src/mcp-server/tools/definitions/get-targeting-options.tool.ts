@@ -99,4 +99,8 @@ export const getTargetingOptionsTool = {
   ],
   logic: getTargetingOptionsLogic,
   responseFormatter: getTargetingOptionsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.options"],
+    contentBlocks: [0],
+  },
 };

@@ -233,4 +233,8 @@ export const getReportTool = {
   ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

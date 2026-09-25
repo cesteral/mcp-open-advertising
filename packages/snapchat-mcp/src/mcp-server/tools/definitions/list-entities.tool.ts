@@ -122,4 +122,8 @@ export const listEntitiesTool = {
   ],
   logic: listEntitiesLogic,
   responseFormatter: listEntitiesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.entities"],
+    contentBlocks: [0],
+  },
 };

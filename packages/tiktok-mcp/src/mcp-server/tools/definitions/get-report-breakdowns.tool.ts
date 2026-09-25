@@ -236,4 +236,8 @@ export const getReportBreakdownsTool = {
   ],
   logic: getReportBreakdownsLogic,
   responseFormatter: getReportBreakdownsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

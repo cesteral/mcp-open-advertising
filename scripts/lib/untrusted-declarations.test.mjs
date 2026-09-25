@@ -23,11 +23,16 @@
 //     `any`, `.passthrough()` / `.catchall()` object, or an array of any of
 //     these, at any depth, following `$ref`s. An open schema is how a raw
 //     platform object passes through, so an undeclared one is almost always an
-//     omission. The one exemption is a property named `summary`: that is
-//     contract-schema's `EffectResult.summary` (on `effect` and on
-//     `dryRun.expectedEffect`), a scalar audit summary of ids, counts and
-//     caller input. A tool whose summary carries platform text
+//     omission. The one exemption is contract-schema's `EffectResult.summary`
+//     (an object of exactly `effectKind` plus a `summary` record of scalars,
+//     on `effect` and on `dryRun.expectedEffect`): an audit summary of ids,
+//     counts and caller input. Any other `summary` is checked like any field.
+//     A tool whose summary carries platform text
 //     (ttd_create_report_template's `template_name`) declares it anyway.
+//   - an open field that is not platform data at all goes in
+//     OPEN_FIELD_ALLOWLIST (untrusted-declarations.mjs) with its reason. An
+//     entry that no longer names an open, undeclared field of a tool some
+//     server registers fails, checked once across the whole fleet.
 //
 // A schema heuristic cannot protect a path to a plain string (`$.creativeName`,
 // `$.errors`): nothing distinguishes it from a server-built string. So every
@@ -41,7 +46,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
 import {
-  OPEN_EXEMPT_PROPERTIES,
+  OPEN_FIELD_ALLOWLIST,
   SNAPSHOT_PATH,
   declarationsOf,
   isOpen,
@@ -78,6 +83,31 @@ describe("isOpen recognises every open JSON Schema shape", () => {
       { type: "object", properties: { entity: { type: "object", additionalProperties: {} } } },
     ],
     [
+      "a summary that is not an EffectResult's",
+      { type: "object", properties: { summary: { type: "object", additionalProperties: {} } } },
+    ],
+    [
+      "an effectKind + summary lookalike whose summary holds any value",
+      {
+        type: "object",
+        properties: {
+          effectKind: { type: "string" },
+          summary: { type: "object", additionalProperties: {} },
+        },
+      },
+    ],
+    [
+      "an effectKind + summary lookalike with extra properties",
+      {
+        type: "object",
+        properties: {
+          effectKind: { type: "string" },
+          name: { type: "string" },
+          summary: { type: "object", additionalProperties: {} },
+        },
+      },
+    ],
+    [
       "a $ref to an open schema",
       { type: "object", properties: { a: { type: "object" }, b: { $ref: "#/properties/a" } } },
     ],
@@ -92,14 +122,29 @@ describe("isOpen recognises every open JSON Schema shape", () => {
     ["a closed object, additionalProperties unset", closed],
     ["an array of strings", { type: "array", items: { type: "string" } }],
     [
-      "an open EffectResult summary",
-      { type: "object", properties: { summary: { type: "object", additionalProperties: {} } } },
+      "an EffectResult summary (a record of scalars beside effectKind)",
+      {
+        type: "object",
+        properties: {
+          effectKind: { type: "string" },
+          summary: {
+            type: "object",
+            additionalProperties: { type: ["string", "number", "boolean", "null"] },
+          },
+        },
+      },
     ],
     ["a self-referencing $ref", { type: "object", properties: { next: { $ref: "#" } } }],
   ])("closed: %s", (_label, schema) => {
     expect(isOpen(schema)).toBe(false);
   });
 });
+
+// Filled by every server's case below, then checked once across the fleet, so an
+// entry naming a renamed, removed or misspelt tool is caught too. A per-server
+// check only ever sees entries for tools that still exist.
+const fleetToolNames = new Set();
+const allowlistHits = new Set();
 
 describe("untrusted-content declarations match each server's claim (#204)", () => {
   it("registry claims are one of the two allowed values", () => {
@@ -143,17 +188,20 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
         }
 
         const declared = new Set(declaration.structuredPaths.map(firstSegment));
-        const openUndeclared = properties.filter(
-          (p) =>
-            !declared.has(p) &&
-            !OPEN_EXEMPT_PROPERTIES.has(p) &&
-            isOpen(schemaProps[p], tool.outputSchema)
-        );
+        const openUndeclared = properties.filter((p) => {
+          if (declared.has(p) || !isOpen(schemaProps[p], tool.outputSchema)) return false;
+          const key = `${tool.name}.${p}`;
+          if (!(key in OPEN_FIELD_ALLOWLIST)) return true;
+          allowlistHits.add(key);
+          return false;
+        });
         expect(
           openUndeclared,
           `${tool.name}: open outputSchema fields can carry raw platform objects; declare them`
         ).toEqual([]);
       }
+
+      for (const tool of tools) fleetToolNames.add(tool.name);
 
       if (claimFor(pkg) === "per-response") {
         expect(
@@ -177,4 +225,19 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
     },
     120_000
   );
+
+  // Declared after the per-server cases, so vitest runs it once they have all
+  // filled fleetToolNames and allowlistHits.
+  it("OPEN_FIELD_ALLOWLIST has no stale entries", () => {
+    const stale = Object.keys(OPEN_FIELD_ALLOWLIST).filter((key) => !allowlistHits.has(key));
+    const unknownTools = stale.filter((key) => !fleetToolNames.has(key.split(".")[0]));
+    expect(
+      unknownTools,
+      "OPEN_FIELD_ALLOWLIST entries naming a tool no server registers; remove them"
+    ).toEqual([]);
+    expect(
+      stale,
+      "OPEN_FIELD_ALLOWLIST entries that no longer name an open, undeclared field; remove them"
+    ).toEqual([]);
+  });
 });

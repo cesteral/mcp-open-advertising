@@ -10,6 +10,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import { AMAZON_DSP_REPORTING_CONTRACT } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 import type {
@@ -290,4 +291,5 @@ export const submitReportTool = {
   ],
   logic: submitReportLogic,
   responseFormatter: submitReportResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

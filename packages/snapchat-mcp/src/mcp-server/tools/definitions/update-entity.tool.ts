@@ -282,4 +282,9 @@ export const updateEntityTool = {
   ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
+  // Formatter prints only ids, statuses and symbolic validation messages over caller input.
+  untrustedContent: {
+    structuredPaths: ["$.dryRun", "$.before", "$.after"],
+    contentBlocks: [],
+  },
 };

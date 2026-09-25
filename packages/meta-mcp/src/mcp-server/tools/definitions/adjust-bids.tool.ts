@@ -407,4 +407,8 @@ export const adjustBidsTool = {
   ],
   logic: adjustBidsLogic,
   responseFormatter: adjustBidsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

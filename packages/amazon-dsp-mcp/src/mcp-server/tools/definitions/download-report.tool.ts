@@ -140,4 +140,9 @@ export const downloadReportTool = {
   ],
   logic: downloadReportLogic,
   responseFormatter: downloadReportResponseFormatter,
+  // rawCsvResourceUri/spill undeclared: an internal report-csv:// URI (resource contents marked whole by report-csv-resource.ts) and GCS object metadata / signed URL / GCS error.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

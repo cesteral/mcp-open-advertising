@@ -145,4 +145,9 @@ export const getTargetingOptionsTool = {
   ],
   logic: getTargetingOptionsLogic,
   responseFormatter: getTargetingOptionsResponseFormatter,
+  // pagination.nextCursor is Snapchat's next_link (a platform-generated URL), so it is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.options"],
+    contentBlocks: [0],
+  },
 };

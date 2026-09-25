@@ -330,4 +330,9 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // videoName is read back from TikTok's video info and may be a platform-assigned name (e.g. from the file) when the caller gave none.
+  untrustedContent: {
+    structuredPaths: ["$.videoName"],
+    contentBlocks: [0],
+  },
 };

@@ -33,6 +33,7 @@ import { NO_UNTRUSTED_CONTENT } from "../../src/utils/untrusted-content.js";
 import { buildServerCardExtras } from "../../src/utils/server-card-builder.js";
 import { conformanceTools } from "../../src/utils/conformance-echo-tool.js";
 import { createToolSearchTool } from "../../src/utils/tool-search.js";
+import { createValidateEntityTool } from "../../src/utils/validate-entity-factory.js";
 import {
   createMcpHttpTransport,
   type TransportFactoryConfig,
@@ -216,7 +217,13 @@ describe("shared tools every server can register", () => {
   // fully declared.
   it("declare that they return no platform text", () => {
     const search = createToolSearchTool({ platform: "probe", getTools: () => [] });
-    for (const t of [...conformanceTools, search]) {
+    const validate = createValidateEntityTool({
+      toolName: "probe_validate_entity",
+      toolTitle: "Probe",
+      toolDescription: "Probe",
+      entityTypeEnum: ["campaign"] as const,
+    });
+    for (const t of [...conformanceTools, search, validate]) {
       expect(t.untrustedContent, t.name).toEqual(NO_UNTRUSTED_CONTENT);
     }
   });
@@ -226,7 +233,9 @@ describe("the server card's path_reporting", () => {
   it("comes from the registry per server, defaulting to unsupported", () => {
     expect(buildServerCardExtras("dbm-mcp").untrustedPathReporting).toBe("per-response");
     expect(buildServerCardExtras("ttd-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("meta-mcp").untrustedPathReporting).toBe("unsupported");
+    expect(buildServerCardExtras("meta-mcp").untrustedPathReporting).toBe("per-response");
+    expect(buildServerCardExtras("tiktok-mcp").untrustedPathReporting).toBe("per-response");
+    expect(buildServerCardExtras("gads-mcp").untrustedPathReporting).toBe("unsupported");
   });
 
   async function cardFor(serverCard: TransportFactoryConfig["serverCard"]) {
