@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+import { z } from "zod";
 
 export type MsAdsEntityType =
   | "campaign"
@@ -261,4 +262,81 @@ export function missingWriteParentMessage(
   const value = parentIds[parent.inputKey];
   if (typeof value === "string" && value.trim().length > 0) return undefined;
   return `${parent.inputKey} is required for entityType '${entityType}' — Microsoft Ads needs ${parent.bodyField} in the request body next to the ${getEntityConfig(entityType).pluralName} array`;
+}
+
+/** Tool input keys that give a by-ID read (and update) its parent context. */
+export type MsAdsEntityContextKey = "accountId" | "campaignId" | "adGroupId" | "adExtensionType";
+
+export type MsAdsEntityContext = Partial<Record<MsAdsEntityContextKey, string>>;
+
+const CONTEXT_INPUT_KEYS: Record<string, MsAdsEntityContextKey> = {
+  AccountId: "accountId",
+  CampaignId: "campaignId",
+  AdGroupId: "adGroupId",
+  AdExtensionType: "adExtensionType",
+};
+
+/**
+ * The context inputs `msads_get_entity` / `msads_update_entity` require for
+ * `entityType`, besides the entity ID. They are the fields the Get*ByIds read
+ * requires (`requiredGetByIdsFields`, which `MsAdsService.getEntity` asserts):
+ * campaign AccountId, adGroup CampaignId, ad and keyword AdGroupId, adExtension
+ * AccountId + AdExtensionType. Budgets, audiences and labels need none. For
+ * every parented type, the read field is also the Update body's parent.
+ *
+ * Both tools take these as flat optional fields and enforce them per type in
+ * `superRefine`, because a top-level discriminated union is published to MCP
+ * clients as an empty input schema (#228).
+ */
+export function getEntityContextKeys(entityType: MsAdsEntityType): MsAdsEntityContextKey[] {
+  return (getEntityConfig(entityType).requiredGetByIdsFields ?? []).map((field) => {
+    const key = CONTEXT_INPUT_KEYS[field];
+    if (!key) throw new Error(`No tool input key for Get*ByIds field ${field}`);
+    return key;
+  });
+}
+
+/**
+ * The context fields that apply to `entityType`, taken from `input`. Fields
+ * that do not apply to the type are dropped, as the discriminated-union schema
+ * these tools used to have stripped them.
+ */
+export function pickEntityContext(
+  entityType: MsAdsEntityType,
+  input: MsAdsEntityContext
+): MsAdsEntityContext {
+  const picked: MsAdsEntityContext = {};
+  for (const key of getEntityContextKeys(entityType)) {
+    const value = input[key];
+    if (typeof value === "string") picked[key] = value;
+  }
+  return picked;
+}
+
+/** Microsoft Ads request parameters for a by-ID read with this context. */
+export function entityContextReadParams(context: MsAdsEntityContext): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
+  if (context.accountId !== undefined) params.AccountId = Number(context.accountId);
+  if (context.campaignId !== undefined) params.CampaignId = Number(context.campaignId);
+  if (context.adGroupId !== undefined) params.AdGroupId = Number(context.adGroupId);
+  if (context.adExtensionType !== undefined) params.AdExtensionType = context.adExtensionType;
+  return params;
+}
+
+/** `superRefine` body: one issue per context field `entityType` requires but `input` lacks. */
+export function refineEntityContext(
+  input: MsAdsEntityContext & { entityType: string },
+  ctx: z.RefinementCtx
+): void {
+  if (!(input.entityType in ENTITY_CONFIGS)) return; // the enum already reported it
+  for (const key of getEntityContextKeys(input.entityType as MsAdsEntityType)) {
+    const value = input[key];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required when entityType is ${input.entityType}`,
+      });
+    }
+  }
 }

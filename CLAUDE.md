@@ -48,7 +48,7 @@ packages/{server-name}/src/
 
 Each tool is a single file in `src/mcp-server/tools/definitions/` exporting three things:
 
-1. **Zod schema** for parameter validation
+1. **Zod schema** for parameter validation. It must be a `z.object` (optionally with `.superRefine` for per-type rules), never a top-level `z.discriminatedUnion`/`z.union`: the SDK publishes a union as an empty input schema, so clients see no parameters and the governed `definitionHash` covers `{}` (#228). Ratcheted by `scripts/lib/input-schema-wire.test.mjs`.
 2. **Tool metadata** object with `name`, `description`, `inputSchema`
 3. **Handler function** that returns `{ content: [{ type: "text", text: ... }] }`
 

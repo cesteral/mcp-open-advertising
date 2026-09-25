@@ -215,7 +215,10 @@ export const createEntityTool = {
       entityIdArgs: [],
       readPartner: {
         toolName: "msads_get_entity",
-        argMap: {},
+        // `msads_get_entity` requires the `entityType` discriminator. This map
+        // was `{}` while get_entity published an empty schema, which hid the
+        // gap from the readPartner gate (#228).
+        argMap: { entityType: "entityType" },
       },
       schemaVersion: 1,
       contractId: "msads.create_entity.v1",
