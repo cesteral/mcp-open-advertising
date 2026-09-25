@@ -67,7 +67,7 @@ export type {
 };
 
 /**
- * Rate-limit cost of ONE item of each bulk method, on `cm360:{profileId}` —
+ * Rate-limit cost of ONE item of each bulk method, on `cm360:user:{quotaUser}` —
  * one entry per `consume` the item makes, in order (see the bulk methods at
  * the bottom of {@link CM360Service}):
  *
@@ -95,43 +95,46 @@ export type CM360BulkOperation = keyof typeof CM360_BULK_COST_PER_ITEM;
  * `assertBulkCapacity` / `projectBulkCapacity`. `rateLimiter` must be the
  * limiter the session's {@link CM360Service} consumes from (the package's
  * `rateLimiter` from `utils/platform.ts`, which both transports hand to
- * `createSessionServices`).
+ * `createSessionServices`), and `quotaUser` that service's
+ * {@link CM360Service.quotaUser}.
  */
 export function cm360BulkCapacityCheck(
   rateLimiter: RateLimiter,
   toolName: string,
   operation: CM360BulkOperation,
-  profileId: string,
+  quotaUser: string,
   itemCount: number
 ): BulkCapacityCheck {
   return {
     rateLimiter,
     toolName,
     itemCount,
-    buckets: [{ key: `cm360:${profileId}`, costPerItem: CM360_BULK_COST_PER_ITEM[operation] }],
+    buckets: [{ key: `cm360:user:${quotaUser}`, costPerItem: CM360_BULK_COST_PER_ITEM[operation] }],
   };
 }
 
 /**
  * Rate-limit keys: the limiter is configured for `cm360:*`, so every key must
  * carry the `cm360:` prefix — a bare `"cm360"` (what every call site used to
- * pass) matches nothing and is silently unlimited. Trafficking calls are keyed
- * per user profile (as dv360/gads/ttd key per advertiser/customer/partner) so
- * one profile's bulk job does not starve other sessions on the instance;
- * `userProfiles.list` has no profile yet and uses `cm360:global`. Reporting
- * uses its own `cm360:reporting:{profileId}` bucket (see CM360ReportingService).
- * Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
+ * pass) matches nothing and is silently unlimited. Every trafficking call is
+ * keyed per quota user, `cm360:user:{quotaUser}`, because CM360 counts its
+ * per-user quota across all of a user's profiles (see `cm360QuotaUser`);
+ * the per-profile key this replaced let one user with N profiles run N times
+ * the default, and still isolates one user's bulk job from other users on the
+ * instance. Reporting uses its own `cm360:user:{quotaUser}:reporting` bucket
+ * (see CM360ReportingService). Ratcheted by `scripts/lib/rate-limit-keys.test.mjs`.
  */
 export class CM360Service {
   constructor(
     private readonly logger: Logger,
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: CM360HttpClient
+    private readonly httpClient: CM360HttpClient,
+    /** Per-user quota key segment — see `cm360QuotaUser` (quota-user.ts). */
+    readonly quotaUser: string
   ) {}
 
   async listUserProfiles(context?: RequestContext): Promise<unknown> {
-    // No profile yet — the one call that is not profile-scoped.
-    await this.rateLimiter.consume("cm360:global");
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     this.logger.debug({ requestId: context?.requestId }, "Listing CM360 user profiles");
     return this.httpClient.fetch("/userprofiles", context);
   }
@@ -144,7 +147,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ entities: CM360EntityMap[T][]; nextPageToken?: string }> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
 
     const params = new URLSearchParams();
@@ -186,7 +189,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context) as Promise<CM360EntityMap[T]>;
@@ -198,7 +201,7 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
@@ -221,7 +224,7 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
@@ -246,7 +249,7 @@ export class CM360Service {
     patch: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     const query = new URLSearchParams({ id: entityId }).toString();
     const path = `/userprofiles/${profileId}/${config.apiCollection}?${query}`;
@@ -265,7 +268,7 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ options: unknown[]; nextPageToken?: string }> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const params = new URLSearchParams();
     if (pageToken) params.set("pageToken", pageToken);
@@ -301,7 +304,7 @@ export class CM360Service {
     entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`cm360:${profileId}`);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
     if (!config.supportsDelete) {
       throw new McpError(

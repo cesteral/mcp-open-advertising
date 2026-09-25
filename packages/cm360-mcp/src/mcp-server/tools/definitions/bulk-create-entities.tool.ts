@@ -93,13 +93,17 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user rate-limit key comes from the session, so resolve it before
+  // the capacity projection (dry-run and execute alike).
+  const { cm360Service } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
     // Parity with the execute path's assertCM360BulkCapacity refusal below.
     const capacityError = cm360BulkCapacityDryRunError(
       TOOL_NAME,
       "create",
-      input.profileId,
+      cm360Service.quotaUser,
       input.items.length,
       "items"
     );
@@ -125,11 +129,9 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  // One POST per item on `cm360:{profileId}`. Refuse a batch that cannot
+  // One POST per item on `cm360:user:{quotaUser}`. Refuse a batch that cannot
   // clear the rate limit within the queue budget before sending anything.
-  assertCM360BulkCapacity(TOOL_NAME, "create", input.profileId, input.items.length);
-
-  const { cm360Service } = resolveSessionServices(sdkContext);
+  assertCM360BulkCapacity(TOOL_NAME, "create", cm360Service.quotaUser, input.items.length);
 
   const bulkResults = await cm360Service.bulkCreateEntities(
     input.entityType as CM360EntityType,

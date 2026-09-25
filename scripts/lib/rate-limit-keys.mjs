@@ -28,7 +28,7 @@
 //                                         runtime
 //   - a bare identifier                -> resolved to a `const NAME = "literal"`
 //                                         declared somewhere in the same
-//                                         package's src (msads' MSADS_READ_KEY)
+//                                         package's src
 //   - anything else                    -> UNRESOLVED, which the ratchet fails
 //
 // Configured patterns come from `createPlatformRateLimiter("<name>", …)` (->

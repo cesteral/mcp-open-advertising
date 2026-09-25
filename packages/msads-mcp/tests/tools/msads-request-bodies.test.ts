@@ -74,6 +74,7 @@ beforeEach(() => {
     rateLimiter,
     http as unknown as MsAdsHttpClient,
     pino({ level: "silent" }),
+    { userId: "u1", customerId: "c1" },
     { customerClient: customer as unknown as MsAdsHttpClient, accountId: "900" }
   );
   mockResolveSessionServices.mockReturnValue({ msadsService });

@@ -60,15 +60,18 @@ export function createSessionServices(
 
   // The customer client lets the campaign service read the account currency
   // (GetAccount) for canonical budget snapshots.
-  const msadsService = new MsAdsService(rateLimiter, campaignClient, logger, {
+  // The adapter is the quota scope: its userId (learned in validate()) and
+  // customerId key the per-user and per-customer rate-limit buckets.
+  const msadsService = new MsAdsService(rateLimiter, campaignClient, logger, authAdapter, {
     customerClient,
     accountId: authAdapter.accountId,
   });
-  const msadsCustomerService = new MsAdsService(rateLimiter, customerClient, logger);
+  const msadsCustomerService = new MsAdsService(rateLimiter, customerClient, logger, authAdapter);
   const msadsReportingService = new MsAdsReportingService(
     rateLimiter,
     reportingClient,
     logger,
+    authAdapter,
     config.reportMaxPollAttempts
   );
 

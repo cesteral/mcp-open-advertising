@@ -15,7 +15,7 @@ import {
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   type RequestContext,
 } from "@cesteral/shared";
-import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
+import { consumeMsAdsQuota, type MsAdsQuotaScope } from "./rate-limit-keys.js";
 
 /**
  * Microsoft Ads Reporting Service.
@@ -58,6 +58,7 @@ export class MsAdsReportingService {
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger,
+    private readonly quotaScope: MsAdsQuotaScope,
     private readonly maxPollAttempts: number = DEFAULT_MAX_POLL_ATTEMPTS,
     private readonly pollIntervalMs: number = POLL_BASE_MS
   ) {}
@@ -66,7 +67,7 @@ export class MsAdsReportingService {
    * Submit a report request. Returns the ReportRequestId.
    */
   async submitReport(config: ReportConfig, context?: RequestContext): Promise<string> {
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await consumeMsAdsQuota(this.rateLimiter, this.quotaScope, "write", 3);
     const body = this.buildReportRequest(config);
     this.logger.info({ reportType: config.reportType }, "Submitting report");
 
@@ -114,7 +115,7 @@ export class MsAdsReportingService {
     reportRequestId: string,
     context?: RequestContext
   ): Promise<{ status: string; downloadUrl?: string }> {
-    await this.rateLimiter.consume(MSADS_READ_KEY);
+    await consumeMsAdsQuota(this.rateLimiter, this.quotaScope, "read");
     const response = (await this.httpClient.post(
       "/GenerateReport/Poll",
       { ReportRequestId: reportRequestId },

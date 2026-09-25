@@ -5,10 +5,12 @@
 // Uses the package's own `rateLimiter` (default config: msads:* at 10/min,
 // 120s queue budget) and a real MsAdsService over a fake HTTP client, so the
 // token pattern under test is the one the service really consumes:
-//   - bulk create / update: one 3-token msads:write request per chunk of
+// Every request draws on BOTH the session's per-user and per-customer write
+// buckets (msads:user:{userId}:write, msads:customer:{customerId}:write):
+//   - bulk create / update: one 3-token write request per chunk of
 //     `batchLimit` items → 9 requests fit (3 per window at t=0, 60s, 120s).
 //     For `ad` (batchLimit 50) that is 450 items; 451 needs a 10th request.
-//   - bulk status: one 1-token msads:write request per id → 30 fit.
+//   - bulk status: one 1-token write request per id → 30 fit.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -82,6 +84,16 @@ describe("Microsoft Ads bulk capacity pre-check", () => {
   let http: Record<"post" | "put" | "delete" | "request", ReturnType<typeof vi.fn>>;
   const upstreamCalls = () => Object.values(http).reduce((n, fn) => n + fn.mock.calls.length, 0);
 
+  const SCOPE = { userId: "u1", customerId: "c1" };
+  const USER_KEY = "msads:user:u1:write";
+  const CUSTOMER_KEY = "msads:customer:c1:write";
+
+  function useScope(scope: { userId: string; customerId: string }) {
+    mockResolveSessionServices.mockReturnValue({
+      msadsService: new MsAdsService(rateLimiter, http as any, logger, scope),
+    });
+  }
+
   function resetMocks() {
     vi.clearAllMocks();
     http = {
@@ -90,9 +102,7 @@ describe("Microsoft Ads bulk capacity pre-check", () => {
       delete: vi.fn().mockResolvedValue({}),
       request: vi.fn().mockResolvedValue({}),
     };
-    mockResolveSessionServices.mockReturnValue({
-      msadsService: new MsAdsService(rateLimiter, http as any, logger),
-    });
+    useScope(SCOPE);
     mockElicit.mockResolvedValue(true);
   }
 
@@ -138,7 +148,8 @@ describe("Microsoft Ads bulk capacity pre-check", () => {
       });
       expect(mockElicit).not.toHaveBeenCalled();
       expect(upstreamCalls()).toBe(0);
-      expect(rateLimiter.getRemainingTokens("msads:write")).toBe(10);
+      expect(rateLimiter.getRemainingTokens(USER_KEY)).toBe(10);
+      expect(rateLimiter.getRemainingTokens(CUSTOMER_KEY)).toBe(10);
     });
 
     it("lets a batch that fits proceed, one request per chunk", async () => {
@@ -216,6 +227,44 @@ describe("Microsoft Ads bulk capacity pre-check", () => {
       const fits: any = await updateStatus(30, true);
       expect(fits.dryRun.wouldSucceed).toBe(true);
       expect(upstreamCalls()).toBe(0);
+    });
+  });
+
+  describe("per-user and per-customer scope", () => {
+    // Pre-fill buckets with the limiter directly: a batch big enough to fill a
+    // window would queue in real time here.
+    it("draws every request from both of the session's buckets", async () => {
+      await updateStatus(3);
+      expect(rateLimiter.getRemainingTokens(USER_KEY)).toBe(7);
+      expect(rateLimiter.getRemainingTokens(CUSTOMER_KEY)).toBe(7);
+    });
+
+    it("refuses when another user already used the customer's window", async () => {
+      // Microsoft throttles per customer as well as per user: another user on
+      // the same customer shares the customer's 60-second window.
+      await rateLimiter.consume("msads:customer:c1:write", 10);
+      const err = await refusal(updateStatus(21));
+      expect(err.data).toMatchObject({ itemsThatFit: 20 });
+      expect(rateLimiter.getRemainingTokens(USER_KEY)).toBe(10);
+      expect(upstreamCalls()).toBe(0);
+    });
+
+    it("refuses when the same user already used its window on another customer", async () => {
+      await rateLimiter.consume("msads:user:u1:write", 10);
+      const err = await refusal(updateStatus(21));
+      expect(err.data).toMatchObject({ itemsThatFit: 20 });
+      expect(rateLimiter.getRemainingTokens(CUSTOMER_KEY)).toBe(10);
+    });
+
+    it("isolates tenants: another user on another customer is not queued behind this one", async () => {
+      // The old msads:write key was shared by every tenant on the instance.
+      await rateLimiter.consume(USER_KEY, 10);
+      await rateLimiter.consume(CUSTOMER_KEY, 10);
+      useScope({ userId: "u2", customerId: "c2" });
+      const dry: any = await updateStatus(30, true);
+      expect(dry.dryRun.wouldSucceed).toBe(true);
+      await updateStatus(3);
+      expect(http.put).toHaveBeenCalledTimes(3);
     });
   });
 });

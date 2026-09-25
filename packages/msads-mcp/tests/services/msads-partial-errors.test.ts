@@ -116,7 +116,10 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
     const rateLimiter = {
       consume: vi.fn().mockResolvedValue(undefined),
     } as unknown as RateLimiter;
-    service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger);
+    service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger, {
+      userId: "u1",
+      customerId: "c1",
+    });
   });
 
   it("createEntity throws when the Add rejected the item", async () => {
@@ -253,7 +256,10 @@ describe("MsAdsService.duplicateEntity — copy lands non-running", () => {
     const rateLimiter = {
       consume: vi.fn().mockResolvedValue(undefined),
     } as unknown as RateLimiter;
-    service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger);
+    service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger, {
+      userId: "u1",
+      customerId: "c1",
+    });
   });
 
   it("forces Status Paused on a copy of an Active campaign", async () => {

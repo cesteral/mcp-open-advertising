@@ -10,7 +10,7 @@ import {
 } from "../../../services/cm360/cm360-service.js";
 
 /**
- * Refuse a CM360 bulk batch that cannot clear the `cm360:{profileId}` rate
+ * Refuse a CM360 bulk batch that cannot clear the `cm360:user:{quotaUser}` rate
  * limit within the queue budget — BEFORE any confirmation prompt or upstream
  * call. Throws `McpError(RateLimited)` with `data.reason: "bulk_exceeds_capacity"`
  * and `itemsThatFit`.
@@ -18,11 +18,11 @@ import {
 export function assertCM360BulkCapacity(
   toolName: string,
   operation: CM360BulkOperation,
-  profileId: string,
+  quotaUser: string,
   itemCount: number
 ): BulkCapacityResult {
   return assertBulkCapacity(
-    cm360BulkCapacityCheck(rateLimiter, toolName, operation, profileId, itemCount)
+    cm360BulkCapacityCheck(rateLimiter, toolName, operation, quotaUser, itemCount)
   );
 }
 
@@ -33,12 +33,12 @@ export function assertCM360BulkCapacity(
 export function cm360BulkCapacityDryRunError(
   toolName: string,
   operation: CM360BulkOperation,
-  profileId: string,
+  quotaUser: string,
   itemCount: number,
   field: string
 ): DryRunValidationError | undefined {
   const projection = projectBulkCapacity(
-    cm360BulkCapacityCheck(rateLimiter, toolName, operation, profileId, itemCount)
+    cm360BulkCapacityCheck(rateLimiter, toolName, operation, quotaUser, itemCount)
   );
   if (projection.itemsThatFit >= itemCount) return undefined;
   const wait = Number.isFinite(projection.projectedWaitMs)
@@ -47,8 +47,8 @@ export function cm360BulkCapacityDryRunError(
   return {
     code: "BULK_EXCEEDS_CAPACITY",
     message:
-      `${itemCount} items would take ${wait} to clear the CM360 rate limit for profile ` +
-      `${profileId}, more than the ${Math.ceil(projection.budgetMs / 1000)}s budget, so the ` +
+      `${itemCount} items would take ${wait} to clear the CM360 per-user rate limit, ` +
+      `more than the ${Math.ceil(projection.budgetMs / 1000)}s budget, so the ` +
       `call would be refused before any write. ${projection.itemsThatFit} item(s) fit right ` +
       `now — split the batch into chunks of at most ${Math.max(projection.itemsThatFit, 1)}.`,
     field,

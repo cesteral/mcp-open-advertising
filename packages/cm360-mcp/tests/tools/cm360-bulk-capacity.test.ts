@@ -42,6 +42,7 @@ import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 const PROFILE = "123456";
+const QUOTA_USER = "user-a";
 
 const logger = {
   debug: vi.fn(),
@@ -75,14 +76,17 @@ async function expectRefused(promise: Promise<unknown>, itemCount: number, items
   expect(mockElicitMutation).not.toHaveBeenCalled();
 }
 
+function serviceFor(quotaUser: string): CM360Service {
+  return new CM360Service(logger, rateLimiter, { fetch: fetchMock } as any, quotaUser);
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-09-24T12:00:00Z"));
   rateLimiter.clear();
   vi.clearAllMocks();
   fetchMock = vi.fn(async () => ({ id: "1", name: "entity" }));
-  const service = new CM360Service(logger, rateLimiter, { fetch: fetchMock } as any);
-  mockResolveSessionServices.mockReturnValue({ cm360Service: service });
+  mockResolveSessionServices.mockReturnValue({ cm360Service: serviceFor(QUOTA_USER) });
   mockElicitStatus.mockResolvedValue(true);
   mockElicitMutation.mockResolvedValue(true);
 });
@@ -122,11 +126,17 @@ describe("cm360_bulk_update_status (GET + PUT per entity)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(14);
   });
 
-  it("counts capacity already used on the profile, and only that profile", async () => {
-    await rateLimiter.consume(`cm360:${PROFILE}`, 5);
-    await expectRefused(bulkUpdateStatusLogic(input(6) as any, ctx, sdk), 6, 5);
+  it("counts capacity the user already used on ANY profile, and only that user's", async () => {
+    await rateLimiter.consume(`cm360:user:${QUOTA_USER}`, 5);
+    // A different profile of the same user draws on the same per-user quota.
+    await expectRefused(
+      bulkUpdateStatusLogic({ ...input(6), profileId: "999" } as any, ctx, sdk),
+      6,
+      5
+    );
 
-    const other = bulkUpdateStatusLogic({ ...input(6), profileId: "999" } as any, ctx, sdk);
+    mockResolveSessionServices.mockReturnValue({ cm360Service: serviceFor("user-b") });
+    const other = bulkUpdateStatusLogic(input(6) as any, ctx, sdk);
     await vi.advanceTimersByTimeAsync(120_000);
     expect((await other).updated).toBe(6);
   });
@@ -146,7 +156,7 @@ describe("cm360_bulk_update_status (GET + PUT per entity)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockElicitStatus).not.toHaveBeenCalled();
     // The projection reserved nothing.
-    expect(rateLimiter.getRemainingTokens(`cm360:${PROFILE}`)).toBe(5);
+    expect(rateLimiter.getRemainingTokens(`cm360:user:${QUOTA_USER}`)).toBe(5);
   });
 });
 

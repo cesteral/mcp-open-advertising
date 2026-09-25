@@ -10,13 +10,15 @@
  * confirmation prompt and the first upstream call, and refuses it with the
  * number of items that fit (see `@cesteral/shared` bulk-capacity.ts).
  *
- * The patterns below restate the `consume` calls MsAdsService makes — keep
- * them in step with msads-service.ts:
- *   - bulkCreateEntities / bulkUpdateEntities: ONE consume(MSADS_WRITE_KEY, 3)
- *     per CHUNK of `batchLimit` items (entity-mapping.ts), not per item. The
- *     projection therefore runs over chunks, and the refusal reports items
- *     that fit as whole chunks × `batchLimit`.
- *   - bulkUpdateStatus: consume(MSADS_WRITE_KEY, 1) per entity id.
+ * The costs below restate the quota MsAdsService consumes — keep them in step
+ * with msads-service.ts. Every request draws on BOTH of the session's write
+ * buckets (per user and per customer, `msadsQuotaBuckets`), and a batch fits
+ * only if it clears both:
+ *   - bulkCreateEntities / bulkUpdateEntities: ONE 3-token write per CHUNK of
+ *     `batchLimit` items (entity-mapping.ts), not per item. The projection
+ *     therefore runs over chunks, and the refusal reports items that fit as
+ *     whole chunks × `batchLimit`.
+ *   - bulkUpdateStatus: one 1-token write per entity id.
  */
 
 import {
@@ -32,18 +34,21 @@ import type {
   EffectDryRunResult,
 } from "@cesteral/shared";
 import { rateLimiter } from "../../../utils/platform.js";
-import { MSADS_WRITE_KEY } from "../../../services/msads/rate-limit-keys.js";
+import {
+  msadsQuotaBuckets,
+  type MsAdsQuotaScope,
+} from "../../../services/msads/rate-limit-keys.js";
 import { getEntityConfig, type MsAdsEntityType } from "./entity-mapping.js";
 
 /** One 3-token Add/Update request per chunk of `batchLimit` items. */
-const ONE_WRITE_PER_CHUNK: readonly BulkCapacityBucket[] = [
-  { key: MSADS_WRITE_KEY, costPerItem: [3] },
-];
+function oneWritePerChunk(scope: MsAdsQuotaScope): readonly BulkCapacityBucket[] {
+  return msadsQuotaBuckets(scope, "write", [3]);
+}
 
 /** bulk_update_status: one 1-token status Update per entity id. */
-export const ONE_STATUS_WRITE_PER_ITEM: readonly BulkCapacityBucket[] = [
-  { key: MSADS_WRITE_KEY, costPerItem: [1] },
-];
+export function oneStatusWritePerItem(scope: MsAdsQuotaScope): readonly BulkCapacityBucket[] {
+  return msadsQuotaBuckets(scope, "write", [1]);
+}
 
 /** A per-item batch: throw `RateLimited` (reason `bulk_exceeds_capacity`) when it cannot be admitted in time. */
 export function assertMsAdsBulkCapacity(
@@ -65,14 +70,18 @@ interface ChunkedProjection {
   budgetMs: number;
 }
 
-function projectChunked(entityType: string, itemCount: number): ChunkedProjection {
+function projectChunked(
+  scope: MsAdsQuotaScope,
+  entityType: string,
+  itemCount: number
+): ChunkedProjection {
   const chunkSize = getEntityConfig(entityType as MsAdsEntityType).batchLimit;
   const chunkCount = Math.ceil(itemCount / chunkSize);
   const projection = projectBulkCapacity({
     rateLimiter,
     toolName: "",
     itemCount: chunkCount,
-    buckets: ONE_WRITE_PER_CHUNK,
+    buckets: oneWritePerChunk(scope),
   });
   return {
     itemCount,
@@ -105,10 +114,11 @@ function describeChunkedRefusal(p: ChunkedProjection): string {
  */
 export function assertMsAdsChunkedBulkCapacity(
   toolName: string,
+  scope: MsAdsQuotaScope,
   entityType: string,
   itemCount: number
 ): void {
-  const p = projectChunked(entityType, itemCount);
+  const p = projectChunked(scope, entityType, itemCount);
   if (p.chunksThatFit >= p.chunkCount) return;
   throw new McpError(
     JsonRpcErrorCode.RateLimited,
@@ -131,11 +141,12 @@ export function assertMsAdsChunkedBulkCapacity(
 
 /** Dry-run parity for a chunked batch: the `BULK_EXCEEDS_CAPACITY` error, or `undefined`. */
 export function chunkedBulkCapacityDryRunError(
+  scope: MsAdsQuotaScope,
   entityType: string,
   itemCount: number,
   field: string
 ): DryRunValidationError | undefined {
-  const p = projectChunked(entityType, itemCount);
+  const p = projectChunked(scope, entityType, itemCount);
   if (p.chunksThatFit >= p.chunkCount) return undefined;
   return {
     code: "BULK_EXCEEDS_CAPACITY",

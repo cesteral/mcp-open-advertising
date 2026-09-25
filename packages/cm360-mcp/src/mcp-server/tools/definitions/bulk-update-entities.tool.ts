@@ -103,10 +103,14 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user rate-limit key comes from the session, so resolve it before
+  // the capacity projection (dry-run and execute alike).
+  const { cm360Service } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, cm360Service.quotaUser);
     return {
       confirmed: true,
       updated: 0,
@@ -118,10 +122,10 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  // One PATCH per item on `cm360:{profileId}`. Refuse a batch that cannot
+  // One PATCH per item on `cm360:user:{quotaUser}`. Refuse a batch that cannot
   // clear the rate limit within the queue budget before prompting the user or
   // sending anything.
-  assertCM360BulkCapacity(TOOL_NAME, "update", input.profileId, input.items.length);
+  assertCM360BulkCapacity(TOOL_NAME, "update", cm360Service.quotaUser, input.items.length);
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -143,8 +147,6 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
-
-  const { cm360Service } = resolveSessionServices(sdkContext);
 
   const bulkResults = await cm360Service.bulkUpdateEntities(
     input.entityType as CM360EntityType,
@@ -198,7 +200,10 @@ export async function bulkUpdateEntitiesLogic(
  * against the rate limiter (read-only) so a batch the execute path would refuse
  * as `BULK_EXCEEDS_CAPACITY` fails here too. No I/O.
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  quotaUser: string
+): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
@@ -220,7 +225,7 @@ function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResu
   const capacityError = cm360BulkCapacityDryRunError(
     TOOL_NAME,
     "update",
-    input.profileId,
+    quotaUser,
     input.items.length,
     "items"
   );

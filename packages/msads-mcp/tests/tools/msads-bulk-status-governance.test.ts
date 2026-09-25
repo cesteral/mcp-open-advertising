@@ -32,11 +32,15 @@ const baseInput = {
 };
 
 describe("msads_bulk_update_status governance contract (effect class)", () => {
-  let svc: { bulkUpdateStatus: ReturnType<typeof vi.fn> };
+  let svc: {
+    bulkUpdateStatus: ReturnType<typeof vi.fn>;
+    quotaScope: { userId: string; customerId: string };
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { userId: "u1", customerId: "c1" },
       bulkUpdateStatus: vi.fn().mockResolvedValue({
         results: [
           { entityId: "123", success: true },

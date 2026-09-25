@@ -45,7 +45,7 @@ describe("CM360Service", () => {
     logger = createMockLogger();
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new CM360Service(logger, rateLimiter, httpClient);
+    service = new CM360Service(logger, rateLimiter, httpClient, "qu");
   });
 
   // ==========================================================================
@@ -68,7 +68,7 @@ describe("CM360Service", () => {
 
       await service.listUserProfiles();
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:global");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
 
     it("passes request context", async () => {
@@ -162,12 +162,12 @@ describe("CM360Service", () => {
       expect(result.nextPageToken).toBeUndefined();
     });
 
-    it("consumes rate limiter with the profile-scoped cm360 key", async () => {
+    it("consumes rate limiter with the per-user cm360 key", async () => {
       httpClient.fetch.mockResolvedValueOnce({ campaigns: [] });
 
       await service.listEntities("campaign", "12345");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
 
     it("omits undefined/null filter values", async () => {
@@ -222,7 +222,7 @@ describe("CM360Service", () => {
 
       await service.getEntity("campaign", "12345", "789");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
   });
 
@@ -265,7 +265,7 @@ describe("CM360Service", () => {
 
       await service.createEntity("campaign", "12345", {});
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
   });
 
@@ -299,7 +299,7 @@ describe("CM360Service", () => {
 
       await service.updateEntity("campaign", "12345", { id: "789" });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
   });
 
@@ -419,7 +419,7 @@ describe("CM360Service", () => {
 
       await service.deleteEntity("floodlightActivity", "12345", "999");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
   });
 
@@ -479,7 +479,7 @@ describe("CM360Service", () => {
 
       await service.listTargetingOptions("12345", "browsers");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu");
     });
   });
 

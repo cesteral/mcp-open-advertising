@@ -280,7 +280,7 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 | `MCP_AUTH_MODE`                   | No       | `google-headers`                                      | Auth mode: `google-headers`, `jwt`, `none` |
 | `MCP_AUTH_SECRET_KEY`             | If jwt   | --                                                    | JWT signing secret                         |
 | `CM360_API_BASE_URL`              | No       | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL                         |
-| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `5`                                                   | API rate limit (requests/min per profile)  |
+| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `5`                                                   | API rate limit (requests/min per user)     |
 | `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON               |
 | `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON        |
 | `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                       |

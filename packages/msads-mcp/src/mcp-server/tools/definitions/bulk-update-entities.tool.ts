@@ -98,12 +98,21 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user / per-customer rate-limit buckets come from the session, so
+  // resolve it before the capacity projection (dry-run and execute alike).
+  const { msadsService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
     const dryRun = withBulkCapacityError(
       buildBulkEffectDryRun(input),
-      chunkedBulkCapacityDryRunError(input.entityType, input.items.length, "items")
+      chunkedBulkCapacityDryRunError(
+        msadsService.quotaScope,
+        input.entityType,
+        input.items.length,
+        "items"
+      )
     );
     return {
       confirmed: true,
@@ -130,9 +139,14 @@ export async function bulkUpdateEntitiesLogic(
   // whole row IS the payload, no .data wrapper.
   const items = input.items as Array<Record<string, unknown>>;
   // Refuse a batch the rate limiter cannot admit in time — before the prompt
-  // and before the first Update. One 3-token msads:write request per
-  // batchLimit-sized chunk.
-  assertMsAdsChunkedBulkCapacity(TOOL_NAME, input.entityType, items.length);
+  // and before the first Update. One 3-token write per batchLimit-sized
+  // chunk, on both quota buckets.
+  assertMsAdsChunkedBulkCapacity(
+    TOOL_NAME,
+    msadsService.quotaScope,
+    input.entityType,
+    items.length
+  );
 
   const confirmed = await elicitBulkMutationConfirmation({
     count: items.length,
@@ -153,8 +167,6 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
-
-  const { msadsService } = resolveSessionServices(sdkContext);
 
   const results = await msadsService.bulkUpdateEntities(
     input.entityType as MsAdsEntityType,

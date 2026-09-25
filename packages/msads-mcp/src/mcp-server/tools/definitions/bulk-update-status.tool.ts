@@ -7,7 +7,7 @@ import {
   assertMsAdsBulkCapacity,
   bulkCapacityDryRunError,
   withBulkCapacityError,
-  ONE_STATUS_WRITE_PER_ITEM,
+  oneStatusWritePerItem,
 } from "../utils/bulk-capacity.js";
 import type { MsAdsEntityType } from "../utils/entity-mapping.js";
 import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
@@ -110,6 +110,10 @@ export async function bulkUpdateStatusLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user / per-customer rate-limit buckets come from the session, so
+  // resolve it before the capacity projection (dry-run and execute alike).
+  const { msadsService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
@@ -118,7 +122,7 @@ export async function bulkUpdateStatusLogic(
       bulkCapacityDryRunError(
         TOOL_NAME,
         input.entityIds.length,
-        ONE_STATUS_WRITE_PER_ITEM,
+        oneStatusWritePerItem(msadsService.quotaScope),
         "entityIds"
       )
     );
@@ -146,8 +150,12 @@ export async function bulkUpdateStatusLogic(
   }
 
   // Refuse a batch the rate limiter cannot admit in time — before the prompt
-  // and before the first Update. One 1-token msads:write request per entity.
-  assertMsAdsBulkCapacity(TOOL_NAME, input.entityIds.length, ONE_STATUS_WRITE_PER_ITEM);
+  // and before the first Update. One 1-token write per entity, on both quota buckets.
+  assertMsAdsBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    oneStatusWritePerItem(msadsService.quotaScope)
+  );
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -169,8 +177,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { msadsService } = resolveSessionServices(sdkContext);
 
   const { results } = await msadsService.bulkUpdateStatus(
     input.entityType as MsAdsEntityType,

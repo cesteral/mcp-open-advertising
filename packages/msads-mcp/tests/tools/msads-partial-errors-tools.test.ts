@@ -85,7 +85,8 @@ beforeEach(() => {
   const msadsService = new MsAdsService(
     rateLimiter,
     http as unknown as MsAdsHttpClient,
-    pino({ level: "silent" })
+    pino({ level: "silent" }),
+    { userId: "u1", customerId: "c1" }
   );
   mockResolveSessionServices.mockReturnValue({ msadsService });
   mockElicitBulk.mockResolvedValue(true);

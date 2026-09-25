@@ -42,7 +42,7 @@ describe("CM360ReportingService", () => {
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
     // Use short poll intervals and max 3 attempts for fast tests
-    service = new CM360ReportingService(rateLimiter, httpClient, logger, 10, 3);
+    service = new CM360ReportingService(rateLimiter, httpClient, logger, "qu", 10, 3);
   });
 
   // ==========================================================================
@@ -87,7 +87,7 @@ describe("CM360ReportingService", () => {
       await service.createReport("12345", { name: "Test", type: "STANDARD" });
 
       expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:reporting:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu:reporting");
     });
 
     it("passes request context through", async () => {
@@ -159,7 +159,7 @@ describe("CM360ReportingService", () => {
 
       await service.checkReportFile("12345", "report-1", "file-1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:reporting:12345");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("cm360:user:qu:reporting");
     });
   });
 

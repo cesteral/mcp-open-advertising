@@ -11,7 +11,7 @@ import {
   type MsAdsEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
-import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
+import { consumeMsAdsQuota, type MsAdsQuotaScope } from "./rate-limit-keys.js";
 import {
   assertMsAdsWriteSucceeded,
   mapMsAdsItemOutcomes,
@@ -128,8 +128,14 @@ export class MsAdsService {
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger,
+    /** Whose Microsoft quota each call draws on — see `MsAdsQuotaScope`. */
+    readonly quotaScope: MsAdsQuotaScope,
     private readonly accountLookup?: MsAdsAccountLookup
   ) {}
+
+  private consumeQuota(kind: "read" | "write", tokens: number = 1): Promise<void> {
+    return consumeMsAdsQuota(this.rateLimiter, this.quotaScope, kind, tokens);
+  }
 
   /**
    * ISO 4217 currency of the session's ad account, from Customer Management
@@ -149,7 +155,7 @@ export class MsAdsService {
     }
     if (!this.accountCurrency) {
       const pending = (async () => {
-        await this.rateLimiter.consume(MSADS_READ_KEY);
+        await this.consumeQuota("read");
         const raw = (await lookup.customerClient.post(
           "/Account/Query",
           { AccountId: Number(lookup.accountId) },
@@ -188,7 +194,7 @@ export class MsAdsService {
   ): Promise<{ entities: MsAdsEntityMap[T][] }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(MSADS_READ_KEY);
+    await this.consumeQuota("read");
 
     let raw: unknown;
 
@@ -245,7 +251,7 @@ export class MsAdsService {
   ): Promise<{ entities: MsAdsEntityMap[T][] }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(MSADS_READ_KEY);
+    await this.consumeQuota("read");
 
     const body: Record<string, unknown> = {
       [config.idsField]: entityIds.map(Number),
@@ -276,7 +282,7 @@ export class MsAdsService {
         "Campaign create requires AccountId in the request data"
       );
     }
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await this.consumeQuota("write", 3);
     this.logger.info({ entityType }, "Creating entity");
     const result = await this.httpClient.post(config.addOperation, data, context);
     // HTTP 200 does not mean the Add happened: rejected items come back in
@@ -364,7 +370,7 @@ export class MsAdsService {
     if (config.writeParentIdField) {
       this.assertRequiredFields([config.writeParentIdField], data, entityType, "updateEntity");
     }
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await this.consumeQuota("write", 3);
     this.logger.info({ entityType }, "Updating entity");
     const result = await this.httpClient.put(config.updateOperation, data, context);
     // Update returns HTTP 200 with PartialErrors for rejected items.
@@ -386,7 +392,7 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await this.consumeQuota("write", 3);
     const body: Record<string, unknown> = {
       [config.idsField]: entityIds.map(Number),
       ...params,
@@ -415,7 +421,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
-      await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+      await this.consumeQuota("write", 3);
       const body = { ...parent, [config.pluralName]: batch };
       this.logger.info(
         { entityType, batchSize: batch.length, batchIndex: i },
@@ -452,7 +458,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
-      await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+      await this.consumeQuota("write", 3);
       const body = { ...parent, [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length }, "Bulk updating entities");
       const result = await this.httpClient.put(config.updateOperation, body, context);
@@ -484,7 +490,7 @@ export class MsAdsService {
       entityIds,
       async (entityId) => {
         // Cost 1 (not 3) — status-only updates are minimal single-field payloads
-        await this.rateLimiter.consume(MSADS_WRITE_KEY, 1);
+        await this.consumeQuota("write", 1);
         const body = {
           ...parent,
           [config.pluralName]: [{ Id: Number(entityId), Status: status }],
@@ -588,7 +594,7 @@ export class MsAdsService {
       );
     }
 
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await this.consumeQuota("write", 3);
     const body = { ...parent, [config.pluralName]: updatedEntities };
     this.logger.info({ entityType, count: adjustments.length }, "Adjusting bids");
     const response = await this.httpClient.put(config.updateOperation, body, context);
@@ -620,7 +626,7 @@ export class MsAdsService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(MSADS_READ_KEY);
+    await this.consumeQuota("read");
     this.logger.debug({ path }, "Executing custom read operation");
     return this.httpClient.post(path, data, context);
   }
@@ -660,7 +666,7 @@ export class MsAdsService {
     method: "POST" | "PUT" | "DELETE" = "POST",
     batch?: MsAdsBatchWriteSpec
   ): Promise<unknown> {
-    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+    await this.consumeQuota("write", 3);
     this.logger.debug({ path, method }, "Executing custom operation");
     const response = await this.httpClient.request(method, path, data, context);
     if (!batch) return response;

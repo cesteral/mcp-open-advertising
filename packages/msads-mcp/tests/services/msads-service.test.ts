@@ -36,7 +36,7 @@ describe("MsAdsService", () => {
     vi.clearAllMocks();
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new MsAdsService(rateLimiter, httpClient, logger);
+    service = new MsAdsService(rateLimiter, httpClient, logger, { userId: "u1", customerId: "c1" });
   });
 
   describe("listEntities", () => {
@@ -363,10 +363,16 @@ describe("MsAdsService", () => {
       (customerClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({
         Account: { Id: 42, CurrencyCode: "EUR" },
       });
-      const svc = new MsAdsService(rateLimiter, httpClient, logger, {
-        customerClient,
-        accountId: "42",
-      });
+      const svc = new MsAdsService(
+        rateLimiter,
+        httpClient,
+        logger,
+        { userId: "u1", customerId: "c1" },
+        {
+          customerClient,
+          accountId: "42",
+        }
+      );
       await expect(svc.getAccountCurrency()).resolves.toBe("EUR");
       await expect(svc.getAccountCurrency()).resolves.toBe("EUR");
       expect(customerClient.post).toHaveBeenCalledTimes(1);
@@ -383,29 +389,41 @@ describe("MsAdsService", () => {
       (customerClient.post as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ Account: {} })
         .mockResolvedValueOnce({ Account: { CurrencyCode: "JPY" } });
-      const svc = new MsAdsService(rateLimiter, httpClient, logger, {
-        customerClient,
-        accountId: "42",
-      });
+      const svc = new MsAdsService(
+        rateLimiter,
+        httpClient,
+        logger,
+        { userId: "u1", customerId: "c1" },
+        {
+          customerClient,
+          accountId: "42",
+        }
+      );
       await expect(svc.getAccountCurrency()).rejects.toThrow("no ISO CurrencyCode");
       await expect(svc.getAccountCurrency()).resolves.toBe("JPY");
     });
   });
 
   describe("executeReadOperation", () => {
-    it("consumes msads:read with cost 1 and POSTs to the read endpoint", async () => {
+    it("consumes 1 read token per user AND per customer, and POSTs to the read endpoint", async () => {
       const data = { Predicates: [] };
       await service.executeReadOperation("/Accounts/Search", data);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("msads:read");
+      expect(vi.mocked(rateLimiter.consume).mock.calls).toEqual([
+        ["msads:user:u1:read", 1],
+        ["msads:customer:c1:read", 1],
+      ]);
       expect(httpClient.post).toHaveBeenCalledWith("/Accounts/Search", data, undefined);
     });
   });
 
   describe("executeOperation", () => {
-    it("defaults to POST and consumes msads:write with cost 3", async () => {
+    it("defaults to POST and consumes 3 write tokens per user AND per customer", async () => {
       const data = { AdExtensionIds: [1, 2] };
       await service.executeOperation("/AdExtensions/QueryByIds", data);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("msads:write", 3);
+      expect(vi.mocked(rateLimiter.consume).mock.calls).toEqual([
+        ["msads:user:u1:write", 3],
+        ["msads:customer:c1:write", 3],
+      ]);
       expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/QueryByIds", data);
     });
 
