@@ -12,15 +12,24 @@ export const KEY = "cesteral/untrusted";
 export const SNAPSHOT_PATH = join(ROOT, "scripts/lib/untrusted-declarations.snapshot.json");
 
 /**
- * True when `name` is the `summary` of contract-schema's `EffectResult`: a
- * property named `summary` beside an `effectKind`. Only that summary may stay
+ * True when `name` is the `summary` of contract-schema's `EffectResult`: an
+ * object whose only properties are `effectKind` and a `summary` record of
+ * scalar values. Only that summary may stay
  * open (a scalar audit summary of ids, counts and caller input); a `summary`
  * anywhere else, such as meta_get_insights' platform aggregates, is checked
  * like any other field. See the header of untrusted-declarations.test.mjs.
  */
 export function isEffectSummary(parent, name) {
-  return name === "summary" && parent?.properties?.effectKind !== undefined;
+  if (name !== "summary") return false;
+  const keys = Object.keys(parent?.properties ?? {}).sort();
+  if (keys.join(",") !== "effectKind,summary") return false;
+  // EffectResult.summary is a record of scalars; anything wider is not it.
+  const values = parent.properties.summary?.additionalProperties;
+  const types = [].concat(values?.type ?? []);
+  return types.length > 0 && types.every((t) => SCALAR_TYPES.has(t));
 }
+
+const SCALAR_TYPES = new Set(["string", "number", "integer", "boolean", "null"]);
 
 /**
  * Open top-level output fields that are NOT platform data, keyed
