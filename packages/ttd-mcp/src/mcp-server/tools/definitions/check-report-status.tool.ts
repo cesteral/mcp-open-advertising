@@ -116,4 +116,8 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.execution", "$.errors"],
+    contentBlocks: [0],
+  },
 };

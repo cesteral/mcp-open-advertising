@@ -11,6 +11,7 @@
  */
 import { z } from "zod";
 import type { ToolDefinitionForFactory, ToolSdkContext } from "./tool-handler-factory.js";
+import { NO_UNTRUSTED_CONTENT } from "./untrusted-content.js";
 
 // ---------------------------------------------------------------------------
 // echo — general connectivity test
@@ -245,6 +246,9 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
 // All conformance tools — import this array in each server's tools/index.ts
 // ---------------------------------------------------------------------------
 
+// None returns platform text: they echo the caller's own arguments or
+// elicitation answers. Declared so a server whose card claims per-response
+// path reporting stays truthful with MCP_INCLUDE_CONFORMANCE_TOOLS=true.
 export const conformanceTools: ToolDefinitionForFactory[] = [
   echoTool,
   testSimpleTextTool,
@@ -252,4 +256,4 @@ export const conformanceTools: ToolDefinitionForFactory[] = [
   testElicitationTool,
   testElicitationSep1034DefaultsTool,
   testElicitationSep1330EnumsTool,
-];
+].map((tool) => ({ ...tool, untrustedContent: NO_UNTRUSTED_CONTENT }));

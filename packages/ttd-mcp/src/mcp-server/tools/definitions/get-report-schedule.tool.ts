@@ -88,4 +88,8 @@ export const getReportScheduleTool = {
   ],
   logic: getReportScheduleLogic,
   responseFormatter: getReportScheduleResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.schedule", "$.raw"],
+    contentBlocks: [0],
+  },
 };

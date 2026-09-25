@@ -237,6 +237,7 @@
         "programmatic",
         "graphql"
       ],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {

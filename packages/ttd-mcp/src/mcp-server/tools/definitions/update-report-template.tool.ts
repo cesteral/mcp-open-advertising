@@ -339,4 +339,8 @@ export const updateReportTemplateTool = {
   ],
   logic: updateReportTemplateLogic,
   responseFormatter: updateReportTemplateResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.templateData", "$.errors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

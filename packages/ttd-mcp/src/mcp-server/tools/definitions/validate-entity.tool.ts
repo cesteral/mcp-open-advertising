@@ -19,6 +19,7 @@ import {
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
   buildNextAction,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
@@ -308,4 +309,5 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

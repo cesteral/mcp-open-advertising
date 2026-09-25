@@ -220,4 +220,8 @@ export const getReportTypeSchemaTool = {
   ],
   logic: getReportTypeSchemaLogic,
   responseFormatter: getReportTypeSchemaResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.reportTypeName", "$.fields", "$.metrics"],
+    contentBlocks: [0],
+  },
 };

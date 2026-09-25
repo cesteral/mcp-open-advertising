@@ -18,7 +18,14 @@
 // And for every declaration present, whichever server it is on:
 //   - its shape is valid (v: 1, two arrays);
 //   - each structured path's first segment is a real top-level property of the
-//     tool's published outputSchema, so a path cannot point at nothing.
+//     tool's published outputSchema, so a path cannot point at nothing;
+//   - every OPEN top-level property (`z.record(z.any())`, `z.any()`, or an
+//     array of either) is declared. An open field is how a raw platform object
+//     passes through, so an undeclared one is almost always an omission, and
+//     this catches a path deleted by mistake. The one exemption is `effect`:
+//     its shape is contract-schema's `EffectResult`, a scalar audit summary of
+//     ids, counts and caller input. A tool whose summary does carry platform
+//     text (ttd_create_report_template's `template_name`) declares it anyway.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -36,6 +43,18 @@ const claimFor = (pkg) =>
   registry.servers.find((s) => s.package === pkg)?.untrustedContent?.pathReporting ?? "unsupported";
 
 const firstSegment = (path) => /^\$\.([A-Za-z_][A-Za-z0-9_]*)/.exec(path)?.[1];
+
+/** Open-schema fields that may stay undeclared; see the header. */
+const OPEN_FIELD_EXEMPT = new Set(["effect"]);
+
+/** True for a JSON Schema that admits arbitrary platform-shaped data. */
+function isOpen(schema) {
+  if (!schema || typeof schema !== "object") return true;
+  if (schema.anyOf) return schema.anyOf.some(isOpen);
+  if (schema.type === "array") return isOpen(schema.items);
+  if (schema.type === "object") return !schema.properties;
+  return schema.type === undefined && schema.enum === undefined && schema.const === undefined;
+}
 
 describe("untrusted-content declarations match each server's claim (#204)", () => {
   it("registry claims are one of the two allowed values", () => {
@@ -69,13 +88,23 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
         expect(Array.isArray(declaration.structuredPaths), tool.name).toBe(true);
         expect(Array.isArray(declaration.contentBlocks), tool.name).toBe(true);
 
-        const properties = Object.keys(tool.outputSchema?.properties ?? {});
+        const schemaProps = tool.outputSchema?.properties ?? {};
+        const properties = Object.keys(schemaProps);
         for (const path of declaration.structuredPaths) {
           expect(
             properties,
             `${tool.name}: ${path} names no top-level property of its outputSchema`
           ).toContain(firstSegment(path));
         }
+
+        const declared = new Set(declaration.structuredPaths.map(firstSegment));
+        const openUndeclared = properties.filter(
+          (p) => isOpen(schemaProps[p]) && !declared.has(p) && !OPEN_FIELD_EXEMPT.has(p)
+        );
+        expect(
+          openUndeclared,
+          `${tool.name}: open outputSchema fields can carry raw platform objects; declare them`
+        ).toEqual([]);
       }
 
       if (claimFor(pkg) === "per-response") {

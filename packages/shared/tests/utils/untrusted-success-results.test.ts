@@ -211,7 +211,8 @@ describe("a malformed declaration fails at registration", () => {
 describe("the server card's path_reporting", () => {
   it("comes from the registry per server, defaulting to unsupported", () => {
     expect(buildServerCardExtras("dbm-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("ttd-mcp").untrustedPathReporting).toBe("unsupported");
+    expect(buildServerCardExtras("ttd-mcp").untrustedPathReporting).toBe("per-response");
+    expect(buildServerCardExtras("meta-mcp").untrustedPathReporting).toBe("unsupported");
   });
 
   async function cardFor(serverCard: TransportFactoryConfig["serverCard"]) {

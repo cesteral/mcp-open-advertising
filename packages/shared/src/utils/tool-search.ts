@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import type { ToolDefinitionForFactory, McpTextContent } from "./tool-handler-factory.js";
+import { NO_UNTRUSTED_CONTENT } from "./untrusted-content.js";
 
 const NAME_WEIGHT = 5;
 const TITLE_WEIGHT = 3;
@@ -244,6 +245,9 @@ If the result is empty or low-confidence, fall back to listing all tools.`;
     logic: async (input: SearchInput): Promise<SearchOutput> => {
       return searchTools(opts.getTools(), input, toolName);
     },
+    // Results are this server's own tool metadata; the only other text is the
+    // caller's query.
+    untrustedContent: NO_UNTRUSTED_CONTENT,
     responseFormatter: (result: SearchOutput): McpTextContent[] => {
       if (result.results.length === 0) {
         return [

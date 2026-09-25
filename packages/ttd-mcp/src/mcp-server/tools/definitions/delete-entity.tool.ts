@@ -277,4 +277,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // The text names only the caller's entityType and entityId.
+  untrustedContent: {
+    structuredPaths: ["$.dryRun", "$.before", "$.after"],
+    contentBlocks: [],
+  },
 };

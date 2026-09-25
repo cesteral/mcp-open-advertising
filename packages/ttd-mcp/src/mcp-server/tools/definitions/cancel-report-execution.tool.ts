@@ -302,4 +302,8 @@ export const cancelReportExecutionTool = {
   ],
   logic: cancelReportExecutionLogic,
   responseFormatter: cancelReportExecutionResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.errors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };

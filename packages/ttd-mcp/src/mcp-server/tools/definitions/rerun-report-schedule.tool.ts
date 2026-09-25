@@ -298,4 +298,8 @@ export const rerunReportScheduleTool = {
   ],
   logic: rerunReportScheduleLogic,
   responseFormatter: rerunReportScheduleResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.newExecutionData", "$.errors", "$.rawResponse"],
+    contentBlocks: [0],
+  },
 };
