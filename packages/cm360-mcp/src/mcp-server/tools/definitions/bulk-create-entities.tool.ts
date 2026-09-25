@@ -5,6 +5,7 @@ import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -26,7 +27,7 @@ const TOOL_NAME = "cm360_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create CM360 Entities";
 const TOOL_DESCRIPTION = `Batch create multiple CM360 entities of the same type.
 
-Loops individual create calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds. Max 50 items per call.`;
+CM360 has no batch endpoint: each item is one create call, paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 15 items fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 items.`;
 
 const EFFECT_KIND = "entities_created";
 
@@ -92,9 +93,21 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user rate-limit key comes from the session, so resolve it before
+  // the capacity projection (dry-run and execute alike).
+  const { cm360Service } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    // Parity with the execute path's assertCM360BulkCapacity refusal below.
+    const capacityError = cm360BulkCapacityDryRunError(
+      TOOL_NAME,
+      "create",
+      cm360Service.quotaUser,
+      input.items.length,
+      "items"
+    );
+    const dryRun = buildBulkEffectDryRun(input, capacityError ? [capacityError] : []);
     return {
       created: 0,
       failed: 0,
@@ -116,7 +129,9 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  const { cm360Service } = resolveSessionServices(sdkContext);
+  // One POST per item on `cm360:user:{quotaUser}`. Refuse a batch that cannot
+  // clear the rate limit within the queue budget before sending anything.
+  assertCM360BulkCapacity(TOOL_NAME, "create", cm360Service.quotaUser, input.items.length);
 
   const bulkResults = await cm360Service.bulkCreateEntities(
     input.entityType as CM360EntityType,
@@ -162,9 +177,14 @@ export async function bulkCreateEntitiesLogic(
  * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). CM360 has no native bulk validate, so both axes are symbolic.
- * Pure (no I/O).
+ * `extraErrors` carries the dry-run-only rate-limit capacity finding (the
+ * execute path reuses this as a payload preflight and refuses capacity
+ * separately, with `RateLimited`). Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
+function buildBulkEffectDryRun(
+  input: BulkCreateEntitiesInput,
+  extraErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
@@ -175,6 +195,7 @@ function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResu
       });
     }
   });
+  validationErrors.push(...extraErrors);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,

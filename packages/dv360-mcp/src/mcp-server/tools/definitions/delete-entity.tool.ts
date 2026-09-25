@@ -3,7 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
+import {
+  getDeletableEntityTypesDynamic,
+  requiresArchiveBeforeDelete,
+} from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds, EntityIdFieldsSchema } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import { runDv360DeleteDryRun, resolveDv360DeleteCapability } from "../utils/dry-run.js";
@@ -11,6 +14,8 @@ import { snapshotFromDv360Entity, buildDv360Snapshot } from "../utils/capture-sn
 import {
   elicitDeleteConfirmation,
   createLogger,
+  McpError,
+  JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -29,7 +34,7 @@ const TOOL_NAME = "dv360_delete_entity";
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
+    entityType: z.enum(getDeletableEntityTypesDynamic() as [string, ...string[]]),
     ...EntityIdFieldsSchema,
     reason: z.string().optional(),
     dry_run: z
@@ -123,6 +128,26 @@ export async function deleteEntityLogic(
     context
   )) as Record<string, any>;
 
+  // DV360 refuses to delete a campaign / IO / line item / creative that is not
+  // archived first. Fail before issuing the DELETE with an actionable error
+  // instead of relaying the platform's 400.
+  if (
+    requiresArchiveBeforeDelete(input.entityType) &&
+    entityBeforeDeletion?.entityStatus !== "ENTITY_STATUS_ARCHIVED"
+  ) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `DV360 requires a ${input.entityType} to be archived before it can be deleted (current entityStatus: ${
+        entityBeforeDeletion?.entityStatus ?? "unknown"
+      }). Set entityStatus to ENTITY_STATUS_ARCHIVED first (dv360_bulk_update_status or dv360_update_entity), then retry.`,
+      {
+        entityType: input.entityType,
+        entityId: primaryId,
+        entityStatus: entityBeforeDeletion?.entityStatus ?? null,
+      }
+    );
+  }
+
   const before: NormalizedEntitySnapshot | undefined = snapshotFromDv360Entity(
     input.entityType,
     entityIds,
@@ -179,11 +204,14 @@ export const deleteEntityTool = {
   name: TOOL_NAME,
   title: "Delete Entity",
   description:
-    "Delete a DV360 entity. Supported types: advertiser, campaign, insertionOrder, lineItem, adGroup, creative, customBiddingAlgorithm, inventorySource, inventorySourceGroup, locationList. " +
-    "Most entities are hard-deleted via the API (subsequent get returns 404). " +
-    "**Line items must be in ENTITY_STATUS_ARCHIVED before delete** — DV360 returns 400 (`LINE_ITEM must be archived before being deleted`) otherwise. " +
+    "Permanently delete a DV360 entity. Supported types: advertiser, campaign, insertionOrder, lineItem, adGroup, creative, inventorySourceGroup " +
+    "(DV360 has no delete method for customBiddingAlgorithm, inventorySource or locationList — archive those via dv360_update_entity instead). " +
+    "Deleted entities cannot be recovered (subsequent get returns 404). " +
+    "**Campaigns, insertion orders, line items and creatives must be in ENTITY_STATUS_ARCHIVED before delete** — DV360 rejects the delete otherwise, and this tool refuses before calling it. " +
     "Use dv360_bulk_update_status with status=ENTITY_STATUS_ARCHIVED first, then call this tool. " +
-    "For reversible removal of any entity, use dv360_update_entity to set entityStatus to ENTITY_STATUS_ARCHIVED.",
+    "**Deleting an advertiser also deletes all of its child resources** (campaigns, insertion orders, line items, …) and cannot be undone. " +
+    "adGroup delete is only supported for Demand Gen ad groups. " +
+    "To stop an entity without deleting it, set entityStatus to ENTITY_STATUS_ARCHIVED (or PAUSED) with dv360_update_entity.",
   inputSchema: DeleteEntityInputSchema,
   outputSchema: DeleteEntityOutputSchema,
   inputExamples: [
@@ -248,7 +276,8 @@ export const deleteEntityTool = {
       },
       schemaVersion: 1,
       contractId: "dv360.delete_entity.v1",
-      // `dry_run` = symbolic validate (incl. line-item-archived precondition) +
+      // `dry_run` = symbolic validate (incl. the archived-before-delete
+      // precondition for campaign / IO / line item / creative) +
       // symbolic apply (expected post-state = entity with status `deleted`).
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,

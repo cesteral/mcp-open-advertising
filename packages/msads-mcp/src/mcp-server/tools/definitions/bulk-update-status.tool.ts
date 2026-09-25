@@ -3,8 +3,17 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import {
+  assertMsAdsBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  oneStatusWritePerItem,
+} from "../utils/bulk-capacity.js";
+import type { MsAdsEntityType } from "../utils/entity-mapping.js";
+import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
+import {
+  McpError,
+  JsonRpcErrorCode,
   elicitBulkStatusChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -27,13 +36,26 @@ const TOOL_TITLE = "Bulk Update Microsoft Ads Entity Status";
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_DESCRIPTION = `Batch update the status of multiple Microsoft Advertising entities.
 
-Valid statuses: Active, Paused, Deleted (varies by entity type).`;
+Valid statuses: Active, Paused, Deleted (varies by entity type).
+
+Supported entity types are the ones with a settable Status: campaign, adGroup, ad,
+keyword. All IDs in one call belong to one parent, sent as the request-body parent
+element Microsoft Ads' Update operation requires: campaign needs \`accountId\`,
+adGroup needs \`campaignId\`, ad and keyword need \`adGroupId\`.`;
+
+/**
+ * Entity types with a writable Status in v13 (`campaign.md`, `adgroup.md`,
+ * `ad.md`, `keyword.md`). Budget, Label and Audience have no Status element,
+ * and AdExtension Status is always Active.
+ */
+const STATUS_ENTITY_TYPES = ["campaign", "adGroup", "ad", "keyword"] as const;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityType: z.enum(STATUS_ENTITY_TYPES).describe("Type of entities to update"),
     entityIds: z.array(z.string()).min(1).describe("Array of entity IDs"),
     status: z.string().describe("New status (Active, Paused, Deleted)"),
+    ...parentIdInputFields,
     dry_run: z
       .boolean()
       .optional()
@@ -88,10 +110,22 @@ export async function bulkUpdateStatusLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user / per-customer rate-limit buckets come from the session, so
+  // resolve it before the capacity projection (dry-run and execute alike).
+  const { msadsService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(
+        TOOL_NAME,
+        input.entityIds.length,
+        oneStatusWritePerItem(msadsService.quotaScope),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       results: [],
@@ -104,6 +138,24 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse before prompting when the request-body parent ID is missing — the
+  // Update call cannot succeed without it.
+  const parentErrors = validateParentId(input);
+  if (parentErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bulk status update: ${parentErrors.map((e) => e.message).join("; ")}`
+    );
+  }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first Update. One 1-token write per entity, on both quota buckets.
+  assertMsAdsBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    oneStatusWritePerItem(msadsService.quotaScope)
+  );
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -126,13 +178,12 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
-  const { msadsService } = resolveSessionServices(sdkContext);
-
   const { results } = await msadsService.bulkUpdateStatus(
     input.entityType as MsAdsEntityType,
     input.entityIds,
     input.status,
-    context
+    context,
+    resolveParentId(input)
   );
 
   const successCount = results.filter((r) => r.success).length;
@@ -170,7 +221,7 @@ export async function bulkUpdateStatusLogic(
  * validate, so both axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...validateParentId(input)];
   input.entityIds.forEach((id, i) => {
     if (!id || id.trim().length === 0) {
       validationErrors.push({
@@ -281,6 +332,7 @@ export const bulkUpdateStatusTool = {
       label: "Pause multiple campaigns",
       input: {
         entityType: "campaign",
+        accountId: "789012",
         entityIds: ["123", "456"],
         status: "Paused",
       },

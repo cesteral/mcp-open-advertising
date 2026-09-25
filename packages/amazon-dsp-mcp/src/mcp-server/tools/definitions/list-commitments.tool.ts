@@ -30,10 +30,10 @@ export const ListCommitmentsInputSchema = z
     maxResults: z
       .number()
       .int()
-      .min(1)
-      .max(50)
+      .min(10)
+      .max(1000)
       .optional()
-      .describe("Page size, 1..50. Amazon's default is 25 if omitted."),
+      .describe("Page size, 10..1000. Amazon's default is 100 if omitted."),
   })
   .describe("Parameters for listing Amazon DSP commitments");
 

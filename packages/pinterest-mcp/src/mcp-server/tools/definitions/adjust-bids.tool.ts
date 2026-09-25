@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
+import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -27,11 +32,11 @@ const TOOL_TITLE = "Pinterest Ad Group Bid Adjustment";
 const TOOL_DESCRIPTION = `Batch adjust ad group bid prices with safe read-modify-write.
 
 Reads current bid prices, applies new values, and reports previous/new amounts.
-Bid prices are in the advertiser's account currency.
+Bid prices are in the advertiser's account currency (e.g. 1.5 = $1.50); the server converts them to Pinterest's integer \`bid_in_micro_currency\` (x 1,000,000).
 
 **Gotchas:**
-- Only applies to ad groups with manual bidding (bid_price field).
-- Ad groups using automated bidding strategies may ignore bid_price.
+- Writes the ad group's \`bid_in_micro_currency\`; meaningful for manual bid strategies (\`bid_strategy_type\` MAX_BID / TARGET_AVG).
+- Ad groups on AUTOMATIC_BID are bid by Pinterest and may ignore \`bid_in_micro_currency\`.
 - Each read + write pair consumes rate limit tokens.
 - Max 50 adjustments per call.`;
 
@@ -104,7 +109,15 @@ export async function adjustBidsLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.adjustments.length,
+        pinterestBulkBuckets.adjustBids(input.adAccountId),
+        "adjustments"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -116,6 +129,14 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/write.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.adjustments.length,
+    pinterestBulkBuckets.adjustBids(input.adAccountId)
+  );
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -180,9 +201,10 @@ export async function adjustBidsLogic(
  * symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"]
+  adjustments: AdjustBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   adjustments.forEach((a, i) => {
     if (!Number.isFinite(a.bidPrice) || a.bidPrice <= 0) {
       validationErrors.push({

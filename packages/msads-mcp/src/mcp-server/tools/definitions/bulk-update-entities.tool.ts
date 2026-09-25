@@ -3,8 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import {
+  assertMsAdsChunkedBulkCapacity,
+  chunkedBulkCapacityDryRunError,
+  withBulkCapacityError,
+} from "../utils/bulk-capacity.js";
+import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
+import {
+  McpError,
+  JsonRpcErrorCode,
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
@@ -27,7 +35,12 @@ const TOOL_NAME = "msads_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update Microsoft Ads Entities";
 const TOOL_DESCRIPTION = `Batch update multiple Microsoft Advertising entities.
 
-Each item must include the Id field. Only include fields you want to change.`;
+Each item must include the Id field. Only include fields you want to change.
+
+All items in one call belong to one parent, sent as the request-body parent element
+Microsoft Ads' Update operation requires: campaign and adExtension need \`accountId\`,
+adGroup needs \`campaignId\`, ad and keyword need \`adGroupId\`. budget, label and
+audience take no parent.`;
 
 const EFFECT_KIND = "entities_updated";
 
@@ -38,6 +51,7 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(z.record(z.unknown()))
       .min(1)
       .describe("Array of entity data objects with Id and fields to update"),
+    ...parentIdInputFields,
     dry_run: z
       .boolean()
       .optional()
@@ -84,10 +98,22 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user / per-customer rate-limit buckets come from the session, so
+  // resolve it before the capacity projection (dry-run and execute alike).
+  const { msadsService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      chunkedBulkCapacityDryRunError(
+        msadsService.quotaScope,
+        input.entityType,
+        input.items.length,
+        "items"
+      )
+    );
     return {
       confirmed: true,
       results: [],
@@ -99,9 +125,29 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
+  // Refuse before prompting when the request-body parent ID is missing — the
+  // Update call cannot succeed without it.
+  const parentErrors = validateParentId(input);
+  if (parentErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bulk update payload: ${parentErrors.map((e) => e.message).join("; ")}`
+    );
+  }
+
   // MSAds items are flat records (e.g. { Id: 123, DailyBudget: 100 }) — the
   // whole row IS the payload, no .data wrapper.
   const items = input.items as Array<Record<string, unknown>>;
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first Update. One 3-token write per batchLimit-sized
+  // chunk, on both quota buckets.
+  assertMsAdsChunkedBulkCapacity(
+    TOOL_NAME,
+    msadsService.quotaScope,
+    input.entityType,
+    items.length
+  );
+
   const confirmed = await elicitBulkMutationConfirmation({
     count: items.length,
     entityLabel: input.entityType,
@@ -122,24 +168,33 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  const { msadsService } = resolveSessionServices(sdkContext);
-
   const results = await msadsService.bulkUpdateEntities(
     input.entityType as MsAdsEntityType,
     input.items,
-    context
+    context,
+    resolveParentId(input)
   );
 
-  // Microsoft Ads' bulk update returns raw batch results without a per-item
-  // success flag, so the effect summary carries the requested count only.
+  // Microsoft Ads returns HTTP 200 even when items are rejected; the service
+  // maps each batch's PartialErrors back to per-item outcomes, so the effect
+  // reports the real outcome rather than blanket success.
+  const requested = input.items.length;
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = requested - succeeded;
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
-    summary: { entity_kind: input.entityType, requested: input.items.length },
+    summary: {
+      entity_kind: input.entityType,
+      requested,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
+    },
   };
 
   return {
     confirmed: true,
-    results: results as Record<string, unknown>[],
+    results: results as unknown as Record<string, unknown>[],
     entityType: input.entityType,
     totalItems: input.items.length,
     timestamp: new Date().toISOString(),
@@ -155,7 +210,7 @@ export async function bulkUpdateEntitiesLogic(
  * native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...validateParentId(input)];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({
@@ -220,10 +275,13 @@ export function bulkUpdateEntitiesResponseFormatter(
       },
     ];
   }
+  const succeeded = result.results.filter((r) => r.success === true).length;
+  const failed = result.results.length - succeeded;
+  const failedNote = failed > 0 ? ` (${failed} rejected by Microsoft Ads)` : "";
   return [
     {
       type: "text" as const,
-      text: `Bulk updated ${result.totalItems} ${result.entityType} entities\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk updated ${succeeded}/${result.totalItems} ${result.entityType} entities${failedNote}\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -264,6 +322,7 @@ export const bulkUpdateEntitiesTool = {
       label: "Bulk update campaign budgets",
       input: {
         entityType: "campaign",
+        accountId: "789012",
         items: [
           { Id: 123, DailyBudget: 100.0 },
           { Id: 456, DailyBudget: 200.0 },

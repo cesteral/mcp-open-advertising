@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { MSADS_AGE_RANGES, MSADS_GENDERS } from "../utils/targeting-values.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
@@ -41,18 +42,9 @@ export const SearchTargetingOutputSchema = z
 type SearchTargetingInput = z.infer<typeof SearchTargetingInputSchema>;
 type SearchTargetingOutput = z.infer<typeof SearchTargetingOutputSchema>;
 
-const AGE_RANGES = [
-  { Id: "EighteenToTwentyFour", Name: "18-24" },
-  { Id: "TwentyFiveToThirtyFour", Name: "25-34" },
-  { Id: "ThirtyFiveToFortyNine", Name: "35-49" },
-  { Id: "FiftyToSixtyFour", Name: "50-64" },
-  { Id: "SixtyFiveAndAbove", Name: "65+" },
-];
+const AGE_RANGES = MSADS_AGE_RANGES.map((v) => ({ ...v }));
 
-const GENDERS = [
-  { Id: "Male", Name: "Male" },
-  { Id: "Female", Name: "Female" },
-];
+const GENDERS = MSADS_GENDERS.map((v) => ({ ...v }));
 
 const DEVICE_TYPES = [
   { Id: "Computers", Name: "Computers" },

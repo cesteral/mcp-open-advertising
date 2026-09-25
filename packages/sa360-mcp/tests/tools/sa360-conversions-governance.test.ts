@@ -17,6 +17,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import {
   insertConversionsLogic,
   insertConversionsResponseFormatter,
+  InsertConversionsInputSchema,
   InsertConversionsOutputSchema,
 } from "../../src/mcp-server/tools/definitions/insert-conversions.tool.js";
 import {
@@ -56,10 +57,11 @@ describe("sa360 conversions governance contract (effect class)", () => {
       advertiserId: "67890",
       conversions: [
         {
-          gclid: "EAIaIQ...",
+          clickId: "EAIaIQ...",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
-          floodlightActivityId: "11111",
+          segmentationId: "11111",
         },
       ],
     };
@@ -80,7 +82,7 @@ describe("sa360 conversions governance contract (effect class)", () => {
           operation: "insert",
         },
       });
-      // No gclid/clickId/revenue/raw payloads leaked into the summary.
+      // No clickId/conversionId/revenue/raw payloads leaked into the summary.
       expect(JSON.stringify(result.dryRun?.expectedEffect?.summary)).not.toContain("EAIaIQ");
       expect(result.dispatchedCapability).toEqual({
         operation: "upload_conversions",
@@ -96,9 +98,10 @@ describe("sa360 conversions governance contract (effect class)", () => {
           ...input,
           conversions: [
             {
+              conversionId: "order-1",
               conversionTimestamp: "1700000000000",
               segmentationType: "FLOODLIGHT",
-              floodlightActivityId: "11111",
+              segmentationId: "11111",
             },
           ],
           dry_run: true,
@@ -115,7 +118,12 @@ describe("sa360 conversions governance contract (effect class)", () => {
         {
           ...input,
           conversions: [
-            { gclid: "g-1", conversionTimestamp: "1700000000000", segmentationType: "FLOODLIGHT" },
+            {
+              clickId: "g-1",
+              conversionId: "order-1",
+              conversionTimestamp: "1700000000000",
+              segmentationType: "FLOODLIGHT",
+            },
           ],
           dry_run: true,
         } as any,
@@ -132,10 +140,11 @@ describe("sa360 conversions governance contract (effect class)", () => {
           ...input,
           conversions: [
             {
-              gclid: "g-1",
+              clickId: "g-1",
+              conversionId: "order-1",
               conversionTimestamp: "not-a-number",
               segmentationType: "FLOODLIGHT",
-              floodlightActivityId: "11111",
+              segmentationId: "11111",
             },
           ],
           dry_run: true,
@@ -174,8 +183,8 @@ describe("sa360 conversions governance contract (effect class)", () => {
       const twoRows = {
         ...input,
         conversions: [
-          { ...input.conversions[0], gclid: "g-1" },
-          { ...input.conversions[0], gclid: "g-2" },
+          { ...input.conversions[0], clickId: "g-1", conversionId: "order-1" },
+          { ...input.conversions[0], clickId: "g-2", conversionId: "order-2" },
         ],
       };
       conversionService.insertConversions.mockResolvedValueOnce({
@@ -219,6 +228,78 @@ describe("sa360 conversions governance contract (effect class)", () => {
       expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     });
 
+    it("dry_run flags a row missing the advertiser-provided conversionId", async () => {
+      const result = await insertConversionsLogic(
+        {
+          ...input,
+          conversions: [
+            {
+              clickId: "g-1",
+              conversionTimestamp: "1700000000000",
+              segmentationType: "FLOODLIGHT",
+              segmentationId: "11111",
+            },
+          ],
+          dry_run: true,
+        } as any,
+        ctx,
+        sdk
+      );
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain("MISSING_CONVERSION_ID");
+    });
+
+    it("dry_run flags duplicate conversionIds within one request", async () => {
+      const result = await insertConversionsLogic(
+        {
+          ...input,
+          conversions: [input.conversions[0], { ...input.conversions[0], clickId: "g-2" }],
+          dry_run: true,
+        } as any,
+        ctx,
+        sdk
+      );
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      const dup = result.dryRun?.validationErrors.find((e) => e.code === "DUPLICATE_CONVERSION_ID");
+      expect(dup?.field).toBe("conversions[1].conversionId");
+    });
+
+    it("execute refuses duplicate conversionIds before confirmation or any API call", async () => {
+      await expect(
+        insertConversionsLogic(
+          {
+            ...input,
+            conversions: [input.conversions[0], { ...input.conversions[0], clickId: "g-2" }],
+          } as any,
+          ctx,
+          sdk
+        )
+      ).rejects.toThrow(/unique conversionId/);
+      expect(mockElicitConversion).not.toHaveBeenCalled();
+      expect(conversionService.insertConversions).not.toHaveBeenCalled();
+    });
+
+    it("the input schema keeps conversionId and drops the non-v2 gclid/floodlightActivityId keys", () => {
+      const parsed = InsertConversionsInputSchema.parse({
+        agencyId: "1",
+        advertiserId: "2",
+        conversions: [{ ...input.conversions[0], gclid: "g", floodlightActivityId: "3" }],
+      });
+      expect(parsed.conversions[0]).toMatchObject({
+        conversionId: "order-1",
+        segmentationId: "11111",
+      });
+      expect(parsed.conversions[0]).not.toHaveProperty("gclid");
+      expect(parsed.conversions[0]).not.toHaveProperty("floodlightActivityId");
+      expect(
+        InsertConversionsInputSchema.safeParse({
+          agencyId: "1",
+          advertiserId: "2",
+          conversions: [{ clickId: "c", conversionTimestamp: "1700000000000" }],
+        }).success
+      ).toBe(false);
+    });
+
     it("formatter renders a dry-run message without a false success", () => {
       const content = insertConversionsResponseFormatter({
         confirmed: true,
@@ -257,11 +338,11 @@ describe("sa360 conversions governance contract (effect class)", () => {
       advertiserId: "67890",
       conversions: [
         {
-          gclid: "EAIaIQ...",
+          clickId: "EAIaIQ...",
           conversionId: "conv-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
-          floodlightActivityId: "11111",
+          segmentationId: "11111",
         },
       ],
     };
@@ -296,10 +377,11 @@ describe("sa360 conversions governance contract (effect class)", () => {
           ...input,
           conversions: [
             {
+              clickId: "g-1",
               conversionId: "",
               conversionTimestamp: "1700000000000",
               segmentationType: "FLOODLIGHT",
-              floodlightActivityId: "11111",
+              segmentationId: "11111",
             },
           ],
           dry_run: true,
@@ -309,6 +391,18 @@ describe("sa360 conversions governance contract (effect class)", () => {
       );
       expect(result.dryRun?.wouldSucceed).toBe(false);
       expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain("MISSING_CONVERSION_ID");
+    });
+
+    it("execute refuses duplicate conversionIds before confirmation or any API call", async () => {
+      await expect(
+        updateConversionsLogic(
+          { ...input, conversions: [input.conversions[0], input.conversions[0]] } as any,
+          ctx,
+          sdk
+        )
+      ).rejects.toThrow(/unique conversionId/);
+      expect(mockElicitConversion).not.toHaveBeenCalled();
+      expect(conversionService.updateConversions).not.toHaveBeenCalled();
     });
 
     it("execute emits the scalar effect identity when SA360 accepts all rows", async () => {

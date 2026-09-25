@@ -107,13 +107,19 @@ describe("meta_download_report computed metrics flag", () => {
     vi.clearAllMocks();
   });
 
+  // Realistic Meta async-report row: action fields are list<AdsActionStats>
+  // (facebook-python-business-sdk adsinsights.py), not scalars.
   const META_ROWS = [
     {
       impressions: "10000",
       clicks: "200",
       spend: "100",
-      conversions: "4",
-      conversion_values: "400",
+      actions: [
+        { action_type: "link_click", value: "150" },
+        { action_type: "offsite_conversion.fb_pixel_purchase", value: "4" },
+      ],
+      action_values: [{ action_type: "offsite_conversion.fb_pixel_purchase", value: "400" }],
+      conversions: [{ action_type: "offsite_conversion.fb_pixel_purchase", value: "4" }],
     },
   ];
 
@@ -163,5 +169,44 @@ describe("meta_download_report computed metrics flag", () => {
     expect(row.cpm).toBe("10");
     expect(row.ctr).toBe("2");
     expect(row.cpc).toBe("0.5");
+    expect(row._computedMetricsWarnings).toBeUndefined();
+  });
+
+  it("keeps array-valued Meta fields intact when computing metrics", async () => {
+    mockService();
+    const result = await downloadReportLogic(
+      {
+        reportRunId: "rr-3",
+        mode: "rows",
+        maxRows: 10,
+        includeComputedMetrics: true,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    const row = (result.rows ?? [])[0] ?? {};
+    expect(row.actions).toEqual(META_ROWS[0]!.actions);
+    expect(row.conversions).toEqual(META_ROWS[0]!.conversions);
+    expect(JSON.stringify(row)).not.toContain("[object Object]");
+  });
+
+  it("flags missing action fields instead of silently computing zero conversions", async () => {
+    mockResolveSessionServices.mockReturnValue({
+      metaInsightsService: {
+        getReportResults: vi.fn().mockResolvedValue({
+          data: [{ impressions: "1000", clicks: "10", spend: "5" }],
+          fetchedAllRows: true,
+          nextCursor: undefined,
+        }),
+      },
+    });
+    const result = await downloadReportLogic(
+      { reportRunId: "rr-4", mode: "rows", maxRows: 10, includeComputedMetrics: true },
+      createMockContext(),
+      createMockSdkContext()
+    );
+    const row = (result.rows ?? [])[0] ?? {};
+    expect(row.cpa).toBe("");
+    expect(row._computedMetricsWarnings).toBe("missing:conversions,missing:conversionValue");
   });
 });

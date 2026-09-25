@@ -94,6 +94,38 @@ describe("AmazonDspService", () => {
     });
   });
 
+  describe("create of unsupported entity types", () => {
+    it("rejects creative creation before any upstream call (no plain POST /dsp/creatives)", async () => {
+      await expect(service.createEntity("creative", { name: "C" } as any)).rejects.toThrow(
+        /Creating a creative is not supported/
+      );
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
+      expect(mockRateLimiter.consume).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("path-segment encoding", () => {
+    it("URI-encodes entity IDs in get paths", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({});
+      await service.getEntity("order", "../advertisers");
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        "/dsp/orders/..%2Fadvertisers",
+        undefined,
+        undefined
+      );
+    });
+
+    it("URI-encodes the creative ID in the preview path", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({});
+      await service.getAdPreviews("../../dsp/advertisers?x=1");
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        "/dsp/creatives/..%2F..%2Fdsp%2Fadvertisers%3Fx%3D1/preview",
+        undefined,
+        undefined
+      );
+    });
+  });
+
   describe("updateEntity", () => {
     it("sends PUT to entity-specific path", async () => {
       mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", name: "Updated" });

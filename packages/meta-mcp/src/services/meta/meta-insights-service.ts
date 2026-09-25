@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
+import { nextPageCursor } from "./paging.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
@@ -106,12 +107,10 @@ export class MetaInsightsService {
     >;
 
     const data = (result.data as unknown[]) || [];
-    const paging = result.paging as Record<string, unknown> | undefined;
-    const cursors = paging?.cursors as Record<string, string> | undefined;
 
     return {
       data,
-      nextCursor: cursors?.after,
+      nextCursor: nextPageCursor(result.paging),
       summary: result.summary,
     };
   }
@@ -264,9 +263,7 @@ export class MetaInsightsService {
       const pageData = Array.isArray(result.data) ? result.data : [];
       data.push(...pageData);
 
-      const paging = result.paging as Record<string, unknown> | undefined;
-      const cursors = paging?.cursors as Record<string, string> | undefined;
-      after = cursors?.after;
+      after = nextPageCursor(result.paging);
 
       if (!after) {
         break;
@@ -357,12 +354,10 @@ export class MetaInsightsService {
     >;
 
     const data = (result.data as unknown[]) || [];
-    const paging = result.paging as Record<string, unknown> | undefined;
-    const cursors = paging?.cursors as Record<string, string> | undefined;
 
     return {
       data,
-      nextCursor: cursors?.after,
+      nextCursor: nextPageCursor(result.paging),
     };
   }
 }

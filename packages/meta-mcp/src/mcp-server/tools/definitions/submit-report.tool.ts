@@ -29,10 +29,10 @@ Returns a \`reportRunId\` immediately. Use \`meta_check_report_status\` to poll 
 
 **Non-blocking workflow:**
 1. \`meta_submit_report\` → get \`reportRunId\`
-2. \`meta_check_report_status\` (repeat every 10s) → wait for "Job Succeeded"
+2. \`meta_check_report_status\` (repeat every 10s) → wait for "Job Completed"
 3. \`meta_download_report\` with the \`reportRunId\` → get parsed data
 
-**Status values:** "Job Not Started", "Job Started", "Job Running", "Job Succeeded", "Job Failed"
+**Status values:** "Job Not Started", "Job Started", "Job Running", "Job Completed", "Job Failed"
 
 Use \`meta_get_insights\` instead for a blocking convenience shortcut on smaller date ranges.`;
 

@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMetaBulkCapacity,
+  metaBulkBuckets,
+  metaBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import {
   elicitBulkStatusChangeConfirmation,
@@ -103,7 +108,15 @@ export async function bulkUpdateStatusLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      metaBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.entityIds.length,
+        metaBulkBuckets.bulkUpdate(),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       results: [],
@@ -114,6 +127,10 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first write.
+  assertMetaBulkCapacity(TOOL_NAME, input.entityIds.length, metaBulkBuckets.bulkUpdate());
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -170,8 +187,11 @@ export async function bulkUpdateStatusLogic(
  * status change to one target status). Meta has no native bulk validate, so both
  * axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateStatusInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((id, i) => {
     if (!id || id.trim().length === 0) {
       validationErrors.push({

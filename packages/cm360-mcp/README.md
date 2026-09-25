@@ -134,7 +134,7 @@ CM360 entities managed by this server:
 | `floodlightActivity`      | floodlightActivities     | Yes             | Conversion tracking       |
 | `floodlightConfiguration` | floodlightConfigurations | No              | Floodlight setup          |
 
-All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection}[/{id}]`
+All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection}[/{id}]`, plus `PATCH /userprofiles/{profileId}/{collection}?id={id}` for partial updates
 
 ---
 
@@ -150,16 +150,16 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 
 ### Core CRUD
 
-| Tool                    | Description                                           | Key Parameters                                                     |
-| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
-| `cm360_list_entities`   | List entities with filters/pagination                 | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
-| `cm360_get_entity`      | Get a single entity by ID                             | `profileId`, `entityType`, `entityId`                              |
-| `cm360_create_entity`   | Create any supported entity                           | `profileId`, `entityType`, `data`                                  |
-| `cm360_update_entity`   | Update entity (PUT semantics -- full object required) | `profileId`, `entityType`, `entityId`, `data`                      |
-| `cm360_delete_entity`   | Delete entity (floodlightActivity only)               | `profileId`, `entityType`, `entityId`                              |
-| `cm360_validate_entity` | Dry-run validate payload (no API call)                | `entityType`, `mode`, `data`                                       |
+| Tool                    | Description                                            | Key Parameters                                                     |
+| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ |
+| `cm360_list_entities`   | List entities with filters/pagination                  | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
+| `cm360_get_entity`      | Get a single entity by ID                              | `profileId`, `entityType`, `entityId`                              |
+| `cm360_create_entity`   | Create any supported entity                            | `profileId`, `entityType`, `data`                                  |
+| `cm360_update_entity`   | Update entity (PATCH semantics -- send changed fields) | `profileId`, `entityType`, `entityId`, `data`                      |
+| `cm360_delete_entity`   | Delete entity (floodlightActivity only)                | `profileId`, `entityType`, `entityId`                              |
+| `cm360_validate_entity` | Dry-run validate payload (no API call)                 | `entityType`, `mode`, `data`                                       |
 
-**CM360 update pattern**: CM360 uses PUT (full replacement), not PATCH. Always fetch the current entity with `cm360_get_entity` first, modify the fields you need, then pass the complete object to `cm360_update_entity`.
+**CM360 update pattern**: `cm360_update_entity` and `cm360_bulk_update_entities` call CM360's `PATCH ?id=` endpoint (v5 `{collection}.patch`), so send only the fields you want to change -- omitted fields keep their current values, nested objects are merged, and arrays are replaced whole. Use `dry_run: true` to preview the merged result. Only `cm360_bulk_update_status` uses the full-replacement `PUT`, and it GETs each entity first and sends the whole object back.
 
 ### Reporting
 
@@ -188,7 +188,7 @@ CM360 reports are asynchronous. Two workflows available:
 
 ### Bulk Operations
 
-No native batch API -- bulk tools loop individual calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds.
+No native batch API: bulk tools make one call per item (two per entity for status changes), paced by the per-user rate limit. A batch that cannot clear the limit within the 2-minute queue budget is refused before anything is sent, with `itemsThatFit` and `retryAfterMs`. At the default 5/min, that is 15 creates/updates or 7 status changes. Use `dry_run` to check first.
 
 | Tool                         | Description                      | Key Parameters                                     |
 | ---------------------------- | -------------------------------- | -------------------------------------------------- |
@@ -280,7 +280,7 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 | `MCP_AUTH_MODE`                   | No       | `google-headers`                                      | Auth mode: `google-headers`, `jwt`, `none` |
 | `MCP_AUTH_SECRET_KEY`             | If jwt   | --                                                    | JWT signing secret                         |
 | `CM360_API_BASE_URL`              | No       | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL                         |
-| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `50`                                                  | API rate limit (requests/min)              |
+| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `5`                                                   | API rate limit (requests/min per user)     |
 | `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON               |
 | `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON        |
 | `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                       |
@@ -291,7 +291,9 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 
 ### Rate Limiting
 
-CM360 API quota: ~50K requests/day (~1 QPS sustained). The server enforces a configurable rate limit (default: 50 requests/minute) with automatic retry on 429 responses using exponential backoff.
+The server enforces a per-user rate limit (`CM360_RATE_LIMIT_PER_MINUTE`, default 5 requests/minute), keyed by the authenticated credential and shared across all of that user's profiles and by reporting and trafficking calls alike, so a running report's status polls count against the same budget as bulk writes. Over-limit calls queue for up to 2 minutes rather than fail. 429 responses are retried with exponential backoff, and a `Retry-After` longer than the retry budget is surfaced as `retryAfterMs` instead of being re-sent early.
+
+CM360's own quota could not be confirmed from a primary source. Search results give 60 queries/min per user and 50,000/day per project; see `cm360.rate_limit_default` in `platform-facts.json` before raising the default.
 
 ---
 

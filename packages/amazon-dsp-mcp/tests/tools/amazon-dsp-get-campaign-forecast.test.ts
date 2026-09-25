@@ -56,30 +56,43 @@ describe("amazon_dsp_get_campaign_forecast", () => {
     expect(
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
+        accountId: "adv-1",
         campaignForecastDescriptions: [],
       }).success
     ).toBe(false);
     expect(
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
+        accountId: "adv-1",
         campaignForecastDescriptions: [{ campaignId: "cmp-1" }, { campaignId: "cmp-2" }],
       }).success
     ).toBe(false);
     expect(
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
+        accountId: "adv-1",
         campaignForecastDescriptions: [{ campaignId: "cmp-1" }],
       }).success
     ).toBe(true);
   });
 
-  it("calls retrieveCampaignForecast with the wrapped request body", async () => {
+  it("requires accountId (sent as the spec-required Amazon-Ads-AccountId header)", () => {
+    expect(
+      GetCampaignForecastInputSchema.safeParse({
+        profileId: "p1",
+        campaignForecastDescriptions: [{ campaignId: "cmp-1" }],
+      }).success
+    ).toBe(false);
+  });
+
+  it("calls retrieveCampaignForecast with the wrapped request body and the accountId", async () => {
     const body = { success: [], error: [] };
     mockRetrieveForecast.mockResolvedValueOnce(body);
 
     await getCampaignForecastLogic(
       {
         profileId: "1234567890",
+        accountId: "adv-1",
         campaignForecastDescriptions: [{ campaignId: "cmp-1", flightIds: ["fl-1"] }],
       },
       baseContext,
@@ -90,6 +103,7 @@ describe("amazon_dsp_get_campaign_forecast", () => {
       {
         campaignForecastDescriptions: [{ campaignId: "cmp-1", flightIds: ["fl-1"] }],
       },
+      "adv-1",
       baseContext
     );
   });

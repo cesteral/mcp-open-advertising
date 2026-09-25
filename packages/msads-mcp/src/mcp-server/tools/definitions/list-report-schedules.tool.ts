@@ -9,12 +9,11 @@ const TOOL_NAME = "msads_list_report_schedules";
 const TOOL_TITLE = "List Microsoft Ads Report Schedules";
 const TOOL_DESCRIPTION = `List scheduled reports in Microsoft Advertising.
 
-Note: The Microsoft Advertising API v13 JSON endpoints do not provide an endpoint to programmatically list all scheduled reports. This tool returns guidance on how to find existing schedules.
+Note: The Microsoft Advertising Reporting API v13 has no report schedules — it exposes only GenerateReport/Submit and GenerateReport/Poll — so this tool returns guidance only and never lists anything.
 
 If Microsoft Advertising exposed such an endpoint, this tool would return an array of canonical \`ReportScheduleSummary\` entries (the same cross-platform shape used by \`ttd_list_report_schedules\` and \`cm360_list_report_schedules\`), mapped via the shared \`fromMsAdsSchedule\` normalizer, with the raw Microsoft Advertising envelopes preserved on a sibling \`raw\` field for platform-specific debugging.
 
-To view scheduled reports: visit app.ads.microsoft.com → Reports → Scheduled Reports.
-To manage schedules programmatically, track the scheduleIds returned by msads_create_report_schedule.`;
+For one-off reports use msads_submit_report / msads_get_report.`;
 
 export const ListReportSchedulesInputSchema = z.object({}).describe("No parameters required");
 

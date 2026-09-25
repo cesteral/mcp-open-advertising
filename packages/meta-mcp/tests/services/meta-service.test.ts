@@ -185,7 +185,35 @@ describe("MetaService", () => {
       expect(result.entities).toEqual(campaigns);
     });
 
-    it("returns nextCursor from paging.cursors.after", async () => {
+    it("returns nextCursor from paging.cursors.after when paging.next is present", async () => {
+      httpClient.get.mockResolvedValueOnce({
+        data: [{ id: "c1" }],
+        paging: {
+          cursors: { before: "abc", after: "xyz" },
+          next: "https://graph.facebook.com/v25.0/act_123/campaigns?after=xyz",
+        },
+      });
+
+      const result = await service.listEntities("campaign", "act_123");
+
+      expect(result.nextCursor).toBe("xyz");
+    });
+
+    it("adCreative default fields name only real AdCreative fields", async () => {
+      // Graph rejects a nonexisting field with (#100); neither of these is in
+      // AdCreative._field_types in facebook-python-business-sdk v26.0.
+      httpClient.get.mockResolvedValueOnce({ data: [] });
+
+      await service.listEntities("adCreative", "act_123");
+
+      const fields = String(httpClient.get.mock.calls[0][1].fields).split(",");
+      expect(fields).toContain("object_story_spec");
+      expect(fields).not.toContain("dynamic_creative_spec");
+      expect(fields).not.toContain("created_time");
+    });
+
+    it("returns undefined nextCursor on the last page (cursors.after present, no paging.next)", async () => {
+      // Meta returns cursors.after on every page, including the last one.
       httpClient.get.mockResolvedValueOnce({
         data: [{ id: "c1" }],
         paging: { cursors: { before: "abc", after: "xyz" } },
@@ -193,7 +221,7 @@ describe("MetaService", () => {
 
       const result = await service.listEntities("campaign", "act_123");
 
-      expect(result.nextCursor).toBe("xyz");
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("returns undefined nextCursor when no paging", async () => {
@@ -508,6 +536,21 @@ describe("MetaService", () => {
 
       const [, params] = httpClient.get.mock.calls[0];
       expect(params.limit).toBe("10");
+    });
+
+    it("returns nextCursor only while paging.next is present", async () => {
+      httpClient.get
+        .mockResolvedValueOnce({
+          data: [{ id: "act_1" }],
+          paging: { cursors: { after: "p2" }, next: "https://graph.facebook.com/me/adaccounts" },
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: "act_2" }],
+          paging: { cursors: { after: "p3" } },
+        });
+
+      expect((await service.listAdAccounts()).nextCursor).toBe("p2");
+      expect((await service.listAdAccounts(undefined, undefined, "p2")).nextCursor).toBeUndefined();
     });
 
     it("calls rateLimiter.consume with default key", async () => {

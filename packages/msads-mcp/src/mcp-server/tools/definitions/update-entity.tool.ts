@@ -4,8 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  entityContextReadParams,
   getEntityConfig,
   getEntityTypeEnum,
+  getWriteParent,
+  pickEntityContext,
+  refineEntityContext,
   type MsAdsEntityType,
 } from "../utils/entity-mapping.js";
 import {
@@ -13,7 +17,11 @@ import {
   resolveMsAdsDispatchedCapability,
   symbolicValidate,
 } from "../utils/dry-run.js";
-import { captureMsAdsSnapshot, snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
+import {
+  captureMsAdsSnapshot,
+  resolveMsAdsCurrency,
+  snapshotFromMsAdsEntity,
+} from "../utils/capture-snapshot.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -34,79 +42,58 @@ Provide the entity ID plus the partial fields to change in \`data\` — Microsof
 supports partial updates, so only include fields you want to modify (do NOT include
 \`Id\`; it is injected). The tool wraps the patch in the entity's plural collection key.
 
-Some entity types require parent/account context so the read partner can capture
-before/after snapshots: campaign needs \`accountId\`, adGroup needs \`campaignId\`,
-ad needs \`adGroupId\`.`;
+Some entity types require their parent ID, which is sent as the request-body
+parent element Microsoft Ads' Update operation takes next to the entity array and
+is also used to read the entity back for before/after snapshots: campaign and
+adExtension need \`accountId\` (AccountId), adGroup needs \`campaignId\`
+(CampaignId), ad and keyword need \`adGroupId\` (AdGroupId).`;
 
-const dataField = z
-  .record(z.unknown())
-  .describe("Partial fields to update (do not include Id — it is injected)");
-
-const dryRunField = z
-  .boolean()
-  .optional()
-  .default(false)
-  .describe(
-    "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the Microsoft Ads API. The underlying entity is never modified."
-  );
-
+// Flat object + superRefine, not a discriminated union: a top-level union is
+// published to MCP clients as an empty input schema, and this tool's
+// definitionHash was computed over that empty schema (#228). The per-type
+// context requirements live in entity-mapping.ts (`getEntityContextKeys`).
 export const UpdateEntityInputSchema = z
-  .discriminatedUnion("entityType", [
-    z.object({
-      entityType: z.literal("campaign"),
-      entityId: z.string().min(1).describe("The campaign ID to update"),
-      accountId: z.string().min(1).describe("AccountId required to read the campaign back"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("adGroup"),
-      entityId: z.string().min(1).describe("The ad group ID to update"),
-      campaignId: z.string().min(1).describe("CampaignId required to read the ad group back"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("ad"),
-      entityId: z.string().min(1).describe("The ad ID to update"),
-      adGroupId: z.string().min(1).describe("AdGroupId required to read the ad back"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("keyword"),
-      entityId: z.string().min(1).describe("The keyword ID to update"),
-      adGroupId: z.string().min(1).describe("AdGroupId required to read the keyword back"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("budget"),
-      entityId: z.string().min(1).describe("The budget ID to update"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("adExtension"),
-      entityId: z.string().min(1).describe("The ad extension ID to update"),
-      accountId: z.string().min(1).describe("AccountId required to read the ad extension back"),
-      adExtensionType: z.string().min(1).describe("AdExtensionType required for the read"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("audience"),
-      entityId: z.string().min(1).describe("The audience ID to update"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-    z.object({
-      entityType: z.literal("label"),
-      entityId: z.string().min(1).describe("The label ID to update"),
-      data: dataField,
-      dry_run: dryRunField,
-    }),
-  ])
+  .object({
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    accountId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Account that owns the entity, sent as the request-body AccountId. Required for campaign and adExtension"
+      ),
+    campaignId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Campaign that owns the ad group, sent as the request-body CampaignId. Required for adGroup"
+      ),
+    adGroupId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Ad group that owns the ad or keyword, sent as the request-body AdGroupId. Required for ad and keyword"
+      ),
+    adExtensionType: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("AdExtensionType, needed to read the ad extension. Required for adExtension"),
+    data: z
+      .record(z.unknown())
+      .describe("Partial fields to update (do not include Id — it is injected)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the Microsoft Ads API. The underlying entity is never modified."
+      ),
+  })
+  .superRefine(refineEntityContext)
   .describe("Parameters for updating a Microsoft Ads entity");
 
 export const UpdateEntityOutputSchema = z
@@ -134,14 +121,22 @@ export const UpdateEntityOutputSchema = z
 type UpdateEntityInput = z.infer<typeof UpdateEntityInputSchema>;
 type UpdateEntityOutput = z.infer<typeof UpdateEntityOutputSchema>;
 
+/**
+ * Build the request-body parent element the Update operation takes for this
+ * entity type (`updatecampaigns.md` / `updateadextensions.md`: AccountId;
+ * `updateadgroups.md`: CampaignId; `updateads.md` / `updatekeywords.md`:
+ * AdGroupId). Budgets, audiences and labels take none.
+ */
+function buildWriteParentBody(input: UpdateEntityInput): Record<string, number> {
+  const parent = getWriteParent(input.entityType as MsAdsEntityType);
+  if (!parent) return {};
+  const value = (input as Record<string, unknown>)[parent.inputKey];
+  return typeof value === "string" ? { [parent.bodyField]: Number(value) } : {};
+}
+
 /** Build the parent/account context the read partner needs for this entity type. */
 function buildReadParams(input: UpdateEntityInput): Record<string, unknown> {
-  const params: Record<string, unknown> = {};
-  if ("accountId" in input) params.AccountId = Number(input.accountId);
-  if ("campaignId" in input) params.CampaignId = Number(input.campaignId);
-  if ("adGroupId" in input) params.AdGroupId = Number(input.adGroupId);
-  if ("adExtensionType" in input) params.AdExtensionType = input.adExtensionType;
-  return params;
+  return entityContextReadParams(pickEntityContext(input.entityType as MsAdsEntityType, input));
 }
 
 export async function updateEntityLogic(
@@ -189,10 +184,10 @@ export async function updateEntityLogic(
   );
 
   // Microsoft Ads updates wrap the entity in its plural collection key with
-  // the Id field injected.
+  // the Id field injected, next to the request-body parent element.
   const config = getEntityConfig(input.entityType as MsAdsEntityType);
   const entityItem = { Id: Number(input.entityId), ...input.data };
-  const payload = { [config.pluralName]: [entityItem] };
+  const payload = { ...buildWriteParentBody(input), [config.pluralName]: [entityItem] };
 
   // Fail fast on an empty or invalid update payload before hitting the API,
   // applying the same symbolic validation the dry-run path uses (finding M3) so
@@ -228,7 +223,12 @@ export async function updateEntityLogic(
     context
   );
   if (!after) {
-    after = snapshotFromMsAdsEntity(input.entityType, input.entityId, entityItem);
+    after = snapshotFromMsAdsEntity(
+      input.entityType,
+      input.entityId,
+      entityItem,
+      await resolveMsAdsCurrency(msadsService, context)
+    );
   }
 
   return {
@@ -295,7 +295,18 @@ export const updateEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "msads_get_entity",
-        argMap: { entityType: "entityType", entityId: "entityId" },
+        // The read needs the same parent context as the write (campaign:
+        // accountId, adGroup: campaignId, ad/keyword: adGroupId, adExtension:
+        // accountId + adExtensionType), so map it; a read built from the
+        // manifest alone would otherwise fail for every parented type.
+        argMap: {
+          entityType: "entityType",
+          entityId: "entityId",
+          accountId: "accountId",
+          campaignId: "campaignId",
+          adGroupId: "adGroupId",
+          adExtensionType: "adExtensionType",
+        },
       },
       schemaVersion: 1,
       contractId: "msads.update_entity.v1",

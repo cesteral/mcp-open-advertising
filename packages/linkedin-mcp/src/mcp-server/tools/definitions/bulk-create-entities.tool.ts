@@ -4,6 +4,12 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertLinkedInBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -88,7 +94,10 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM, "items")
+    );
     return {
       results: [],
       successCount: 0,
@@ -109,6 +118,10 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the first
+  // write. One 3-token linkedin:default POST per item.
+  assertLinkedInBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
   const { linkedInService } = resolveSessionServices(sdkContext);
 

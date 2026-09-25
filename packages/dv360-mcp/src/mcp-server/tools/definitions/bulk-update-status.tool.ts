@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import {
@@ -172,8 +173,18 @@ export async function bulkUpdateStatusLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
+  // Per entity: GET (1 token) then PATCH with the fetched entity passed through
+  // (1 token), both on `dv360:${advertiserId}`. The PATCH is skipped for an
+  // entity already in the target status; the projection assumes it is not.
+  const { dv360Service } = resolveSessionServices(sdkContext);
+  const capacityChecks = dv360Service.bulkCapacityChecks(
+    TOOL_NAME,
+    input.entityIds.map(() => input.advertiserId),
+    [1, 1]
+  );
+
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors(capacityChecks));
     return {
       confirmed: true,
       results: [],
@@ -187,6 +198,10 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll(capacityChecks);
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -210,7 +225,6 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
-  const { dv360Service } = resolveSessionServices(sdkContext);
   const advertiserId = input.advertiserId;
 
   const successful: Array<{
@@ -352,8 +366,11 @@ export async function bulkUpdateStatusLogic(
  * status change to one target status). DV360 has no native bulk validate, so
  * both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateStatusInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((id, i) => {
     const trimmed = (id ?? "").trim();
     if (trimmed.length === 0) {

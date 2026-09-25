@@ -16,6 +16,18 @@ export const TTD_RETRY_CONFIG: RetryConfig = {
 };
 
 /**
+ * TTD's documented wait after a throttle that carries no `Retry-After`:
+ * "wait 1 minute after a failed call" (TTD Foundations, vendored at
+ * docs/api/TTD_Foundations.md). It exceeds `TTD_RETRY_CONFIG.maxBackoffMs`, so
+ * a bare 429 is surfaced with `retryAfterMs` instead of being re-sent early.
+ */
+export const TTD_THROTTLE_WAIT_MS = 60_000;
+
+export function ttdThrottleDelayMs(status: number): number | undefined {
+  return status === 429 ? TTD_THROTTLE_WAIT_MS : undefined;
+}
+
+/**
  * Shared HTTP client for TTD API requests.
  *
  * Delegates authentication to the injected TtdAuthAdapter (which handles
@@ -55,6 +67,7 @@ export class TtdHttpClient {
         context,
         logger: this.logger,
         fetchFn: fetchWithTimeout,
+        throttleDelayMs: ttdThrottleDelayMs,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {
@@ -94,6 +107,7 @@ export class TtdHttpClient {
         context,
         logger: this.logger,
         fetchFn: fetchWithTimeout,
+        throttleDelayMs: ttdThrottleDelayMs,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {

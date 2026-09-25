@@ -138,7 +138,7 @@ describe("SA360ReportingService", () => {
         reportScope: { agencyId: "agency-1" },
       });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -179,7 +179,12 @@ describe("SA360ReportingService", () => {
         id: "report-123",
         isReportReady: true,
         rowCount: 500,
-        files: [{ url: "https://example.com/file0", byteCount: "1024" }],
+        files: [
+          {
+            url: "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0",
+            byteCount: "1024",
+          },
+        ],
       });
 
       const result = await service.getReportStatus("report-123");
@@ -187,7 +192,9 @@ describe("SA360ReportingService", () => {
       expect(result.isReportReady).toBe(true);
       expect(result.rowCount).toBe(500);
       expect(result.files).toHaveLength(1);
-      expect(result.files![0].url).toBe("https://example.com/file0");
+      expect(result.files![0].url).toBe(
+        "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0"
+      );
     });
 
     it("consumes rate limiter", async () => {
@@ -198,7 +205,7 @@ describe("SA360ReportingService", () => {
 
       await service.getReportStatus("report-1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -220,16 +227,31 @@ describe("SA360ReportingService", () => {
         text: vi.fn().mockResolvedValue(csvData),
       });
 
-      const result = await service.downloadReport("https://example.com/file0");
+      const result = await service.downloadReport(
+        "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0"
+      );
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
       expect(mockFetchWithTimeout).toHaveBeenCalledWith(
-        "https://example.com/file0",
+        "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0",
         60_000,
         undefined,
         { headers: { Authorization: "Bearer mock-token" } }
       );
       expect(result).toBe(csvData);
+    });
+
+    // The URL comes from the MCP client and gets the user's bearer token, so
+    // an off-host URL must be refused before any credential is fetched.
+    it.each([
+      "https://attacker.example/steal",
+      "https://googleapis.com.attacker.example/x",
+      "http://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0",
+      "not-a-url",
+    ])("refuses %s without fetching a token or the URL", async (url) => {
+      await expect(service.downloadReport(url)).rejects.toThrow("download URL");
+      expect(authAdapter.getAccessToken).not.toHaveBeenCalled();
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
     });
 
     it("throws on non-ok response", async () => {
@@ -239,9 +261,9 @@ describe("SA360ReportingService", () => {
         statusText: "Not Found",
       });
 
-      await expect(service.downloadReport("https://example.com/file0")).rejects.toThrow(
-        "Failed to download SA360 report: 404 Not Found"
-      );
+      await expect(
+        service.downloadReport("https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0")
+      ).rejects.toThrow("Failed to download SA360 report: 404 Not Found");
     });
 
     it("consumes rate limiter", async () => {
@@ -250,17 +272,21 @@ describe("SA360ReportingService", () => {
         text: vi.fn().mockResolvedValue(""),
       });
 
-      await service.downloadReport("https://example.com/file0");
+      await service.downloadReport(
+        "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/files/0"
+      );
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:reports");
     });
 
     it("propagates fetch errors", async () => {
       mockFetchWithTimeout.mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(service.downloadReport("https://example.com/bad")).rejects.toThrow(
-        "Network error"
-      );
+      await expect(
+        service.downloadReport(
+          "https://www.googleapis.com/doubleclicksearch/v2/reports/bad/files/0"
+        )
+      ).rejects.toThrow("Network error");
     });
   });
 });

@@ -20,20 +20,84 @@ import {
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
-/** Pinterest report task status values */
-export type ReportTaskStatus = "IN_PROGRESS" | "FINISHED" | "FAILED" | "EXPIRED" | "DOES_NOT_EXIST";
+/** Pinterest report task status values (v5 `BulkReportingJobStatus`) */
+export type ReportTaskStatus =
+  | "IN_PROGRESS"
+  | "FINISHED"
+  | "FAILED"
+  | "EXPIRED"
+  | "DOES_NOT_EXIST"
+  | "CANCELLED";
 
-/** Pinterest report task check response */
+/** Report statuses after which the report will never become downloadable. */
+export const TERMINAL_FAILED_REPORT_STATUSES: readonly string[] = [
+  "FAILED",
+  "EXPIRED",
+  "DOES_NOT_EXIST",
+  "CANCELLED",
+];
+
+/**
+ * Pinterest report task check response (v5 `AdsAnalyticsGetAsyncResponse`).
+ * It carries no `token` — the caller already holds it.
+ */
 interface ReportTaskCheckData {
   report_status: ReportTaskStatus;
-  url?: string;
-  size?: number;
-  token: string;
+  url?: string | null;
+  size?: number | null;
 }
+
+/** Report type as exposed by this server's tools. */
+export type PinterestReportType = "CAMPAIGN" | "AD_GROUP" | "AD" | "KEYWORD" | "ACCOUNT";
+
+/**
+ * Tool report type → v5 `MetricsReportingLevel`. Pinterest calls ads "pin
+ * promotions" in reporting (the Ad schema's `summary_status` is a
+ * `PinPromotionSummaryStatus`) and the account level `ADVERTISER`.
+ */
+const REPORT_LEVEL: Record<PinterestReportType, string> = {
+  CAMPAIGN: "CAMPAIGN",
+  AD_GROUP: "AD_GROUP",
+  AD: "PIN_PROMOTION",
+  KEYWORD: "KEYWORD",
+  ACCOUNT: "ADVERTISER",
+};
+
+/**
+ * Tool report type → the `*_TARGETING` level that `targeting_types` breakdowns
+ * require. KEYWORD has no targeting variant in `MetricsReportingLevel`.
+ */
+const TARGETING_REPORT_LEVEL: Partial<Record<PinterestReportType, string>> = {
+  CAMPAIGN: "CAMPAIGN_TARGETING",
+  AD_GROUP: "AD_GROUP_TARGETING",
+  AD: "PIN_PROMOTION_TARGETING",
+  ACCOUNT: "ADVERTISER_TARGETING",
+};
+
+/** v5 `AdAdsAnalyticsAsyncTargetingTypes` — valid `targeting_types` breakdowns. */
+export const PINTEREST_REPORT_TARGETING_TYPES = [
+  "KEYWORD",
+  "APPTYPE",
+  "GENDER",
+  "LOCATION",
+  "PLACEMENT",
+  "COUNTRY",
+  "TARGETED_INTEREST",
+  "PINNER_INTEREST",
+  "AUDIENCE_INCLUDE",
+  "GEO",
+  "AGE_BUCKET",
+  "REGION",
+  "MEDIA_TYPE",
+  "AGE_BUCKET_AND_GENDER",
+  "AUDIENCE_MULTIPLIER",
+  "CREATIVE_ENHANCEMENTS",
+  "LOCAL_ADS_STORE_CODE",
+] as const;
 
 /** Pinterest report configuration */
 export interface PinterestReportConfig {
-  type?: "CAMPAIGN" | "AD_GROUP" | "AD" | "KEYWORD" | "ACCOUNT";
+  type?: PinterestReportType;
   columns: string[];
   start_date: string;
   end_date: string;
@@ -41,14 +105,56 @@ export interface PinterestReportConfig {
   campaign_ids?: string[];
   ad_group_ids?: string[];
   ad_ids?: string[];
+  /** Breakdowns; switches the level to the report type's `*_TARGETING` variant. */
+  targeting_types?: string[];
+}
+
+/**
+ * Build the v5 `AdsAnalyticsCreateAsyncRequest` body.
+ *
+ * - `level`, not `type` — `type` is not a field of the request.
+ * - `report_format: "CSV"` — the default is JSON, and `downloadReport` parses CSV.
+ * - `granularity` is required by the spec; defaults to DAY (the tools' default).
+ * - `targeting_types` requires a level ending in `_TARGETING`.
+ */
+export function buildReportRequestBody(config: PinterestReportConfig): Record<string, unknown> {
+  const reportType = config.type ?? "CAMPAIGN";
+  const targetingTypes = config.targeting_types?.length ? config.targeting_types : undefined;
+  let level: string;
+  if (targetingTypes) {
+    const targetingLevel = TARGETING_REPORT_LEVEL[reportType];
+    if (!targetingLevel) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Pinterest has no targeting-breakdown report at the ${reportType} level; use CAMPAIGN, AD_GROUP, AD or ACCOUNT`,
+        { reportType }
+      );
+    }
+    level = targetingLevel;
+  } else {
+    level = REPORT_LEVEL[reportType];
+  }
+
+  return {
+    level,
+    report_format: "CSV",
+    columns: config.columns,
+    start_date: config.start_date,
+    end_date: config.end_date,
+    granularity: config.granularity ?? "DAY",
+    ...(targetingTypes ? { targeting_types: targetingTypes } : {}),
+    ...(config.campaign_ids ? { campaign_ids: config.campaign_ids } : {}),
+    ...(config.ad_group_ids ? { ad_group_ids: config.ad_group_ids } : {}),
+    ...(config.ad_ids ? { ad_ids: config.ad_ids } : {}),
+  };
 }
 
 /**
  * Pinterest Reporting Service — Handles async reporting via Pinterest Marketing API v5.
  *
  * Pinterest reporting uses an async polling pattern:
- * 1. POST /v5/ad_accounts/{adAccountId}/reports → get token
- * 2. GET /v5/ad_accounts/{adAccountId}/reports/{token} → poll until FINISHED
+ * 1. POST /v5/ad_accounts/{adAccountId}/reports (JSON body, `report_format: "CSV"`) → get token
+ * 2. GET /v5/ad_accounts/{adAccountId}/reports?token={token} → poll until FINISHED
  * 3. GET download url to retrieve CSV report data
  */
 export class PinterestReportingService {
@@ -68,22 +174,15 @@ export class PinterestReportingService {
     reportConfig: PinterestReportConfig,
     context?: RequestContext
   ): Promise<{ task_id: string }> {
-    await this.rateLimiter.consume(`pinterest:reporting`);
-
     const adAccountId = this.httpClient.accountId;
+
+    const body = buildReportRequestBody(reportConfig);
+
+    await this.rateLimiter.consume(`pinterest:reporting`);
 
     const result = (await this.httpClient.post(
       `/v5/ad_accounts/${adAccountId}/reports`,
-      {
-        type: reportConfig.type ?? "CAMPAIGN",
-        columns: reportConfig.columns,
-        start_date: reportConfig.start_date,
-        end_date: reportConfig.end_date,
-        ...(reportConfig.granularity ? { granularity: reportConfig.granularity } : {}),
-        ...(reportConfig.campaign_ids ? { campaign_ids: reportConfig.campaign_ids } : {}),
-        ...(reportConfig.ad_group_ids ? { ad_group_ids: reportConfig.ad_group_ids } : {}),
-        ...(reportConfig.ad_ids ? { ad_ids: reportConfig.ad_ids } : {}),
-      },
+      body,
       context
     )) as { token: string };
 
@@ -109,10 +208,7 @@ export class PinterestReportingService {
           )) as ReportTaskCheckData;
         },
         isComplete: (r) => r.report_status === "FINISHED",
-        isFailed: (r) =>
-          r.report_status === "FAILED" ||
-          r.report_status === "EXPIRED" ||
-          r.report_status === "DOES_NOT_EXIST",
+        isFailed: (r) => TERMINAL_FAILED_REPORT_STATUSES.includes(r.report_status),
         initialDelayMs: this.pollIntervalMs,
         maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
         maxAttempts: this.maxPollAttempts,
@@ -143,10 +239,11 @@ export class PinterestReportingService {
       context
     )) as ReportTaskCheckData;
 
+    // The GET response has no `token` field; the task id is the token we polled with.
     return {
-      taskId: result.token,
+      taskId,
       status: result.report_status,
-      downloadUrl: result.url,
+      ...(result.url ? { downloadUrl: result.url } : {}),
     };
   }
 
@@ -238,11 +335,7 @@ export class PinterestReportingService {
     const { task_id } = await this.submitReport(reportConfig, requestContext);
     const taskResult = await this.pollReport(task_id, requestContext);
 
-    if (
-      taskResult.report_status === "FAILED" ||
-      taskResult.report_status === "EXPIRED" ||
-      taskResult.report_status === "DOES_NOT_EXIST"
-    ) {
+    if (TERMINAL_FAILED_REPORT_STATUSES.includes(taskResult.report_status)) {
       throw new McpError(
         JsonRpcErrorCode.InternalError,
         `Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`
@@ -265,8 +358,10 @@ export class PinterestReportingService {
   }
 
   /**
-   * Get report with dimensional breakdowns.
-   * Adds breakdown columns to the report config.
+   * Get report with targeting breakdowns.
+   *
+   * Pinterest v5 breakdowns are not columns: they are `targeting_types` on a
+   * report whose `level` is the `*_TARGETING` variant of the report type.
    */
   async getReportBreakdowns(
     reportConfig: PinterestReportConfig,
@@ -276,7 +371,7 @@ export class PinterestReportingService {
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: PinterestReportConfig = {
       ...reportConfig,
-      columns: [...reportConfig.columns, ...breakdowns],
+      targeting_types: breakdowns,
     };
 
     return this.getReport(configWithBreakdowns, maxRowsOrContext, context);

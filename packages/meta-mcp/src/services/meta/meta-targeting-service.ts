@@ -27,12 +27,14 @@ export class MetaTargetingService {
     query: string,
     limit?: number,
     context?: RequestContext,
-    after?: string
+    after?: string,
+    targetingClass?: string
   ): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`);
 
-    // Normalize type to lowercase — Meta API search types are case-sensitive
-    // and expect lowercase (e.g., "adinterest", "adinterestsuggestion")
+    // Normalize type to lowercase, matching facebook-python-business-sdk's
+    // TargetingSearchTypes (e.g. "adinterest", "adtargetingcategory").
+    // (facebook-php-business-sdk spells the latter "adTargetingCategory".)
     const normalizedType = type.toLowerCase();
 
     const params: Record<string, string> = {
@@ -48,6 +50,12 @@ export class MetaTargetingService {
       params.interest_list = query;
     } else {
       params.q = query;
+    }
+
+    // `class` narrows adTargetingCategory searches (facebook-php-business-sdk
+    // TargetingSearch::search($type, $class, $query)).
+    if (targetingClass) {
+      params.class = targetingClass;
     }
 
     if (limit) {

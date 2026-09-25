@@ -106,7 +106,14 @@ describe("MsAdsReportingService", () => {
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
     // Use low maxPollAttempts + 1ms poll interval so timing tests don't wait.
-    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 5, 1);
+    service = new MsAdsReportingService(
+      rateLimiter,
+      httpClient,
+      logger,
+      { userId: "u1", customerId: "c1" },
+      5,
+      1
+    );
   });
 
   describe("submitReport", () => {

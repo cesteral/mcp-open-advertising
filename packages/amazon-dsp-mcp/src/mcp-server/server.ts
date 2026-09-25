@@ -47,12 +47,8 @@ const amazonDspWorkflowIdByToolName: Record<string, string> = {
   amazon_dsp_bulk_create_entities: "mcp.execute.amazon_dsp_bulk_operations",
   amazon_dsp_bulk_update_entities: "mcp.execute.amazon_dsp_bulk_operations",
   amazon_dsp_adjust_bids: "mcp.execute.amazon_dsp_bulk_operations",
-  // Targeting
-  amazon_dsp_search_targeting: "mcp.execute.amazon_dsp_entity_read",
-  amazon_dsp_get_targeting_options: "mcp.execute.amazon_dsp_entity_read",
   // Specialized
   amazon_dsp_duplicate_entity: "mcp.execute.amazon_dsp_entity_update",
-  amazon_dsp_get_audience_estimate: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_get_ad_preview: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_validate_entity: "mcp.execute.amazon_dsp_entity_read",
 };

@@ -97,7 +97,12 @@ describe("Async Reporting Workflow", () => {
       id: "report-abc",
       isReportReady: true,
       rowCount: 3,
-      files: [{ url: "https://example.com/reports/abc/files/0", byteCount: "256" }],
+      files: [
+        {
+          url: "https://www.googleapis.com/doubleclicksearch/v2/reports/abc/files/0",
+          byteCount: "256",
+        },
+      ],
     });
 
     const readyStatus = await service.getReportStatus("report-abc");

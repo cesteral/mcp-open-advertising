@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { getEntitySchemaForOperation } from "../utils/entity-mapping-dynamic.js";
@@ -132,8 +133,21 @@ export async function bulkUpdateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
+  // Per item: updateEntity is called WITHOUT a pre-fetched entity, so it GETs
+  // (1 token) then PATCHes (1 token), both on `dv360:${advertiserId}`
+  // (DV360Service.updateEntity). For entityType "advertiser" the item's own id
+  // is the advertiserId the calls are keyed on.
+  const { dv360Service } = resolveSessionServices(sdkContext);
+  const capacityChecks = dv360Service.bulkCapacityChecks(
+    TOOL_NAME,
+    input.items.map((item) =>
+      input.entityType === "advertiser" ? item.entityId : input.advertiserId
+    ),
+    [1, 1]
+  );
+
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors(capacityChecks));
     return {
       confirmed: true,
       entityType: input.entityType,
@@ -146,6 +160,10 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll(capacityChecks);
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -169,8 +187,6 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
-
-  const { dv360Service } = resolveSessionServices(sdkContext);
 
   const results: BulkUpdateEntitiesOutput["results"] = [];
   let successCount = 0;
@@ -333,8 +349,11 @@ function validateBulkUpdateItem(
  * projects the would-be effect (an N-item update of one entity kind). DV360 has
  * no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     validationErrors.push(...validateBulkUpdateItem(input, item, i));
   });

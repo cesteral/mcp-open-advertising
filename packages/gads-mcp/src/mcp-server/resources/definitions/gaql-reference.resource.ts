@@ -82,7 +82,7 @@ Only \`SELECT\` and \`FROM\` are required. All other clauses are optional.
 | \`NOT IN\` | \`campaign.status NOT IN ('REMOVED')\` | Set exclusion |
 | \`LIKE\` | \`campaign.name LIKE '%brand%'\` | Pattern match |
 | \`CONTAINS ANY\` | \`campaign.labels CONTAINS ANY ('label1')\` | Label matching |
-| \`IS NULL\` / \`IS NOT NULL\` | \`campaign.end_date IS NOT NULL\` | Null check |
+| \`IS NULL\` / \`IS NOT NULL\` | \`campaign.end_date_time IS NOT NULL\` | Null check |
 | \`BETWEEN\` | \`segments.date BETWEEN '2025-01-01' AND '2025-01-31'\` | Date range |
 | \`DURING\` | \`segments.date DURING LAST_30_DAYS\` | Relative date range |
 

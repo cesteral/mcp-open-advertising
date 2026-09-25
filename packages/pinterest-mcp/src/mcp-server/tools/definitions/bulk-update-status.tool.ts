@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkStatusChangeConfirmation,
@@ -35,7 +40,7 @@ const TOOL_DESCRIPTION = `Batch update the status of Pinterest Ads entities.
 - **PAUSED** — Pause entities
 - **ARCHIVED** — Archive entities (soft-delete)
 
-Pinterest's status update API accepts an array of IDs in a single request.`;
+Each id is sent as its own PATCH (a one-item batch), so every id gets its own success or error; Pinterest answers a rejected item with HTTP 200 and per-item exceptions, which are reported as failures.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -103,7 +108,15 @@ export async function bulkUpdateStatusLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.entityIds.length,
+        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        "entityIds"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -115,6 +128,14 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first write.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+  );
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -180,8 +201,11 @@ export async function bulkUpdateStatusLogic(
  * status change to one target status). Pinterest has no native bulk validate, so
  * both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateStatusInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.entityIds.forEach((id, i) => {
     if (!id || id.trim().length === 0) {
       validationErrors.push({

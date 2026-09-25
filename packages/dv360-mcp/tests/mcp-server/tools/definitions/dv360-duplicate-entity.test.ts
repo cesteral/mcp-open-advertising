@@ -8,9 +8,11 @@ vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
+import { extractZodShape } from "@cesteral/shared";
 import {
   duplicateEntityLogic,
   duplicateEntityResponseFormatter,
+  DuplicateEntityInputSchema,
 } from "../../../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 
 const ctx = { requestId: "r" } as any;
@@ -28,14 +30,14 @@ describe("dv360_duplicate_entity governance contract", () => {
       duplicateEntity: vi.fn().mockResolvedValue({
         insertionOrderId: "io-COPY-1",
         displayName: "Source IO - Copy",
-        entityStatus: "ENTITY_STATUS_PAUSED",
+        entityStatus: "ENTITY_STATUS_DRAFT",
       }),
       getEntity: vi.fn(),
     };
     mockResolveSessionServices.mockReturnValue({ dv360Service: svc });
   });
 
-  it("dry_run reads the source and projects the PAUSED copy, no API call", async () => {
+  it("dry_run reads the source and projects the DRAFT IO copy, no API call", async () => {
     svc.getEntity.mockResolvedValue({
       insertionOrderId: "io-SRC-1",
       displayName: "Source IO",
@@ -59,7 +61,12 @@ describe("dv360_duplicate_entity governance contract", () => {
       { advertiserId: "adv-1", insertionOrderId: "io-SRC-1" },
       ctx
     );
-    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    // CreateInsertionOrder only accepts ENTITY_STATUS_DRAFT (v4 Discovery), so
+    // the IO copy lands DRAFT (canonicalizes to "unknown"), never PAUSED.
+    expect(result.dryRun?.expectedPostState?.status).toEqual({
+      canonical: "unknown",
+      platformRaw: "ENTITY_STATUS_DRAFT",
+    });
     // The copy has no entity ID yet pre-duplicate.
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
     // The service renames the copy `Copy of {source}` by default.
@@ -131,7 +138,7 @@ describe("dv360_duplicate_entity governance contract", () => {
       sdk
     );
     expect(svc.duplicateEntity).toHaveBeenCalledOnce();
-    expect(result.after?.status.canonical).toBe("paused");
+    expect(result.after?.status.platformRaw).toBe("ENTITY_STATUS_DRAFT");
     expect(result.after?.platformEntityId).toBe("io-COPY-1");
     expect((result as any).before).toBeUndefined();
   });
@@ -152,5 +159,70 @@ describe("dv360_duplicate_entity governance contract", () => {
     });
     expect(content[0].text).toContain("Dry run: duplicating insertionOrder would succeed");
     expect(content[0].text).not.toContain("duplicated successfully");
+  });
+
+  it("execute passes the source line item ID through to the service", async () => {
+    svc.duplicateEntity.mockResolvedValue({
+      lineItemId: "li-COPY-1",
+      displayName: "Copy of Source LI",
+      entityStatus: "ENTITY_STATUS_DRAFT",
+    });
+    const result = await duplicateEntityLogic(
+      { entityType: "lineItem", advertiserId: "adv-1", lineItemId: "li-SRC-1" } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.duplicateEntity).toHaveBeenCalledWith(
+      "lineItem",
+      { advertiserId: "adv-1", lineItemId: "li-SRC-1" },
+      undefined,
+      ctx
+    );
+    expect(result.after?.platformEntityId).toBe("li-COPY-1");
+  });
+});
+
+describe("DuplicateEntityInputSchema", () => {
+  it("advertises every parameter on the wire (flat object, not a top-level union)", () => {
+    // A top-level discriminatedUnion is emitted to MCP clients as
+    // `{"type":"object","properties":{}}` — zero parameters.
+    const shape = extractZodShape(DuplicateEntityInputSchema) as Record<string, unknown>;
+    expect(Object.keys(shape).sort()).toEqual(
+      [
+        "advertiserId",
+        "displayName",
+        "dry_run",
+        "entityType",
+        "insertionOrderId",
+        "lineItemId",
+      ].sort()
+    );
+  });
+
+  it("requires the source ID that matches entityType", () => {
+    expect(
+      DuplicateEntityInputSchema.safeParse({
+        entityType: "lineItem",
+        advertiserId: "adv-1",
+        insertionOrderId: "io-1",
+      }).success
+    ).toBe(false);
+    expect(
+      DuplicateEntityInputSchema.safeParse({
+        entityType: "insertionOrder",
+        advertiserId: "adv-1",
+        insertionOrderId: "io-1",
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects entity types that cannot be duplicated", () => {
+    expect(
+      DuplicateEntityInputSchema.safeParse({
+        entityType: "campaign",
+        advertiserId: "adv-1",
+        campaignId: "c-1",
+      }).success
+    ).toBe(false);
   });
 });

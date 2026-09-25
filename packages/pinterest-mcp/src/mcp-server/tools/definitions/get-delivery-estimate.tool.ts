@@ -9,18 +9,18 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "pinterest_get_delivery_estimate";
 const TOOL_TITLE = "Pinterest Delivery Estimate";
-const TOOL_DESCRIPTION = `Get a delivery estimate for a Pinterest targeting configuration.
+const TOOL_DESCRIPTION = `Get the potential audience size for a Pinterest targeting spec.
 
-Use this to validate and tune targeting before creating ad groups.
-Returns estimated reach and audience size ranges.
+Calls \`POST /v5/ad_accounts/{ad_account_id}/ad_groups/audience_sizing\` with \`targetingConfig\` sent as the ad group \`targeting_spec\`.
+Use this to tune targeting before creating ad groups. Returns \`audience_size_lower_bound\` / \`audience_size_upper_bound\` (estimated people reachable per month; not a delivery guarantee).
 
-**Example targeting config:**
+**Example targeting spec** (keys are Pinterest \`targeting_spec\` fields; find ids with \`pinterest_search_targeting\`):
 \`\`\`json
 {
-  "age": ["AGE_18_24", "AGE_25_34"],
-  "gender": ["GENDER_FEMALE"],
-  "location_ids": ["JP"],
-  "interest_category_ids": ["123456789"]
+  "AGE_BUCKET": ["18-24", "25-34"],
+  "GENDER": ["female"],
+  "LOCATION": ["US"],
+  "INTEREST": ["935541271955"]
 }
 \`\`\``;
 
@@ -29,13 +29,19 @@ export const GetDeliveryEstimateInputSchema = z
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingConfig: z
       .record(z.any())
-      .describe("Targeting specification object with demographic and interest criteria"),
+      .describe(
+        "Pinterest ad group targeting_spec (e.g. AGE_BUCKET, GENDER, LOCATION, GEO, INTEREST, LOCALE, APPTYPE)"
+      ),
   })
   .describe("Parameters for getting a Pinterest delivery estimate");
 
 export const GetDeliveryEstimateOutputSchema = z
   .object({
-    estimate: z.record(z.any()).describe("Delivery estimate data from Pinterest"),
+    estimate: z
+      .record(z.any())
+      .describe(
+        "Pinterest audience sizing response (audience_size_lower_bound / audience_size_upper_bound)"
+      ),
     timestamp: z.string().datetime(),
   })
   .describe("Delivery estimate result");
@@ -92,9 +98,9 @@ export const getDeliveryEstimateTool = {
       input: {
         adAccountId: "1234567890",
         targetingConfig: {
-          age: ["AGE_18_24", "AGE_25_34"],
-          gender: ["GENDER_FEMALE"],
-          location_ids: ["US"],
+          AGE_BUCKET: ["18-24", "25-34"],
+          GENDER: ["female"],
+          LOCATION: ["US"],
         },
       },
     },
@@ -103,9 +109,9 @@ export const getDeliveryEstimateTool = {
       input: {
         adAccountId: "1234567890",
         targetingConfig: {
-          age: ["AGE_25_34"],
-          location_ids: ["GB"],
-          interest_category_ids: ["123456789", "987654321"],
+          AGE_BUCKET: ["25-34"],
+          LOCATION: ["GB"],
+          INTEREST: ["123456789", "987654321"],
         },
       },
     },

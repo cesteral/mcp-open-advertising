@@ -115,8 +115,11 @@ export function buildGAdsSnapshot(
   const dailyMinor =
     entityKind === "campaign_budget" ? microsToMinor(r.amountMicros ?? r.amount_micros) : undefined;
 
-  const startAt = r.startDate ?? r.start_date;
-  const endAt = r.endDate ?? r.end_date;
+  // v23 carries the flight as `startDateTime` / `endDateTime`
+  // ("yyyy-MM-dd HH:mm:ss" in the customer's time zone); the date-only
+  // `startDate` / `endDate` fields no longer exist on Campaign.
+  const startAt = r.startDateTime ?? r.start_date_time;
+  const endAt = r.endDateTime ?? r.end_date_time;
 
   return {
     schemaVersion: 1,

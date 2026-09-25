@@ -154,11 +154,16 @@ describe("CM360HttpClient", () => {
       const resp = mockResponse(200, "csv-data");
       mockFetchWithTimeout.mockResolvedValueOnce(resp);
 
-      const result = await client.fetchRaw("https://example.com/report", 30_000);
+      const result = await client.fetchRaw(
+        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
+        30_000
+      );
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
       const callArgs = mockFetchWithTimeout.mock.calls[0];
-      expect(callArgs[0]).toBe("https://example.com/report");
+      expect(callArgs[0]).toBe(
+        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media"
+      );
       expect(callArgs[1]).toBe(30_000);
 
       const options = callArgs[3] as RequestInit;
@@ -167,11 +172,28 @@ describe("CM360HttpClient", () => {
       expect(result).toBe(resp);
     });
 
+    // fetchRaw attaches the user's Google token to a URL supplied by the MCP
+    // client (cm360_download_report). Off-host URLs must never receive it.
+    it.each([
+      "https://attacker.example/steal",
+      "https://googleapis.com.attacker.example/x",
+      "http://www.googleapis.com/dfareporting/v5/reports/1/files/2",
+      "https://169.254.169.254/computeMetadata/v1/",
+    ])("refuses %s without fetching a token or the URL", async (url) => {
+      await expect(client.fetchRaw(url, 30_000)).rejects.toThrow("download URL");
+      expect(authAdapter.getAccessToken).not.toHaveBeenCalled();
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
     it("passes request context to fetchWithTimeout", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, "ok"));
       const context = { requestId: "req-456" };
 
-      await client.fetchRaw("https://example.com/report", 30_000, context);
+      await client.fetchRaw(
+        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
+        30_000,
+        context
+      );
 
       const callArgs = mockFetchWithTimeout.mock.calls[0];
       expect(callArgs[2]).toEqual(context);
@@ -180,10 +202,15 @@ describe("CM360HttpClient", () => {
     it("passes additional options to fetchWithTimeout", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, "ok"));
 
-      await client.fetchRaw("https://example.com/report", 30_000, undefined, {
-        method: "GET",
-        headers: { Accept: "text/csv" },
-      });
+      await client.fetchRaw(
+        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
+        30_000,
+        undefined,
+        {
+          method: "GET",
+          headers: { Accept: "text/csv" },
+        }
+      );
 
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
       expect(options.method).toBe("GET");

@@ -17,18 +17,16 @@ function formatEntityHierarchyMarkdown(): string {
 Advertiser (advertiser_id: XXXXXXXXXX)
   ├── Campaign (campaign_id)
   │     └── Ad Group (adgroup_id)
-  │           └── Ad (ad_id)  ← references Creative
-  └── Creative (creative_id, reusable across ads)
+  │           └── Ad (ad_id)  ← carries creatives[] (video_id / image_ids)
 \`\`\`
 
-## Entity Types (4 total)
+## Entity Types (3 total)
 
 | Entity Type | List Endpoint | Create Endpoint | ID Field |
 |-------------|---------------|-----------------|----------|
 | **campaign** | \`/open_api/v1.3/campaign/get/\` | \`/open_api/v1.3/campaign/create/\` | campaign_id |
 | **adGroup** | \`/open_api/v1.3/adgroup/get/\` | \`/open_api/v1.3/adgroup/create/\` | adgroup_id |
 | **ad** | \`/open_api/v1.3/ad/get/\` | \`/open_api/v1.3/ad/create/\` | ad_id |
-| **creative** | \`/open_api/v1.3/creative/adcreative/get/\` | \`/open_api/v1.3/creative/adcreative/create/\` | creative_id |
 
 ## Key Relationships
 
@@ -76,10 +74,10 @@ POST /open_api/v1.3/campaign/status/update/
 { "advertiser_id": "123", "campaign_ids": ["456", "789"], "operation_status": "DISABLE" }
 \`\`\`
 
-### Delete: Separate endpoint, POST with IDs array
+### Delete: the status endpoint with operation_status DELETE (no /delete/ endpoint in v1.3)
 \`\`\`
-POST /open_api/v1.3/campaign/delete/
-{ "advertiser_id": "123", "campaign_ids": ["456"] }
+POST /open_api/v1.3/campaign/status/update/
+{ "advertiser_id": "123", "campaign_ids": ["456"], "operation_status": "DELETE" }
 \`\`\`
 
 ### Response Shape
@@ -110,7 +108,7 @@ TikTok uses page-based pagination (NOT cursor-based):
 | \`tiktok_create_entity\` | Create single entity | |
 | \`tiktok_update_entity\` | Update single entity | |
 | \`tiktok_delete_entity\` | Delete entities | ✓ |
-| \`tiktok_list_advertisers\` | List accessible advertisers | |
+| \`tiktok_list_advertisers\` | Account info for the session-bound advertiser | |
 | \`tiktok_get_report\` | Async report with polling | |
 | \`tiktok_get_report_breakdowns\` | Report with breakdown dimensions | |
 | \`tiktok_bulk_update_status\` | Batch status update | ✓ |
@@ -121,7 +119,7 @@ TikTok uses page-based pagination (NOT cursor-based):
 | \`tiktok_get_targeting_options\` | Browse targeting categories | |
 | \`tiktok_duplicate_entity\` | Duplicate campaign/adGroup/ad | |
 | \`tiktok_get_audience_estimate\` | Audience size estimation | |
-| \`tiktok_get_ad_preview\` | Ad preview data | |
+| \`tiktok_get_ad_preview\` | Not available (no v1.3 preview endpoint) | |
 | \`tiktok_validate_entity\` | Client-side payload validation | |
 
 ## Budget Notes

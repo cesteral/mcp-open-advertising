@@ -19,3 +19,10 @@ packages/*/tests/live/last-run.json
 packages/*/src/generated/
 packages/*/dist/
 **/*.generated.ts
+
+# Review reports kept verbatim as the evidence record behind #225. Formatting
+# pads their wide findings tables to over twice the size, and prettier's output
+# is not stable on two of them (a second --write still fails --check). The
+# index README in that folder is authored normally and stays formatted.
+docs/reviews/*/*.md
+!docs/reviews/*/README.md

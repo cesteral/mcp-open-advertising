@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { LinkedInHttpClient } from "./linkedin-http-client.js";
+import type { RestliQueryValue } from "./restli-query.js";
 import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
@@ -87,7 +88,7 @@ export class LinkedInService {
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
 
-    const params: Record<string, string> = {
+    const params: Record<string, RestliQueryValue> = {
       q: "search",
       start: String(start ?? 0),
       count: String(Math.min(count ?? 25, 100)),
@@ -95,8 +96,10 @@ export class LinkedInService {
 
     // Under /rest/ the ad account lives in the PATH; under the legacy /v2/
     // surface it is a query parameter. entity-mapping.ts owns which is which.
+    // A `list` param is sent as a one-element Rest.li 2.0 `List(...)`.
     if (adAccountUrn && config.listScopingParam) {
-      params[config.listScopingParam] = adAccountUrn;
+      const { name, list } = config.listScopingParam;
+      params[name] = list ? [adAccountUrn] : adAccountUrn;
     }
 
     const path = config.collectionPath(
@@ -121,9 +124,8 @@ export class LinkedInService {
   ): Promise<LinkedInEntityMap[T]> {
     await this.rateLimiter.consume(`linkedin:default`);
 
-    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
     return this.httpClient.get(
-      this.entityItemPath(entityType, encodedUrn),
+      this.entityItemPath(entityType, entityUrn),
       undefined,
       context
     ) as Promise<LinkedInEntityMap[T]>;
@@ -160,9 +162,8 @@ export class LinkedInService {
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
-    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
     return this.httpClient.patch(
-      this.entityItemPath(entityType, encodedUrn),
+      this.entityItemPath(entityType, entityUrn),
       data as unknown as Record<string, unknown>,
       context
     ) as Promise<LinkedInEntityMap[T]>;
@@ -175,8 +176,7 @@ export class LinkedInService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
-    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.delete(this.entityItemPath(entityType, encodedUrn), context);
+    return this.httpClient.delete(this.entityItemPath(entityType, entityUrn), context);
   }
 
   // ─── Ad Accounts ───────────────────────────────────────────────────
@@ -494,8 +494,19 @@ export class LinkedInService {
    * into refusals: that `/v2/` is fully dead for these products is #210's claim
    * and it is unverified from here, so refusing would risk breaking a call that
    * still works, on our own say-so.
+   *
+   * `adAccount` is the exception that IS on `/rest/`, and its key is the
+   * NUMERIC account id — `/rest/adAccounts/123`, not the encoded URN. LinkedIn's
+   * official clients address it exactly that way against the versioned API
+   * (linkedin-api-python-client README: `resource_path="/adAccounts/{id}"`,
+   * `path_keys={"id": 123}`, `version_string="202212"`; its client_test expects
+   * the path `/adAccounts/123`).
    */
-  private entityItemPath(entityType: LinkedInEntityType, encodedUrn: string): string {
+  private entityItemPath(entityType: LinkedInEntityType, entityUrn: string): string {
+    if (entityType === "adAccount") {
+      return `${getEntityConfig("adAccount").collectionPath()}/${adAccountIdFromUrn(entityUrn)}`;
+    }
+    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
     const config = getEntityConfig(entityType);
     const collection = config.accountScoped
       ? (config.legacyCollectionPath ?? config.collectionPath())

@@ -146,9 +146,25 @@ const COLUMN_MAPPINGS = {
 };
 
 /**
+ * Column carrying the time bucket for each time groupBy the historical tool
+ * requests. The weekly/monthly names are the filters' display names from
+ * `data/bid-manager-reference.json` (FILTER_WEEK → "Week", FILTER_MONTH →
+ * "Month"). Before these existed only `Date`/`Day` were recognised, so every
+ * weekly/monthly row had no date and the series came back empty, silently.
+ */
+export const TIME_COLUMNS_BY_GROUP_BY: Readonly<Record<string, readonly string[]>> = {
+  FILTER_DATE: COLUMN_MAPPINGS.date,
+  FILTER_WEEK: ["Week", "week"],
+  FILTER_MONTH: ["Month", "month"],
+};
+
+/**
  * Get value from record using column name variations
  */
-function getField(record: Record<string, string>, variations: string[]): string | undefined {
+function getField(
+  record: Record<string, string>,
+  variations: readonly string[]
+): string | undefined {
   for (const name of variations) {
     if (record[name] !== undefined) return record[name];
   }
@@ -158,9 +174,12 @@ function getField(record: Record<string, string>, variations: string[]): string 
 /**
  * Map generic record to typed Bid Manager row
  */
-export function mapToBidManagerRow(record: Record<string, string>): ParsedRow {
+export function mapToBidManagerRow(
+  record: Record<string, string>,
+  timeColumns: readonly string[] = COLUMN_MAPPINGS.date
+): ParsedRow {
   return {
-    date: parseDateValue(getField(record, COLUMN_MAPPINGS.date)),
+    date: parseDateValue(getField(record, timeColumns)),
     campaign: getField(record, COLUMN_MAPPINGS.campaign),
     advertiserId: getField(record, COLUMN_MAPPINGS.advertiserId),
     insertionOrder: getField(record, COLUMN_MAPPINGS.insertionOrder),
@@ -176,9 +195,13 @@ export function mapToBidManagerRow(record: Record<string, string>): ParsedRow {
 /**
  * Parse CSV and return typed Bid Manager rows
  */
-export function parseCSVContent(csv: string, skipZeroRows: boolean = true): ParsedRow[] {
+export function parseCSVContent(
+  csv: string,
+  skipZeroRows: boolean = true,
+  timeColumns: readonly string[] = COLUMN_MAPPINGS.date
+): ParsedRow[] {
   const records = csvToJson(csv);
-  const rows = records.map(mapToBidManagerRow);
+  const rows = records.map((record) => mapToBidManagerRow(record, timeColumns));
 
   if (skipZeroRows) {
     return rows.filter((row) => row.impressions > 0 || row.clicks > 0 || row.spend > 0);
@@ -251,9 +274,14 @@ export function parseCSVToDeliveryMetrics(csv: string): DeliveryMetrics {
 }
 
 /**
- * Parse CSV and return historical data points
+ * Parse CSV and return historical data points, bucketed by the column that
+ * belongs to the requested time groupBy (FILTER_DATE / FILTER_WEEK / FILTER_MONTH).
  */
-export function parseCSVToHistoricalData(csv: string): HistoricalDataPoint[] {
-  const rows = parseCSVContent(csv);
+export function parseCSVToHistoricalData(
+  csv: string,
+  timeGroupBy: string = "FILTER_DATE"
+): HistoricalDataPoint[] {
+  const timeColumns = TIME_COLUMNS_BY_GROUP_BY[timeGroupBy] ?? COLUMN_MAPPINGS.date;
+  const rows = parseCSVContent(csv, true, timeColumns);
   return aggregateToHistoricalData(rows);
 }

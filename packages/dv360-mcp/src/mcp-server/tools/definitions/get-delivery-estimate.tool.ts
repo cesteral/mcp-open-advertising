@@ -8,26 +8,20 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_get_delivery_estimate";
 const TOOL_TITLE = "Get DV360 Delivery Estimate";
-const TOOL_DESCRIPTION = `Get delivery and targeting information for DV360 campaign planning.
+const TOOL_DESCRIPTION = `Get delivery and targeting information for an existing DV360 line item, for campaign planning.
 
-**Two modes of operation:**
-
-1. **With lineItemId:** Fetches the line item's configuration and all assigned targeting
-   options, providing a complete picture of current delivery settings and targeting scope.
-
-2. **Without lineItemId:** Calls the DV360 generateDefault endpoint to get DV360's
-   recommended default line item settings for the advertiser, useful for planning.
-
-Returns targeting assignments, budget configuration, and bid strategy details
-that can be used to estimate delivery potential.`;
+Fetches the line item's configuration (budget, pacing, bid strategy, flight) and all of its
+assigned targeting options, giving a complete picture of its current delivery settings and
+targeting scope. This is configuration context, not a volume forecast — DV360's API exposes no
+advertiser-level default line item or delivery forecast to read here.`;
 
 export const GetDeliveryEstimateInputSchema = z
   .object({
     advertiserId: z.string().describe("DV360 Advertiser ID"),
     lineItemId: z
       .string()
-      .optional()
-      .describe("Optional: existing Line Item ID to get targeting/delivery info for"),
+      .min(1)
+      .describe("Existing Line Item ID to get targeting/delivery info for"),
   })
   .describe("Parameters for getting a DV360 delivery estimate");
 
@@ -65,11 +59,7 @@ export async function getDeliveryEstimateLogic(
 export function getDeliveryEstimateResponseFormatter(
   result: GetDeliveryEstimateOutput
 ): McpTextContent[] {
-  const source = (result.estimate as Record<string, unknown>).source as string | undefined;
-  const header =
-    source === "lineItem"
-      ? "DV360 Line Item Delivery Info"
-      : "DV360 Default Line Item Configuration";
+  const header = "DV360 Line Item Delivery Info";
 
   return [
     {
@@ -97,12 +87,6 @@ export const getDeliveryEstimateTool = {
       input: {
         advertiserId: "1234567890",
         lineItemId: "9876543210",
-      },
-    },
-    {
-      label: "Get default line item configuration",
-      input: {
-        advertiserId: "1234567890",
       },
     },
   ],

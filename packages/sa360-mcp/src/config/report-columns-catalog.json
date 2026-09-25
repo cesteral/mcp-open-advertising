@@ -1,7 +1,6 @@
 {
-  "description": "Static fallback catalog of common SA360 Reporting API v0 field prefixes. Seeded from https://developers.google.com/search-ads/reporting/query/query-structure. Used when the live sa360_search_fields call is unavailable (e.g. credentials not provisioned, SA360-reporting entitlement gated) so callers can still discover field groupings.",
+  "description": "Static fallback catalog of common SA360 Reporting API v0 field prefixes. Seeded from https://developers.google.com/search-ads/reporting/query/query-structure. Every entry must exist on the pinned v0 SearchAds360Row schema (src/generated/openapi.json; enforced by tests/tools/list-report-columns.test.ts). Used when the live sa360_search_fields call is unavailable (e.g. credentials not provisioned, SA360-reporting entitlement gated) so callers can still discover field groupings.",
   "resources": [
-    "account",
     "campaign",
     "ad_group",
     "ad_group_ad",
@@ -21,24 +20,20 @@
       "campaign.advertising_channel_type",
       "campaign.start_date",
       "campaign.end_date",
-      "campaign.bidding_strategy_type",
-      "campaign.effective_target_roas",
-      "campaign.effective_target_cpa_micros"
+      "campaign.bidding_strategy_type"
     ],
     "ad_group": [
       "ad_group.id",
       "ad_group.name",
       "ad_group.status",
       "ad_group.type",
-      "ad_group.cpc_bid_micros",
-      "ad_group.cpm_bid_micros"
+      "ad_group.cpc_bid_micros"
     ],
     "ad_group_ad": [
       "ad_group_ad.ad.id",
       "ad_group_ad.ad.name",
       "ad_group_ad.ad.type",
-      "ad_group_ad.status",
-      "ad_group_ad.policy_summary.review_status"
+      "ad_group_ad.status"
     ],
     "ad_group_criterion": [
       "ad_group_criterion.criterion_id",
@@ -61,9 +56,7 @@
       "metrics.all_conversions",
       "metrics.all_conversions_value",
       "metrics.search_impression_share",
-      "metrics.search_top_impression_share",
-      "metrics.engagements",
-      "metrics.video_views"
+      "metrics.search_top_impression_share"
     ],
     "segments": [
       "segments.date",

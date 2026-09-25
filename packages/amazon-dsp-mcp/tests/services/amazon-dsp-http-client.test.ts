@@ -70,6 +70,71 @@ describe("AmazonDspHttpClient", () => {
     expect(headers["Amazon-Advertising-API-ClientId"]).toBe("client_abc");
   });
 
+  it("sends Amazon-Ads-ClientId (not the legacy header) on Ads API v1 paths", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ commitments: [] }),
+    });
+    await client.get("/adsApi/v1/commitments/dsp");
+    const headers = mockFetch.mock.calls[0][3].headers;
+    expect(headers["Amazon-Ads-ClientId"]).toBe("client_abc");
+    expect(headers["Amazon-Advertising-API-ClientId"]).toBeUndefined();
+  });
+
+  it("sends Amazon-Ads-ClientId on Ads API v1 POSTs and keeps the legacy header off them", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ success: [], error: [] }),
+    });
+    await client.post("/adsApi/v1/create/commitments/dsp", { commitments: [] });
+    const headers = mockFetch.mock.calls[0][3].headers;
+    expect(headers["Amazon-Ads-ClientId"]).toBe("client_abc");
+    expect(headers["Amazon-Advertising-API-ClientId"]).toBeUndefined();
+  });
+
+  it("keeps the legacy Amazon-Advertising-API-ClientId header on /dsp/* and reporting paths", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({}),
+    });
+    await client.get("/dsp/advertisers");
+    await client.post("/accounts/acct-1/dsp/reports", { startDate: "2026-01-01" });
+    for (const call of mockFetch.mock.calls) {
+      const headers = call[3].headers;
+      expect(headers["Amazon-Advertising-API-ClientId"]).toBe("client_abc");
+      expect(headers["Amazon-Ads-ClientId"]).toBeUndefined();
+    }
+  });
+
+  it("forwards per-call extra headers (e.g. Amazon-Ads-AccountId) on POST and GET", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({}),
+    });
+    await client.post(
+      "/adsApi/v1/retrieve/campaignForecasts/dsp",
+      { campaignForecastDescriptions: [] },
+      undefined,
+      undefined,
+      undefined,
+      { "Amazon-Ads-AccountId": "adv-1" }
+    );
+    await client.get("/adsApi/v1/commitments/dsp", undefined, undefined, undefined, {
+      "Amazon-Ads-AccountId": "adv-2",
+    });
+    expect(mockFetch.mock.calls[0][3].headers["Amazon-Ads-AccountId"]).toBe("adv-1");
+    expect(mockFetch.mock.calls[0][3].headers["Content-Type"]).toBe("application/json");
+    expect(mockFetch.mock.calls[1][3].headers["Amazon-Ads-AccountId"]).toBe("adv-2");
+  });
+
   it("returns raw response body (no TikTok envelope unwrapping)", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

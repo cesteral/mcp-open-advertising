@@ -63,6 +63,7 @@ import {
 } from "../../src/utils/errors/bid-manager-errors.js";
 import {
   parseCSVToDeliveryMetrics,
+  parseCSVToHistoricalData,
   calculatePerformanceMetrics,
 } from "../../src/services/bid-manager/report-parser.js";
 
@@ -99,6 +100,7 @@ function createMockClient() {
     queries: {
       create: vi.fn(),
       run: vi.fn(),
+      delete: vi.fn().mockResolvedValue({ data: {} }),
       reports: {
         get: vi.fn(),
       },
@@ -499,15 +501,16 @@ describe("BidManagerService", () => {
       });
     });
 
-    it("re-runs when getReportStatus throws", async () => {
-      mockClient.queries.reports.get.mockRejectedValue(new Error("Not found"));
-      mockClient.queries.run.mockResolvedValue({
-        data: { key: { reportId: "r-new" } },
+    it("propagates a failed status read instead of POSTing a new run", async () => {
+      // Not knowing the report's state is no reason to re-send queries.run:
+      // that used to start a duplicate report on every transient status error.
+      mockClient.queries.reports.get.mockRejectedValue({
+        response: { status: 500 },
+        message: "Backend Error",
       });
 
-      const result = await service.continueQuery("q-123", "r-456");
-
-      expect(result).toEqual({ reportId: "r-new", isNewRun: true });
+      await expect(service.continueQuery("q-123", "r-456")).rejects.toThrow("Backend Error");
+      expect(mockClient.queries.run).not.toHaveBeenCalled();
     });
 
     it("runs query when no reportId provided", async () => {
@@ -654,7 +657,7 @@ describe("BidManagerService", () => {
       await assertion;
     });
 
-    it("throws RetryExhaustedError when no GCS path in completed report", async () => {
+    it("surfaces a DONE report without a GCS path immediately, without retrying", async () => {
       mockClient.queries.create.mockResolvedValue({
         data: { queryId: "q-123" },
       });
@@ -671,7 +674,7 @@ describe("BidManagerService", () => {
       });
 
       const promise = service.executeQueryWithRetry(createQuerySpec(), {
-        maxRetries: 1,
+        maxRetries: 3,
         retryCooldownMs: 50,
         backoffConfig: {
           maxRetries: 1,
@@ -682,13 +685,288 @@ describe("BidManagerService", () => {
       });
 
       // Register the rejection handler BEFORE advancing timers
-      const assertion = expect(promise).rejects.toThrow(RetryExhaustedError);
+      const assertion = expect(promise).rejects.toThrow(ReportFetchError);
 
       for (let i = 0; i < 10; i++) {
         await vi.advanceTimersByTimeAsync(100);
       }
 
       await assertion;
+      expect(mockClient.queries.run).toHaveBeenCalledOnce();
+    });
+  });
+
+  // =========================================================================
+  // executeQueryWithRetry — which failures are retried (#2)
+  // =========================================================================
+
+  describe("executeQueryWithRetry retry classification", () => {
+    const fastOptions = {
+      maxRetries: 3,
+      retryCooldownMs: 50,
+      backoffConfig: { maxRetries: 1, initialDelayMs: 10, maxDelayMs: 20, backoffMultiplier: 2 },
+    };
+
+    function googleApiError(status: number, message: string) {
+      // Shape of a GaxiosError from googleapis: status + response.status
+      return Object.assign(new Error(message), {
+        status,
+        response: { status, data: { error: { code: status, message } } },
+      });
+    }
+
+    function doneReport() {
+      return {
+        data: {
+          metadata: {
+            status: { state: "DONE", format: "CSV" },
+            googleCloudStoragePath: "https://storage.googleapis.com/b/r.csv",
+          },
+        },
+      };
+    }
+
+    async function settle<T>(promise: Promise<T>): Promise<{ value?: T; error?: any }> {
+      const outcome = promise.then(
+        (value) => ({ value }),
+        (error) => ({ error })
+      );
+      for (let i = 0; i < 20; i++) {
+        await vi.advanceTimersByTimeAsync(50);
+      }
+      return outcome;
+    }
+
+    it("does not retry a 400 from queries.create and surfaces Google's message as InvalidParams", async () => {
+      mockClient.queries.create.mockRejectedValue(
+        googleApiError(400, "Metric METRIC_FOO is not compatible with report type STANDARD")
+      );
+
+      const { error } = await settle(service.executeQueryWithRetry(createQuerySpec(), fastOptions));
+
+      expect(error).toBeInstanceOf(QueryCreationError);
+      expect(error).not.toBeInstanceOf(RetryExhaustedError);
+      expect(error.message).toContain("Metric METRIC_FOO is not compatible");
+      expect(error.code).toBe(-32602); // InvalidParams
+      expect(mockClient.queries.create).toHaveBeenCalledOnce();
+    });
+
+    it("does not retry 401/403 and keeps the auth code", async () => {
+      mockClient.queries.create.mockRejectedValue(googleApiError(403, "Permission denied"));
+
+      const { error } = await settle(service.executeQueryWithRetry(createQuerySpec(), fastOptions));
+
+      expect(error.code).toBe(-32005); // Forbidden
+      expect(error.message).toContain("Permission denied");
+      expect(mockClient.queries.create).toHaveBeenCalledOnce();
+    });
+
+    it("does not re-send queries.create after an ambiguous 5xx", async () => {
+      mockClient.queries.create.mockRejectedValue(googleApiError(503, "Backend Error"));
+
+      const { error } = await settle(service.executeQueryWithRetry(createQuerySpec(), fastOptions));
+
+      expect(error).toBeInstanceOf(QueryCreationError);
+      expect(error.message).toContain("Backend Error");
+      expect(mockClient.queries.create).toHaveBeenCalledOnce();
+    });
+
+    it("does not re-send queries.run after an ambiguous 5xx", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockRejectedValue(googleApiError(500, "Internal error"));
+
+      const { error } = await settle(service.executeQueryWithRetry(createQuerySpec(), fastOptions));
+
+      expect(error).toBeInstanceOf(QueryExecutionError);
+      expect(mockClient.queries.run).toHaveBeenCalledOnce();
+    });
+
+    it("retries queries.create after an upstream 429 (not processed)", async () => {
+      mockClient.queries.create
+        .mockRejectedValueOnce(googleApiError(429, "Quota exceeded"))
+        .mockResolvedValueOnce({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockResolvedValue(doneReport());
+
+      const { value, error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), fastOptions)
+      );
+
+      expect(error).toBeUndefined();
+      expect(value).toMatchObject({ queryId: "q-1", reportId: "r-1" });
+      expect(mockClient.queries.create).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries after the local rate limiter refuses (request never sent)", async () => {
+      const limiter = {
+        consume: vi
+          .fn()
+          .mockRejectedValueOnce(new McpError(-32003 as any, "Rate limit exceeded"))
+          .mockResolvedValue(undefined),
+      };
+      service = new BidManagerService(mockConfig, mockLogger, mockClient, limiter as any);
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockResolvedValue(doneReport());
+
+      const { value, error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), fastOptions)
+      );
+
+      expect(error).toBeUndefined();
+      expect(value).toMatchObject({ queryId: "q-1" });
+      expect(mockClient.queries.create).toHaveBeenCalledOnce();
+    });
+
+    it("retries a transient status-poll failure without re-running the query", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get
+        .mockRejectedValueOnce(googleApiError(503, "Backend Error"))
+        .mockResolvedValue(doneReport());
+
+      const { value, error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), fastOptions)
+      );
+
+      expect(error).toBeUndefined();
+      expect(value).toMatchObject({ reportId: "r-1" });
+      expect(mockClient.queries.run).toHaveBeenCalledOnce();
+    });
+
+    it("does not retry a permanent status-poll failure", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockRejectedValue(googleApiError(403, "Forbidden"));
+
+      const { error } = await settle(service.executeQueryWithRetry(createQuerySpec(), fastOptions));
+
+      expect(error).not.toBeInstanceOf(RetryExhaustedError);
+      expect(error.message).toContain("Forbidden");
+      expect(mockClient.queries.reports.get).toHaveBeenCalledOnce();
+    });
+
+    it("resumes polling the same report after a poll timeout, then reports the cause", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockResolvedValue({
+        data: { metadata: { status: { state: "RUNNING" } } },
+      });
+
+      const { error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), { ...fastOptions, maxRetries: 2 })
+      );
+
+      expect(error).toBeInstanceOf(RetryExhaustedError);
+      expect(error.code).toBe(-32004); // Timeout — the report really was still running
+      expect(error.message).toContain("Report polling exceeded");
+      expect(mockClient.queries.run).toHaveBeenCalledOnce();
+    });
+
+    it("keeps the last error's message and code when retries are exhausted on FAILED reports", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockResolvedValue({
+        data: { metadata: { status: { state: "FAILED" } } },
+      });
+
+      const { error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), { ...fastOptions, maxRetries: 2 })
+      );
+
+      expect(error).toBeInstanceOf(RetryExhaustedError);
+      expect(error.code).not.toBe(-32004);
+      expect(error.message).toContain("generation failed");
+    });
+  });
+
+  // =========================================================================
+  // Saved-query cleanup (#3)
+  // =========================================================================
+
+  describe("saved query cleanup", () => {
+    it("deletes the query after the report CSV has been downloaded", async () => {
+      setupFullLifecycleMocks(mockClient);
+      const order: string[] = [];
+      (fetch as any).mockImplementation(async () => {
+        order.push("fetch");
+        return { ok: true, text: async () => "csv,data\n1,2" };
+      });
+      mockClient.queries.delete.mockImplementation(async () => {
+        order.push("delete");
+        return { data: {} };
+      });
+
+      await withAdvancedTimers(() =>
+        service.getDeliveryMetrics({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          startDate: "2024-01-01",
+          endDate: "2024-01-31",
+        })
+      );
+
+      expect(mockClient.queries.delete).toHaveBeenCalledWith({ queryId: "q-lifecycle" });
+      // queries.delete also deletes the query's reports, so it must come last
+      expect(order).toEqual(["fetch", "delete"]);
+    });
+
+    it("never lets a failed delete mask the result", async () => {
+      setupFullLifecycleMocks(mockClient);
+      mockClient.queries.delete.mockRejectedValue(new Error("delete failed"));
+
+      const result = await withAdvancedTimers(() =>
+        service.executeCustomQuery({
+          reportType: "STANDARD",
+          groupBys: ["FILTER_DATE"],
+          metrics: ["METRIC_IMPRESSIONS"],
+          dateRange: { preset: "LAST_7_DAYS" },
+        })
+      );
+
+      expect(result.queryId).toBe("q-lifecycle");
+      expect(mockClient.queries.delete).toHaveBeenCalledOnce();
+    });
+
+    it("deletes the query when the run fails after creation, and rethrows the original error", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-9" } });
+      mockClient.queries.run.mockRejectedValue(
+        Object.assign(new Error("Bad request"), { status: 400, response: { status: 400 } })
+      );
+
+      const assertion = expect(
+        service.getDeliveryMetrics({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          startDate: "2024-01-01",
+          endDate: "2024-01-31",
+        })
+      ).rejects.toThrow("Bad request");
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      await assertion;
+      expect(mockClient.queries.delete).toHaveBeenCalledWith({ queryId: "q-9" });
+    });
+
+    it("does not call delete when no query was created", async () => {
+      mockClient.queries.create.mockRejectedValue(
+        Object.assign(new Error("Invalid"), { status: 400, response: { status: 400 } })
+      );
+
+      const assertion = expect(
+        service.getDeliveryMetrics({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          startDate: "2024-01-01",
+          endDate: "2024-01-31",
+        })
+      ).rejects.toThrow("Invalid");
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      await assertion;
+      expect(mockClient.queries.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -778,6 +1056,37 @@ describe("BidManagerService", () => {
       // Verify parseCSVToDeliveryMetrics was called with the CSV data
       expect(parseCSVToDeliveryMetrics).toHaveBeenCalledWith("csv,data\n1,2");
     });
+  });
+
+  // =========================================================================
+  // getHistoricalMetrics
+  // =========================================================================
+
+  describe("getHistoricalMetrics", () => {
+    it.each([
+      ["daily", "FILTER_DATE"],
+      ["weekly", "FILTER_WEEK"],
+      ["monthly", "FILTER_MONTH"],
+    ] as const)(
+      "groups %s data by %s and parses the CSV by that same column",
+      async (granularity, groupBy) => {
+        setupFullLifecycleMocks(mockClient);
+
+        await withAdvancedTimers(() =>
+          service.getHistoricalMetrics({
+            advertiserId: "adv-123",
+            campaignId: "camp-456",
+            startDate: "2024-01-01",
+            endDate: "2024-03-31",
+            granularity,
+          })
+        );
+
+        const createCall = mockClient.queries.create.mock.calls[0][0];
+        expect(createCall.requestBody.params.groupBys[0]).toBe(groupBy);
+        expect(parseCSVToHistoricalData).toHaveBeenCalledWith("csv,data\n1,2", groupBy);
+      }
+    );
   });
 
   // =========================================================================

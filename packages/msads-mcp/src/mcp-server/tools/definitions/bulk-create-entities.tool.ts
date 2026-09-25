@@ -4,7 +4,13 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMsAdsChunkedBulkCapacity,
+  chunkedBulkCapacityDryRunError,
+  withBulkCapacityError,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { parentIdInputFields, resolveParentId, validateParentId } from "../utils/parent-ids.js";
 import {
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -26,7 +32,12 @@ const TOOL_NAME = "msads_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create Microsoft Ads Entities";
 const TOOL_DESCRIPTION = `Batch create multiple Microsoft Advertising entities in a single operation.
 
-Items are automatically batched per entity type limits. Each batch is sent as a separate API call.`;
+Items are automatically batched per entity type limits. Each batch is sent as a separate API call.
+
+All items in one call belong to one parent, sent as the request-body parent element
+Microsoft Ads' Add operation requires: campaign and adExtension need \`accountId\`,
+adGroup needs \`campaignId\`, ad and keyword need \`adGroupId\`. budget, label and
+audience take no parent.`;
 
 const EFFECT_KIND = "entities_created";
 
@@ -34,6 +45,7 @@ export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     items: z.array(z.record(z.unknown())).min(1).describe("Array of entity data objects to create"),
+    ...parentIdInputFields,
     dry_run: z
       .boolean()
       .optional()
@@ -78,9 +90,21 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user / per-customer rate-limit buckets come from the session, so
+  // resolve it before the capacity projection (dry-run and execute alike).
+  const { msadsService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      chunkedBulkCapacityDryRunError(
+        msadsService.quotaScope,
+        input.entityType,
+        input.items.length,
+        "items"
+      )
+    );
     return {
       results: [],
       entityType: input.entityType,
@@ -102,23 +126,41 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  const { msadsService } = resolveSessionServices(sdkContext);
+  // Refuse a batch the rate limiter cannot admit in time — before the first
+  // Add. One 3-token write per batchLimit-sized chunk, on both quota buckets.
+  assertMsAdsChunkedBulkCapacity(
+    TOOL_NAME,
+    msadsService.quotaScope,
+    input.entityType,
+    input.items.length
+  );
 
   const results = await msadsService.bulkCreateEntities(
     input.entityType as MsAdsEntityType,
     input.items,
-    context
+    context,
+    resolveParentId(input)
   );
 
-  // Microsoft Ads' bulk create returns raw batch results without a per-item
-  // success flag, so the effect summary carries the requested count only.
+  // Microsoft Ads returns HTTP 200 even when items are rejected; the service
+  // maps each batch's PartialErrors / null ids back to per-item outcomes, so the
+  // effect reports the real outcome rather than blanket success.
+  const requested = input.items.length;
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = requested - succeeded;
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
-    summary: { entity_kind: input.entityType, requested: input.items.length },
+    summary: {
+      entity_kind: input.entityType,
+      requested,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
+    },
   };
 
   return {
-    results: results as Record<string, unknown>[],
+    results: results as unknown as Record<string, unknown>[],
     entityType: input.entityType,
     totalItems: input.items.length,
     timestamp: new Date().toISOString(),
@@ -135,7 +177,7 @@ export async function bulkCreateEntitiesLogic(
  * symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...validateParentId(input)];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({
@@ -183,10 +225,13 @@ export function bulkCreateEntitiesResponseFormatter(
       },
     ];
   }
+  const succeeded = result.results.filter((r) => r.success === true).length;
+  const failed = result.results.length - succeeded;
+  const failedNote = failed > 0 ? ` (${failed} rejected by Microsoft Ads)` : "";
   return [
     {
       type: "text" as const,
-      text: `Bulk created ${result.totalItems} ${result.entityType} entities\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk created ${succeeded}/${result.totalItems} ${result.entityType} entities${failedNote}\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -227,10 +272,8 @@ export const bulkCreateEntitiesTool = {
       label: "Bulk create ad groups",
       input: {
         entityType: "adGroup",
-        items: [
-          { Name: "Ad Group 1", CampaignId: 123 },
-          { Name: "Ad Group 2", CampaignId: 123 },
-        ],
+        campaignId: "123",
+        items: [{ Name: "Ad Group 1" }, { Name: "Ad Group 2" }],
       },
     },
   ],

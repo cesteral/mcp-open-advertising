@@ -4,26 +4,30 @@ Amazon DSP MCP server for campaign management and reporting through the Amazon A
 
 ## Current Scope
 
-The server currently exposes generic CRUD-style MCP tools for these Amazon DSP entities:
+The server currently exposes generic CRUD-style MCP tools for these Amazon DSP entities, addressed by Amazon's legacy object names (`entityType` accepts exactly these values — `campaign` / `adGroup` are **not** accepted):
 
-- `campaign` and `order` as backward-compatible aliases for the same management object
-- `adGroup` and `lineItem` as backward-compatible aliases for the same management object
-- `creative`
+- `order` — the campaign-level object
+- `lineItem` — the ad-group-level object
+- `creative` (read-only here: create is rejected, because Amazon routes creative writes to subtype-specific endpoints this server does not implement)
 - `target`
 - `creativeAssociation`
 
-The implementation keeps the older `order` / `lineItem` names for compatibility while accepting Amazon-style `campaign` / `adGroup` inputs.
+Entity management uses the legacy `/dsp/orders`, `/dsp/lineItems`, `/dsp/creatives`, `/dsp/targets` and `/dsp/creativeAssociations` endpoints. Amazon's DSP migration guide ([amzn/ads-advanced-tools-docs](https://github.com/amzn/ads-advanced-tools-docs), `unified-dsp-cm-migration`) directs integrations to the Unified `/adsApi/v1/{create,update,query,delete}/*` API; that migration is not done yet.
+
+Commitments, commitment spend and campaign forecasts use the Amazon Ads API v1 (`/adsApi/v1/*`).
 
 ## Reporting
 
-Amazon Ads reporting uses reporting v3:
+DSP reporting uses DSP reports v3, scoped by the DSP advertiser ID in the URL path (per Amazon's Postman collection, Reporting / DSP report):
 
-- Submit: `POST /reporting/reports`
-- Poll: `GET /reporting/reports/{reportId}`
-- Required `Content-Type`: `application/vnd.createasyncreportrequest.v3+json`
-- Status values: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`
+- Submit: `POST /accounts/{accountId}/dsp/reports` with `Accept: application/vnd.dspcreatereports.v3+json`
+- Poll: `GET /accounts/{accountId}/dsp/reports/{reportId}` with `Accept: application/vnd.dspgetreports.v3+json`
+- Body: `{ startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD", type, dimensions: [...], metrics: [...] }`
+- Status values: `IN_PROGRESS`, `SUCCESS`, `FAILURE`; on `SUCCESS` the status response carries a presigned S3 `location`
 
-Downloaded reports are handled as raw JSON after decompression, with CSV-style fallback parsing for defensive compatibility.
+`accountId` is the DSP advertiser ID (the `advertiserId` returned by `amazon_dsp_list_advertisers`), not the profile ID. The reporting tools (`amazon_dsp_submit_report`, `amazon_dsp_check_report_status`, `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`) all take it as an input.
+
+Downloaded reports are handled as raw JSON, with CSV-style fallback parsing for defensive compatibility.
 
 The `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`, and `amazon_dsp_download_report` tools all return data using the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
 
@@ -33,7 +37,11 @@ All upstream requests carry:
 
 - `Authorization: Bearer <access token>`
 - `Amazon-Advertising-API-Scope: <profile id>`
-- `Amazon-Advertising-API-ClientId: <client id>`
+- the client ID, under the header name each API family requires:
+  - `Amazon-Advertising-API-ClientId` on the legacy `/dsp/*` endpoints and DSP reporting
+  - `Amazon-Ads-ClientId` on Ads API v1 (`/adsApi/v1/*`), per Amazon's spec (`unified-api-dsp.json` `ClientIdHeader`)
+
+`amazon_dsp_get_campaign_forecast` additionally sends `Amazon-Ads-AccountId: <DSP advertiser id>`, which the spec requires on `retrieve/campaignForecasts/dsp`.
 
 The MCP server does not inject profile IDs into request bodies — scope is conveyed through Amazon's required headers.
 
@@ -49,7 +57,7 @@ The server supports two flows:
 
 **Flow A — LwA refresh-token (recommended).** Provide `AMAZON_DSP_APP_ID` + `AMAZON_DSP_APP_SECRET` + `AMAZON_DSP_REFRESH_TOKEN` + `AMAZON_DSP_PROFILE_ID`. The adapter mints access tokens via `POST https://api.amazon.com/auth/o2/token` and auto-refreshes them before the 60-minute expiry. In HTTP mode, pass these as `X-AmazonDsp-App-Id` / `-App-Secret` / `-Refresh-Token` headers plus `Amazon-Advertising-API-Scope`.
 
-**Flow B — static access token (CI / short sessions).** Provide `AMAZON_DSP_ACCESS_TOKEN` + `AMAZON_DSP_PROFILE_ID` (+ optional `AMAZON_DSP_CLIENT_ID`). Server starts returning 401 after 60 minutes — re-mint manually. In HTTP mode, use a standard `Authorization: Bearer …` header.
+**Flow B — static access token (CI / short sessions).** Provide `AMAZON_DSP_ACCESS_TOKEN` + `AMAZON_DSP_PROFILE_ID` + `AMAZON_DSP_CLIENT_ID` (the LwA client ID — without it no client-ID header is sent and Amazon rejects the calls). Server starts returning 401 after 60 minutes — re-mint manually. In HTTP mode, use a standard `Authorization: Bearer …` header.
 
 Stdio prefers Flow A when its three env vars are set, falling back to Flow B.
 

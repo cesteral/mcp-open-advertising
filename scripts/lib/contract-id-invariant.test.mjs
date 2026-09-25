@@ -56,3 +56,32 @@ describe("governed contractId identity invariant", () => {
     });
   }
 });
+
+// One contract namespace per server (#235).
+//
+// Governance keys policy on the contractId's platform slug, and so does this
+// repo: `resolveTokenMode` reads the per-server override from
+// `GOVERNANCE_TOKEN_MODE_<SLUG>`, with the slug taken from the contractId.
+// gads shipped 8 governed tools as `google_ads.*` and 3 as `gads.*`, so
+// `GOVERNANCE_TOKEN_MODE_GOOGLE_ADS=enforce` enforced the 8 and left
+// gads_duplicate_entity, gads_upload_image and gads_upload_video on the
+// global mode. A server whose governed tools share one slug cannot be split
+// that way.
+describe("one contractPlatformSlug per server", () => {
+  for (const pkg of packages) {
+    it(`${pkg}: every governed tool uses the same contractPlatformSlug`, async () => {
+      const tools = await withServerClient(pkg, listRawTools);
+      const bySlug = new Map();
+      for (const tool of tools) {
+        const slug = tool.annotations?.cesteral?.contractPlatformSlug;
+        if (slug === undefined) continue;
+        bySlug.set(slug, [...(bySlug.get(slug) ?? []), tool.name]);
+      }
+      const summary = [...bySlug].map(([slug, names]) => `${slug}: ${names.join(", ")}`);
+      expect(
+        bySlug.size,
+        `${pkg} splits its contracts across slugs:\n  ${summary.join("\n  ")}`
+      ).toBeLessThanOrEqual(1);
+    });
+  }
+});

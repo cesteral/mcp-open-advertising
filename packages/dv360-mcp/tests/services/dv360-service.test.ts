@@ -798,4 +798,214 @@ describe("DV360Service", () => {
       );
     });
   });
+
+  // ==========================================================================
+  // Custom bidding response enums — v4 Discovery
+  // ==========================================================================
+
+  describe("custom bidding response parsing (v4 Discovery enums)", () => {
+    it("parses a REJECTED rules resource with CONSTRAINT_VIOLATION_ERROR and no message", async () => {
+      // Discovery `CustomBiddingAlgorithmRulesError` = { errorCode } only; the
+      // enum value is CONSTRAINT_VIOLATION_ERROR (not CONSTRAINT_VIOLATION).
+      const rules = {
+        name: "customBiddingAlgorithms/algo-42/rules/r-9",
+        customBiddingAlgorithmId: "algo-42",
+        customBiddingAlgorithmRulesId: "r-9",
+        state: "REJECTED",
+        error: { errorCode: "CONSTRAINT_VIOLATION_ERROR" },
+      };
+      httpClient.fetch.mockResolvedValue(rules);
+
+      const result = await service.getCustomBiddingRules("algo-42", "r-9", {
+        advertiserId: "adv-1",
+      });
+
+      expect(result.state).toBe("REJECTED");
+      expect(result.error?.errorCode).toBe("CONSTRAINT_VIOLATION_ERROR");
+    });
+
+    it("accepts STATE_UNSPECIFIED on rules and scripts", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        name: "n",
+        customBiddingAlgorithmId: "a",
+        customBiddingAlgorithmRulesId: "r",
+        state: "STATE_UNSPECIFIED",
+      });
+      await expect(
+        service.getCustomBiddingRules("a", "r", { advertiserId: "adv-1" })
+      ).resolves.toMatchObject({ state: "STATE_UNSPECIFIED" });
+
+      httpClient.fetch.mockResolvedValueOnce({
+        name: "n",
+        customBiddingAlgorithmId: "a",
+        customBiddingScriptId: "s",
+        state: "STATE_UNSPECIFIED",
+        errors: [
+          { errorCode: "ERROR_CODE_UNSPECIFIED", line: "1", column: "1", errorMessage: "?" },
+        ],
+      });
+      await expect(
+        service.getCustomBiddingScript("a", "s", { advertiserId: "adv-1" })
+      ).resolves.toMatchObject({ state: "STATE_UNSPECIFIED" });
+    });
+  });
+
+  // ==========================================================================
+  // duplicateEntity
+  // ==========================================================================
+
+  describe("duplicateEntity", () => {
+    beforeEach(() => {
+      mockEntityConfig({
+        // Line-item calls carry a lineItemId; the IO create carries only the
+        // advertiserId parent.
+        apiPath: (ids: Record<string, string>) =>
+          ids.lineItemId !== undefined
+            ? `/advertisers/${ids.advertiserId}/lineItems`
+            : `/advertisers/${ids.advertiserId}/insertionOrders`,
+      });
+      mockEntitySchema();
+    });
+
+    it("creates insertion-order copies in ENTITY_STATUS_DRAFT (the only status CreateInsertionOrder accepts)", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          name: "advertisers/1/insertionOrders/io-1",
+          insertionOrderId: "io-1",
+          displayName: "Src IO",
+          entityStatus: "ENTITY_STATUS_ACTIVE",
+          updateTime: "t",
+        })
+        .mockResolvedValueOnce({ insertionOrderId: "io-2", entityStatus: "ENTITY_STATUS_DRAFT" });
+
+      await service.duplicateEntity("insertionOrder", {
+        advertiserId: "1",
+        insertionOrderId: "io-1",
+      });
+
+      const [path, , init] = httpClient.fetch.mock.calls[1];
+      expect(path).toBe("/advertisers/1/insertionOrders");
+      expect(init.method).toBe("POST");
+      const body = JSON.parse(init.body as string);
+      expect(body.entityStatus).toBe("ENTITY_STATUS_DRAFT");
+      expect(body.displayName).toBe("Copy of Src IO");
+      expect(body.insertionOrderId).toBeUndefined();
+      expect(body.name).toBeUndefined();
+    });
+
+    it("duplicates line items with the native lineItems:duplicate method, not GET→POST create", async () => {
+      httpClient.fetch
+        // source read
+        .mockResolvedValueOnce({
+          lineItemId: "li-1",
+          displayName: "Src LI",
+          entityStatus: "ENTITY_STATUS_ACTIVE",
+          containsEuPoliticalAds: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+        })
+        // :duplicate
+        .mockResolvedValueOnce({ duplicateLineItemId: "li-2" })
+        // copy read-back
+        .mockResolvedValueOnce({ lineItemId: "li-2", entityStatus: "ENTITY_STATUS_DRAFT" });
+
+      const result = await service.duplicateEntity(
+        "lineItem",
+        { advertiserId: "1", lineItemId: "li-1" },
+        "My Copy"
+      );
+
+      const dupCall = httpClient.fetch.mock.calls[1];
+      expect(dupCall[0]).toBe("/advertisers/1/lineItems/li-1:duplicate");
+      expect(dupCall[2].method).toBe("POST");
+      expect(JSON.parse(dupCall[2].body as string)).toEqual({
+        targetDisplayName: "My Copy",
+        containsEuPoliticalAds: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+      });
+      // Discovery flags this method as high-latency — longer timeout.
+      expect(dupCall[3]).toEqual({ timeoutMs: 120_000 });
+      // No POST to the lineItems collection (the old create-based copy).
+      expect(
+        httpClient.fetch.mock.calls.some(
+          (c: any[]) => c[0] === "/advertisers/1/lineItems" && c[2]?.method === "POST"
+        )
+      ).toBe(false);
+      expect(httpClient.fetch.mock.calls[2][0]).toBe("/advertisers/1/lineItems/li-2");
+      expect(result).toEqual({ lineItemId: "li-2", entityStatus: "ENTITY_STATUS_DRAFT" });
+    });
+
+    it("defaults the line-item copy name to `Copy of {source}`", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ lineItemId: "li-1", displayName: "Src LI" })
+        .mockResolvedValueOnce({ duplicateLineItemId: "li-2" })
+        .mockResolvedValueOnce({ lineItemId: "li-2", entityStatus: "ENTITY_STATUS_DRAFT" });
+
+      await service.duplicateEntity("lineItem", { advertiserId: "1", lineItemId: "li-1" });
+
+      expect(JSON.parse(httpClient.fetch.mock.calls[1][2].body as string)).toEqual({
+        targetDisplayName: "Copy of Src LI",
+      });
+    });
+
+    it("pauses a line-item copy that DV360 returns ACTIVE", async () => {
+      const activeCopy = { lineItemId: "li-2", entityStatus: "ENTITY_STATUS_ACTIVE" };
+      httpClient.fetch
+        .mockResolvedValueOnce({ lineItemId: "li-1", displayName: "Src LI" })
+        .mockResolvedValueOnce({ duplicateLineItemId: "li-2" })
+        .mockResolvedValueOnce(activeCopy)
+        .mockResolvedValueOnce({ lineItemId: "li-2", entityStatus: "ENTITY_STATUS_PAUSED" });
+
+      const result = (await service.duplicateEntity("lineItem", {
+        advertiserId: "1",
+        lineItemId: "li-1",
+      })) as Record<string, unknown>;
+
+      const patch = httpClient.fetch.mock.calls[3];
+      expect(patch[0]).toBe("/advertisers/1/lineItems/li-2?updateMask=entityStatus");
+      expect(patch[2].method).toBe("PATCH");
+      expect(JSON.parse(patch[2].body as string).entityStatus).toBe("ENTITY_STATUS_PAUSED");
+      expect(result.entityStatus).toBe("ENTITY_STATUS_PAUSED");
+    });
+
+    it("reports the created copy's ID when the read-back fails", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ lineItemId: "li-1", displayName: "Src LI" })
+        .mockResolvedValueOnce({ duplicateLineItemId: "li-2" })
+        .mockRejectedValueOnce(new Error("boom"));
+
+      await expect(
+        service.duplicateEntity("lineItem", { advertiserId: "1", lineItemId: "li-1" })
+      ).rejects.toThrow(/created duplicate line item li-2/);
+    });
+
+    it("throws when :duplicate returns no duplicateLineItemId", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ lineItemId: "li-1", displayName: "Src LI" })
+        .mockResolvedValueOnce({});
+
+      await expect(
+        service.duplicateEntity("lineItem", { advertiserId: "1", lineItemId: "li-1" })
+      ).rejects.toThrow(/no duplicateLineItemId/);
+    });
+  });
+
+  // ==========================================================================
+  // getDeliveryEstimate
+  // ==========================================================================
+
+  describe("getDeliveryEstimate", () => {
+    it("reads the line item and its assigned targeting; never calls generateDefault", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ lineItemId: "li-1" })
+        .mockResolvedValueOnce({ lineItemAssignedTargetingOptions: [] });
+
+      const result = await service.getDeliveryEstimate("1", "li-1");
+
+      const paths = httpClient.fetch.mock.calls.map((c: any[]) => c[0] as string);
+      expect(paths).toEqual([
+        "/advertisers/1/lineItems/li-1",
+        "/advertisers/1/lineItems:bulkListAssignedTargetingOptions?lineItemIds=li-1",
+      ]);
+      expect(paths.some((p) => p.includes("generateDefault"))).toBe(false);
+      expect(result.source).toBe("lineItem");
+    });
+  });
 });

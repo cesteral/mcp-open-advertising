@@ -29,10 +29,11 @@ export type MsAdsCampaignType =
   | "PerformanceMax"
   | "Video";
 
+/** BudgetLimitType (`budgetlimittype.md`). */
 export type MsAdsBudgetMode =
   | "DailyBudgetAccelerated"
   | "DailyBudgetStandard"
-  | "MonthlyBudgetSpendUntilDepleted";
+  | "LifetimeBudgetStandard";
 
 export type MsAdsAdGroupStatus = "Active" | "Expired" | "Paused" | "Deleted";
 
@@ -132,8 +133,8 @@ export interface MsAdsCampaign {
   Name: string;
   Status: MsAdsCampaignStatus;
   BudgetType?: MsAdsBudgetMode;
+  /** Daily amount, or the lifetime amount when BudgetType is LifetimeBudgetStandard. */
   DailyBudget?: number;
-  MonthlyBudget?: number;
   BudgetId?: number;
   CampaignType?: MsAdsCampaignType;
   TimeZone: string;

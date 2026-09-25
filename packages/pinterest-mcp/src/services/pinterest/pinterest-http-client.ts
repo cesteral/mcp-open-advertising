@@ -51,8 +51,13 @@ function buildPinterestNextAction(
  * Key Pinterest v5 patterns:
  * - ad_account_id is in the URL path (interpolated before calling these methods)
  * - GET requests: additional filters go in query params
- * - POST/PATCH requests: body is an array of entity objects
- * - DELETE requests: entity IDs go in query params
+ * - POST/PATCH to the campaign/ad group/ad batch endpoints: body is an array of
+ *   entity objects; other endpoints (pins, media, reports, …) take an object
+ * - DELETE exists only on single-entity paths (e.g. `/v5/pins/{pin_id}`);
+ *   campaigns/ad groups/ads are archived via PATCH, never deleted
+ * - Every POST goes through `executeRequest` with the shared default retry
+ *   policy (429 retried for all methods; 5xx only for idempotent methods).
+ *   Nothing here opts a POST into 5xx retry.
  */
 export class PinterestHttpClient {
   constructor(
@@ -118,8 +123,7 @@ export class PinterestHttpClient {
   }
 
   /**
-   * Make an authenticated DELETE request.
-   * Pinterest v5 delete endpoints use query params for entity IDs (e.g. ?campaign_ids=123,456).
+   * Make an authenticated DELETE request (single-entity paths, e.g. `/v5/pins/{pin_id}`).
    */
   async delete(
     path: string,
@@ -130,68 +134,6 @@ export class PinterestHttpClient {
 
     return this.executeRequest(url, context, {
       method: "DELETE",
-    });
-  }
-
-  /**
-   * Make an authenticated POST request with multipart/form-data body.
-   * Used for media uploads (images, videos) to Pinterest Marketing API.
-   */
-  async postMultipart(
-    path: string,
-    fields: Record<string, string>,
-    fileField: string,
-    fileBuffer: Buffer,
-    filename: string,
-    fileContentType: string,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const url = this.buildUrl(path);
-
-    return withPinterestApiSpan("api.multipart.POST", path, async (span) => {
-      span.setAttribute("http.request.method", "POST");
-      span.setAttribute("http.url", url);
-      const { body, contentType } = buildMultipartFormData(
-        fields,
-        fileField,
-        fileBuffer,
-        filename,
-        fileContentType
-      );
-
-      const result = await executeWithRetry(PINTEREST_RETRY_CONFIG, {
-        url,
-        fetchOptions: {
-          method: "POST",
-          body,
-        },
-        context,
-        logger: this.logger,
-        fetchFn: fetchWithTimeout,
-        getHeaders: async () => {
-          const accessToken = await this.authAdapter.getAccessToken();
-          return {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": contentType,
-          };
-        },
-        buildNextAction: buildPinterestNextAction,
-        // Deliberate opt-in to 5xx retry for this POST: the shared default does
-        // not retry non-idempotent methods on 5xx (a re-send after an ambiguous
-        // failure could duplicate a committed mutation). A media upload is safe
-        // to re-send — a duplicate registration is an inert orphan asset until a
-        // later create call references it, and Pinterest media uploads are
-        // transient/idempotent in effect.
-        //
-        // Expressed as `retryNonIdempotent` rather than an `isRetryable`
-        // override: since sweep 2026-07-25 (05-F3) an override decides only the
-        // error CLASS and can no longer grant re-send safety by omission, which
-        // is how the same one-liner on a general request path silently opted
-        // CREATES back into retry on other servers.
-        retryNonIdempotent: true,
-      });
-      span.setAttribute("http.response.status_code", 200);
-      return result;
     });
   }
 

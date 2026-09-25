@@ -191,6 +191,47 @@ export class SnapchatRefreshTokenAdapter
   }
 }
 
+/** Credentials a process can be configured with through env vars (stdio mode). */
+export interface SnapchatEnvCredentials {
+  baseUrl: string;
+  adAccountId?: string;
+  orgId?: string;
+  accessToken?: string;
+  appId?: string;
+  appSecret?: string;
+  refreshToken?: string;
+}
+
+/**
+ * Build the auth adapter for env-var credentials. Prefers the refresh-token
+ * flow (`SNAPCHAT_APP_ID` + `_APP_SECRET` + `_REFRESH_TOKEN`) because it renews
+ * the short-lived access token; a static `SNAPCHAT_ACCESS_TOKEN` stops working
+ * when it expires, which ends a long-running stdio session. Returns undefined
+ * when there is no ad account or no usable credential set.
+ */
+export function createSnapchatEnvAuthAdapter(
+  env: SnapchatEnvCredentials
+): SnapchatAuthAdapter | undefined {
+  if (!env.adAccountId) return undefined;
+  if (env.appId && env.appSecret && env.refreshToken) {
+    return new SnapchatRefreshTokenAdapter(
+      { appId: env.appId, appSecret: env.appSecret, refreshToken: env.refreshToken },
+      env.adAccountId,
+      env.baseUrl,
+      env.orgId ?? ""
+    );
+  }
+  if (env.accessToken) {
+    return new SnapchatAccessTokenAdapter(
+      env.accessToken,
+      env.adAccountId,
+      env.baseUrl,
+      env.orgId ?? ""
+    );
+  }
+  return undefined;
+}
+
 /**
  * Parse Snapchat refresh token credentials from HTTP headers.
  * Expects X-Snapchat-App-Id, X-Snapchat-App-Secret, X-Snapchat-Refresh-Token headers.

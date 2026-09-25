@@ -100,7 +100,6 @@ describe("UpdateConversionsInputSchema", () => {
       conversions: [
         {
           clickId: "click-1",
-          gclid: "EAIaIQobChMI...",
           conversionId: "conv-1",
           conversionTimestamp: "1700000000000",
           revenueMicros: "10000000",
@@ -108,7 +107,7 @@ describe("UpdateConversionsInputSchema", () => {
           quantityMillis: "2000",
           segmentationType: "FLOODLIGHT",
           segmentationName: "Purchase",
-          floodlightActivityId: "11111",
+          segmentationId: "11111",
           type: "TRANSACTION",
           state: "ACTIVE",
           customMetric: [{ name: "metric1", value: 42 }],

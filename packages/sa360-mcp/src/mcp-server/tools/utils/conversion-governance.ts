@@ -25,7 +25,6 @@ export type ConversionMode = "insert" | "update";
 /** Subset of a conversion row the client-side validator inspects. */
 export interface ConversionFieldsInput {
   clickId?: string;
-  gclid?: string;
   conversionId?: string;
   conversionTimestamp?: string;
   revenueMicros?: string;
@@ -33,7 +32,7 @@ export interface ConversionFieldsInput {
   quantityMillis?: string;
   segmentationType?: string;
   segmentationName?: string;
-  floodlightActivityId?: string;
+  segmentationId?: string;
   type?: string;
   state?: string;
 }
@@ -66,13 +65,14 @@ export function validateConversionFields(
   const errors: ConversionFieldError[] = [];
   const warnings: string[] = [];
 
-  // Click ID: at least one of clickId or gclid required.
-  if (!c.clickId && !c.gclid) {
+  // Click ID: required to attribute the conversion to a click. The v2
+  // Conversion resource has no `gclid` field — the click goes in `clickId`.
+  if (!c.clickId) {
     errors.push({
       code: "MISSING_CLICK_ID",
       field: "clickId",
       message:
-        "At least one of 'clickId' or 'gclid' is required to attribute the conversion to a click.",
+        "'clickId' is required to attribute the conversion to a click. (The SA360 v2 Conversion resource has no 'gclid' field; send the click identifier as 'clickId'.)",
     });
   }
 
@@ -127,13 +127,21 @@ export function validateConversionFields(
     );
   }
 
-  // Floodlight identification: need segmentationName or floodlightActivityId.
-  if (!c.segmentationName && !c.floodlightActivityId) {
+  // Floodlight identification: v2 identifies the segment by `segmentationId`
+  // (numeric, e.g. Floodlight activity ID) or `segmentationName` (e.g. activity
+  // name). There is no `floodlightActivityId` field.
+  if (!c.segmentationName && !c.segmentationId) {
     errors.push({
       code: "MISSING_FLOODLIGHT_ID",
-      field: "floodlightActivityId",
+      field: "segmentationId",
       message:
-        "Either 'segmentationName' or 'floodlightActivityId' is required to identify the Floodlight activity.",
+        "Either 'segmentationId' (numeric Floodlight activity ID) or 'segmentationName' (Floodlight activity name) is required to identify the Floodlight activity.",
+    });
+  } else if (c.segmentationId !== undefined && !/^\d+$/.test(c.segmentationId)) {
+    errors.push({
+      code: "INVALID_SEGMENTATION_ID",
+      field: "segmentationId",
+      message: `'segmentationId' must be a numeric string (the Floodlight activity ID). Got: "${c.segmentationId}"`,
     });
   }
 
@@ -153,21 +161,18 @@ export function validateConversionFields(
     );
   }
 
-  // Update mode: conversionId required.
-  if (mode === "update" && !c.conversionId) {
+  // conversionId: required in both modes. For offline conversions the
+  // advertiser chooses it at insert time (v2 `Conversion.conversionId`); an
+  // update identifies the conversion by that same ID.
+  if (!c.conversionId) {
     errors.push({
       code: "MISSING_CONVERSION_ID",
       field: "conversionId",
       message:
-        "'conversionId' is required for update mode (returned from the original insert response).",
+        mode === "insert"
+          ? "'conversionId' is required: for offline conversions the advertiser supplies it. Use any ID meaningful to you, unique within the request; (conversionId, conversionTimestamp) must be unique within the advertiser."
+          : "'conversionId' is required for update mode: the advertiser-assigned ID the conversion was inserted with.",
     });
-  }
-
-  // Insert mode: conversionId should not be present.
-  if (mode === "insert" && c.conversionId) {
-    warnings.push(
-      "'conversionId' is set but mode is 'insert'. conversionId is typically only used for updates."
-    );
   }
 
   // currencyCode format warning.
@@ -178,6 +183,34 @@ export function validateConversionFields(
   }
 
   return { errors, warnings };
+}
+
+/**
+ * v2 `Conversion.conversionId`: "Each conversion in a request must specify a
+ * unique ID". Returns one error per row whose ID repeats an earlier row's.
+ * Pure (no I/O).
+ */
+export function findDuplicateConversionIds(
+  rows: ReadonlyArray<{ conversionId?: string }>
+): Array<ConversionFieldError & { index: number }> {
+  const firstSeen = new Map<string, number>();
+  const duplicates: Array<ConversionFieldError & { index: number }> = [];
+  rows.forEach((row, index) => {
+    const id = row.conversionId;
+    if (!id) return;
+    const first = firstSeen.get(id);
+    if (first === undefined) {
+      firstSeen.set(id, index);
+      return;
+    }
+    duplicates.push({
+      index,
+      code: "DUPLICATE_CONVERSION_ID",
+      field: "conversionId",
+      message: `'conversionId' "${id}" is also used by conversion[${first}]; each conversion in a request must have a unique conversionId.`,
+    });
+  });
+  return duplicates;
 }
 
 /** Result of reconciling an SA360 `/conversion` response against the request. */

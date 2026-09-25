@@ -29,7 +29,8 @@ const TOOL_DESCRIPTION = `Delete one or more TikTok Ads entities.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-TikTok delete uses a POST to the /delete/ endpoint with an array of entity IDs.
+TikTok has no /delete/ endpoint for these entities: deletion is a POST to the entity's
+/status/update/ endpoint with \`operation_status: "DELETE"\` and the array of entity IDs (max 20).
 Deleted entities cannot be recovered. Consider using \`tiktok_bulk_update_status\` with DISABLE first.`;
 
 const EFFECT_KIND = "entities_deleted";

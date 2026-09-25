@@ -17,7 +17,7 @@ Use this before calling \`meta_get_insights\` or \`meta_get_insights_breakdowns\
 
 The response groups metrics by semantic category (delivery, engagement, video, conversions, attribution, quality, other) so you can quickly pick the fields that match what you care about. Breakdowns and action breakdowns are returned as flat lists.
 
-**Source:** Meta Marketing API v24.0+ static catalog, seeded from Meta's public docs. Call the live field-introspection endpoint for the authoritative current list.`;
+**Source:** static catalog seeded from Meta's public docs and checked against the Marketing API v26.0 insights spec. Call the live field-introspection endpoint for the authoritative current list.`;
 
 type InsightsCatalog = {
   description: string;

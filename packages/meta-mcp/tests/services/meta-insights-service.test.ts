@@ -168,7 +168,21 @@ describe("MetaInsightsService", () => {
       expect(result.data).toEqual(insightsData);
     });
 
-    it("returns nextCursor from paging.cursors.after", async () => {
+    it("returns nextCursor from paging.cursors.after when paging.next is present", async () => {
+      httpClient.get.mockResolvedValueOnce({
+        data: [{ impressions: "100" }],
+        paging: {
+          cursors: { before: "abc", after: "xyz" },
+          next: "https://graph.facebook.com/v25.0/campaign-123/insights?after=xyz",
+        },
+      });
+
+      const result = await service.getInsights("campaign-123", {});
+
+      expect(result.nextCursor).toBe("xyz");
+    });
+
+    it("returns undefined nextCursor on the last page (cursors.after present, no paging.next)", async () => {
       httpClient.get.mockResolvedValueOnce({
         data: [{ impressions: "100" }],
         paging: { cursors: { before: "abc", after: "xyz" } },
@@ -176,7 +190,7 @@ describe("MetaInsightsService", () => {
 
       const result = await service.getInsights("campaign-123", {});
 
-      expect(result.nextCursor).toBe("xyz");
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("returns undefined nextCursor when no paging", async () => {
@@ -401,7 +415,23 @@ describe("MetaInsightsService", () => {
       expect(result.data).toEqual(breakdownData);
     });
 
-    it("returns nextCursor from paging.cursors.after", async () => {
+    it("returns nextCursor from paging.cursors.after when paging.next is present", async () => {
+      httpClient.get.mockResolvedValueOnce({
+        data: [{ age: "25-34" }],
+        paging: {
+          cursors: { before: "abc", after: "xyz" },
+          next: "https://graph.facebook.com/v25.0/campaign-123/insights?after=xyz",
+        },
+      });
+
+      const result = await service.getInsightsBreakdowns("campaign-123", {
+        breakdowns: ["age"],
+      });
+
+      expect(result.nextCursor).toBe("xyz");
+    });
+
+    it("returns undefined nextCursor on the last page (cursors.after present, no paging.next)", async () => {
       httpClient.get.mockResolvedValueOnce({
         data: [{ age: "25-34" }],
         paging: { cursors: { before: "abc", after: "xyz" } },
@@ -411,7 +441,7 @@ describe("MetaInsightsService", () => {
         breakdowns: ["age"],
       });
 
-      expect(result.nextCursor).toBe("xyz");
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("returns undefined nextCursor when no paging", async () => {
@@ -495,10 +525,12 @@ describe("MetaInsightsService", () => {
       httpClient.get
         .mockResolvedValueOnce({
           data: [{ id: "1" }, { id: "2" }],
-          paging: { cursors: { after: "cursor-2" } },
+          paging: { cursors: { after: "cursor-2" }, next: "https://graph.facebook.com/next" },
         })
         .mockResolvedValueOnce({
+          // Last page: Meta still returns cursors.after, but no paging.next.
           data: [{ id: "3" }],
+          paging: { cursors: { after: "cursor-3" } },
         });
 
       const result = await service.getReportResults("report-123", { limit: 10 });
@@ -508,6 +540,8 @@ describe("MetaInsightsService", () => {
         fetchedAllRows: true,
         nextCursor: undefined,
       });
+      // The last page's cursors.after must not trigger a third request.
+      expect(httpClient.get).toHaveBeenCalledTimes(2);
       expect(httpClient.get).toHaveBeenNthCalledWith(
         1,
         "/report-123/insights",
@@ -525,7 +559,7 @@ describe("MetaInsightsService", () => {
     it("stops at the requested row limit and returns the continuation cursor", async () => {
       httpClient.get.mockResolvedValueOnce({
         data: [{ id: "1" }, { id: "2" }],
-        paging: { cursors: { after: "cursor-2" } },
+        paging: { cursors: { after: "cursor-2" }, next: "https://graph.facebook.com/next" },
       });
 
       const result = await service.getReportResults("report-123", { limit: 2 });

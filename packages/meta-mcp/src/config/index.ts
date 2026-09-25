@@ -23,8 +23,13 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["meta-bearer", "jwt", "none"]).default("meta-bearer"),
 
   // Meta API Configuration
-  metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v25.0"),
-  metaApiVersion: z.string().default("v25.0"),
+  metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v26.0"),
+  // Selects the Graph API version when META_API_BASE_URL is not set; the
+  // default version is the one in `metaApiBaseUrl` above.
+  metaApiVersion: z
+    .string()
+    .regex(/^v\d+\.\d+$/, 'META_API_VERSION must look like "v26.0"')
+    .optional(),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via META_RATE_LIMIT_PER_MINUTE for different scaling profiles.
@@ -61,7 +66,13 @@ export function parseConfig(): AppConfig {
     host: process.env.META_MCP_HOST || defaultHost,
 
     // Meta API
-    metaApiBaseUrl: process.env.META_API_BASE_URL,
+    // An explicit META_API_BASE_URL wins; otherwise META_API_VERSION picks the
+    // version on the default Graph host.
+    metaApiBaseUrl:
+      process.env.META_API_BASE_URL ||
+      (process.env.META_API_VERSION
+        ? `https://graph.facebook.com/${process.env.META_API_VERSION}`
+        : undefined),
     metaApiVersion: process.env.META_API_VERSION,
     metaRateLimitPerMinute: process.env.META_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.META_RATE_LIMIT_PER_MINUTE)

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertLinkedInBulkCapacity, analyticsReadPerPivot } from "../utils/bulk-capacity.js";
 import {
   appendComputedMetricsToRows,
   ComputedMetricsFlagSchema,
@@ -84,6 +85,15 @@ export async function getAnalyticsBreakdownsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetAnalyticsBreakdownsOutput> {
+  // One analytics request per pivot, issued sequentially on the account's
+  // limiter key: refuse a pivot list that cannot be admitted in time rather
+  // than queueing past the client's timeout.
+  assertLinkedInBulkCapacity(
+    TOOL_NAME,
+    input.pivots.length,
+    analyticsReadPerPivot(input.adAccountUrn)
+  );
+
   const { linkedInReportingService } = resolveSessionServices(sdkContext);
 
   let resolvedStartDate = input.startDate;

@@ -10,7 +10,7 @@ import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
  * unversioned path and returns 410 Gone / 404 Not Found for migrated products
  * (#210). The two differ structurally, not just by prefix:
  *
- *   /v2/adCampaigns?q=search&accounts[0]=urn:li:sponsoredAccount:123
+ *   /v2/adCampaigns?q=search&accounts=List(urn%3Ali%3AsponsoredAccount%3A123)
  *   /rest/adAccounts/123/adCampaigns?q=search
  *
  * The ad account moves OUT of the query string and INTO the path. A constant
@@ -59,7 +59,7 @@ export interface LinkedInEntityConfig {
    * Only meaningful while `apiSurface === "legacy-v2"`. Under `/rest/` the
    * account is in the path instead, which is the whole structural change.
    */
-  listScopingParam?: "accounts[0]" | "account";
+  listScopingParam?: { name: "accounts"; list: true } | { name: "account"; list: false };
   /** Whether this entity has been migrated to the versioned `/rest/` surface. */
   apiSurface: LinkedInApiSurface;
   /** Display name for messages */
@@ -129,7 +129,10 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     // can be read from LinkedIn's reference or exercised against an account.
     collectionPath: () => "/v2/adCreatives",
     accountScoped: false,
-    listScopingParam: "accounts[0]",
+    // A one-element array, serialized as Rest.li 2.0 `accounts=List(urn%3A…)`.
+    // The old `accounts[0]=` key was the Rest.li 1.0 spelling of the same
+    // parameter, sent under a `X-Restli-Protocol-Version: 2.0.0` header.
+    listScopingParam: { name: "accounts", list: true },
     apiSurface: "legacy-v2",
     displayName: "Creative",
     defaultFields: ["id", "status", "campaign", "reference", "review"],
@@ -143,7 +146,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     // would be a guess wearing the costume of a migration.
     collectionPath: () => "/v2/conversions",
     accountScoped: false,
-    listScopingParam: "account",
+    listScopingParam: { name: "account", list: false },
     apiSurface: "legacy-v2",
     displayName: "Conversion Rule",
     defaultFields: ["id", "name", "type", "account", "status", "urlRules"],
