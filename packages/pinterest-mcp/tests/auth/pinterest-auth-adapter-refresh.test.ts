@@ -237,6 +237,21 @@ describe("PinterestRefreshTokenAdapter", () => {
       expect(options.body).toContain("refresh_token=test-refresh-token");
     });
 
+    it("does not narrow the scope on refresh, so the original grant's scopes are kept", async () => {
+      // The body used to send scope=ads:read,ads:write. A refresh may only
+      // narrow a grant (RFC 6749 §6), which dropped user_accounts:read (the
+      // validate() call), pins:* (video upload) and boards:* (Pins).
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
+      mockTokenExchangeSuccess();
+
+      await adapter.getAccessToken();
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      const body = new URLSearchParams(options.body as string);
+      expect(body.has("scope")).toBe(false);
+      expect([...body.keys()].sort()).toEqual(["grant_type", "refresh_token"]);
+    });
+
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 

@@ -137,10 +137,15 @@ export class PinterestRefreshTokenAdapter
               "Content-Type": "application/x-www-form-urlencoded",
               Authorization: `Basic ${Buffer.from(`${credentials.appId}:${credentials.appSecret}`).toString("base64")}`,
             },
+            // No `scope`: a refresh may only narrow the grant (RFC 6749 §6),
+            // and omitting it keeps the scopes the user originally granted.
+            // This used to send "ads:read,ads:write", which drops scopes the
+            // server needs: `user_accounts:read` (GET /v5/user_account, used
+            // by validate()), `pins:read`/`pins:write` (/v5/media, video
+            // upload) and `boards:*`/`pins:*` (/v5/pins, creatives).
             body: new URLSearchParams({
               grant_type: "refresh_token",
               refresh_token: refreshToken,
-              scope: "ads:read,ads:write",
             }).toString(),
           }
         );

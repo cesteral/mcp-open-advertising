@@ -31,7 +31,7 @@ function buildPinterestNextAction(
     return "Renew the Pinterest access token. Regenerate it at https://developers.pinterest.com and update PINTEREST_ACCESS_TOKEN.";
   }
   if (status === 403) {
-    return "Verify the token has ads:read / ads:write scopes and the user is admin/employee on the ad account.";
+    return "Verify the token's scopes cover the call (ads:read / ads:write for ad accounts, campaigns, reports and targeting; pins:read / pins:write for video upload; boards:read / boards:write plus pins:read / pins:write for Pins; user_accounts:read for the account check) and that the user has access to the ad account.";
   }
   if (status === 404) {
     return "Verify the ad_account_id and entity IDs with pinterest_list_ad_accounts / pinterest_list_entities.";
