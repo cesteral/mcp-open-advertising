@@ -141,6 +141,35 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     });
   });
 
+  describe("tiktok_bulk_update_entities for ads (AdUpdateBody needs adgroup_id)", () => {
+    const input = (n: number, data: Record<string, unknown>) =>
+      ({
+        entityType: "ad",
+        advertiserId: ADVERTISER,
+        items: ids(n).map((entityId) => ({ entityId, data })),
+      }) as any;
+
+    it("an ad without data.adgroup_id costs a read then the write: 6 of 8 fit where 9 campaigns would", async () => {
+      await expectRefused(bulkUpdateEntitiesLogic(input(8, { ad_name: "n" }), ctx, sdk), 8, 6);
+    });
+
+    it("an ad with data.adgroup_id costs the write only", async () => {
+      await expectRefused(
+        bulkUpdateEntitiesLogic(input(10, { adgroup_id: "ag", ad_name: "n" }), ctx, sdk),
+        10,
+        9
+      );
+    });
+
+    it("a fitting batch consumes exactly the modeled tokens", async () => {
+      const result = await bulkUpdateEntitiesLogic(input(2, { ad_name: "n" }), ctx, sdk);
+      expect(result.successCount).toBe(2);
+      expect(http.get).toHaveBeenCalledTimes(2);
+      expect(http.post).toHaveBeenCalledTimes(2);
+      expect(rateLimiter.getRemainingTokens(KEY)).toBe(10 - 2 * (1 + 3));
+    });
+  });
+
   describe("tiktok_bulk_create_entities (3 tokens/item on the session's tiktok:token:{quotaClient} bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({

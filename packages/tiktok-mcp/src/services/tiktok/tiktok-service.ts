@@ -3,7 +3,7 @@
 
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import { consumeTikTokQuota, tiktokQuotaBucket } from "./rate-limit-keys.js";
-import type { BulkCapacityBucket, RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityBucket, DryRunValidationError, RateLimiter } from "@cesteral/shared";
 import {
   type RequestContext,
   executeBulkConcurrent,
@@ -73,6 +73,115 @@ export const TIKTOK_DUPLICATE_UNSUPPORTED_MESSAGE =
 export const TIKTOK_AD_PREVIEW_UNSUPPORTED_MESSAGE =
   "Ad previews are not available: TikTok's official Business API SDK defines no ad-preview " +
   "endpoint for v1.3. Inspect the ad with tiktok_get_entity (entityType 'ad') instead.";
+
+/**
+ * `ad/update/` body fields that sit at the TOP level of `AdUpdateBody`;
+ * every other field of an ad update belongs to the creative.
+ *
+ * basis: official SDK (tiktok/tiktok-business-api-sdk @ f809c39)
+ * `python_sdk/business_api_client/models/ad_update_body.py` `swagger_types`:
+ * `adgroup_id` (required), `advertiser_id` (required), `creatives`
+ * (list[AdupdateCreatives], required), `patch_update` (optional). There is no
+ * top-level `ad_id`; `adupdate_creatives.py` carries `ad_id` per creative.
+ * `ad_api.py` `ad_update`: POST /open_api/v1.3/ad/update/.
+ */
+const AD_UPDATE_BODY_FIELDS = new Set(["adgroup_id", "advertiser_id", "creatives", "patch_update"]);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Why an ad update's `data` cannot be mapped onto `AdUpdateBody` for
+ * `entityId`, or none. Shared by `TikTokService.updateEntity` (which throws)
+ * and the update tool's dry run (which reports), so the two agree.
+ *
+ * The update tools change ONE ad (`entityId`), so the body carries exactly one
+ * creative, whose `ad_id` is `entityId`. Creative fields may be given at the
+ * top level of `data` (`{ ad_name }`) or as `data.creatives[0]`, not both.
+ */
+export function adUpdateShapeErrors(
+  entityId: string,
+  data: Record<string, unknown>
+): DryRunValidationError[] {
+  const errors: DryRunValidationError[] = [];
+  if (data.ad_id !== undefined && String(data.ad_id) !== entityId) {
+    errors.push({
+      code: "AD_ID_CONFLICT",
+      message: `data.ad_id (${String(data.ad_id)}) names a different ad than entityId (${entityId}); an ad update changes the ad named by entityId.`,
+      field: "data.ad_id",
+    });
+  }
+  if (data.creatives !== undefined) {
+    const creatives = data.creatives;
+    if (!Array.isArray(creatives) || creatives.length !== 1 || !isPlainRecord(creatives[0])) {
+      errors.push({
+        code: "INVALID_AD_CREATIVES",
+        message:
+          "data.creatives must be an array of exactly one creative object: this tool updates one ad (entityId), and TikTok's ad/update/ body carries that ad as creatives[0].",
+        field: "data.creatives",
+      });
+    } else {
+      const creativeAdId = creatives[0].ad_id;
+      if (creativeAdId !== undefined && String(creativeAdId) !== entityId) {
+        errors.push({
+          code: "AD_ID_CONFLICT",
+          message: `data.creatives[0].ad_id (${String(creativeAdId)}) names a different ad than entityId (${entityId}).`,
+          field: "data.creatives[0].ad_id",
+        });
+      }
+      const topLevelCreativeFields = Object.keys(data).filter(
+        (k) => !AD_UPDATE_BODY_FIELDS.has(k) && k !== "ad_id"
+      );
+      if (topLevelCreativeFields.length > 0) {
+        errors.push({
+          code: "AMBIGUOUS_AD_CREATIVE_FIELDS",
+          message: `Creative fields were given both in data.creatives[0] and at the top level of data (${topLevelCreativeFields.join(", ")}); put them in one place.`,
+          field: "data",
+        });
+      }
+    }
+  }
+  if (
+    data.adgroup_id !== undefined &&
+    (data.adgroup_id === null || String(data.adgroup_id).length === 0)
+  ) {
+    errors.push({
+      code: "INVALID_ADGROUP_ID",
+      message: "data.adgroup_id must be the ad's ad group id, or omitted to read it from the ad.",
+      field: "data.adgroup_id",
+    });
+  }
+  return errors;
+}
+
+/**
+ * Map an ad update onto TikTok's `AdUpdateBody` (see AD_UPDATE_BODY_FIELDS):
+ * `{ adgroup_id, creatives: [{ ad_id: entityId, ...creative fields }] }`,
+ * plus `patch_update` / `advertiser_id` when the caller set them. The HTTP
+ * client adds the session's `advertiser_id`. `patch_update` is passed through
+ * only when given: the SDK types it (optional bool) without saying what it
+ * does, so this server does not choose a value.
+ */
+export function buildAdUpdateBody(
+  entityId: string,
+  data: Record<string, unknown>,
+  adgroupId: string
+): Record<string, unknown> {
+  const creativeFields: Record<string, unknown> = {};
+  const topLevel: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "ad_id" || key === "adgroup_id" || key === "creatives") continue;
+    if (AD_UPDATE_BODY_FIELDS.has(key)) topLevel[key] = value;
+    else creativeFields[key] = value;
+  }
+  const given = Array.isArray(data.creatives) ? (data.creatives[0] as Record<string, unknown>) : {};
+  return {
+    ...topLevel,
+    adgroup_id: adgroupId,
+    creatives: [{ ...creativeFields, ...given, ad_id: entityId }],
+  };
+}
 
 /** TikTok list response data shape */
 interface TikTokListData<T> {
@@ -214,25 +323,66 @@ export class TikTokService {
     ) as Promise<TikTokEntityMap[T]>;
   }
 
+  /**
+   * POST `{entity}/update/`. Campaigns and ad groups carry their id at the top
+   * level of the body (`campaign_id` / `adgroup_id`, CampaignUpdateBody /
+   * AdgroupUpdateBody). Ads do not: `AdUpdateBody` has `adgroup_id` and
+   * `creatives[]`, with `ad_id` inside the creative (see `buildAdUpdateBody`).
+   *
+   * An ad update needs the ad's `adgroup_id`. It is taken from `data`, else
+   * from `options.adgroupId` (a caller that already read the ad), else read
+   * here with one `getEntity` — one extra read token, which the bulk capacity
+   * pre-check models (`tiktokBulkBuckets.bulkUpdate`).
+   */
   async updateEntity<T extends TikTokEntityType>(
     entityType: T,
     entityId: string,
     data: TikTokUpdateEntityInputMap[T],
-    context?: RequestContext
+    context?: RequestContext,
+    options?: { adgroupId?: string }
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
+    let body: Record<string, unknown>;
+    if (entityType === "ad") {
+      body = await this.adUpdateBody(entityId, data, context, options?.adgroupId);
+    } else {
+      // TikTok uses POST for updates, with entity ID in body
+      body = { [config.idField]: entityId, ...data };
+    }
+
     await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
-    // TikTok uses POST for updates, with entity ID in body
-    return this.httpClient.post(
-      config.updatePath,
-      {
-        [config.idField]: entityId,
-        ...data,
-      },
-      context
-    ) as Promise<TikTokEntityMap[T]>;
+    return this.httpClient.post(config.updatePath, body, context) as Promise<TikTokEntityMap[T]>;
+  }
+
+  private async adUpdateBody(
+    entityId: string,
+    data: Record<string, unknown>,
+    context: RequestContext | undefined,
+    knownAdgroupId: string | undefined
+  ): Promise<Record<string, unknown>> {
+    const errors = adUpdateShapeErrors(entityId, data);
+    if (errors.length > 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Invalid ad update payload: ${errors.map((e) => e.message).join("; ")}`
+      );
+    }
+    let adgroupId = data.adgroup_id !== undefined ? String(data.adgroup_id) : knownAdgroupId;
+    if (!adgroupId) {
+      const ad = (await this.getEntity("ad", entityId, context)) as { adgroup_id?: unknown };
+      if (ad?.adgroup_id !== undefined && ad.adgroup_id !== null && String(ad.adgroup_id)) {
+        adgroupId = String(ad.adgroup_id);
+      }
+    }
+    if (!adgroupId) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Could not determine the ad group of ad ${entityId}, which TikTok's ad/update/ requires; pass it as data.adgroup_id.`
+      );
+    }
+    return buildAdUpdateBody(entityId, data, adgroupId);
   }
 
   /**

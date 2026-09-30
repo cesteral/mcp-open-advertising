@@ -61,9 +61,25 @@ export const tiktokBulkBuckets = {
   bulkCreate: (scope: TikTokBulkScope): BulkCapacityBucket[] => [
     scope.bulkCapacityBucket([TIKTOK_WRITE_TOKENS]),
   ],
-  /** `tiktok_bulk_update_entities`: one `updateEntity` (3) per item. */
-  bulkUpdate: (scope: TikTokBulkScope): BulkCapacityBucket[] => [
-    scope.bulkCapacityBucket([TIKTOK_WRITE_TOKENS]),
+  /**
+   * `tiktok_bulk_update_entities`: one `updateEntity` (3) per item. An ad
+   * update without `data.adgroup_id` first reads the ad for it
+   * (`TikTokService.updateEntity`, AdUpdateBody requires `adgroup_id`), so
+   * such items cost a read (1) then the write (3). A batch where only some ad
+   * items lack it is projected as if all did: over-projecting can refuse a
+   * batch that would have fit, under-projecting would admit one that queues
+   * past the budget.
+   */
+  bulkUpdate: (
+    scope: TikTokBulkScope,
+    entityType: string,
+    items: ReadonlyArray<{ data?: Record<string, unknown> }>
+  ): BulkCapacityBucket[] => [
+    scope.bulkCapacityBucket(
+      entityType === "ad" && items.some((item) => item.data?.adgroup_id === undefined)
+        ? [TIKTOK_READ_TOKENS, TIKTOK_WRITE_TOKENS]
+        : [TIKTOK_WRITE_TOKENS]
+    ),
   ],
 };
 

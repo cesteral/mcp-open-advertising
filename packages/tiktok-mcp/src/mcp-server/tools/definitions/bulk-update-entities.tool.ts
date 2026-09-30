@@ -126,7 +126,7 @@ export async function bulkUpdateEntitiesLogic(
       tiktokBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        tiktokBulkBuckets.bulkUpdate(session.tiktokService),
+        tiktokBulkBuckets.bulkUpdate(session.tiktokService, input.entityType, input.items),
         "items"
       )
     );
@@ -147,7 +147,7 @@ export async function bulkUpdateEntitiesLogic(
   assertTikTokBulkCapacity(
     TOOL_NAME,
     input.items.length,
-    tiktokBulkBuckets.bulkUpdate(session.tiktokService)
+    tiktokBulkBuckets.bulkUpdate(session.tiktokService, input.entityType, input.items)
   );
 
   const payloads = input.items.map((it) => it.data ?? {});

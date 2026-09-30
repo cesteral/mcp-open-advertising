@@ -297,7 +297,7 @@ describe("tiktok_create_entity → {campaign,adgroup,ad}/create/", () => {
   });
 });
 
-describe("tiktok_update_entity → {campaign,adgroup}/update/", () => {
+describe("tiktok_update_entity → {campaign,adgroup,ad}/update/", () => {
   it("campaign → pre-state GET, then POST campaign/update/ with campaign_id in the body", async () => {
     stub.route({
       method: "GET",
@@ -379,16 +379,122 @@ describe("tiktok_update_entity → {campaign,adgroup}/update/", () => {
   // AdUpdateBody; ad_update_body.py declares ONLY adgroup_id (required),
   // advertiser_id (required), creatives list[AdupdateCreatives] (required) and
   // patch_update — there is no top-level `ad_id`; adupdate_creatives.py
-  // carries `ad_id` per creative. TikTokService.updateEntity sends
-  // `{ advertiser_id, ad_id: <entityId>, ...data }` for every entity type, so
-  // an ad update puts `ad_id` where the SDK body has no such field and relies
-  // on the caller to supply adgroup_id + creatives[].ad_id in `data`. Not
-  // fixed here: the correct shape needs a decision on how `entityId` maps into
-  // creatives[] (and possibly a schema change that would move the governed
-  // definitionHash). Reported on #236.
-  it.todo(
-    "tiktok_update_entity (ad) sends ad_id inside creatives[] per AdUpdateBody, not at the top level — reported on #236"
-  );
+  // carries `ad_id` (and ad_name, ad_text, … ) per creative.
+  const AD_ID = "1600000000000001";
+  const AD_GROUP_ID = "1700000000000001";
+  function routeAdRead() {
+    stub.route({
+      method: "GET",
+      path: `${V}/ad/get/`,
+      data: {
+        list: [
+          { ad_id: AD_ID, adgroup_id: AD_GROUP_ID, ad_name: "Autumn", status: "AD_STATUS_ENABLE" },
+        ],
+        page_info: { page: 1, page_size: 1, total_number: 1, total_page: 1 },
+      },
+    });
+  }
+
+  it("ad → POST ad/update/ with adgroup_id from the pre-read and ad_id inside creatives[0]", async () => {
+    routeAdRead();
+    stub.route({ method: "POST", path: `${V}/ad/update/`, data: {} });
+
+    await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "ad",
+        advertiserId: ADV,
+        entityId: AD_ID,
+        data: { ad_name: "Autumn v2" },
+      }),
+      ctx,
+      sdk
+    );
+
+    const req = onlyWrite();
+    expect(req.method).toBe("POST");
+    expect(req.url).toBe(`${API}/ad/update/`);
+    expectJsonAuth(req);
+    expect(req.body).toEqual({
+      advertiser_id: ADV,
+      adgroup_id: AD_GROUP_ID,
+      creatives: [{ ad_id: AD_ID, ad_name: "Autumn v2" }],
+    });
+    expect(req.body).not.toHaveProperty("ad_id");
+    // The tool's pre-state read supplies adgroup_id: one GET, not two. (The
+    // re-read fallback for `after` runs because this POST returns no entity.)
+    const reads = apiRequests().filter((r) => r.method === "GET");
+    expect(reads[0]!.path).toBe(`${V}/ad/get/`);
+    expect(JSON.parse(reads[0]!.query.filtering!)).toEqual({ ad_ids: [AD_ID] });
+    expect(apiRequests().map((r) => r.method)).toEqual(["GET", "POST", "GET"]);
+  });
+
+  it("ad → a caller-supplied adgroup_id and creatives[0] are sent as given, with ad_id set", async () => {
+    stub.route({ method: "POST", path: `${V}/ad/update/`, data: {} });
+
+    await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "ad",
+        advertiserId: ADV,
+        entityId: AD_ID,
+        data: {
+          adgroup_id: AD_GROUP_ID,
+          creatives: [{ ad_text: "New copy", call_to_action: "LEARN_MORE" }],
+        },
+      }),
+      ctx,
+      sdk
+    );
+
+    expect(onlyWrite().body).toEqual({
+      advertiser_id: ADV,
+      adgroup_id: AD_GROUP_ID,
+      creatives: [{ ad_id: AD_ID, ad_text: "New copy", call_to_action: "LEARN_MORE" }],
+    });
+  });
+
+  it("ad → refuses a data.ad_id naming another ad, sending nothing", async () => {
+    routeAdRead();
+    await expect(
+      updateEntityLogic(
+        UpdateEntityInputSchema.parse({
+          entityType: "ad",
+          advertiserId: ADV,
+          entityId: AD_ID,
+          data: { ad_id: "1600000000000999", ad_name: "x" },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/different ad than entityId/);
+    expect(apiRequests()).toHaveLength(0);
+  });
+
+  it("ad (bulk) → reads each ad for its adgroup_id, then POSTs ad/update/ per ad", async () => {
+    routeAdRead();
+    stub.route({ method: "POST", path: `${V}/ad/update/`, data: {} });
+
+    await bulkUpdateEntitiesLogic(
+      BulkUpdateEntitiesInputSchema.parse({
+        entityType: "ad",
+        advertiserId: ADV,
+        items: [{ entityId: AD_ID, data: { ad_name: "Autumn v2" } }],
+      }),
+      ctx,
+      sdk
+    );
+
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      `GET ${V}/ad/get/`,
+      `POST ${V}/ad/update/`,
+    ]);
+    expect(onlyWrite().body).toEqual({
+      advertiser_id: ADV,
+      adgroup_id: AD_GROUP_ID,
+      creatives: [{ ad_id: AD_ID, ad_name: "Autumn v2" }],
+    });
+    // The read the ad path adds is counted, and the pre-check models it.
+    expect(remaining()).toBe(LIMIT - TIKTOK_READ_TOKENS - TIKTOK_WRITE_TOKENS);
+  });
 
   it("dry_run sends no POST", async () => {
     stub.route({
