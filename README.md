@@ -47,7 +47,7 @@ This repo is an **open connector layer**, not the full product.
 ### <img src="docs/logos/google-ad-manager.svg" width="20" height="20" alt="Google Ads"> Google Ads MCP
 
 Campaign writes, GAQL reporting, bid adjustments, previews, and validation via
-Google Ads REST API v23.
+Google Ads REST API v25.
 
 [Package docs](packages/gads-mcp) | [Use with Cesteral Intelligence](https://cesteral.com/integrations/google-ads?utm_source=github&utm_medium=readme&utm_campaign=gads-mcp)
 
@@ -86,7 +86,7 @@ Intelligence layers governance and orchestration on top:
 
 | Server                                    | Platform                          | Tools | Auth                            |
 | ----------------------------------------- | --------------------------------- | ----- | ------------------------------- |
-| [gads-mcp](packages/gads-mcp)             | Google Ads REST API v23           | 18    | OAuth2 refresh token            |
+| [gads-mcp](packages/gads-mcp)             | Google Ads REST API v25           | 18    | OAuth2 refresh token            |
 | [meta-mcp](packages/meta-mcp)             | Meta Marketing API v25.0          | 27    | Bearer token                    |
 | [dv360-mcp](packages/dv360-mcp)           | DV360 API v4                      | 26    | Google OAuth2 / service account |
 | [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 46    | User token (TTD-Auth header)    |

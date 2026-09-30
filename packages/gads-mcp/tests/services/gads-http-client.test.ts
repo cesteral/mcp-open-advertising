@@ -55,7 +55,7 @@ describe("GAdsHttpClient", () => {
   beforeEach(() => {
     adapter = createMockAdapter();
     logger = createMockLogger();
-    client = new GAdsHttpClient(adapter, "https://googleads.googleapis.com/v23", logger);
+    client = new GAdsHttpClient(adapter, "https://googleads.googleapis.com/v25", logger);
     mockFetchWithTimeout.mockReset();
   });
 
@@ -71,7 +71,7 @@ describe("GAdsHttpClient", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
       const callArgs = mockFetchWithTimeout.mock.calls[0];
       expect(callArgs[0]).toBe(
-        "https://googleads.googleapis.com/v23/customers/123/googleAds:search"
+        "https://googleads.googleapis.com/v25/customers/123/googleAds:search"
       );
 
       const options = callArgs[3] as RequestInit;
@@ -83,7 +83,7 @@ describe("GAdsHttpClient", () => {
 
     it("includes login-customer-id header when set", async () => {
       adapter = createMockAdapter({ loginCustomerId: "9876543210" });
-      client = new GAdsHttpClient(adapter, "https://googleads.googleapis.com/v23", logger);
+      client = new GAdsHttpClient(adapter, "https://googleads.googleapis.com/v25", logger);
 
       mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, { results: [] }));
 

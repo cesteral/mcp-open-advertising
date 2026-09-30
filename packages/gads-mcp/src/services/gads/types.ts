@@ -2,9 +2,10 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Google Ads REST API v23 entity type definitions
- * Hand-crafted from Google Ads API v23 reference
- * Source: https://developers.google.com/google-ads/api/reference/rpc/v23/
+ * Google Ads REST API v25 entity type definitions
+ * Hand-crafted from the Google Ads API reference. The status, channel-type,
+ * bidding-strategy, match-type and ad-type unions are the v25 Discovery enums
+ * (https://googleads.googleapis.com/$discovery/rest?version=v25), in its order.
  *
  * Note: Google Ads API uses resource names as IDs:
  * customers/{customerId}/campaigns/{campaignId}
@@ -22,6 +23,8 @@ export type GoogleAdsAdStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "
 export type GoogleAdsCriterionStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "UNSPECIFIED";
 
 export type GoogleAdsAdvertisingChannelType =
+  | "UNSPECIFIED"
+  | "UNKNOWN"
   | "SEARCH"
   | "DISPLAY"
   | "SHOPPING"
@@ -32,42 +35,46 @@ export type GoogleAdsAdvertisingChannelType =
   | "SMART"
   | "PERFORMANCE_MAX"
   | "LOCAL_SERVICES"
-  | "DISCOVERY"
   | "TRAVEL"
-  | "DEMAND_GEN"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+  | "DEMAND_GEN";
 
 export type GoogleAdsBiddingStrategyType =
+  | "UNSPECIFIED"
+  | "UNKNOWN"
+  | "COMMISSION"
+  | "ENHANCED_CPC"
+  | "FIXED_CPM"
+  | "FIXED_SHARE_OF_VOICE"
+  | "INVALID"
+  | "MANUAL_CPA"
   | "MANUAL_CPC"
   | "MANUAL_CPM"
   | "MANUAL_CPV"
   | "MAXIMIZE_CONVERSIONS"
   | "MAXIMIZE_CONVERSION_VALUE"
+  | "PAGE_ONE_PROMOTED"
+  | "PERCENT_CPC"
   | "TARGET_CPA"
+  | "TARGET_CPC"
   | "TARGET_CPM"
+  | "TARGET_CPV"
   | "TARGET_IMPRESSION_SHARE"
   | "TARGET_OUTRANK_SHARE"
   | "TARGET_ROAS"
-  | "TARGET_SPEND"
-  | "PERCENT_CPC"
-  | "COMMISSION"
-  | "ENHANCED_CPC"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+  | "TARGET_SPEND";
 
 export type GoogleAdsKeywordMatchType = "BROAD" | "EXACT" | "PHRASE" | "UNKNOWN" | "UNSPECIFIED";
 
 export type GoogleAdsAdType =
+  | "UNSPECIFIED"
+  | "UNKNOWN"
   | "TEXT_AD"
   | "EXPANDED_TEXT_AD"
-  | "CALL_ONLY_AD"
   | "EXPANDED_DYNAMIC_SEARCH_AD"
   | "HOTEL_AD"
   | "SHOPPING_SMART_AD"
   | "SHOPPING_PRODUCT_AD"
   | "VIDEO_AD"
-  | "GMAIL_AD"
   | "IMAGE_AD"
   | "RESPONSIVE_SEARCH_AD"
   | "LEGACY_RESPONSIVE_DISPLAY_AD"
@@ -81,10 +88,18 @@ export type GoogleAdsAdType =
   | "SHOPPING_COMPARISON_LISTING_AD"
   | "VIDEO_BUMPER_AD"
   | "VIDEO_NON_SKIPPABLE_IN_STREAM_AD"
-  | "VIDEO_OUTSTREAM_AD"
+  | "VIDEO_TRUEVIEW_IN_STREAM_AD"
   | "VIDEO_RESPONSIVE_AD"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+  | "SMART_CAMPAIGN_AD"
+  | "CALL_AD"
+  | "APP_PRE_REGISTRATION_AD"
+  | "IN_FEED_VIDEO_AD"
+  | "DEMAND_GEN_MULTI_ASSET_AD"
+  | "DEMAND_GEN_CAROUSEL_AD"
+  | "TRAVEL_AD"
+  | "DEMAND_GEN_VIDEO_RESPONSIVE_AD"
+  | "DEMAND_GEN_PRODUCT_AD"
+  | "YOUTUBE_AUDIO_AD";
 
 // ─── GAQL Resource Row Types ──────────────────────────────────────────────────
 

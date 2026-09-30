@@ -36,7 +36,7 @@ export function getTroubleshootEntityMessage(args?: Record<string, string>): str
 ## Context
 - Entity Type: \`${entityType}\`
 - Reported Error: ${errorMessage}
-- Platform: Google Ads API v23
+- Platform: Google Ads API v25
 
 ---
 
