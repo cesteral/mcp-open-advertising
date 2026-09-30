@@ -71,4 +71,36 @@ describe("ttd rate-limit keys", () => {
 
     expect(limiter.getRemainingTokens(key)).toBe(57);
   });
+
+  // uploadVideoCreative used to draw ONE token for its two TTD calls (#236).
+  // basis: Foundations §12 limits calls per client per endpoint — the
+  // generate-URL POST and the /creative POST are two calls; the PUT goes to the
+  // presigned storage URL, not TTD's API.
+  it("a video upload draws one token per TTD call, none for the presigned PUT", async () => {
+    const adapter = new TtdDirectTokenAuthAdapter(TOKEN);
+    const httpClient = {
+      quotaClient: adapter.quotaClient,
+      fetch: vi
+        .fn()
+        .mockResolvedValueOnce({ UploadUrl: "https://storage.example/presigned", MediaId: "m1" })
+        .mockResolvedValueOnce({ CreativeId: "cr-1" }),
+      fetchDirect: vi.fn(),
+    } as any;
+    const put = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 200 }));
+    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
+    const service = new TtdService(logger, limiter, httpClient);
+    const { key } = service.bulkCapacityCheck("probe", 1, [1]).buckets[0]!;
+
+    await service.uploadVideoCreative("adv1", "v.mp4", Buffer.from("vid"), "video/mp4", {
+      CreativeName: "Promo",
+    });
+
+    expect(httpClient.fetch.mock.calls.map((c: unknown[]) => c[0])).toEqual([
+      "/creative/generateuploadurlforvideocreative",
+      "/creative",
+    ]);
+    expect(put).toHaveBeenCalledOnce();
+    expect(limiter.getRemainingTokens(key)).toBe(58);
+    put.mockRestore();
+  });
 });

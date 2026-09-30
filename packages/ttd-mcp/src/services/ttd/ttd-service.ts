@@ -193,6 +193,12 @@ export class TtdService {
     creativeFields: Record<string, unknown>,
     context?: RequestContext
   ): Promise<TtdCreative> {
+    // One token per TTD API call: step 1 and step 3 each draw their own (#236:
+    // this used to draw one token for both). Step 2 goes to the presigned
+    // storage URL, not TTD's API, and draws none.
+    // basis: TTD Foundations §12 (vendored docs/api/TTD_Foundations.md) limits
+    // the calls a client makes to each platform endpoint — the generate-URL
+    // POST and the /creative POST are two such calls.
     await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // Step 1 — presigned upload URL + attributes to echo back on create.
@@ -230,6 +236,7 @@ export class TtdService {
       AdvertiserId: advertiserId,
       CreativeType: "Video",
     };
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     return this.httpClient.fetch("/creative", context, {
       method: "POST",
       body: JSON.stringify(body),
