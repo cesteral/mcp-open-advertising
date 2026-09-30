@@ -1,52 +1,113 @@
-# Expected conformance test failures for Cesteral MCP servers.
-# These scenarios require specific tool/resource behaviors that our
-# business-domain servers don't expose (e.g., returning audio content,
-# binary resources, or sampling support).
+# Expected conformance failures for Cesteral MCP servers.
 #
-# Format: use "server:" key as the root (required by @modelcontextprotocol/conformance).
-# As new capabilities are added, scenarios should be removed from this list.
+# Baseline for `./scripts/conformance-test.sh --full`, which runs the
+# @modelcontextprotocol/conformance 0.1.16 "active" server suite against each
+# server started with MCP_AUTH_MODE=none, MCP_INCLUDE_CONFORMANCE_TOOLS=true and
+# MCP_CONFORMANCE_FIXTURES=true. Re-baselined 2026-09-30 (#241): all 13
+# servers produce the same result — 13 of the 30 active scenarios pass and the
+# first 17 entries below fail; the last 2 are pending scenarios that fail under
+# `--suite all`. The harness exits non-zero both on a failure missing from this
+# list and on a listed scenario that now passes, so every entry is a scenario
+# that fails today.
+#
+# Two of the passes are hollow. tools-call-simple-text sends no `arguments`,
+# which the servers reject as invalid input for test_simple_text's empty
+# object schema (`arguments` is optional in the spec); tools-call-error calls
+# test_error_handling, which is not registered. Both checks accept any
+# isError text result, so neither proves a successful tool call.
+#
+# Most scenarios call fixed fixture names from the reference test server
+# (`test_image_content`, `test://static-binary`, `test_prompt_with_image`, ...).
+# Where our fixtures do not register that name, the scenario fails on
+# "not found" and says nothing about the capability; each reason says which
+# case applies. Entries marked SERVER BUG fail with the fixture present, because
+# of a defect in shared server code.
+#
+# Format: "server:" root key (required by @modelcontextprotocol/conformance).
+# Remove an entry as soon as its scenario passes.
 
 server:
-  # Content type scenarios — our tools return text/JSON only
+  # Completions — no server declares the `completions` capability or handles
+  # completion/complete (-32601 Method not found).
+  - completion-complete
+
+  # Non-text tool content — no fixture for test_image_content /
+  # test_audio_content / test_embedded_resource / test_multiple_content_types,
+  # and no production tool returns image, audio or embedded-resource content:
+  # every tool result is text (plus structuredContent where declared).
   - tools-call-image
   - tools-call-audio
   - tools-call-embedded-resource
   - tools-call-mixed-content
 
-  # Progress tokens — not currently implemented
+  # SERVER BUG — logging notifications are not delivered. The fixture
+  # (test_tool_with_logging) runs, but tool-handler-factory.ts sends through
+  # server.sendLoggingMessage(), which carries no relatedRequestId, so the SDK
+  # routes notifications/message to the standalone GET SSE stream instead of
+  # the tools/call response stream. The harness never opens a GET stream (it is
+  # optional for clients), so it receives 0 of 3 notifications. Not a
+  # logging/setLevel ordering problem: no level set means nothing is filtered,
+  # and logging-set-level passes. Verified by sending through the request's
+  # own extra.sendNotification: the scenario then passes.
+  - tools-call-with-logging
+
+  # Progress — no fixture for test_tool_with_progress, and no tool emits
+  # notifications/progress for a request's progressToken.
   - tools-call-with-progress
 
-  # Sampling — servers don't request LLM completions from clients
+  # Sampling — no fixture for test_sampling; no server issues
+  # sampling/createMessage.
   - tools-call-sampling
 
-  # Elicitation — requires interactive user input; our servers don't elicit
+  # SERVER BUG — elicitation requests are not delivered. The fixtures
+  # (test_elicitation, test_elicitation_sep1034_defaults,
+  # test_elicitation_sep1330_enums) run and call elicitInput, but
+  # tool-handler-factory.ts calls server.server.elicitInput(params) with no
+  # relatedRequestId, so elicitation/create goes to the standalone GET SSE
+  # stream the harness never opens and the call times out after 60s (-32001).
+  # The same path carries the production destructive-operation confirmations in
+  # elicitation-helpers.ts, so a client without a GET stream cannot confirm a
+  # delete. Verified by passing { relatedRequestId: extra.requestId }: all
+  # three scenarios then pass (sep1330 also needs the legacy `enumNames`
+  # variant, which the fixture now includes).
   - tools-call-elicitation
   - elicitation-sep1034-defaults
   - elicitation-sep1330-enums
 
-  # Resource subscriptions — not implemented (polling is sufficient)
+  # Binary resources — no fixture for test://static-binary; every resource is
+  # text (text/markdown, application/json or text/csv).
+  - resources-read-binary
+
+  # Resource subscriptions — resources/subscribe and resources/unsubscribe are
+  # not implemented (-32601 Method not found).
   - resources-subscribe
   - resources-unsubscribe
 
-  # Binary resources — all resources are text/JSON
-  - resources-read-binary
-
-  # Completion — not implemented
-  - completion-complete
-
-  # SSE scenarios — we use Streamable HTTP, not SSE polling
-  - server-sse-polling
-
-  # JSON Schema 2020-12 — our tools use Zod-generated JSON Schema (draft-07)
-  - json-schema-2020-12
-
-  # DNS rebinding — tested separately via our own security tests
-  - dns-rebinding-protection
-
-  # Prompts returning embedded resources or images — our prompts return text only
+  # Prompts with non-text content — no fixture for
+  # test_prompt_with_embedded_resource / test_prompt_with_image; every prompt
+  # returns text messages only.
   - prompts-get-embedded-resource
   - prompts-get-with-image
 
-  # Logging notifications — sendLoggingMessage requires client to call logging/setLevel first;
-  # conformance scenario doesn't set level before calling tool so notifications are filtered
-  - tools-call-with-logging
+  # SERVER BUG (security) — no DNS-rebinding protection in the default
+  # self-host posture. A request with Host: evil.example.com and
+  # Origin: http://evil.example.com gets 200. The transport never validates
+  # Host, and validates Origin only when MCP_ALLOWED_ORIGINS is set or
+  # NODE_ENV=production; otherwise the allow-list is "*" and the check is
+  # skipped. Binding 127.0.0.1 does not help, since DNS rebinding reaches
+  # localhost through the browser. The scenario passes with
+  # MCP_ALLOWED_ORIGINS=http://localhost:<port>. With NODE_ENV=production and
+  # no allow-list, the rebinding request is rejected but so is a valid
+  # localhost Origin (403).
+  - dns-rebinding-protection
+
+  # --- Pending in 0.1.16: run only with `--suite all`, ignored by `active` ---
+
+  # No fixture for json_schema_2020_12_tool. Tool input schemas are published
+  # as JSON Schema draft-07 ($schema http://json-schema.org/draft-07/schema#).
+  - json-schema-2020-12
+
+  # No fixture for test_reconnection, and no EventStore is configured, so POST
+  # SSE streams carry no event ids, priming event or retry field; SSE
+  # resumption (Last-Event-ID) is not supported.
+  - server-sse-polling
