@@ -2,12 +2,14 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { BulkCapacityCheck, RateLimiter } from "@cesteral/shared";
+import { dv360QuotaBucket } from "./rate-limit-keys.js";
 
 /**
  * Bulk-capacity projection inputs for a DV360 batch, one per limiter key.
  *
- * Every DV360 call consumes one token from `dv360:${advertiserId}` — and only
- * when the call carries an advertiserId (DV360Service / TargetingService). A
+ * Every advertiser-scoped DV360 call consumes one token from
+ * `dv360:${advertiserId}` (`consumeDv360Quota`, DV360Service / TargetingService);
+ * the bulk tools are all advertiser-scoped, so that is the key projected. A
  * batch whose items span several advertisers therefore draws from several
  * independent buckets, so the items are grouped by advertiser and each group is
  * projected on its own key with its own item count.
@@ -33,6 +35,6 @@ export function dv360BulkCapacityChecks(
     rateLimiter,
     toolName,
     itemCount,
-    buckets: [{ key: `dv360:${advertiserId}`, costPerItem }],
+    buckets: [dv360QuotaBucket({ advertiserId }, costPerItem)!],
   }));
 }

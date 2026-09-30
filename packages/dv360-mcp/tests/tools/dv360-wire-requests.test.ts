@@ -31,7 +31,7 @@
  * are out of scope here.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mcpConfig } from "../../src/config/index.js";
 import {
   createEntityLogic,
@@ -233,6 +233,35 @@ function expectOneTokenPerApiCall(advertiserId = ADV) {
   expect(session.rateLimiter.getRemainingTokens(`dv360:${advertiserId}`)).toBe(
     mcpConfig.dv360RateLimitPerMinute - apiRequests().length
   );
+}
+
+/**
+ * Every displayvideo call drew exactly one token from the partner's REAL
+ * `dv360:partner:{partnerId}` bucket (a call naming only a partner).
+ */
+function expectOneTokenPerApiCallOnPartner(partnerId: string) {
+  expect(session.rateLimiter.getRemainingTokens(`dv360:partner:${partnerId}`)).toBe(
+    mcpConfig.dv360RateLimitPerMinute - apiRequests().length
+  );
+}
+
+/**
+ * Tokens drawn from the limiter while `run` executes, read off `consume`
+ * itself — so a call that bypasses the limiter shows up as missing tokens
+ * whatever key it would have used.
+ */
+async function tokensSpentDuring(run: () => Promise<unknown>): Promise<number> {
+  const consume = vi.spyOn(session.rateLimiter, "consume");
+  consume.mockClear();
+  try {
+    await run();
+    return consume.mock.calls.reduce(
+      (sum, call) => sum + ((call[1] as number | undefined) ?? 1),
+      0
+    );
+  } finally {
+    consume.mockRestore();
+  }
 }
 
 /** Echo a POST/PATCH body back as the created/updated resource, as DV360 does. */
@@ -969,8 +998,14 @@ describe("dv360_bulk_update_entities → <collection>.get then <collection>.patc
  * `CustomBiddingAlgorithmRulesRef` whose `resourceName` is uploaded with
  * `media.upload`, then referenced by `scripts.create` / `rules.create`.
  *
- * These calls pass no advertiserId in their path ids, so DV360Service draws no
- * limiter token for them (see the report on #236); no token assertion here.
+ * Every one of these calls draws one limiter token from the owner's bucket —
+ * `dv360:{advertiserId}` for an advertiser-owned algorithm, `dv360:partner:{id}`
+ * for a partner-owned one. They carry no advertiserId in their PATH ids, and
+ * used to draw no token at all (#236, dv360 #24).
+ * basis: DV360 counts every API request against its quotas (per advertiser
+ * per project, and per project — developers.google.com/display-video/api/limits,
+ * corroboration only, docs/reviews/2026-09-fleet-review/_quotas-google.md);
+ * `media.upload` is a method of the same API (Discovery `media.upload`).
  */
 describe("custom bidding", () => {
   const RESOURCE = "customBiddingAlgorithms/7001/scriptRef/9001";
@@ -1067,17 +1102,20 @@ describe("custom bidding", () => {
   describe("dv360_create_custom_bidding_algorithm → customBiddingAlgorithms.create (+ upload chain)", () => {
     it("advertiser-owned SCRIPT_BASED with initialScript", async () => {
       routeUploads();
-      const out = await createCustomBiddingAlgorithmLogic(
-        CreateCustomBiddingAlgorithmInputSchema.parse({
-          displayName: "CB Algo",
-          algorithmType: "SCRIPT_BASED",
-          ownerType: "advertiser",
-          ownerId: ADV,
-          initialScript: SCRIPT,
-        }),
-        ctx,
-        sdk
-      );
+      let out!: Awaited<ReturnType<typeof createCustomBiddingAlgorithmLogic>>;
+      const spent = await tokensSpentDuring(async () => {
+        out = await createCustomBiddingAlgorithmLogic(
+          CreateCustomBiddingAlgorithmInputSchema.parse({
+            displayName: "CB Algo",
+            algorithmType: "SCRIPT_BASED",
+            ownerType: "advertiser",
+            ownerId: ADV,
+            initialScript: SCRIPT,
+          }),
+          ctx,
+          sdk
+        );
+      });
 
       const create = apiRequests()[0]!;
       // basis: `customBiddingAlgorithms.create` — POST `v4/customBiddingAlgorithms`,
@@ -1096,21 +1134,27 @@ describe("custom bidding", () => {
       });
       expectScriptUploadChain(`advertiserId=${ADV}`, SCRIPT, RESOURCE, "Script");
       expect(out.scriptUpload).toEqual({ success: true, scriptId: "8001", state: "PENDING" });
+      // create + uploadScript + media.upload + scripts.create
+      expect(apiRequests()).toHaveLength(4);
+      expect(spent).toBe(4);
+      expectOneTokenPerApiCall();
     });
 
     it("partner-owned RULE_BASED with sharedAdvertiserIds and initialRules", async () => {
       routeUploads();
-      await createCustomBiddingAlgorithmLogic(
-        CreateCustomBiddingAlgorithmInputSchema.parse({
-          displayName: "Partner Algo",
-          algorithmType: "RULE_BASED",
-          ownerType: "partner",
-          ownerId: "555",
-          sharedAdvertiserIds: [ADV, "112"],
-          initialRules: RULES,
-        }),
-        ctx,
-        sdk
+      const spent = await tokensSpentDuring(() =>
+        createCustomBiddingAlgorithmLogic(
+          CreateCustomBiddingAlgorithmInputSchema.parse({
+            displayName: "Partner Algo",
+            algorithmType: "RULE_BASED",
+            ownerType: "partner",
+            ownerId: "555",
+            sharedAdvertiserIds: [ADV, "112"],
+            initialRules: RULES,
+          }),
+          ctx,
+          sdk
+        )
       );
       const create = apiRequests()[0]!;
       // basis: `schemas.CustomBiddingAlgorithm.partnerId` ("Immutable.") and
@@ -1125,6 +1169,10 @@ describe("custom bidding", () => {
         sharedAdvertiserIds: [ADV, "112"],
       });
       expectScriptUploadChain("partnerId=555", RULES, RULES_RESOURCE, "Rules");
+      // create + uploadRules + media.upload + rules.create, on the partner's bucket
+      expect(apiRequests()).toHaveLength(4);
+      expect(spent).toBe(4);
+      expectOneTokenPerApiCallOnPartner("555");
     });
 
     it("dry_run sends nothing", async () => {
@@ -1146,18 +1194,23 @@ describe("custom bidding", () => {
   describe("dv360_manage_custom_bidding_script (upload) → uploadScript, media.upload, scripts.create", () => {
     it("scopes every call to the owner and uploads the raw script bytes", async () => {
       routeUploads();
-      const out = await manageCustomBiddingScriptLogic(
-        ManageCustomBiddingScriptInputSchema.parse({
-          customBiddingAlgorithmId: "7001",
-          action: "upload",
-          scriptContent: SCRIPT,
-          partnerId: "555",
-        }),
-        ctx,
-        sdk
-      );
+      let out!: Awaited<ReturnType<typeof manageCustomBiddingScriptLogic>>;
+      const spent = await tokensSpentDuring(async () => {
+        out = await manageCustomBiddingScriptLogic(
+          ManageCustomBiddingScriptInputSchema.parse({
+            customBiddingAlgorithmId: "7001",
+            action: "upload",
+            scriptContent: SCRIPT,
+            partnerId: "555",
+          }),
+          ctx,
+          sdk
+        );
+      });
       expectScriptUploadChain("partnerId=555", SCRIPT, RESOURCE, "Script");
       expect(out.script?.customBiddingScriptId).toBe("8001");
+      expect(spent).toBe(3);
+      expectOneTokenPerApiCallOnPartner("555");
     });
 
     it("dry_run sends nothing", async () => {
@@ -1179,18 +1232,23 @@ describe("custom bidding", () => {
   describe("dv360_manage_custom_bidding_rules (upload) → uploadRules, media.upload, rules.create", () => {
     it("scopes every call to the owner and uploads the raw rules bytes", async () => {
       routeUploads();
-      const out = await manageCustomBiddingRulesLogic(
-        ManageCustomBiddingRulesInputSchema.parse({
-          customBiddingAlgorithmId: "7001",
-          action: "upload",
-          rulesContent: RULES,
-          advertiserId: ADV,
-        }),
-        ctx,
-        sdk
-      );
+      let out!: Awaited<ReturnType<typeof manageCustomBiddingRulesLogic>>;
+      const spent = await tokensSpentDuring(async () => {
+        out = await manageCustomBiddingRulesLogic(
+          ManageCustomBiddingRulesInputSchema.parse({
+            customBiddingAlgorithmId: "7001",
+            action: "upload",
+            rulesContent: RULES,
+            advertiserId: ADV,
+          }),
+          ctx,
+          sdk
+        );
+      });
       expectScriptUploadChain(`advertiserId=${ADV}`, RULES, RULES_RESOURCE, "Rules");
       expect(out.rules?.customBiddingAlgorithmRulesId).toBe("8002");
+      expect(spent).toBe(3);
+      expectOneTokenPerApiCall();
     });
 
     it("dry_run sends nothing", async () => {

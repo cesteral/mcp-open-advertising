@@ -13,6 +13,7 @@ import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 import type { BulkCapacityCheck } from "@cesteral/shared";
 import { dv360BulkCapacityChecks } from "./bulk-capacity-checks.js";
+import { consumeDv360Quota } from "./rate-limit-keys.js";
 
 // ============================================================================
 // Response Validation
@@ -358,11 +359,9 @@ export class DV360Service {
       const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
       setSpanAttribute("dv360.apiPath", basePath);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       const response = await this.httpClient.fetch(path, context);
 
@@ -403,11 +402,9 @@ export class DV360Service {
       const scopeQs = entityScopeQueryParams(ids, config.queryParamIds);
       const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       setSpanAttribute("dv360.entityId", entityId);
 
@@ -446,11 +443,9 @@ export class DV360Service {
       const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
       setSpanAttribute("dv360.apiPath", basePath);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       const scopeQs = writeScopeQueryParams(config, ids);
       const response = await this.httpClient.fetch(
@@ -530,11 +525,9 @@ export class DV360Service {
         scopeQs ? `&${scopeQs}` : ""
       }`;
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       const response = await this.httpClient.fetch(
         path,
@@ -614,11 +607,9 @@ export class DV360Service {
       const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
       setSpanAttribute("dv360.entityId", entityId);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       await this.httpClient.fetch(
         path,
@@ -659,6 +650,7 @@ export class DV360Service {
       // The same resourceName is then handed to `scripts.create`.
       const scopeQs = ownerScopeQueryParams(scope);
       const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript${scopeQs ? `?${scopeQs}` : ""}`;
+      await consumeDv360Quota(this.rateLimiter, scope);
       const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
       if (!ref?.resourceName) {
@@ -675,6 +667,8 @@ export class DV360Service {
         "Uploading custom bidding script bytes"
       );
 
+      // `media.upload` is a DV360 API method of its own and draws its own token.
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
@@ -724,6 +718,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -762,6 +757,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const raw = await this.httpClient.fetch(path, context);
       const response = parsePaginatedList(raw, "customBiddingScripts", `GET ${path}`);
       const scripts = (response.customBiddingScripts ?? []) as CustomBiddingScript[];
@@ -795,6 +791,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       return CustomBiddingScriptSchema.parse(await this.httpClient.fetch(path, context));
     });
   }
@@ -822,6 +819,7 @@ export class DV360Service {
       // `:uploadRules` 404s.
       const scopeQs = ownerScopeQueryParams(scope);
       const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules${scopeQs ? `?${scopeQs}` : ""}`;
+      await consumeDv360Quota(this.rateLimiter, scope);
       const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
       if (!ref?.resourceName) {
@@ -838,6 +836,8 @@ export class DV360Service {
         "Uploading custom bidding rules bytes"
       );
 
+      // `media.upload` is a DV360 API method of its own and draws its own token.
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
@@ -887,6 +887,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -925,6 +926,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const raw = await this.httpClient.fetch(path, context);
       const response = parsePaginatedList(raw, "customBiddingAlgorithmRules", `GET ${path}`);
       const rules = (response.customBiddingAlgorithmRules ?? []) as CustomBiddingAlgorithmRules[];
@@ -1222,7 +1224,9 @@ export class DV360Service {
       setSpanAttribute("dv360.advertiserId", advertiserId);
       setSpanAttribute("dv360.lineItemId", lineItemId);
 
-      await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+      // One token per DV360 call: the line item GET and the targeting GET each
+      // draw their own (#236: this used to draw one for both).
+      await consumeDv360Quota(this.rateLimiter, { advertiserId });
 
       // Fetch line item details including budget and targeting info
       const lineItem = (await this.httpClient.fetch(
@@ -1233,6 +1237,7 @@ export class DV360Service {
       // Fetch targeting assigned to this line item.
       // The v4 method is on the lineItems collection, not the resource:
       // GET /advertisers/{advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds={id}
+      await consumeDv360Quota(this.rateLimiter, { advertiserId });
       const targeting = (await this.httpClient.fetch(
         `/advertisers/${advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds=${encodeURIComponent(lineItemId)}`,
         context
@@ -1287,9 +1292,7 @@ export class DV360Service {
         const path = `/customBiddingAlgorithms${params.toString() ? `?${params}` : ""}`;
         setSpanAttribute("dv360.apiPath", "/customBiddingAlgorithms");
 
-        if (advertiserId) {
-          await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
-        }
+        await consumeDv360Quota(this.rateLimiter, { advertiserId, partnerId });
 
         const raw = await this.httpClient.fetch(path, context);
         const response = parsePaginatedList(raw, "customBiddingAlgorithms", `GET ${path}`);
@@ -1324,6 +1327,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       return CustomBiddingAlgorithmRulesSchema.parse(await this.httpClient.fetch(path, context));
     });
   }

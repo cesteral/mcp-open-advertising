@@ -108,7 +108,7 @@ The server is built with production-grade architecture and complete functionalit
 - Campaigns cannot be in DRAFT status (must be ACTIVE or PAUSED)
 - Insertion orders and line items can only be created in DRAFT (v4 Discovery `entityStatus`); activate them with an update afterwards
 - `updateMask` is required for all update operations — omitting it silently ignores fields
-- Rate limiting is per-advertiser (`DV360_RATE_LIMIT_PER_MINUTE`, default 6 req/min); over-limit calls queue for up to 2 minutes, and bulk batches that cannot clear the limit in that time are refused up front
+- Rate limiting is per-advertiser (`DV360_RATE_LIMIT_PER_MINUTE`, default 6 req/min), and per partner for calls that name only a partner (e.g. partner-owned custom bidding); over-limit calls queue for up to 2 minutes, and bulk batches that cannot clear the limit in that time are refused up front
 - Entity creation requires parent IDs in a specific hierarchy
 
 ## Supported Entity Types
@@ -360,7 +360,7 @@ node dist/index.js
 
 ### API rate limiting
 
-The server implements per-advertiser rate limiting (default: 6 requests/minute, `DV360_RATE_LIMIT_PER_MINUTE`). DV360's own quota could not be confirmed from a primary source; see `dv360.rate_limit_default` in `platform-facts.json` before raising it.
+The server implements per-advertiser rate limiting (default: 6 requests/minute, `DV360_RATE_LIMIT_PER_MINUTE`). A call that names only a partner draws on a per-partner bucket at the same default; every call, custom-bidding uploads (`:uploadScript`/`:uploadRules`, `media.upload`, `scripts`/`rules.create`) included, draws one token. DV360's own quota could not be confirmed from a primary source; see `dv360.rate_limit_default` in `platform-facts.json` before raising it.
 
 If hitting limits:
 
