@@ -22,10 +22,12 @@
  * The `Content-Type: application/json` header on JSON bodies is implied by
  * each requestBody's `application/json` content key.
  *
- * Rate limiting: calls keyed by the ad account draw from
- * `pinterest:{adAccountId}` — a read costs PINTEREST_READ_TOKENS (1), a write
- * PINTEREST_WRITE_TOKENS (3); reporting calls draw 1 from
- * `pinterest:reporting`.
+ * Rate limiting (`src/services/pinterest/rate-limit-keys.ts`): every bucket
+ * belongs to the session's Pinterest user (the `/v5/user_account` id). Calls
+ * on the ad account — Pins and media included — draw from
+ * `pinterest:user:{id}:account:{adAccountId}`: a read costs
+ * PINTEREST_READ_TOKENS (1), a write PINTEREST_WRITE_TOKENS (3), per request;
+ * reporting calls draw 1 from `pinterest:user:{id}:reporting`.
  *
  * list/get/check/download/targeting/pacing/validate tools send only GETs and
  * are out of scope here.
@@ -119,6 +121,11 @@ const API = "https://api.pinterest.com/v5";
 const AD = AD_ACCOUNT_ID;
 const ctx = { requestId: "wire-req" } as any;
 
+/** The wire session's buckets: the stubbed `GET /v5/user_account` answers id 7000000000000000001. */
+const USER_KEY = "pinterest:user:7000000000000000001";
+const ACCOUNT_KEY = `${USER_KEY}:account:${AD}`;
+const REPORTING_KEY = `${USER_KEY}:reporting`;
+
 let stub: FetchStub;
 let session: WireSession;
 let sdk: ReturnType<typeof acceptingSdkContext>;
@@ -164,9 +171,28 @@ function expectAccountTokensPerCall() {
     (sum, r) => sum + (r.method === "GET" ? PINTEREST_READ_TOKENS : PINTEREST_WRITE_TOKENS),
     0
   );
-  expect(rateLimiter.getRemainingTokens(`pinterest:${AD}`)).toBe(
+  expect(rateLimiter.getRemainingTokens(ACCOUNT_KEY)).toBe(
     mcpConfig.pinterestRateLimitPerMinute - spent
   );
+}
+
+/**
+ * Tokens drawn from the limiter while `run` executes, read off `consume`
+ * itself — so a call that bypasses the limiter shows up as missing tokens
+ * whatever key it would have used.
+ */
+async function tokensSpentDuring(run: () => Promise<unknown>): Promise<number> {
+  const consume = vi.spyOn(rateLimiter, "consume");
+  consume.mockClear();
+  try {
+    await run();
+    return consume.mock.calls.reduce(
+      (sum, call) => sum + ((call[1] as number | undefined) ?? 1),
+      0
+    );
+  } finally {
+    consume.mockRestore();
+  }
 }
 
 /** Pinterest's batch-write envelope (`CampaignBatchWriteResponseModel` etc.): `{ items: [{ data, exceptions }] }`. */
@@ -485,13 +511,35 @@ describe("pinterest_delete_entity", () => {
     expectAccountTokensPerCall();
   });
 
-  // PinterestService.deleteEntity draws ONE write weight for a whole batch of
-  // Pin DELETEs (`pinterestBulkBuckets.delete` documents it: "a single 3-token
-  // consume for the whole batch"), so N DELETE /pins/{id} requests spend the
-  // tokens of one. Asserting per-call accounting for N > 1 would fail today.
-  it.todo(
-    "a multi-Pin delete draws one write weight per DELETE /pins/{pin_id} — reported on #236, not fixed here"
-  );
+  // PinterestService.deleteEntity used to draw ONE write weight for a whole
+  // batch of Pin DELETEs, so N DELETE /pins/{id} requests spent the tokens of
+  // one (#236).
+  // basis: `pins/delete` is one `org_write` operation per Pin
+  // (x-ratelimit-category, openapi.json 5.28.0) — each request counts.
+  it("a multi-Pin delete draws one write weight per DELETE /pins/{pin_id}", async () => {
+    stub.route({ method: "DELETE", path: /^\/v5\/pins\/\d+$/, response: {} });
+    const spent = await tokensSpentDuring(() =>
+      deleteEntityLogic(
+        DeleteEntityInputSchema.parse({
+          entityType: "creative",
+          adAccountId: AD,
+          entityIds: ["813", "814", "815"],
+        }),
+        ctx,
+        sdk
+      )
+    );
+    expect(writes().map((r) => `${r.method} ${r.url}`)).toEqual(
+      expect.arrayContaining([
+        `DELETE ${API}/pins/813`,
+        `DELETE ${API}/pins/814`,
+        `DELETE ${API}/pins/815`,
+      ])
+    );
+    expect(writes()).toHaveLength(3);
+    expect(spent).toBe(3 * PINTEREST_WRITE_TOKENS);
+    expectAccountTokensPerCall();
+  });
 
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
@@ -849,7 +897,7 @@ describe("reporting → analytics/create_report, analytics/get_report", () => {
   }
 
   function expectReportTokens(calls: number) {
-    expect(rateLimiter.getRemainingTokens("pinterest:reporting")).toBe(
+    expect(rateLimiter.getRemainingTokens(REPORTING_KEY)).toBe(
       mcpConfig.pinterestRateLimitPerMinute - calls
     );
   }
@@ -996,7 +1044,7 @@ describe("pinterest_get_delivery_estimate → ad_groups/audience_sizing", () => 
     expectJsonAuth(req);
     expect(req.body).toEqual({ targeting_spec: targeting });
     // A read-only POST: PinterestService draws a read weight for it.
-    expect(rateLimiter.getRemainingTokens(`pinterest:${AD}`)).toBe(
+    expect(rateLimiter.getRemainingTokens(ACCOUNT_KEY)).toBe(
       mcpConfig.pinterestRateLimitPerMinute - PINTEREST_READ_TOKENS
     );
   });
@@ -1032,7 +1080,7 @@ describe("pinterest_get_ad_preview → ads/get then ad_previews/create", () => {
     expectJsonAuth(req);
     expect(req.body).toEqual({ pin_id: "813", creative_type: "MAX_WIDTH_VIDEO_COLLECTION" });
     // One read (the ad GET) + the preview POST, which draws a read weight.
-    expect(rateLimiter.getRemainingTokens(`pinterest:${AD}`)).toBe(
+    expect(rateLimiter.getRemainingTokens(ACCOUNT_KEY)).toBe(
       mcpConfig.pinterestRateLimitPerMinute - 2 * PINTEREST_READ_TOKENS
     );
   });
@@ -1130,12 +1178,57 @@ describe("pinterest_upload_video → media/create, the S3 form POST, then media/
     expect(out.mediaStatus).toBe("succeeded");
   });
 
-  // The media/create POST and media/get polls go through
-  // `pinterestService.client` directly and never touch the limiter, so this
-  // tool is the one Pinterest write path with no rate accounting at all.
-  it.todo(
-    "pinterest_upload_video draws limiter tokens for media/create and media/get — reported on #236, not fixed here"
-  );
+  // The media/create POST and media/get polls used to go through the HTTP
+  // client directly and never touch the limiter (#236).
+  // basis: `media/create` is an `org_write` and `media/get` an `org_read`
+  // operation (x-ratelimit-category, openapi.json 5.28.0) — both are counted by
+  // Pinterest; the S3 form POST goes to the presigned `upload_url`, not the API.
+  it("draws one write for media/create and one read per media/get poll; the S3 POST draws none", async () => {
+    stub.route({
+      method: "GET",
+      host: "cdn.example.com",
+      path: "/spot.mp4",
+      rawBody: Buffer.from("mp4-bytes", "latin1"),
+      contentType: "video/mp4",
+    });
+    stub.route({
+      method: "POST",
+      path: "/v5/media",
+      response: { media_id: "12345", upload_url: UPLOAD_URL, upload_parameters: PARAMS },
+    });
+    stub.route({
+      method: "POST",
+      host: "pinterest-media-upload.s3-accelerate.amazonaws.com",
+      path: "/",
+      response: {},
+    });
+    let polls = 0;
+    stub.route({
+      method: "GET",
+      path: "/v5/media/12345",
+      response: () => ({ media_id: "12345", status: ++polls < 3 ? "processing" : "succeeded" }),
+    });
+
+    const spent = await tokensSpentDuring(() =>
+      uploadVideoLogic(
+        UploadVideoInputSchema.parse({
+          adAccountId: AD,
+          mediaUrl: "https://cdn.example.com/spot.mp4",
+        }),
+        ctx,
+        sdk
+      )
+    );
+
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      "POST /v5/media",
+      "GET /v5/media/12345",
+      "GET /v5/media/12345",
+      "GET /v5/media/12345",
+    ]);
+    expect(spent).toBe(PINTEREST_WRITE_TOKENS + 3 * PINTEREST_READ_TOKENS);
+    expectAccountTokensPerCall();
+  });
 
   it("dry_run downloads and uploads nothing", async () => {
     await uploadVideoLogic(

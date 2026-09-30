@@ -36,6 +36,7 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { quotaUser: "u-1" },
       deleteEntity: vi.fn().mockResolvedValue({
         removal: "archived",
         results: [

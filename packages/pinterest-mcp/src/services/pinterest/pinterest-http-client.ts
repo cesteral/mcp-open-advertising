@@ -76,6 +76,15 @@ export class PinterestHttpClient {
   }
 
   /**
+   * Rate-limit identity of this session's Pinterest user (the
+   * `/v5/user_account` id, never the token). Read by `consumePinterest*Quota`
+   * / `pinterest*QuotaBucket` in `rate-limit-keys.ts`.
+   */
+  get quotaUser(): string {
+    return this.authAdapter.quotaUser;
+  }
+
+  /**
    * Expose the API version (for reference and future use in path construction).
    */
   get version(): string {

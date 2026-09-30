@@ -16,9 +16,12 @@
  * `createSessionServices` hands every `PinterestService` (index.ts, the HTTP
  * transport), so the projection reads the same window the writes will consume.
  *
- * Every write here is keyed by the ad account the tool passes as
- * `filters.adAccountId` — `pinterest:${adAccountId}`, exactly as `consume`
- * receives it.
+ * Every write here draws on the session's bucket for the ad account the tool
+ * passes as `filters.adAccountId` — `pinterestAccountQuotaBucket`, the same
+ * key `consumePinterestAccountQuota` consumes (`rate-limit-keys.ts`). The
+ * buckets are the SESSION's (its Pinterest user's), so a tool resolves its
+ * session before projecting — on the dry run too — and another tenant's
+ * traffic neither fills them nor gets this batch refused.
  */
 
 import { assertBulkCapacity, McpError } from "@cesteral/shared";
@@ -32,7 +35,10 @@ import {
   PINTEREST_READ_TOKENS,
   PINTEREST_WRITE_TOKENS,
 } from "../../../services/pinterest/pinterest-service.js";
-import { getEntityConfig, type PinterestEntityType } from "./entity-mapping.js";
+import {
+  pinterestAccountQuotaBucket,
+  type PinterestQuotaScope,
+} from "../../../services/pinterest/rate-limit-keys.js";
 
 /** Dry-run validation error code for a batch the limiter cannot admit within budget. */
 export const BULK_EXCEEDS_CAPACITY = "BULK_EXCEEDS_CAPACITY";
@@ -43,30 +49,30 @@ export const pinterestBulkBuckets = {
    * `pinterest_adjust_bids`: `PinterestService.adjustBids`, sequential per ad
    * group — `getEntity` (1) then `updateEntity` (3).
    */
-  adjustBids: (adAccountId: string): BulkCapacityBucket[] => [
-    {
-      key: `pinterest:${adAccountId}`,
-      costPerItem: [PINTEREST_READ_TOKENS, PINTEREST_WRITE_TOKENS],
-    },
+  adjustBids: (scope: PinterestQuotaScope, adAccountId: string): BulkCapacityBucket[] => [
+    pinterestAccountQuotaBucket(scope, adAccountId, [
+      PINTEREST_READ_TOKENS,
+      PINTEREST_WRITE_TOKENS,
+    ]),
   ],
   /**
    * `pinterest_bulk_create_entities` / `_bulk_update_entities` /
    * `_bulk_update_status`: one `createEntity` / `updateEntity` (3) per item —
    * the batch endpoints are called with a one-item array each.
    */
-  perItemWrite: (adAccountId: string): BulkCapacityBucket[] => [
-    { key: `pinterest:${adAccountId}`, costPerItem: [PINTEREST_WRITE_TOKENS] },
+  perItemWrite: (scope: PinterestQuotaScope, adAccountId: string): BulkCapacityBucket[] => [
+    pinterestAccountQuotaBucket(scope, adAccountId, [PINTEREST_WRITE_TOKENS]),
   ],
   /**
    * `pinterest_delete_entity`: campaign / adGroup / ad are archived with one
-   * `updateEntity` (3) per id. A creative (Pin) is removed with a single
-   * 3-token consume for the whole batch (`deleteEntity`), which does not grow
-   * with the batch — no bucket.
+   * `updateEntity` (3) per id; a creative (Pin) is removed with one
+   * `DELETE /v5/pins/{pin_id}` (3) per id (`deleteEntity`). Either way one
+   * write per item — a multi-Pin delete used to draw a single write for the
+   * whole batch and project nothing (#236).
    */
-  delete: (adAccountId: string, entityType: string): BulkCapacityBucket[] =>
-    getEntityConfig(entityType as PinterestEntityType).removal === "archive"
-      ? [{ key: `pinterest:${adAccountId}`, costPerItem: [PINTEREST_WRITE_TOKENS] }]
-      : [],
+  delete: (scope: PinterestQuotaScope, adAccountId: string): BulkCapacityBucket[] => [
+    pinterestAccountQuotaBucket(scope, adAccountId, [PINTEREST_WRITE_TOKENS]),
+  ],
 };
 
 /**

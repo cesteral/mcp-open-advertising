@@ -29,6 +29,15 @@ import {
 interface PinterestUserAccountResponse {
   username: string;
   account_type: string;
+  /** `Account.id` — "User account ID" (openapi.json 5.28.0, `user_account/get`). */
+  id?: string;
+}
+
+/** What `GET /v5/user_account` tells an adapter about its user. */
+interface PinterestUserIdentity {
+  username: string;
+  /** Stable, non-secret user id; "" when the response carried none. */
+  id: string;
 }
 
 /**
@@ -39,13 +48,38 @@ export interface PinterestAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly adAccountId: string;
+  /**
+   * The rate-limit identity of this credential — see {@link pinterestQuotaUser}.
+   * Never the token.
+   */
+  readonly quotaUser: string;
+}
+
+/**
+ * The rate-limit identity of a Pinterest session: the user `id` that
+ * `GET /v5/user_account` returned in `validate()`. Unlike `userId` (the
+ * username, which a user can change) it is stable, and it is not a secret.
+ * Keys `pinterest:user:{quotaUser}…` — see `services/pinterest/rate-limit-keys.ts`.
+ *
+ * Every session is validated before its services are built (the bearer
+ * strategy, the env-token JWT paths and stdio all call `validate()` first), so
+ * the fallback is defensive: before validation, or if the response carried no
+ * id, it is a domain-separated one-way hash of the adapter's credential (the
+ * access token, or the initial refresh token), prefixed so it can never
+ * collide with a Pinterest id. Rate-limit errors echo the key, so the
+ * credential itself must never appear in it.
+ */
+export function pinterestQuotaUser(userIdentityId: string | undefined, credential: string): string {
+  if (userIdentityId) return userIdentityId;
+  return `token-${fingerprintCredentials("pinterest-quota-user", credential).slice(0, 16)}`;
 }
 
 /**
  * Validate a Pinterest access token against GET /v5/user_account and return
- * the authenticated user's username. Throws Unauthorized on any non-2xx response.
+ * the authenticated user's username and id. Throws Unauthorized on any non-2xx
+ * response.
  */
-async function fetchPinterestUserId(token: string, baseUrl: string): Promise<string> {
+async function fetchPinterestUser(token: string, baseUrl: string): Promise<PinterestUserIdentity> {
   const response = await fetchWithTimeout(`${baseUrl}/v5/user_account`, 10_000, undefined, {
     method: "GET",
     headers: {
@@ -63,7 +97,10 @@ async function fetchPinterestUserId(token: string, baseUrl: string): Promise<str
   }
 
   const data = (await response.json()) as PinterestUserAccountResponse;
-  return data.username ?? "unknown";
+  return {
+    username: data.username ?? "unknown",
+    id: data.id ? String(data.id) : "",
+  };
 }
 
 /**
@@ -73,6 +110,7 @@ async function fetchPinterestUserId(token: string, baseUrl: string): Promise<str
 export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
   private validated = false;
   private _userId = "";
+  private _userAccountId = "";
 
   constructor(
     private readonly accessToken: string,
@@ -88,13 +126,19 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
     return this._adAccountId;
   }
 
+  get quotaUser(): string {
+    return pinterestQuotaUser(this._userAccountId, this.accessToken);
+  }
+
   async getAccessToken(): Promise<string> {
     return this.accessToken;
   }
 
   async validate(): Promise<void> {
     if (this.validated) return;
-    this._userId = await fetchPinterestUserId(this.accessToken, this.baseUrl);
+    const user = await fetchPinterestUser(this.accessToken, this.baseUrl);
+    this._userId = user.username;
+    this._userAccountId = user.id;
     this.validated = true;
   }
 }
@@ -117,6 +161,8 @@ export class PinterestRefreshTokenAdapter
   implements PinterestAuthAdapter
 {
   private _userId = "";
+  private _userAccountId = "";
+  private readonly initialRefreshToken: string;
 
   constructor(
     credentials: PinterestRefreshCredentials,
@@ -163,6 +209,7 @@ export class PinterestRefreshTokenAdapter
         };
       },
     });
+    this.initialRefreshToken = credentials.refreshToken;
   }
 
   get userId(): string {
@@ -173,10 +220,16 @@ export class PinterestRefreshTokenAdapter
     return this._adAccountId;
   }
 
+  get quotaUser(): string {
+    return pinterestQuotaUser(this._userAccountId, this.initialRefreshToken);
+  }
+
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-    this._userId = await fetchPinterestUserId(token, this.baseUrl);
+    const user = await fetchPinterestUser(token, this.baseUrl);
+    this._userId = user.username;
+    this._userAccountId = user.id;
   }
 }
 

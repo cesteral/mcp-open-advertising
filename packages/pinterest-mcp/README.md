@@ -17,7 +17,7 @@ against a live account, so every governed tool is at `declared` verification.
 - **Per-session auth** via `PinterestBearerAuthStrategy`: a Bearer access token, or app credentials plus a refresh token (`X-Pinterest-App-Id` / `X-Pinterest-App-Secret` / `X-Pinterest-Refresh-Token`), always with `X-Pinterest-Advertiser-Id` naming the ad account
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via the shared `RateLimiter` (default 10/min per process; writes draw more than reads)
+- **Rate limiting** via the shared `RateLimiter` (default 10/min per process; writes draw more than reads). Buckets are per Pinterest user (the token's `/v5/user_account` id): one for the ad account's calls (Pins and media included), one for reporting and one for the rest, so one tenant's traffic never queues another's
 - **Structured logging** via Pino
 - The ad account is part of every URL path (`/v5/ad_accounts/{ad_account_id}/…`); nothing is injected into request bodies
 

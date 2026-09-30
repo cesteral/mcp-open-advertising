@@ -31,6 +31,7 @@ describe("pinterest_adjust_bids governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { quotaUser: "u-1" },
       adjustBids: vi.fn().mockResolvedValue({
         results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),

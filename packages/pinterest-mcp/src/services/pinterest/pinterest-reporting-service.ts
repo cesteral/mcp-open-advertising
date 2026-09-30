@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
+import { consumePinterestReportingQuota } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   fetchWithTimeout,
@@ -225,7 +226,7 @@ export class PinterestReportingService {
 
     const body = buildReportRequestBody(reportConfig);
 
-    await this.rateLimiter.consume(`pinterest:reporting`);
+    await consumePinterestReportingQuota(this.rateLimiter, this.httpClient);
 
     const result = (await this.httpClient.post(
       `/v5/ad_accounts/${adAccountId}/reports`,
@@ -247,7 +248,7 @@ export class PinterestReportingService {
     try {
       return await pollUntilComplete<ReportTaskCheckData>({
         fetchStatus: async () => {
-          await this.rateLimiter.consume(`pinterest:reporting`);
+          await consumePinterestReportingQuota(this.rateLimiter, this.httpClient);
           return (await this.httpClient.get(
             `/v5/ad_accounts/${adAccountId}/reports`,
             { token: taskId },
@@ -276,7 +277,7 @@ export class PinterestReportingService {
     taskId: string,
     context?: RequestContext
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
-    await this.rateLimiter.consume(`pinterest:reporting`);
+    await consumePinterestReportingQuota(this.rateLimiter, this.httpClient);
 
     const adAccountId = this.httpClient.accountId;
 

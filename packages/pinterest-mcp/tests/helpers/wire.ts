@@ -102,7 +102,7 @@ export function installFetchStub(routes: WireRoute[] = []): FetchStub {
       method: "GET",
       host: PINTEREST_HOST,
       path: "/v5/user_account",
-      response: { username: "wire-user", account_type: "BUSINESS" },
+      response: { id: "7000000000000000001", username: "wire-user", account_type: "BUSINESS" },
     },
     ...routes,
   ];

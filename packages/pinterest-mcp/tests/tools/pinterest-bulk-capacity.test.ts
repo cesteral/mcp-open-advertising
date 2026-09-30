@@ -57,6 +57,7 @@ const ACCOUNT = "549755885175";
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `68719476${i}`);
 
 let http: {
+  quotaUser: string;
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
   patch: ReturnType<typeof vi.fn>;
@@ -96,6 +97,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
     rateLimiter.clear();
     const batchItem = { items: [{ data: { id: "x" }, exceptions: [] }] };
     http = {
+      quotaUser: "u-1",
       // getEntity requires the returned id to be the one asked for.
       get: vi.fn().mockImplementation(async (path: string) => ({
         id: decodeURIComponent(path.split("/").pop() ?? ""),
@@ -120,7 +122,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
     ]);
   });
 
-  describe("pinterest_bulk_update_status (3 tokens/item on pinterest:${adAccountId})", () => {
+  describe("pinterest_bulk_update_status (3 tokens/item on the account bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({
         entityType: "campaign",
@@ -136,7 +138,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
 
     it("counts tokens already consumed on the same account key only", async () => {
       // A saturated window on another account does not constrain this one…
-      await rateLimiter.consume("pinterest:another-account", 10);
+      await rateLimiter.consume("pinterest:user:u-1:account:another-account", 10);
       await expect(bulkUpdateStatusLogic(input(3), ctx, sdk)).resolves.toMatchObject({
         successCount: 3,
       });
@@ -269,11 +271,19 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
       expect(result.dryRun?.validationErrors[0]?.code).toBe("BULK_EXCEEDS_CAPACITY");
     });
 
-    it("creative (Pin DELETE) is one 3-token consume for the whole batch — not refused", async () => {
-      const result = await deleteEntityLogic(input("creative", 20), ctx, sdk);
-      expect(http.delete).toHaveBeenCalledTimes(20);
-      expect(rateLimiter.getRemainingTokens(`pinterest:${ACCOUNT}`)).toBe(7);
-      expect(result.succeededCount).toBe(20);
+    // A Pin batch used to draw one 3-token consume for the whole batch, so 20
+    // DELETEs spent 3 tokens and were never refused (#236). Each DELETE is now
+    // one write, projected like an archive batch.
+    it("creative (one 3-token Pin DELETE per id): refuses 20 before confirmation and HTTP", async () => {
+      await expectRefused(deleteEntityLogic(input("creative", 20), ctx, sdk), 20, 9);
+      expect(http.delete).not.toHaveBeenCalled();
+    });
+
+    it("creative: a batch that fits proceeds, drawing one write per DELETE", async () => {
+      const result = await deleteEntityLogic(input("creative", 3), ctx, sdk);
+      expect(http.delete).toHaveBeenCalledTimes(3);
+      expect(rateLimiter.getRemainingTokens(`pinterest:user:u-1:account:${ACCOUNT}`)).toBe(1);
+      expect(result.succeededCount).toBe(3);
     });
   });
 });

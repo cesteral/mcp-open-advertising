@@ -130,13 +130,18 @@ export async function deleteEntityLogic(
 
   const removal = removalFor(input.entityType);
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+
   if (input.dry_run === true) {
     const dryRun = buildBulkEffectDryRun(
       input,
       pinterestBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.entityIds.length,
-        pinterestBulkBuckets.delete(input.adAccountId, input.entityType),
+        pinterestBulkBuckets.delete(pinterestService.quotaScope, input.adAccountId),
         "entityIds"
       )
     );
@@ -158,7 +163,6 @@ export async function deleteEntityLogic(
   // Scope-check BEFORE the capacity check and the confirmation prompt, so a
   // user is never asked to confirm a call that then fails on an account
   // mismatch (fleet review 2026-09, pinterest #24).
-  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
@@ -166,7 +170,7 @@ export async function deleteEntityLogic(
   assertPinterestBulkCapacity(
     TOOL_NAME,
     input.entityIds.length,
-    pinterestBulkBuckets.delete(input.adAccountId, input.entityType)
+    pinterestBulkBuckets.delete(pinterestService.quotaScope, input.adAccountId)
   );
 
   const confirmed = await elicitBulkDeleteConfirmation({

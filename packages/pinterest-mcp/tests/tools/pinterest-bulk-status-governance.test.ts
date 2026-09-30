@@ -37,6 +37,7 @@ describe("pinterest_bulk_update_status governance contract (effect class)", () =
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { quotaUser: "u-1" },
       bulkUpdateStatus: vi.fn().mockResolvedValue({
         results: [
           { entityId: "1800111111111", success: true },

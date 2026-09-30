@@ -21,6 +21,7 @@ const mockHttpClient = {
   post: vi.fn(),
   get: vi.fn(),
   accountId: "ad-acct-123",
+  quotaUser: "u-1",
 };
 
 describe("PinterestReportingService", () => {
@@ -269,7 +270,7 @@ describe("PinterestReportingService", () => {
     await service.checkReportStatus("token-rl");
 
     expect(mockRateLimiter.consume).toHaveBeenCalledTimes(1);
-    expect(mockRateLimiter.consume).toHaveBeenCalledWith("pinterest:reporting");
+    expect(mockRateLimiter.consume).toHaveBeenCalledWith("pinterest:user:u-1:reporting", 1);
   });
 
   it("getReportBreakdowns sends breakdowns as targeting_types at the *_TARGETING level", async () => {
