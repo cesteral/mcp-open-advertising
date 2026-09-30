@@ -2,16 +2,20 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Hermetic check of every default GAQL SELECT field against the pinned API
+ * Hermetic check of GAQL fields and create payloads against the pinned API
  * version's schema, taken from Google's own Discovery document.
  *
  * All HTTP in this package's suite is mocked, so nothing else notices a field
  * the API no longer has. That is how `campaign.start_date` / `end_date`
  * (removed in v23 in favour of `start_date_time` / `end_date_time`) shipped:
  * the whole campaign SELECT fails upstream once one field is unrecognized.
+ * `metrics.video_views`, `metrics.video_view_rate` and `metrics.quality_score`
+ * sat in the reference resources the same way, naming fields that no
+ * supported version has.
  *
- * The fixture is an extract of https://googleads.googleapis.com/$discovery/rest?version=v23
- * (property names only). Regenerate it when the API version is bumped.
+ * The fixture is written by `scripts/extract-discovery.ts` for the version in
+ * src/config/index.ts. Regenerate it (`pnpm run extract:discovery`) when the
+ * version is bumped; the first test fails until you do.
  */
 
 import { readFileSync } from "node:fs";
@@ -28,23 +32,19 @@ import {
 } from "../../src/mcp-server/tools/utils/entity-mapping.js";
 import { createEntityTool } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 import { entityExampleAllResource } from "../../src/mcp-server/resources/definitions/entity-examples.resource.js";
+import { collectGaqlFieldRefs, snakeToCamel } from "../../scripts/lib/gaql-field-refs.js";
 
 interface DiscoveryExtract {
-  resources: Record<string, string>;
+  _provenance: { version: string; revision: string };
+  resources: Record<string, string | null>;
   schemas: Record<string, Record<string, string | null>>;
 }
 
+const HERE = dirname(fileURLToPath(import.meta.url));
 const extract = JSON.parse(
-  readFileSync(
-    join(
-      dirname(fileURLToPath(import.meta.url)),
-      "../fixtures/google-ads-v23-discovery-extract.json"
-    ),
-    "utf-8"
-  )
+  readFileSync(join(HERE, "../fixtures/google-ads-discovery-extract.json"), "utf-8")
 ) as DiscoveryExtract;
-
-const snakeToCamel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+const VERSION = extract._provenance.version;
 
 /** Resolve `resource.field.sub_field` through the extract; returns an error string or null. */
 function resolveGaqlField(field: string): string | null {
@@ -61,13 +61,23 @@ function resolveGaqlField(field: string): string | null {
   return null;
 }
 
+/** Fields src/ names only to say they were removed; they must stay unresolvable. */
+const NAMED_AS_REMOVED = new Set(["campaign.start_date", "campaign.end_date"]);
+/** Placeholders in GAQL syntax templates (`SELECT metrics.metric1, ...`). */
+const PLACEHOLDERS = new Set(["metrics.metric1", "segments.segment1"]);
+
 function selectedFields(query: string): string[] {
   const match = /^SELECT (.+?) FROM /.exec(query);
   if (!match) throw new Error(`not a SELECT: ${query}`);
   return match[1].split(",").map((f) => f.trim());
 }
 
-describe("default GAQL SELECT fields exist in the v23 Discovery schema", () => {
+describe(`GAQL fields exist in the ${VERSION} Discovery schema`, () => {
+  it("the extract matches the version src/config pins", () => {
+    const config = readFileSync(join(HERE, "../../src/config/index.ts"), "utf-8");
+    expect(/googleads\.googleapis\.com\/(v\d+)/.exec(config)?.[1]).toBe(VERSION);
+  });
+
   for (const entityType of getEntityTypeEnum() as GAdsEntityType[]) {
     it(`${entityType}: every list/get field resolves`, () => {
       const fields = new Set([
@@ -100,6 +110,23 @@ describe("default GAQL SELECT fields exist in the v23 Discovery schema", () => {
       "campaign.contains_eu_political_advertising"
     );
   });
+
+  it("every GAQL field named anywhere in src/ resolves (descriptions, prompts, resources)", () => {
+    const refs = collectGaqlFieldRefs(
+      join(HERE, "../../src"),
+      new Set(Object.keys(extract.resources))
+    );
+    expect(refs.size).toBeGreaterThan(50);
+    const unresolved = [...refs]
+      .filter(([field]) => !NAMED_AS_REMOVED.has(field) && !PLACEHOLDERS.has(field))
+      .map(([field, files]) => ({ field, files, error: resolveGaqlField(field) }))
+      .filter((r) => r.error !== null);
+    expect(unresolved).toEqual([]);
+  });
+
+  it("each field named as removed is still absent (drop it from the list once the text goes)", () => {
+    for (const field of NAMED_AS_REMOVED) expect(resolveGaqlField(field)).not.toBeNull();
+  });
 });
 
 /** mutate-JSON `data` keys for an entity type → the Discovery resource schema they must exist on. */
@@ -114,7 +141,7 @@ function unknownDataKeys(entityType: string, data: Record<string, unknown>): str
   return Object.keys(data).filter((key) => !(key in schema));
 }
 
-describe("documented create payloads use v23 field names", () => {
+describe(`documented create payloads use ${VERSION} field names`, () => {
   it("gads_create_entity inputExamples: every data key exists on the resource", () => {
     const checked = createEntityTool.inputExamples.filter(
       (ex) => MUTATE_SCHEMA_BY_ENTITY[ex.input.entityType as string]
