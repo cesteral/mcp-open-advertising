@@ -185,9 +185,10 @@ describe("getCampaignDeliveryResponseFormatter", () => {
     expect(mockCalculateCTR).toHaveBeenCalledWith(2000, 100000);
     // Verify CPM calculation was called with spend and impressions
     expect(mockCalculateCPM).toHaveBeenCalledWith(5000, 100000);
-    // Verify formatMetricValue was called for both
+    // CTR goes through formatMetricValue; CPM is money in the advertiser
+    // currency, so it is printed without formatMetricValue's "$" unit.
     expect(mockFormatMetricValue).toHaveBeenCalledWith("ctr", 2.0);
-    expect(mockFormatMetricValue).toHaveBeenCalledWith("cpm", 50.0);
+    expect(mockFormatMetricValue).not.toHaveBeenCalledWith("cpm", expect.anything());
   });
 
   it("produces text content with correct structure", () => {
@@ -214,8 +215,12 @@ describe("getCampaignDeliveryResponseFormatter", () => {
     expect(content[0].text).toContain("2025-01-01 to 2025-01-31");
     expect(content[0].text).toContain("Impressions: 100,000");
     expect(content[0].text).toContain("Clicks: 2,000");
-    expect(content[0].text).toContain("Spend: $5000.00");
-    expect(content[0].text).toContain("Revenue: $15000.00");
+    // Fleet review dbm #15: amounts are in the advertiser currency
+    // (METRIC_*_ADVERTISER), which is not always dollars.
+    expect(content[0].text).toContain("money in the advertiser currency");
+    expect(content[0].text).toContain("Spend: 5000.00");
+    expect(content[0].text).toContain("Revenue: 15000.00");
+    expect(content[0].text).not.toContain("$");
     expect(content[0].text).toContain("Conversions: 50");
   });
 });

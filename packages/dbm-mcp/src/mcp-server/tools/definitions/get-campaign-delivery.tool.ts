@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
+import { refineDateOrder } from "../../../utils/date.js";
 import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
 const TOOL_NAME = "dbm_get_campaign_delivery";
@@ -29,6 +30,7 @@ export const GetCampaignDeliveryInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .describe("End date in YYYY-MM-DD format"),
   })
+  .superRefine(refineDateOrder("startDate", "endDate"))
   .describe("Parameters for fetching campaign delivery metrics");
 
 /**
@@ -111,14 +113,14 @@ export function getCampaignDeliveryResponseFormatter(
       type: "text" as const,
       text: `Campaign ${input.campaignId} Delivery (${input.startDate} to ${input.endDate}):
 
-Delivery Metrics:
+Delivery Metrics (money in the advertiser currency):
 - Impressions: ${result.metrics.impressions.toLocaleString()}
 - Clicks: ${result.metrics.clicks.toLocaleString()}
 - CTR: ${formatMetricValue("ctr", ctr)}
-- Spend: $${result.metrics.spend.toFixed(2)}
-- CPM: ${formatMetricValue("cpm", cpm)}
+- Spend: ${result.metrics.spend.toFixed(2)}
+- CPM: ${cpm.toFixed(2)}
 - Conversions: ${result.metrics.conversions}
-- Revenue: $${result.metrics.revenue.toFixed(2)}
+- Revenue: ${result.metrics.revenue.toFixed(2)}
 `,
     },
   ];

@@ -6,12 +6,12 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
-import { daysBetween } from "../../../utils/date.js";
+import { daysBetween, refineDateOrder } from "../../../utils/date.js";
 
 const TOOL_NAME = "dbm_get_pacing_status";
 const TOOL_TITLE = "Get Pacing Status";
 const TOOL_DESCRIPTION =
-  "Get real-time pacing status for a campaign (actual vs expected delivery). Requires budget and flight dates as inputs.";
+  "Get pacing status for a campaign (actual vs expected delivery) from Bid Manager report data, which lags real time by hours. Requires budget and flight dates as inputs; amounts are in the caller's currency.";
 
 /**
  * Input schema
@@ -31,6 +31,7 @@ export const GetPacingStatusInputSchema = z
       .describe("Campaign flight end date (YYYY-MM-DD)"),
     currency: z.string().default("USD").describe("Currency code (default: USD)"),
   })
+  .superRefine(refineDateOrder("flightStartDate", "flightEndDate"))
   .describe("Parameters for checking campaign pacing status");
 
 /**
@@ -135,6 +136,9 @@ export function getPacingStatusResponseFormatter(
         : result.pacing.status === "BEHIND"
           ? "[BEHIND]"
           : "[CRITICAL]";
+  // Amounts are in the caller's `currency` (advertiser currency), not always
+  // dollars: print the ISO code rather than a hard-coded "$" (as ttd-mcp does).
+  const money = (amount: string) => `${amount} ${result.budget.currency}`;
 
   return [
     {
@@ -144,9 +148,9 @@ export function getPacingStatusResponseFormatter(
 ${statusEmoji} Status: ${result.pacing.status}
 
 Budget:
-• Total: $${result.budget.total.toLocaleString()}
-• Spent: $${result.budget.spent.toLocaleString()} (${result.pacing.actualSpendPercent.toFixed(1)}%)
-• Remaining: $${result.budget.remaining.toLocaleString()}
+• Total: ${money(result.budget.total.toLocaleString())}
+• Spent: ${money(result.budget.spent.toLocaleString())} (${result.pacing.actualSpendPercent.toFixed(1)}%)
+• Remaining: ${money(result.budget.remaining.toLocaleString())}
 
 Flight:
 • ${result.flight.startDate} to ${result.flight.endDate}
@@ -157,7 +161,7 @@ Pacing Analysis:
 • Expected Spend: ${result.pacing.expectedSpendPercent.toFixed(1)}%
 • Actual Spend: ${result.pacing.actualSpendPercent.toFixed(1)}%
 • Pacing Ratio: ${result.pacing.pacingRatio.toFixed(2)}x
-• Projected End Spend: $${result.pacing.projectedEndSpend.toFixed(2)}`,
+• Projected End Spend: ${money(result.pacing.projectedEndSpend.toFixed(2))}`,
     },
   ];
 }

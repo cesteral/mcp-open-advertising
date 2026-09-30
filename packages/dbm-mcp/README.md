@@ -1,39 +1,42 @@
 # @cesteral/dbm-mcp
 
-DBM MCP Server - Generic cross-platform reporting and metrics server.
+DBM MCP Server - DV360 reporting through the Bid Manager API v2.
 
 ## Purpose
 
-Read-only reporting server that provides delivery metrics, performance calculations, time-series data, and pacing status. Platform-agnostic design supports DV360, Google Ads, Meta, The Trade Desk, and Amazon DSP.
+Read-only reporting server for Display & Video 360: delivery metrics, performance calculations, time-series data, pacing status and custom Bid Manager queries. It covers the Bid Manager API only; entity management is in `@cesteral/dv360-mcp`.
+
+Every tool call creates a saved Bid Manager query, runs it, downloads the report and then deletes the query (best-effort). Report data lags real time by hours, and money is in the advertiser currency.
 
 ## Features
 
-- **Per-session Google auth** via `GoogleAuthAdapter` with `X-DV360-*` request headers
+- **Per-session Google auth** via `GoogleAuthAdapter` with `X-Google-*` request headers (`X-Google-Auth-Type`, `X-Google-Credentials`, or `X-Google-Client-Id` / `X-Google-Client-Secret` / `X-Google-Refresh-Token`)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class
 - **Structured logging** via Pino
-- **Read-only reporting** -- no write operations, no entity mutation
+- **Read-only reporting** -- no entity mutation; the saved query each call creates is deleted afterwards (best-effort)
 
 ## MCP Tools
 
 ### 1. `dbm_get_campaign_delivery`
 
-Fetch delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range.
+Fetch delivery metrics (impressions, clicks, spend, conversions, revenue) for a campaign within a date range.
 
 **Parameters:**
 
-- `campaignId` (string): Campaign ID
 - `advertiserId` (string): DV360 Advertiser ID
+- `campaignId` (string): Campaign ID
 - `startDate` (string): Start date (YYYY-MM-DD)
-- `endDate` (string): End date (YYYY-MM-DD)
+- `endDate` (string): End date (YYYY-MM-DD), not before `startDate`
 
 ### 2. `dbm_get_performance_metrics`
 
-Calculate performance KPIs (CPM, CTR, CPA, ROAS) from delivery data.
+Calculate performance KPIs (CPM, CTR, CPC, CPA, ROAS) from delivery data.
 
 **Parameters:**
 
+- `advertiserId` (string): DV360 Advertiser ID
 - `campaignId` (string): Campaign ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
@@ -44,31 +47,36 @@ Fetch time-series historical metrics for trend analysis.
 
 **Parameters:**
 
+- `advertiserId` (string): DV360 Advertiser ID
 - `campaignId` (string): Campaign ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
-- `granularity` (string, optional): "daily" or "hourly" (default: "daily")
+- `granularity` (string, optional): `daily`, `weekly` or `monthly` (default: `daily`)
 
 ### 4. `dbm_get_pacing_status`
 
-Get real-time pacing status for a campaign (actual vs expected delivery).
+Pacing status for a campaign (actual vs expected delivery) from Bid Manager report data.
 
 **Parameters:**
 
+- `advertiserId` (string): DV360 Advertiser ID
 - `campaignId` (string): Campaign ID
+- `budgetTotal` (number): Total campaign budget in advertiser currency
+- `flightStartDate` / `flightEndDate` (string): Flight dates (YYYY-MM-DD); a flight that has not started is refused
+- `currency` (string, optional): Currency code printed with amounts (default: `USD`)
 
 ### 5. `dbm_run_custom_query`
 
-Compose and execute a custom Bid Manager report with specified metrics, dimensions, and filters.
+Compose and execute a custom Bid Manager report with specified metrics, group-bys and filters.
 
 **Parameters:**
 
-- `reportType` (string): Report type
-- `timeRange` (object): Time range for the report
-- `metrics` (string[]): Metrics to include
-- `dimensions` (string[]): Dimensions for grouping
-- `filters` (object[], optional): Filter conditions
-- `advertiserId` (string): DV360 Advertiser ID
+- `reportType` (string, default `STANDARD`): Report type (see `report-types://all`)
+- `groupBys` (string[]): `FILTER_*` dimensions to group by
+- `metrics` (string[]): `METRIC_*` metrics to include
+- `filters` (object[], optional): `{ type, value }` filter conditions (e.g. `FILTER_ADVERTISER`)
+- `dateRange` (object): `{ preset }` (e.g. `LAST_7_DAYS`) or `{ startDate, endDate }`
+- `strictValidation` (boolean, default `true`): reject report types, filters and metrics missing from the bundled catalogue
 - `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `offset` paginates; `maxRows` caps page size (default 10/50; hard cap 200).
 
 ### 6. `dbm_run_custom_query_async`
@@ -81,7 +89,7 @@ Submit a custom Bid Manager report without waiting for completion (non-blocking)
 
 | Mode                       | Header                        | Description                                     |
 | -------------------------- | ----------------------------- | ----------------------------------------------- |
-| `google-headers` (default) | `X-DV360-*`                   | Google OAuth2 credentials via request headers   |
+| `google-headers` (default) | `X-Google-*`                  | Google OAuth2 credentials via request headers   |
 | `jwt`                      | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
 | `none`                     | —                             | No authentication (development only)            |
 
@@ -114,7 +122,7 @@ Set via `MCP_AUTH_MODE` environment variable.
 
 - Reports are async: create query → run query → poll status → fetch results
 - Report results are CSV-formatted; the server parses them into structured JSON
-- `advertiserId` is required for all reporting tools
+- `advertiserId` is required by every tool except `dbm_run_custom_query`, which filters through `filters`
 - Rate limits apply per Google Cloud project, not per advertiser
 - Read-only server — no entity mutation; use `dv360-mcp` for write operations
 
@@ -157,9 +165,8 @@ pnpm run lint
 See root `.env.example` for all required variables:
 
 - `DBM_MCP_PORT`: Server port (default: 3001)
-- `DBM_MCP_HOST`: Server host (default: 0.0.0.0)
+- `DBM_MCP_HOST`: Server host (default: `127.0.0.1`, or `0.0.0.0` when `NODE_ENV=production`; `MCP_HTTP_HOST` overrides)
 - `GCP_PROJECT_ID`: Google Cloud project ID
-- `BIGQUERY_DATASET_ID`: BigQuery dataset name
 
 ## Testing with MCP Inspector
 

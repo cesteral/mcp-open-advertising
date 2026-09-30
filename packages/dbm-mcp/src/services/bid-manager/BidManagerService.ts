@@ -20,6 +20,8 @@ import {
   ReportFailedError,
   ReportingError,
   mapReportingError,
+  McpError,
+  JsonRpcErrorCode,
   type ReportingErrorData,
   type RateLimiter,
 } from "@cesteral/shared";
@@ -295,8 +297,14 @@ export class BidManagerService {
       });
     } catch (error) {
       if (error instanceof ReportFailedError) {
-        const failed = error.status as ReportMetadata;
-        throw new ReportGenerationError(queryId, reportId, failed.status.format);
+        // v2 `ReportStatus` is { state, format, finishTime }: there is no
+        // failure-reason field, so say so rather than passing the file format
+        // off as the reason ("generation failed: CSV").
+        throw new ReportGenerationError(
+          queryId,
+          reportId,
+          "Bid Manager reported state FAILED (the v2 API returns no failure reason)"
+        );
       }
       throw error;
     }
@@ -662,6 +670,15 @@ export class BidManagerService {
     const today = getTodayString();
     const flightStartDate = params.flightStartDate;
     const flightEndDate = params.flightEndDate;
+
+    // A flight that has not started has nothing to pace, and querying
+    // [flightStart, today] would send a reversed date range.
+    if (flightStartDate > today) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `The flight starts on ${flightStartDate}, after today (${today} UTC); there is no delivery to pace yet.`
+      );
+    }
 
     // Determine the effective end date for metrics (either today or flight end, whichever is earlier)
     const effectiveEndDate = today < flightEndDate ? today : flightEndDate;

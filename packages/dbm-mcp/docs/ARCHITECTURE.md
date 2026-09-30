@@ -31,8 +31,8 @@ The **dbm-mcp** server is a production-grade MCP (Model Context Protocol) server
 
 - **DV360 Reporting**: Delivery metrics via Bid Manager API v2 (async report generation)
 - **Performance Analytics**: Calculate CPM, CTR, CPA, ROAS from report data
-- **Time-Series Data**: Historical metrics with configurable granularity (hourly, daily)
-- **Pacing Intelligence**: Real-time pacing status (actual vs expected delivery)
+- **Time-Series Data**: Historical metrics with configurable granularity (daily, weekly, monthly)
+- **Pacing Intelligence**: Pacing status (actual vs expected delivery) from report data, which lags real time by hours
 - **Read-Only Design**: No write operations, ensuring data integrity
 
 ### Technology Stack

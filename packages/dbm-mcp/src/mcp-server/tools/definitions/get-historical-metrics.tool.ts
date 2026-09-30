@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
+import { refineDateOrder } from "../../../utils/date.js";
 
 const TOOL_NAME = "dbm_get_historical_metrics";
 const TOOL_TITLE = "Get Historical Metrics";
@@ -31,6 +32,7 @@ export const GetHistoricalMetricsInputSchema = z
       .default("daily")
       .describe("Time series granularity (default: daily)"),
   })
+  .superRefine(refineDateOrder("startDate", "endDate"))
   .describe("Parameters for fetching historical metrics");
 
 /**
@@ -140,7 +142,7 @@ export function getHistoricalMetricsResponseFormatter(
     .slice(0, 5)
     .map(
       (point) =>
-        `  ${point.date}: ${point.metrics.impressions.toLocaleString()} impr, $${point.metrics.spend.toFixed(2)} spend`
+        `  ${point.date}: ${point.metrics.impressions.toLocaleString()} impr, ${point.metrics.spend.toFixed(2)} spend`
     )
     .join("\n");
 
@@ -152,7 +154,7 @@ export function getHistoricalMetricsResponseFormatter(
 Summary (${result.summary.dataPoints} data points, ${result.granularity}):
 • Total Impressions: ${result.summary.totalImpressions.toLocaleString()}
 • Total Clicks: ${result.summary.totalClicks.toLocaleString()}
-• Total Spend: $${result.summary.totalSpend.toFixed(2)}
+• Total Spend: ${result.summary.totalSpend.toFixed(2)} (advertiser currency)
 • Total Conversions: ${result.summary.totalConversions}
 
 Trend (first 5 periods):

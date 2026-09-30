@@ -878,6 +878,23 @@ describe("BidManagerService", () => {
       expect(error.code).not.toBe(-32004);
       expect(error.message).toContain("generation failed");
     });
+
+    // Fleet review dbm #14: v2 ReportStatus is { state, format, finishTime }
+    // (Discovery rev 20260923), so the report format is not a failure reason.
+    it("does not present the report format as the failure reason", async () => {
+      mockClient.queries.create.mockResolvedValue({ data: { queryId: "q-1" } });
+      mockClient.queries.run.mockResolvedValue({ data: { key: { reportId: "r-1" } } });
+      mockClient.queries.reports.get.mockResolvedValue({
+        data: { metadata: { status: { state: "FAILED", format: "CSV" } } },
+      });
+
+      const { error } = await settle(
+        service.executeQueryWithRetry(createQuerySpec(), { ...fastOptions, maxRetries: 1 })
+      );
+
+      expect(error.message).not.toContain("generation failed: CSV");
+      expect(error.message).toContain("returns no failure reason");
+    });
   });
 
   // =========================================================================
