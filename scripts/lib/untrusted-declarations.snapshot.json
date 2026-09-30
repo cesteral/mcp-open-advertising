@@ -307,7 +307,7 @@
       "contentBlocks": [0]
     },
     "dv360_get_ad_preview": {
-      "structuredPaths": ["$.creativeName"],
+      "structuredPaths": ["$.creativeName", "$.thirdPartyTag", "$.vastTagUrl", "$.reviewStatus"],
       "contentBlocks": [0]
     },
     "dv360_get_assigned_targeting": {
