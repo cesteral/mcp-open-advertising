@@ -8,6 +8,7 @@ import { RateLimiter } from "@cesteral/shared";
 import { CM360HttpClient } from "./cm360/cm360-http-client.js";
 import { CM360Service } from "./cm360/cm360-service.js";
 import { CM360ReportingService } from "./cm360/cm360-reporting-service.js";
+import { cm360QuotaUser } from "./cm360/quota-user.js";
 
 export interface CM360SessionConfig {
   baseUrl: string;
@@ -22,11 +23,19 @@ export function createSessionServices(
   authAdapter: GoogleAuthAdapter,
   config: CM360SessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter
+  rateLimiter: RateLimiter,
+  /** The session's credential fingerprint; keys the per-user rate limit. */
+  credentialFingerprint: string | undefined
 ): SessionServices {
   const httpClient = new CM360HttpClient(authAdapter, config.baseUrl, logger);
-  const cm360Service = new CM360Service(logger, rateLimiter, httpClient);
-  const cm360ReportingService = new CM360ReportingService(rateLimiter, httpClient, logger);
+  const quotaUser = cm360QuotaUser(credentialFingerprint);
+  const cm360Service = new CM360Service(logger, rateLimiter, httpClient, quotaUser);
+  const cm360ReportingService = new CM360ReportingService(
+    rateLimiter,
+    httpClient,
+    logger,
+    quotaUser
+  );
   return {
     cm360Service,
     cm360ReportingService,

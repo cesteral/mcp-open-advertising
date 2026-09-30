@@ -10,16 +10,17 @@ const mockContext: RequestContext = {
 
 describe("SA360 Validate Conversion", () => {
   describe("insert mode", () => {
-    it("should pass for a valid insert conversion with gclid", async () => {
+    it("should pass for a valid insert conversion with clickId + segmentationId", async () => {
       const result = await validateConversionLogic(
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
+            conversionId: "order-1",
             conversionTimestamp: "1700000000000",
             revenueMicros: "5000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
             type: "TRANSACTION",
           },
         },
@@ -35,6 +36,7 @@ describe("SA360 Validate Conversion", () => {
           mode: "insert",
           conversion: {
             clickId: "abc123",
+            conversionId: "order-2",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
             segmentationName: "My Floodlight Activity",
@@ -46,14 +48,14 @@ describe("SA360 Validate Conversion", () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it("should fail when neither clickId nor gclid is provided", async () => {
+    it("should fail when clickId is missing", async () => {
       const result = await validateConversionLogic(
         {
           mode: "insert",
           conversion: {
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -67,9 +69,9 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -83,10 +85,10 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "2024-01-15T10:00:00Z",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -100,9 +102,9 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -111,12 +113,12 @@ describe("SA360 Validate Conversion", () => {
       expect(result.errors).toContainEqual(expect.stringContaining("segmentationType"));
     });
 
-    it("should fail when neither segmentationName nor floodlightActivityId is provided", async () => {
+    it("should fail when neither segmentationName nor segmentationId is provided", async () => {
       const result = await validateConversionLogic(
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
           },
@@ -132,11 +134,11 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             revenueMicros: "five dollars",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -150,10 +152,10 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
             state: "INVALID_STATE",
           },
         },
@@ -163,22 +165,76 @@ describe("SA360 Validate Conversion", () => {
       expect(result.errors).toContainEqual(expect.stringContaining("state"));
     });
 
-    it("should warn when conversionId is set in insert mode", async () => {
+    it("should fail when conversionId is missing in insert mode (advertiser-provided, required by v2)", async () => {
       const result = await validateConversionLogic(
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
+            conversionTimestamp: "1700000000000",
+            segmentationType: "FLOODLIGHT",
+            segmentationId: "11111",
+          },
+        },
+        mockContext
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(expect.stringContaining("conversionId"));
+    });
+
+    it("should not warn when conversionId is set in insert mode", async () => {
+      const result = await validateConversionLogic(
+        {
+          mode: "insert",
+          conversion: {
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             conversionId: "conv_abc123",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
       );
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(expect.stringContaining("conversionId"));
+      expect(result.warnings.filter((w) => w.includes("conversionId"))).toEqual([]);
+    });
+
+    it("does not accept the non-v2 gclid / floodlightActivityId keys as click or segment", async () => {
+      const result = await validateConversionLogic(
+        {
+          mode: "insert",
+          conversion: {
+            gclid: "EAIaIQobChMI...",
+            conversionId: "order-1",
+            conversionTimestamp: "1700000000000",
+            segmentationType: "FLOODLIGHT",
+            floodlightActivityId: "11111",
+          } as any,
+        },
+        mockContext
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(expect.stringContaining("'clickId' is required"));
+      expect(result.errors).toContainEqual(expect.stringContaining("segmentationId"));
+    });
+
+    it("should fail when segmentationId is not numeric", async () => {
+      const result = await validateConversionLogic(
+        {
+          mode: "insert",
+          conversion: {
+            clickId: "EAIaIQobChMI...",
+            conversionId: "order-1",
+            conversionTimestamp: "1700000000000",
+            segmentationType: "FLOODLIGHT",
+            segmentationId: "purchase",
+          },
+        },
+        mockContext
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(expect.stringContaining("segmentationId"));
     });
 
     it("should warn when conversionTimestamp looks like seconds instead of millis", async () => {
@@ -186,10 +242,10 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "946684799999",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -202,11 +258,11 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "insert",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             currencyCode: "dollars",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -221,12 +277,12 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "update",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionId: "conv_abc123",
             conversionTimestamp: "1700000000000",
             revenueMicros: "10000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -240,10 +296,10 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "update",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         },
         mockContext
@@ -257,11 +313,11 @@ describe("SA360 Validate Conversion", () => {
         {
           mode: "update",
           conversion: {
-            gclid: "EAIaIQobChMI...",
+            clickId: "EAIaIQobChMI...",
             conversionId: "conv_abc123",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
             state: "REMOVED",
           },
         },

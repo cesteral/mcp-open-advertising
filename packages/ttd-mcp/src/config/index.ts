@@ -9,6 +9,7 @@ import {
   parseConfigWithSchema,
   getDefaultHost,
 } from "@cesteral/shared";
+import { findProductionEndpointsUnderSandbox, TTD_SANDBOX_HOST } from "./sandbox-guard.js";
 
 // Load .env file from package root
 loadDotEnv();
@@ -41,6 +42,19 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Report polling configuration
   ttdReportPollIntervalMs: z.number().int().min(1000).default(2000),
   ttdReportMaxPollAttempts: z.number().int().min(1).default(60),
+}).superRefine((config, ctx) => {
+  // An explicit base URL overrides the sandbox default. Refuse to start when
+  // that override points sandbox mode at production — see sandbox-guard.ts.
+  for (const { setting, url } of findProductionEndpointsUnderSandbox(config)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [setting === "TTD_API_BASE_URL" ? "ttdApiBaseUrl" : "ttdGraphqlUrl"],
+      message:
+        `TTD_USE_SANDBOX=true but ${setting}=${url} is a production host — writes would ` +
+        `spend real money. Unset ${setting} to use the sandbox default (${TTD_SANDBOX_HOST}), ` +
+        `or unset TTD_USE_SANDBOX to target production deliberately.`,
+    });
+  }
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

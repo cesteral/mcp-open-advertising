@@ -41,7 +41,14 @@ describe("MSAds long-tail governance contracts (effect class)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    msadsService = { executeOperation: vi.fn().mockResolvedValue({ ok: true }) };
+    // Batch writes (5th arg) get the service's per-item counts; reads get the raw response.
+    msadsService = {
+      executeOperation: vi.fn(async (...args: unknown[]) =>
+        args[4]
+          ? { response: { ok: true }, requested: 1, succeeded: 1, failed: 0, failures: [] }
+          : { ok: true }
+      ),
+    };
     mockResolveSessionServices.mockReturnValue({ msadsService });
   });
 
@@ -79,8 +86,22 @@ describe("MSAds long-tail governance contracts (effect class)", () => {
     );
     expect(exec.effect).toEqual({
       effectKind: "import_job_managed",
-      summary: { operation: "create" },
+      summary: {
+        operation: "create",
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        partial_success: false,
+      },
     });
+    // AddImportJobs → POST /ImportJobs with the PartialErrors mapping keyed on ImportJobIds.
+    expect(msadsService.executeOperation).toHaveBeenCalledWith(
+      "/ImportJobs",
+      { ImportJobs: [{ secret: 1 }] },
+      ctx,
+      "POST",
+      expect.objectContaining({ itemsField: "ImportJobs", idsField: "ImportJobIds" })
+    );
     expect(JSON.stringify(exec.effect?.summary)).not.toContain("secret");
     expect(() => ImportFromGoogleOutputSchema.parse(exec)).not.toThrow();
     expect(() => EffectResultSchema.parse(exec.effect)).not.toThrow();
@@ -105,6 +126,39 @@ describe("MSAds long-tail governance contracts (effect class)", () => {
     expect(() => ManageAdExtensionsOutputSchema.parse(exec)).not.toThrow();
   });
 
+  it.each([
+    ["setAssociations", "/AdExtensionsAssociations/Set", "POST", true],
+    ["deleteAssociations", "/AdExtensionsAssociations", "DELETE", true],
+    ["getAssociations", "/AdExtensionsAssociations/Query", "POST", false],
+  ] as const)(
+    "manage_ad_extensions %s → %s %s (documented REST route)",
+    async (operation, path, method, isBatchWrite) => {
+      await manageAdExtensionsLogic({ operation, data: { x: 1 } } as any, ctx, sdk);
+      const call = msadsService.executeOperation.mock.calls[0]!;
+      expect(call.slice(0, 4)).toEqual([path, { x: 1 }, ctx, method]);
+      expect(call[4] !== undefined).toBe(isBatchWrite);
+    }
+  );
+
+  it.each([
+    ["create", "/ImportJobs"],
+    ["getStatus", "/ImportJobs/QueryByIds"],
+    ["getResults", "/ImportResults/Query"],
+  ] as const)(
+    "import_from_google %s → POST %s (documented REST route)",
+    async (operation, path) => {
+      await importFromGoogleLogic({ operation, data: { ImportJobIds: [1] } } as any, ctx, sdk);
+      expect(msadsService.executeOperation.mock.calls[0]![0]).toBe(path);
+    }
+  );
+
+  it("import_from_google's create example matches GoogleImportJob (long account id, Name, CredentialId)", () => {
+    const job = (importFromGoogleTool.inputExamples[0]!.input.data as any).ImportJobs[0];
+    expect(typeof job.GoogleAccountId).toBe("number");
+    expect(job.Name).toEqual(expect.any(String));
+    expect(job.CredentialId).toEqual(expect.any(String));
+  });
+
   it("manage_criterions: dry_run previews with entity level; execute emits criterions_managed", async () => {
     const dry = await manageCriterionsLogic(
       { operation: "add", entityLevel: "campaign", data: { x: 1 }, dry_run: true } as any,
@@ -124,8 +178,29 @@ describe("MSAds long-tail governance contracts (effect class)", () => {
     );
     expect(exec.effect).toEqual({
       effectKind: "criterions_managed",
-      summary: { operation: "add", entity_level: "campaign" },
+      summary: {
+        operation: "add",
+        entity_level: "campaign",
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        partial_success: false,
+      },
     });
     expect(() => ManageCriterionsOutputSchema.parse(exec)).not.toThrow();
   });
+
+  it.each([
+    ["add", "campaign", "POST", "CampaignCriterions", "CampaignCriterionIds"],
+    ["update", "adGroup", "PUT", "AdGroupCriterions", undefined],
+    ["delete", "campaign", "DELETE", "CampaignCriterionIds", undefined],
+  ] as const)(
+    "manage_criterions %s (%s) runs the PartialErrors mapping over %s",
+    async (operation, entityLevel, method, itemsField, idsField) => {
+      await manageCriterionsLogic({ operation, entityLevel, data: { x: 1 } } as any, ctx, sdk);
+      const call = msadsService.executeOperation.mock.calls[0]!;
+      expect(call[3]).toBe(method);
+      expect(call[4]).toMatchObject({ itemsField, ...(idsField ? { idsField } : {}) });
+    }
+  );
 });

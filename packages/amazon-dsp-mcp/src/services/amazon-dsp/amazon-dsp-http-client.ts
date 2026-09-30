@@ -5,6 +5,11 @@ import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withAmazonDspApiSpan } from "../../utils/platform.js";
+import {
+  AMAZON_ADS_V1_HEADERS,
+  AMAZON_LEGACY_CLIENT_ID_HEADER,
+  isAmazonAdsV1Path,
+} from "./amazon-dsp-v1-api-contract.js";
 
 // Amazon DSP returns bare `{"message":"Too Many Requests"}` on 429 with NO
 // Retry-After header, so blind exponential retries just deepen the per-LwA-app
@@ -42,10 +47,10 @@ function buildAmazonDspNextAction(
     return "Renew the Amazon DSP access token via Login with Amazon (LWA) using the configured refresh token, then update AMAZON_DSP_ACCESS_TOKEN.";
   }
   if (status === 403) {
-    return "Verify the Amazon-Advertising-API-Scope (profileId) and ClientId headers correspond to a profile the user has access to. Use amazon_dsp_list_accounts to discover valid profileIds.";
+    return "Verify the Amazon-Advertising-API-Scope (profileId) and ClientId headers correspond to a profile the user has access to. Profile IDs come from Amazon's GET /v2/profiles (this server has no profile-listing tool); use amazon_dsp_list_advertisers to confirm the profile can see the expected DSP advertisers.";
   }
   if (status === 404) {
-    return "Verify the order/lineItem/creative ID with amazon_dsp_list_entities and the accountId with amazon_dsp_list_accounts.";
+    return "Verify the order/lineItem/creative ID with amazon_dsp_list_entities and the accountId (DSP advertiser ID) with amazon_dsp_list_advertisers.";
   }
   if (status === 429) {
     return "Amazon DSP per-LwA-app quota tripped. Amazon does not send Retry-After; wait at least 5 minutes before retrying, and reduce request rate. /dsp/orders, /dsp/lineItems, /dsp/creatives have particularly tight rolling-window limits.";
@@ -60,8 +65,12 @@ function buildAmazonDspNextAction(
  * retry with exponential backoff, and error parsing.
  *
  * Key Amazon DSP patterns:
- * - ALL requests require Amazon-Advertising-API-Scope: {profileId} header
- * - ALL requests require Amazon-Advertising-API-ClientId: {clientId} header (when available)
+ * - ALL requests carry Amazon-Advertising-API-Scope: {profileId}
+ * - The client ID header name depends on the API family: legacy `/dsp/*` and
+ *   DSP reporting use `Amazon-Advertising-API-ClientId`; Ads API v1
+ *   (`/adsApi/v1/*`) requires `Amazon-Ads-ClientId` (see
+ *   amazon-dsp-v1-api-contract.ts for the spec reference)
+ * - Per-call headers (e.g. `Amazon-Ads-AccountId`) are passed via `extraHeaders`
  * - Response is raw JSON (no TikTok-style { code: 0, data: ... } envelope)
  * - No DELETE endpoint — archive via PUT with { state: "ARCHIVED" }
  * - Offset pagination: startIndex + count query params
@@ -82,11 +91,15 @@ export class AmazonDspHttpClient {
     path: string,
     params?: Record<string, string>,
     context?: RequestContext,
-    accept?: string
+    accept?: string,
+    extraHeaders?: Record<string, string>
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
-    const headers = accept ? { Accept: accept } : undefined;
-    return this.executeRequest(url, context, { method: "GET", headers });
+    const headers: Record<string, string> = { ...extraHeaders };
+    if (accept) {
+      headers.Accept = accept;
+    }
+    return this.executeRequest(path, url, context, { method: "GET", headers });
   }
 
   /**
@@ -104,17 +117,20 @@ export class AmazonDspHttpClient {
    *                       (safe for non-DSP-entity paths like reporting).
    * @param accept      - Override Accept header. Defaults to contentType
    *                       (Amazon expects matching Accept on entity writes).
+   * @param extraHeaders - Per-call headers (e.g. `Amazon-Ads-AccountId`).
    */
   async post(
     path: string,
     data?: Record<string, unknown>,
     context?: RequestContext,
     accept?: string,
-    contentType?: string
+    contentType?: string,
+    extraHeaders?: Record<string, string>
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
     const headers: Record<string, string> = {
+      ...extraHeaders,
       "Content-Type": contentType ?? "application/json",
     };
     if (accept) {
@@ -123,7 +139,7 @@ export class AmazonDspHttpClient {
       headers.Accept = contentType;
     }
 
-    return this.executeRequest(url, context, {
+    return this.executeRequest(path, url, context, {
       method: "POST",
       headers,
       body,
@@ -150,7 +166,7 @@ export class AmazonDspHttpClient {
       headers.Accept = contentType;
     }
 
-    return this.executeRequest(url, context, {
+    return this.executeRequest(path, url, context, {
       method: "PUT",
       headers,
       body,
@@ -170,6 +186,7 @@ export class AmazonDspHttpClient {
   }
 
   private async executeRequest(
+    path: string,
     url: string,
     context?: RequestContext,
     options?: RequestInit
@@ -197,7 +214,11 @@ export class AmazonDspHttpClient {
           }
           const clientId = this.authAdapter.clientId;
           if (clientId) {
-            headers["Amazon-Advertising-API-ClientId"] = clientId;
+            headers[
+              isAmazonAdsV1Path(path)
+                ? AMAZON_ADS_V1_HEADERS.clientId
+                : AMAZON_LEGACY_CLIENT_ID_HEADER
+            ] = clientId;
           }
           return headers;
         },

@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
@@ -138,8 +139,14 @@ export async function uploadVideoLogic(
     context
   );
 
-  const fields: Record<string, string> = {};
-  if (input.videoName) fields.video_name = input.videoName;
+  // Per TikTok's AdUploadBody spec (official SDK): UPLOAD_BY_FILE requires
+  // `video_signature` = MD5 of the video bytes, and the library name field is
+  // `file_name` (there is no `video_name` request field).
+  const fields: Record<string, string> = {
+    upload_type: "UPLOAD_BY_FILE",
+    video_signature: createHash("md5").update(buffer).digest("hex"),
+  };
+  if (input.videoName) fields.file_name = input.videoName;
 
   const uploadResult = (await tiktokService.client.postMultipart(
     tiktokService.client.versionedPath("file/video/ad/upload/"),

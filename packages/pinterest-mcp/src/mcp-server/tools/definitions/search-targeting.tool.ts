@@ -6,30 +6,30 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { PINTEREST_TARGETING_TYPES } from "../../../services/pinterest/pinterest-service.js";
 
 const TOOL_NAME = "pinterest_search_targeting";
 const TOOL_TITLE = "Pinterest Search Targeting Options";
-const TOOL_DESCRIPTION = `Search Pinterest targeting options by keyword or browse by type.
+const TOOL_DESCRIPTION = `Search Pinterest targeting options of one type by keyword, or browse them.
 
-**Common targeting types:**
-- INTEREST_CATEGORY — Interest and hobby categories
-- BEHAVIOR — User behavior segments
-- HASHTAG — Pinterest hashtag interests
-- LOCATION — Geographic locations
-- LANGUAGE — Language targeting
+Reads \`GET /v5/resources/targeting/{targeting_type}\`. That endpoint has no search or count parameter, so the keyword match (case-insensitive, on option id and name) and the limit are applied by this server over the full option list.
 
-Use results to populate ad group targeting configurations.`;
+**Targeting types:** ${PINTEREST_TARGETING_TYPES.join(", ")}
+
+Use the returned ids in an ad group's \`targeting_spec\` (e.g. \`LOCATION\`, \`INTEREST\`).`;
 
 export const SearchTargetingInputSchema = z
   .object({
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingType: z
-      .string()
-      .describe("Type of targeting to search (e.g., INTEREST_CATEGORY, BEHAVIOR, HASHTAG)"),
+      .enum(PINTEREST_TARGETING_TYPES)
+      .describe("Pinterest targeting type to search (e.g., INTEREST, LOCATION, GEO)"),
     query: z
       .string()
       .optional()
-      .describe("Search keyword (optional — returns top options if omitted)"),
+      .describe(
+        "Keyword matched case-insensitively against option ids and names (optional — returns the first options if omitted)"
+      ),
     limit: z
       .number()
       .int()
@@ -61,16 +61,13 @@ export async function searchTargetingLogic(
   const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
-  const results = (await pinterestService.searchTargeting(
+  const list = await pinterestService.searchTargeting(
     input.targetingType,
     input.query,
     input.limit,
+    { adAccountId: input.adAccountId },
     context
-  )) as Record<string, unknown>[] | { list?: Record<string, unknown>[] };
-
-  const list = Array.isArray(results)
-    ? results
-    : ((results as { list?: Record<string, unknown>[] }).list ?? []);
+  );
 
   return {
     results: list,
@@ -103,19 +100,19 @@ export const searchTargetingTool = {
   },
   inputExamples: [
     {
-      label: "Search interest categories",
+      label: "Search interests",
       input: {
         adAccountId: "1234567890",
-        targetingType: "INTEREST_CATEGORY",
+        targetingType: "INTEREST",
         query: "gaming",
         limit: 20,
       },
     },
     {
-      label: "Browse behavior segments",
+      label: "Browse locations",
       input: {
         adAccountId: "1234567890",
-        targetingType: "BEHAVIOR",
+        targetingType: "LOCATION",
         limit: 30,
       },
     },

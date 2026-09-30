@@ -4,6 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  assertLinkedInBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
+import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -118,7 +124,15 @@ export async function adjustBidsLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = withBulkCapacityError(
+      buildAdjustBidsEffectDryRun(input.adjustments),
+      bulkCapacityDryRunError(
+        TOOL_NAME,
+        input.adjustments.length,
+        ONE_WRITE_PER_ITEM,
+        "adjustments"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -130,6 +144,11 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first PATCH. One 3-token linkedin:default write per item
+  // (LinkedInService.adjustBids → updateEntity; no read).
+  assertLinkedInBulkCapacity(TOOL_NAME, input.adjustments.length, ONE_WRITE_PER_ITEM);
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,

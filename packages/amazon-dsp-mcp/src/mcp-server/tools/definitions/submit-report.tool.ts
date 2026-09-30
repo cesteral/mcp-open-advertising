@@ -26,7 +26,7 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_submit_report";
 const TOOL_TITLE = "Submit Amazon DSP Report";
-const TOOL_DESCRIPTION = `Submit an Amazon DSP report (legacy /dsp/reports API) without waiting for completion.
+const TOOL_DESCRIPTION = `Submit an Amazon DSP report (DSP reports v3: POST /accounts/{accountId}/dsp/reports) without waiting for completion.
 
 Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll for completion (\`SUCCESS\` or \`FAILURE\`), then \`amazon_dsp_download_report\` to fetch results.
 
@@ -37,12 +37,18 @@ Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll
 
 Use \`amazon_dsp_get_report\` instead for a blocking convenience shortcut.
 
-**Report shape:** each \`type\` (CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE) is a fixed report category. CAMPAIGN supports breaking down by \`ORDER | LINE_ITEM | CREATIVE\` via \`dimensions\`. \`metrics\` is the list of metric names (impressions, totalCost, viewableImpressions, viewabilityRate, …) — sent to Amazon as a comma-separated string.
+**Report shape:** \`accountId\` is the DSP advertiser ID (from \`amazon_dsp_list_advertisers\`), not the profile ID. Each \`type\` (CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE) is a fixed report category. CAMPAIGN supports breaking down by \`ORDER | LINE_ITEM | CREATIVE\` via \`dimensions\`. \`metrics\` is the list of metric names (impressions, clickThroughs, totalCost, viewableImpressions, …).
 
 Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supported preset.`;
 
 export const SubmitReportInputSchema = z
   .object({
+    accountId: z
+      .string()
+      .min(1)
+      .describe(
+        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Used as the `{accountId}` segment of the report URL. Distinct from the profile ID."
+      ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -54,15 +60,13 @@ export const SubmitReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Start date (YYYY-MM-DD format, e.g. 2026-05-01). Max 95-day lookback. Required if datePreset not provided. Converted to YYYYMMDD for the upstream API."
+        "Start date (YYYY-MM-DD format, e.g. 2026-05-01). Max 95-day lookback. Required if datePreset not provided."
       ),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe(
-        "End date (YYYY-MM-DD format). Required if datePreset not provided. Converted to YYYYMMDD for the upstream API."
-      ),
+      .describe("End date (YYYY-MM-DD format). Required if datePreset not provided."),
     type: z
       .enum(AMAZON_DSP_REPORTING_CONTRACT.reportTypes)
       .describe(
@@ -78,7 +82,7 @@ export const SubmitReportInputSchema = z
       .array(z.string())
       .optional()
       .describe(
-        "Metric names to include (e.g. ['impressions', 'totalCost']). Joined to a comma-separated string upstream. Amazon will 422 with the authoritative invalid-list if any name is unknown."
+        "Metric names to include (e.g. ['impressions', 'totalCost']). Amazon will 422 with the authoritative invalid-list if any name is unknown."
       ),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
@@ -157,6 +161,7 @@ export async function submitReportLogic(
 
   const result = await amazonDspReportingService.submitReport(
     {
+      accountId: input.accountId,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
       type: input.type,
@@ -275,6 +280,7 @@ export const submitReportTool = {
     {
       label: "Daily order-level CAMPAIGN report, last 7 days",
       input: {
+        accountId: "577020615253975655",
         datePreset: "LAST_7_DAYS",
         type: "CAMPAIGN",
         dimensions: ["ORDER"],

@@ -1,3 +1,4 @@
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices } = vi.hoisted(() => ({
@@ -24,12 +25,30 @@ import {
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see gads-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityCheck = (
+  toolName: string,
+  customerId: string,
+  itemCount: number,
+  costPerItem: readonly number[]
+) => ({
+  rateLimiter: new RateLimiter(),
+  toolName,
+  itemCount,
+  buckets: [{ key: `gads:${customerId}`, costPerItem }],
+});
+
 describe("gads_adjust_bids governance contract (effect class)", () => {
-  let svc: { adjustBids: ReturnType<typeof vi.fn> };
+  let svc: {
+    adjustBids: ReturnType<typeof vi.fn>;
+    bulkCapacityCheck: typeof unlimitedBulkCapacityCheck;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      bulkCapacityCheck: unlimitedBulkCapacityCheck,
       adjustBids: vi.fn().mockResolvedValue({ results: [{ adGroupId: "ag-1", success: true }] }),
     };
     mockResolveSessionServices.mockReturnValue({ gadsService: svc });

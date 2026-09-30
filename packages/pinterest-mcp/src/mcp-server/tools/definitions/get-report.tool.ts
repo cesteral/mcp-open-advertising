@@ -25,8 +25,8 @@ const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads performance
 Follows the async polling pattern: submit task → poll until FINISHED → download CSV.
 This may take 30s–5 minutes depending on the data volume.
 
-**Common columns:** IMPRESSION_1, CLICKTHROUGH_1, SPEND_IN_DOLLAR, CTR, CPM, CPC, TOTAL_CONVERSIONS, REACH
-**Report types:** CAMPAIGN (default), AD_GROUP, AD, KEYWORD, ACCOUNT
+**Common columns:** IMPRESSION_1, CLICKTHROUGH_1, SPEND_IN_DOLLAR, CTR, CPM_IN_DOLLAR, ECPC_IN_DOLLAR, TOTAL_CONVERSIONS, TOTAL_IMPRESSION
+**Report types:** CAMPAIGN (default), AD_GROUP, AD (Pinterest level PIN_PROMOTION), KEYWORD, ACCOUNT (Pinterest level ADVERTISER)
 **Granularity:** DAY (default), TOTAL, HOUR, WEEK, MONTH`;
 
 export const GetReportInputSchema = z
@@ -203,7 +203,7 @@ export const getReportTool = {
       input: {
         adAccountId: "1234567890",
         type: "CAMPAIGN",
-        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM"],
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM_IN_DOLLAR"],
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
       },

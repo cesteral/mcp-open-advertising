@@ -37,13 +37,54 @@ export class BidManagerError extends McpError {
 }
 
 /**
+ * HTTP status of an upstream failure, read off a gaxios/googleapis error
+ * (`status` or `response.status`) or anything in its `cause` chain.
+ */
+export function upstreamHttpStatus(error: unknown): number | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth++) {
+    const e = current as {
+      status?: unknown;
+      httpStatus?: unknown;
+      response?: { status?: unknown };
+      cause?: unknown;
+    };
+    for (const candidate of [e.httpStatus, e.status, e.response?.status]) {
+      if (typeof candidate === "number" && candidate >= 100 && candidate <= 599) return candidate;
+    }
+    current = e.cause;
+  }
+  return undefined;
+}
+
+/** JSON-RPC code that carries the meaning of an upstream HTTP status to the client. */
+export function jsonRpcCodeForHttpStatus(status: number | undefined): JsonRpcErrorCode {
+  if (status === undefined) return JsonRpcErrorCode.InternalError;
+  if (status === 400) return JsonRpcErrorCode.InvalidParams;
+  if (status === 401) return JsonRpcErrorCode.Unauthorized;
+  if (status === 403) return JsonRpcErrorCode.Forbidden;
+  if (status === 404) return JsonRpcErrorCode.NotFound;
+  if (status === 409) return JsonRpcErrorCode.Conflict;
+  if (status === 429) return JsonRpcErrorCode.RateLimited;
+  if (status >= 500) return JsonRpcErrorCode.ServiceUnavailable;
+  return JsonRpcErrorCode.InternalError;
+}
+
+/**
  * Error when query creation fails
+ *
+ * Carries the upstream HTTP status (when there was one) both as `httpStatus`
+ * and as the JSON-RPC code, so a 400 invalid-query reaches the client as
+ * InvalidParams with Google's own message rather than a generic internal error.
  */
 export class QueryCreationError extends BidManagerError {
   constructor(message: string, cause?: unknown) {
+    const httpStatus = upstreamHttpStatus(cause);
     super(`Failed to create Bid Manager query: ${message}`, {
-      code: JsonRpcErrorCode.InternalError,
+      code: jsonRpcCodeForHttpStatus(httpStatus),
+      httpStatus,
       cause,
+      data: httpStatus !== undefined ? { httpStatus } : undefined,
     });
     this.name = "QueryCreationError";
   }
@@ -56,10 +97,12 @@ export class QueryExecutionError extends BidManagerError {
   public readonly queryId: string;
 
   constructor(queryId: string, message: string, cause?: unknown) {
+    const httpStatus = upstreamHttpStatus(cause);
     super(`Failed to execute query ${queryId}: ${message}`, {
-      code: JsonRpcErrorCode.InternalError,
+      code: jsonRpcCodeForHttpStatus(httpStatus),
+      httpStatus,
       cause,
-      data: { queryId },
+      data: { queryId, ...(httpStatus !== undefined ? { httpStatus } : {}) },
     });
     this.name = "QueryExecutionError";
     this.queryId = queryId;
@@ -155,7 +198,10 @@ export class CredentialsNotConfiguredError extends BidManagerError {
  * Error when all retry attempts are exhausted
  *
  * Thrown after the maximum number of query retries have been attempted
- * without successful completion.
+ * without successful completion. Only retryable failures get this far (see
+ * `classifyReportError`); the last one's message is part of this error's
+ * message and its JSON-RPC code is kept, because `cause` never reaches the
+ * client. `Timeout` is used only when the report was still running.
  */
 export class RetryExhaustedError extends BidManagerError {
   public readonly queryId?: string;
@@ -174,15 +220,25 @@ export class RetryExhaustedError extends BidManagerError {
   ) {
     const queryInfo = options?.queryId ? ` for query ${options.queryId}` : "";
     const statusInfo = options?.lastStatus ? ` (last status: ${options.lastStatus})` : "";
+    const lastError = options?.lastError;
+    const causeInfo = lastError?.message ? `: ${lastError.message}` : "";
+    const code =
+      options?.lastStatus === "TIMEOUT"
+        ? JsonRpcErrorCode.Timeout
+        : lastError instanceof McpError
+          ? lastError.code
+          : JsonRpcErrorCode.InternalError;
 
-    super(`All ${attemptCount} retry attempts exhausted${queryInfo}${statusInfo}`, {
-      code: JsonRpcErrorCode.Timeout,
-      cause: options?.lastError,
+    super(`All ${attemptCount} retry attempts exhausted${queryInfo}${statusInfo}${causeInfo}`, {
+      code,
+      cause: lastError,
       data: {
         attemptCount,
         queryId: options?.queryId,
         reportId: options?.reportId,
         lastStatus: options?.lastStatus,
+        lastErrorMessage: lastError?.message,
+        ...(lastError instanceof McpError ? { lastErrorCode: lastError.code } : {}),
       },
     });
     this.name = "RetryExhaustedError";

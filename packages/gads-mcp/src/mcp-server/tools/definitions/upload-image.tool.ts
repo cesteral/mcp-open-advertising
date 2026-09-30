@@ -241,14 +241,14 @@ export const uploadImageTool = {
       writeClass: "effect",
       executableArgsExclude: ["dry_run"],
       platform: "google_ads",
-      contractPlatformSlug: "gads",
+      contractPlatformSlug: "google_ads",
       contractToolSlug: "upload_image",
       operation: ["upload"],
       // Effect-class: creates an asset with no canonical entity snapshot.
       entityKinds: [],
       entityIdArgs: ["customerId"],
       schemaVersion: 1,
-      contractId: "gads.upload_image.v1",
+      contractId: "google_ads.upload_image.v1",
       // `dry_run` = symbolic validate + symbolic effect projection. Google Ads
       // has no native asset-upload validate/preview, so both axes are symbolic.
       supportsDryRun: true,

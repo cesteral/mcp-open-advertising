@@ -3,8 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import type { MsAdsEntityType } from "../utils/entity-mapping.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -24,33 +26,54 @@ import type {
 
 const TOOL_NAME = "msads_adjust_bids";
 const TOOL_TITLE = "Adjust Microsoft Ads Bids";
-const TOOL_DESCRIPTION = `Batch adjust bids for Microsoft Advertising keywords or ad groups using a safe read-modify-write pattern.
+const TOOL_DESCRIPTION = `Batch adjust bids for Microsoft Advertising keywords or ad groups.
 
-Reads current entities, applies bid changes, and updates. This prevents overwriting other fields.`;
+Reads the entities first to confirm they exist, then sends a minimal Update carrying only
+each entity's Id and bid field as a Bid object (\`{ "Amount": newBid }\`), so no other
+field is touched. Keyword bids (\`Bid\`) need \`scope.adGroupId\`; ad group bids
+(\`CpcBid\`, \`CpmBid\`, \`CpvBid\`) need \`scope.campaignId\` — the parent is sent
+as the request-body AdGroupId / CampaignId. All entities in one call share that parent.`;
+
+/** Entity types that carry a Bid-object field (`keyword.md` Bid; `adgroup.md` CpcBid/CpmBid/CpvBid). */
+const BID_ENTITY_TYPES = ["keyword", "adGroup"] as const;
+
+/** The scope key each entity type's Update needs as its request-body parent. */
+const REQUIRED_SCOPE: Record<(typeof BID_ENTITY_TYPES)[number], "campaignId" | "adGroupId"> = {
+  keyword: "adGroupId",
+  adGroup: "campaignId",
+};
 
 export const AdjustBidsInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Entity type (typically 'keyword' or 'adGroup')"),
+    entityType: z.enum(BID_ENTITY_TYPES).describe("Entity type: 'keyword' or 'adGroup'"),
     scope: z
       .object({
         campaignId: z
           .string()
           .optional()
-          .describe("CampaignId required when adjusting ad group bids"),
-        adGroupId: z.string().optional().describe("AdGroupId required when adjusting keyword bids"),
+          .describe(
+            "Required for adGroup: the campaign that owns the ad groups (read + request-body CampaignId)"
+          ),
+        adGroupId: z
+          .string()
+          .optional()
+          .describe(
+            "Required for keyword: the ad group that owns the keywords (read + request-body AdGroupId)"
+          ),
       })
       .optional()
-      .describe(
-        "Additional query context required by Microsoft Advertising read-before-write operations"
-      ),
+      .describe("Parent of the entities being adjusted, used for the read and the Update body"),
     adjustments: z
       .array(
         z.object({
           entityId: z.string().describe("Entity ID"),
-          bidField: z.string().describe("Bid field name (e.g., Bid, CpcBid)"),
-          newBid: z.number().positive().describe("New bid amount"),
+          bidField: z
+            .string()
+            .describe("Bid field name: Bid (keyword); CpcBid, CpmBid or CpvBid (adGroup)"),
+          newBid: z
+            .number()
+            .positive()
+            .describe("New bid amount in account currency (sent as { Amount: newBid })"),
         })
       )
       .min(1)
@@ -101,7 +124,7 @@ export async function adjustBidsLogic(
   };
 
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments, input.entityType);
+    const dryRun = buildAdjustBidsEffectDryRun(input);
     return {
       confirmed: true,
       result: {},
@@ -111,6 +134,14 @@ export async function adjustBidsLogic(
       dryRun,
       dispatchedCapability,
     };
+  }
+
+  const scopeErrors = validateScope(input);
+  if (scopeErrors.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bid adjustment: ${scopeErrors.map((e) => e.message).join("; ")}`
+    );
   }
 
   const confirmed = await elicitBidChangeConfirmation({
@@ -142,18 +173,34 @@ export async function adjustBidsLogic(
     queryParams.AdGroupId = Number(input.scope.adGroupId);
   }
 
-  const result = (await msadsService.adjustBids(
+  const { response, results } = await msadsService.adjustBids(
     input.entityType as MsAdsEntityType,
     input.adjustments,
     queryParams,
     context
-  )) as Record<string, unknown>;
+  );
+
+  // Microsoft Ads returns HTTP 200 even when bids are rejected (PartialErrors),
+  // and entities missing on read are never sent. The service resolves both to a
+  // per-adjustment outcome; report those instead of blanket success. The raw
+  // Update response is kept as-is and `adjustmentResults` is added beside it —
+  // its PartialErrors[].Index counts only the entities actually submitted, so it
+  // cannot be read against `adjustments` on its own.
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.length - succeeded;
+  const result: Record<string, unknown> = {
+    ...(response && typeof response === "object" ? (response as Record<string, unknown>) : {}),
+    adjustmentResults: results,
+  };
 
   const effect: EffectResult = {
     effectKind: "bids_adjusted",
     summary: {
       entity_label: input.entityType,
       requested: input.adjustments.length,
+      succeeded,
+      failed,
+      partial_success: succeeded > 0 && failed > 0,
     },
   };
 
@@ -168,17 +215,30 @@ export async function adjustBidsLogic(
   };
 }
 
+/** The parent the Update body needs (`updatekeywords.md` AdGroupId, `updateadgroups.md` CampaignId). */
+function validateScope(input: AdjustBidsInput): DryRunValidationError[] {
+  const key = REQUIRED_SCOPE[input.entityType];
+  const value = input.scope?.[key];
+  if (typeof value === "string" && value.trim().length > 0) return [];
+  return [
+    {
+      code: "MISSING_PARENT_ID",
+      message: `scope.${key} is required for entityType '${input.entityType}' — Microsoft Ads needs it to read the entities and as the Update request-body ${key === "adGroupId" ? "AdGroupId" : "CampaignId"}`,
+      field: `scope.${key}`,
+    },
+  ];
+}
+
 /**
  * Symbolic effect dry-run for `adjust_bids`. Validates the batch (each `newBid`
- * is a positive number) and projects the would-be effect — a bid adjustment
- * over N entities of `entityType`. Microsoft Advertising has no native bid
- * validate/preview wired here, so both axes are symbolic. Pure (no I/O).
+ * is a positive number; the required parent scope is present) and projects the
+ * would-be effect — a bid adjustment over N entities of `entityType`.
+ * Microsoft Advertising has no native bid validate/preview wired here, so both
+ * axes are symbolic. Pure (no I/O).
  */
-function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"],
-  entityType: string
-): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildAdjustBidsEffectDryRun(input: AdjustBidsInput): EffectDryRunResult {
+  const { adjustments, entityType } = input;
+  const validationErrors: DryRunValidationError[] = [...validateScope(input)];
   adjustments.forEach((a, i) => {
     if (!Number.isFinite(a.newBid) || a.newBid <= 0) {
       validationErrors.push({
@@ -232,10 +292,24 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
       },
     ];
   }
+  const itemResults = Array.isArray(result.result.adjustmentResults)
+    ? (result.result.adjustmentResults as Array<{
+        entityId: string;
+        success: boolean;
+        error?: string;
+      }>)
+    : undefined;
+  const succeeded = itemResults
+    ? itemResults.filter((r) => r.success).length
+    : result.adjustmentCount;
+  const failures = itemResults ? itemResults.filter((r) => !r.success) : [];
+  const failureLines = failures.length
+    ? `\n\nFailed:\n${failures.map((r) => `  ${r.entityId}: ${r.error ?? "unknown error"}`).join("\n")}`
+    : "";
   return [
     {
       type: "text" as const,
-      text: `Adjusted ${result.adjustmentCount} ${result.entityType} bids\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Adjusted ${succeeded}/${result.adjustmentCount} ${result.entityType} bids${failureLines}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

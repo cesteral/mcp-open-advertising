@@ -84,7 +84,8 @@ Input: {
     "advertisingChannelType": "SEARCH",
     "status": "PAUSED",
     "campaignBudget": "customers/${customerId}/campaignBudgets/{budgetId}",
-    "startDate": "2025-03-01",
+    "containsEuPoliticalAdvertising": "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+    "startDateTime": "2025-03-01 00:00:00",
     "networkSettings": {
       "targetGoogleSearch": true,
       "targetSearchNetwork": true,

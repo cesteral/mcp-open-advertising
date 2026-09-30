@@ -35,10 +35,10 @@ Conversions use the **legacy DoubleClick Search v2 API**, separate from the Repo
 | Field | Type | Description |
 |-------|------|-------------|
 | clickId OR criterionId | string | Click identifier (gclid preferred) |
-| conversionId | string | Unique conversion identifier |
+| conversionId | string | Advertiser-chosen ID, unique within the request; (conversionId, conversionTimestamp) unique within the advertiser |
 | conversionTimestamp | string | Unix epoch in **milliseconds** |
 | segmentationType | string | Always "FLOODLIGHT" |
-| segmentationName | string | Floodlight activity name (exact match) |
+| segmentationName OR segmentationId | string | Floodlight activity name (exact match) or numeric Floodlight activity ID |
 | type | string | "TRANSACTION" or "ACTION" |
 
 ## Optional Fields

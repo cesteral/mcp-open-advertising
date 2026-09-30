@@ -32,6 +32,10 @@ describe("msads-mcp cesteral.* annotations (round 4)", () => {
     expect(cesteral.readPartner.argMap).toEqual({
       entityType: "entityType",
       entityId: "entityId",
+      accountId: "accountId",
+      campaignId: "campaignId",
+      adGroupId: "adGroupId",
+      adExtensionType: "adExtensionType",
     });
     // R4-U5: symbolic-apply dry-run + before/after capture.
     expect(cesteral.supportsDryRun).toBe(true);

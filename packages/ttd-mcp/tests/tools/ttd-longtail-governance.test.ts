@@ -8,6 +8,7 @@
 // symbolic `EffectDryRunResult` and performs no API call; the effect summary
 // never carries raw query/mutation/data payloads.
 
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices } = vi.hoisted(() => ({
@@ -74,12 +75,26 @@ function effectAnnotation(tool: { annotations: { cesteral?: any } }) {
   return tool.annotations.cesteral;
 }
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see ttd-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityCheck = (
+  toolName: string,
+  itemCount: number,
+  costPerItem: readonly number[]
+) => ({
+  rateLimiter: new RateLimiter(),
+  toolName,
+  itemCount,
+  buckets: [{ key: "ttd:test", costPerItem }],
+});
+
 describe("TTD long-tail governance contracts (effect class)", () => {
   let svc: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      bulkCapacityCheck: unlimitedBulkCapacityCheck,
       graphqlQuery: vi.fn(),
       archiveEntities: vi.fn(),
       createBidList: vi.fn(),

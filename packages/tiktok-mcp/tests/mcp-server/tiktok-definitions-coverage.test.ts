@@ -34,7 +34,7 @@ const tiktokService = {
   adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
-  searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),
+  searchTargeting: vi.fn(async () => ({ targeting_tag_list: [{ name: "Stockholm" }] })),
   getTargetingOptions: vi.fn(async () => ({ list: [{ id: "targeting-option-1" }] })),
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
@@ -66,13 +66,11 @@ const tiktokReportingService = {
     headers: ["date", "impressions"],
     rows: [["2026-03-01", "100"]],
     totalRows: 1,
-    taskId: "task-123",
   })),
   getReportBreakdowns: vi.fn(async () => ({
     headers: ["date", "impressions", "country"],
     rows: [["2026-03-01", "100", "US"]],
     totalRows: 1,
-    taskId: "task-456",
   })),
   submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
   checkReportStatus: vi.fn(async () => ({
@@ -103,6 +101,8 @@ import {
   promptRegistry,
 } from "../../src/mcp-server/prompts/index.js";
 
+const REFUSING_TOOLS = new Set(["tiktok_duplicate_entity", "tiktok_get_ad_preview"]);
+
 describe("TikTok MCP definitions coverage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,6 +131,16 @@ describe("TikTok MCP definitions coverage", () => {
       expect(example, `${tool.name} should have at least one input example`).toBeDefined();
 
       const parsedInput = tool.inputSchema.parse(example);
+
+      // TikTok v1.3 has no copy or ad-preview endpoint; these tools refuse
+      // with InvalidRequest instead of calling a path that does not exist.
+      if (REFUSING_TOOLS.has(tool.name)) {
+        await expect(
+          tool.logic(parsedInput as never, requestContext, sdkContext)
+        ).rejects.toMatchObject({ code: -32600 });
+        continue;
+      }
+
       // Run logic concurrently with timer advancement to handle any sleep() calls in upload polling
       const [result] = await Promise.all([
         tool.logic(parsedInput as never, requestContext, sdkContext),
@@ -153,6 +163,8 @@ describe("TikTok MCP definitions coverage", () => {
     expect(tiktokService.adjustBids).toHaveBeenCalled();
     expect(tiktokReportingService.getReport).toHaveBeenCalled();
     expect(tiktokReportingService.getReportBreakdowns).toHaveBeenCalled();
+    expect(tiktokService.duplicateEntity).not.toHaveBeenCalled();
+    expect(tiktokService.getAdPreviews).not.toHaveBeenCalled();
   });
 
   it("generates prompt messages", () => {

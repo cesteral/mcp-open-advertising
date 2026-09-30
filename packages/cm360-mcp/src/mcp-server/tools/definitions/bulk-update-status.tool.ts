@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -29,12 +30,12 @@ const TOOL_TITLE = "Bulk Update CM360 Entity Status";
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_DESCRIPTION = `Batch update the status of multiple CM360 entities.
 
-Each entity is fetched first then updated (CM360 uses PUT/replace semantics). Loops individual GET+PUT calls with rate limiting. At ~1 QPS, 50 items takes ~100 seconds.
+Each entity is fetched and then written back whole (GET + PUT, because CM360's PUT replaces the entity), so every entity costs two calls. Calls are paced by the per-user rate limit (\`CM360_RATE_LIMIT_PER_MINUTE\`, default 5/min, shared by every profile of the authenticated user). A batch that cannot clear that limit within the 2-minute queue budget is refused before anything is sent, and the error carries \`itemsThatFit\` and \`retryAfterMs\`. At the default limit, 7 entities fit when nothing else is queued. Run with \`dry_run\` to check a batch first. The schema accepts up to 50 IDs.
 
 Supported mappings:
 - campaign: ACTIVE, ARCHIVED
 - ad, creative: ACTIVE, ARCHIVED
-- placement: ACTIVE, INACTIVE, ARCHIVED, PERMANENTLY_ARCHIVED`;
+- placement: ACTIVE, INACTIVE (or PAUSED), ARCHIVED, PERMANENTLY_ARCHIVED (irreversible)`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -96,10 +97,14 @@ export async function bulkUpdateStatusLogic(
     canonicalEntityKind: null,
   };
 
+  // The per-user rate-limit key comes from the session, so resolve it before
+  // the capacity projection (dry-run and execute alike).
+  const { cm360Service } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, cm360Service.quotaUser);
     return {
       confirmed: true,
       updated: 0,
@@ -110,6 +115,12 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Each entity is a GET + PUT on `cm360:user:{quotaUser}`. Refuse a batch that
+  // cannot clear the rate limit within the queue budget before prompting the
+  // user or sending anything — otherwise it queues for minutes, past client
+  // and Cloud Run timeouts, while the writes keep landing.
+  assertCM360BulkCapacity(TOOL_NAME, "status", cm360Service.quotaUser, input.entityIds.length);
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -129,8 +140,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { cm360Service } = resolveSessionServices(sdkContext);
 
   const entityType = input.entityType as CM360EntityType;
   const bulkResults = await cm360Service.bulkUpdateStatus(
@@ -180,9 +189,14 @@ export async function bulkUpdateStatusLogic(
  * Symbolic effect dry-run for `bulk_update_status`. Validates the batch (every
  * entity ID must be non-empty) and projects the would-be effect (an N-entity
  * status change to one target status). CM360 has no native bulk validate, so
- * both axes are symbolic. Pure (no I/O).
+ * both axes are symbolic. Also projects the batch against the rate limiter
+ * (read-only) so a batch the execute path would refuse as
+ * `BULK_EXCEEDS_CAPACITY` fails here too. No I/O.
  */
-function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult {
+function buildBulkEffectDryRun(
+  input: BulkUpdateStatusInput,
+  quotaUser: string
+): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.entityIds.forEach((id, i) => {
     if (!id || id.trim().length === 0) {
@@ -193,6 +207,15 @@ function buildBulkEffectDryRun(input: BulkUpdateStatusInput): EffectDryRunResult
       });
     }
   });
+  // Parity with the execute path's assertCM360BulkCapacity refusal.
+  const capacityError = cm360BulkCapacityDryRunError(
+    TOOL_NAME,
+    "status",
+    quotaUser,
+    input.entityIds.length,
+    "entityIds"
+  );
+  if (capacityError) validationErrors.push(capacityError);
 
   const expectedEffect: EffectResult = {
     effectKind: EFFECT_KIND,

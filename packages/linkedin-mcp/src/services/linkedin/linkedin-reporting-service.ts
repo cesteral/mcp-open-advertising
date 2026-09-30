@@ -9,8 +9,9 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 /**
  * LinkedIn Reporting Service — Queries the adAnalytics API for performance data.
  *
- * LinkedIn Analytics uses an offset-based API at /rest/adAnalytics with:
- * - dateRange.start.year/month/day and dateRange.end.year/month/day
+ * The `q=analytics` finder on /rest/adAnalytics, in Rest.li 2.0 query syntax:
+ * - accounts=List(urn%3Ali%3AsponsoredAccount%3A123)
+ * - dateRange=(start:(year:2026,month:1,day:1),end:(year:2026,month:1,day:31))
  * - pivot: CAMPAIGN, CAMPAIGN_GROUP, CREATIVE, MEMBER_COMPANY_SIZE, etc.
  * - timeGranularity: DAILY, MONTHLY, YEARLY, ALL
  * - metrics: impressions, clicks, costInUsd, conversions, etc.
@@ -53,17 +54,16 @@ export class LinkedInReportingService {
     const startDate = this.parseDateParts(dateRange.start);
     const endDate = this.parseDateParts(dateRange.end);
 
-    const params: Record<string, string> = {
+    // Structured values, not pre-flattened strings: the HTTP client serializes
+    // these as Rest.li 2.0 (`List(...)`, `(k:v)`). The 1.0 spellings this used
+    // to send (`accounts[0]=`, `dateRange.start.year=`) are a different wire
+    // format from the `X-Restli-Protocol-Version: 2.0.0` the request declares.
+    const params = {
       q: "analytics",
       pivot: pivot ?? "CAMPAIGN",
       timeGranularity: timeGranularity ?? "DAILY",
-      "accounts[0]": adAccountUrn,
-      "dateRange.start.year": String(startDate.year),
-      "dateRange.start.month": String(startDate.month),
-      "dateRange.start.day": String(startDate.day),
-      "dateRange.end.year": String(endDate.year),
-      "dateRange.end.month": String(endDate.month),
-      "dateRange.end.day": String(endDate.day),
+      accounts: [adAccountUrn],
+      dateRange: { start: startDate, end: endDate },
       fields: (metrics ?? defaultMetrics).join(","),
     };
 

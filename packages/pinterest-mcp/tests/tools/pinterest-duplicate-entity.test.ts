@@ -51,7 +51,7 @@ describe("pinterest_duplicate_entity governance contract", () => {
     } as any);
   });
 
-  it("dry_run clones the source (no forced pause) when no options given", async () => {
+  it("dry_run projects the copy as PAUSED even when the source is ACTIVE", async () => {
     svc.getEntity.mockResolvedValue({
       id: "campaign-SRC-1",
       name: "Source Campaign",
@@ -77,8 +77,8 @@ describe("pinterest_duplicate_entity governance contract", () => {
       "campaign-SRC-1",
       expect.any(Object)
     );
-    // Pinterest does not force a pause — the copy keeps the source's status.
-    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
+    // The copy is always created PAUSED, like dv360 and msads.
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
     expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Campaign");
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
     expect(result.dispatchedCapability).toEqual({
@@ -87,7 +87,7 @@ describe("pinterest_duplicate_entity governance contract", () => {
     });
   });
 
-  it("dry_run applies options (rename + re-state) to the projected copy", async () => {
+  it("dry_run applies options to the projected copy but ignores a status override", async () => {
     svc.getEntity.mockResolvedValue({
       id: "campaign-SRC-1",
       name: "Source Campaign",
@@ -100,7 +100,7 @@ describe("pinterest_duplicate_entity governance contract", () => {
         entityType: "campaign",
         adAccountId: "act-1",
         entityId: "campaign-SRC-1",
-        options: { name: "Copy of Source Campaign", status: "PAUSED" },
+        options: { name: "Copy of Source Campaign", status: "ACTIVE" },
         dry_run: true,
       } as any,
       ctx,

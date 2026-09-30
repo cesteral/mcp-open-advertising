@@ -6,17 +6,18 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 /**
  * Pinterest Entity Duplication Workflow Prompt
  *
- * Guides AI agents through duplicating campaigns, ad groups, and ads
- * for A/B testing, scaling, and templating.
+ * Guides AI agents through duplicating a campaign. Only campaigns support
+ * duplication (`supportsDuplicate` in entity-mapping.ts), and the copy is the
+ * campaign object alone: its ad groups and ads are not copied.
  */
 export const pinterestEntityDuplicationWorkflowPrompt: Prompt = {
   name: "pinterest_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating Pinterest Ads campaigns, ad groups, and ads using pinterest_duplicate_entity — covers A/B testing, scaling, and common patterns.",
+    "Step-by-step guide for duplicating a Pinterest Ads campaign with pinterest_duplicate_entity: only campaigns can be copied, the copy is always created PAUSED, and ad groups and ads are not copied.",
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to duplicate: campaign, adGroup, or ad",
+      description: "Entity type to duplicate. Only campaign is supported.",
       required: true,
     },
     {
@@ -26,7 +27,7 @@ export const pinterestEntityDuplicationWorkflowPrompt: Prompt = {
     },
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID",
+      description: "Pinterest ad account ID",
       required: true,
     },
   ],
@@ -43,171 +44,144 @@ export function getPinterestEntityDuplicationWorkflowMessage(
 
 Entity Type: \`${entityType}\`
 Entity ID: \`${entityId}\`
-Advertiser ID: \`${adAccountId}\`
+Ad account ID: \`${adAccountId}\`
 
 ---
 
 ## Overview
 
-\`pinterest_duplicate_entity\` creates a copy of a campaign, ad group, or ad with all settings preserved.
+\`pinterest_duplicate_entity\` copies a **campaign**. It is the only entity type that supports duplication, and the tool rejects \`adGroup\`, \`ad\` and \`creative\`.
 
-| What Gets Copied | Details |
-|------------------|---------|
-| **Campaign** | Structure, budget mode, objective |
-| **Ad Group** | Targeting, bid, schedule, budget |
-| **Ad** | Creative reference, copy, CTA, landing page |
+Pinterest v5 has no copy API, so the server reads the source campaign, drops the system fields (\`id\`, \`created_time\`, \`updated_time\`, \`ad_account_id\`) and creates a new campaign from the rest. Anything in \`options\` is merged over the copy before it is created.
+
+The copy keeps the campaign's objective, spend caps and schedule. **Its ad groups and ads are not copied.** The new campaign starts empty, and you build its ad groups and ads yourself.
+
+**The copy is always created \`PAUSED\`**, whatever the source's status, so it cannot spend until you activate it (Step 5). A \`status\` in \`options\` is ignored.
 
 ---
 
-## Step 1: Review the Source Entity
-
-Before duplicating, inspect the entity you're copying:
+## Step 1: Review the source campaign
 
 \`\`\`json
 {
   "tool": "pinterest_get_entity",
   "params": {
-    "entityType": "${entityType}",
+    "entityType": "campaign",
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}"
   }
 }
 \`\`\`
 
-Confirm this is the right entity and note its current state.
+Confirm it is the right campaign. Note its \`objective_type\`, spend caps and \`start_time\` / \`end_time\` (Unix seconds). A copy with an \`end_time\` in the past will not deliver.
 
 ---
 
-## Step 2: Duplicate the Entity
+## Step 2: Duplicate it
 
 \`\`\`json
 {
   "tool": "pinterest_duplicate_entity",
   "params": {
-    "entityType": "${entityType}",
+    "entityType": "campaign",
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}",
     "options": {
-      "newName": "Copy of ${entityType} ${entityId}"
+      "name": "Copy of campaign ${entityId}"
     }
   }
 }
 \`\`\`
 
-The response includes the new entity ID.
+\`options\` keys are Pinterest campaign field names and go into the create request as they are, so only use real fields (\`name\`, \`daily_spend_cap\`, \`lifetime_spend_cap\`, \`start_time\`, \`end_time\`, …). The response includes the new campaign and its id.
 
-⚠️ **GOTCHA**: Duplicated entities are created in **DISABLE** status by default. Enable only after review.
+Run it with \`"dry_run": true\` first to see the projected copy without creating anything.
 
 ---
 
-## Step 3: Customize the Copy
+## Step 3: Adjust the copy
 
-Use the returned entity ID to modify the copy:
-
-### Update Name and Budget
+Money is integer micro-currency, and times are Unix seconds.
 
 \`\`\`json
 {
   "tool": "pinterest_update_entity",
   "params": {
-    "entityType": "${entityType}",
+    "entityType": "campaign",
     "adAccountId": "${adAccountId}",
-    "entityId": "{newEntityId}",
+    "entityId": "{newCampaignId}",
     "data": {
-      "campaign_name": "Campaign B - Broad Targeting Test",
-      "budget": 150
+      "daily_spend_cap": 150000000,
+      "end_time": 1782863999
     }
   }
 }
 \`\`\`
 
-### Update Targeting (Ad Group)
+\`150000000\` = 150.00 in the account currency. \`1782863999\` = 2026-06-30 23:59:59 UTC. \`objective_type\` can only change while a campaign is a draft.
+
+---
+
+## Step 4: Rebuild the ad groups and ads
+
+Read the source campaign's ad groups (and then each ad group's ads, with \`entityType: "ad"\` and \`adGroupId\`):
 
 \`\`\`json
 {
-  "tool": "pinterest_update_entity",
+  "tool": "pinterest_list_entities",
   "params": {
     "entityType": "adGroup",
     "adAccountId": "${adAccountId}",
-    "entityId": "{newAdGroupId}",
-    "data": {
-      "age": ["AGE_35_44", "AGE_45_54"],
-      "gender": ["GENDER_FEMALE"],
-      "location_ids": ["GB", "CA"]
-    }
+    "campaignId": "${entityId}"
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are in **account currency** — \`budget: 150\` means $150.00.
+Then create each one under the new campaign with \`pinterest_create_entity\` or \`pinterest_bulk_create_entities\`:
+- **Ad group**: copy \`name\`, \`billable_event\`, \`budget_in_micro_currency\`, \`budget_type\`, \`bid_strategy_type\`, \`bid_in_micro_currency\` and \`targeting_spec\`. Set \`campaign_id\` to the new campaign and \`status\` to \`PAUSED\`.
+- **Ad**: copy \`creative_type\`, \`pin_id\`, \`name\` and \`destination_url\`. Set \`ad_group_id\` to the new ad group and \`status\` to \`PAUSED\`.
+
+Pins are reusable, so a rebuilt ad can promote the same \`pin_id\` as the original.
 
 ---
 
-## Step 4: Activate When Ready
-
-After reviewing and customizing the copy:
+## Step 5: Activate when ready
 
 \`\`\`json
 {
   "tool": "pinterest_bulk_update_status",
   "params": {
-    "entityType": "${entityType}",
+    "entityType": "campaign",
     "adAccountId": "${adAccountId}",
-    "entityIds": ["{newEntityId}"],
+    "entityIds": ["{newCampaignId}"],
     "operationStatus": "ACTIVE"
   }
 }
 \`\`\`
 
+Activate the new ad groups and ads the same way.
+
 ---
 
 ## Common Patterns
 
-### A/B Testing
+### A/B test on targeting
+1. Duplicate the campaign, paused
+2. Rebuild the ad groups under the copy with a different \`targeting_spec\` (UPPERCASE keys, see \`pinterest_targeting_discovery_workflow\`)
+3. Activate both campaigns and compare with \`pinterest_get_report\`
 
-1. Duplicate the ad group
-2. Change targeting or bid on the copy
-3. Enable both and compare via \`pinterest_get_report\`
-
-### Scaling to New Geos
-
-1. Duplicate a proven ad group
-2. Update \`location_ids\` on the copy
-3. Adjust budget for the new market
-4. Enable
-
-### Creative Testing
-
-1. Duplicate an ad
-2. Update \`ad_text\` or CTA on the copy
-3. Run both ads in the same ad group
-
-⚠️ **GOTCHA**: Video IDs are immutable — you cannot change the video on an existing ad. Create a new ad instead of duplicating if you want different video creative.
+### Creative test
+You don't need a new campaign. Create a Pin with the alternative image or video (see the \`creative_upload_workflow\` prompt), then create a second ad in the same ad group with the new \`pin_id\`. An ad's creative is its Pin, so a creative test means a different \`pin_id\`, not an edited ad.
 
 ---
 
-## Verification
-
-After duplication, verify the copy:
-
-\`\`\`json
-{
-  "tool": "pinterest_get_entity",
-  "params": {
-    "entityType": "${entityType}",
-    "adAccountId": "${adAccountId}",
-    "entityId": "{newEntityId}"
-  }
-}
-\`\`\`
-
 ## Success Criteria
 
-- [ ] Source entity reviewed before duplication
-- [ ] Copy created (check DISABLE status)
-- [ ] Copy renamed to distinguish from original
-- [ ] Desired changes applied (targeting, budget, creative)
-- [ ] Copy verified via \`pinterest_get_entity\`
-- [ ] Enabled only after review via \`pinterest_bulk_update_status\`
+- [ ] Source campaign reviewed before duplication
+- [ ] Copy created (always \`PAUSED\`)
+- [ ] Copy renamed to distinguish it from the original
+- [ ] Schedule and spend caps checked on the copy
+- [ ] Ad groups and ads rebuilt under the copy, paused
+- [ ] Activated only after review
 `;
 }

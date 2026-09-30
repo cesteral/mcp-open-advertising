@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import type { MsAdsBatchWriteSpec } from "../../../services/msads/msads-service.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -71,15 +72,43 @@ export const ManageCriterionsOutputSchema = z
 type ManageCriterionsInput = z.infer<typeof ManageCriterionsInputSchema>;
 type ManageCriterionsOutput = z.infer<typeof ManageCriterionsOutputSchema>;
 
+/**
+ * Add / Update / Delete report rejected items on an HTTP 200: Add and Update
+ * via `NestedPartialErrors` (plus an id list on Add — `CampaignCriterionIds` /
+ * `AdGroupCriterionIds`), Delete via `PartialErrors` indexing into the
+ * submitted id list (`add|update|delete{campaign,adgroup}criterions.md`
+ * Response Body Elements).
+ */
 function getOperation(
   operation: string,
   entityLevel: string
-): { path: string; method: "POST" | "PUT" | "DELETE" } {
+): { path: string; method: "POST" | "PUT" | "DELETE"; batch?: MsAdsBatchWriteSpec } {
   const level = entityLevel === "campaign" ? "Campaign" : "AdGroup";
-  const ops: Record<string, { path: string; method: "POST" | "PUT" | "DELETE" }> = {
-    add: { path: `/${level}Criterions`, method: "POST" },
-    update: { path: `/${level}Criterions`, method: "PUT" },
-    delete: { path: `/${level}Criterions`, method: "DELETE" },
+  const entityLabel = `${entityLevel === "campaign" ? "campaign" : "ad group"} criterions`;
+  const ops: Record<
+    string,
+    { path: string; method: "POST" | "PUT" | "DELETE"; batch?: MsAdsBatchWriteSpec }
+  > = {
+    add: {
+      path: `/${level}Criterions`,
+      method: "POST",
+      batch: {
+        operation: "add",
+        entityLabel,
+        itemsField: `${level}Criterions`,
+        idsField: `${level}CriterionIds`,
+      },
+    },
+    update: {
+      path: `/${level}Criterions`,
+      method: "PUT",
+      batch: { operation: "update", entityLabel, itemsField: `${level}Criterions` },
+    },
+    delete: {
+      path: `/${level}Criterions`,
+      method: "DELETE",
+      batch: { operation: "delete", entityLabel, itemsField: `${level}CriterionIds` },
+    },
     getByCampaign: { path: "/CampaignCriterions/QueryByIds", method: "POST" },
     getByAdGroup: { path: "/AdGroupCriterions/QueryByIds", method: "POST" },
   };
@@ -128,17 +157,43 @@ export async function manageCriterionsLogic(
 
   const op = getOperation(input.operation, input.entityLevel);
 
-  const result = (await msadsService.executeOperation(
-    op.path,
-    input.data,
-    context,
-    op.method
-  )) as Record<string, unknown>;
+  // Writes go through the PartialErrors mapping: a batch whose every item was
+  // rejected throws; a partial success is reported in the effect summary.
+  let result: Record<string, unknown>;
+  let counts: Record<string, number | boolean> = {};
+  if (op.batch) {
+    const batch = await msadsService.executeOperation(
+      op.path,
+      input.data,
+      context,
+      op.method,
+      op.batch
+    );
+    result = {
+      ...(batch.response && typeof batch.response === "object"
+        ? (batch.response as Record<string, unknown>)
+        : {}),
+      itemFailures: batch.failures,
+    };
+    counts = {
+      requested: batch.requested,
+      succeeded: batch.succeeded,
+      failed: batch.failed,
+      partial_success: batch.failed > 0,
+    };
+  } else {
+    result = (await msadsService.executeOperation(
+      op.path,
+      input.data,
+      context,
+      op.method
+    )) as Record<string, unknown>;
+  }
 
   // Effect summary carries audit identity only — never the raw criterion data.
   const effect: EffectResult = {
     effectKind: "criterions_managed",
-    summary: { operation: input.operation, entity_level: input.entityLevel },
+    summary: { operation: input.operation, entity_level: input.entityLevel, ...counts },
   };
 
   return {

@@ -31,14 +31,25 @@ export const SearchFieldsInputSchema = z
       .max(1000)
       .optional()
       .default(100)
-      .describe("Max results to return (default 100)"),
+      .describe("Max results to return per page (default 100)"),
+    pageToken: z
+      .string()
+      .optional()
+      .describe("Page token for the next page of results (nextPageToken from a previous call)"),
   })
   .describe("Parameters for field discovery");
 
 export const SearchFieldsOutputSchema = z
   .object({
     fields: z.array(z.record(z.any())).describe("Field metadata results"),
-    totalSize: z.number().optional().describe("Total fields matching query"),
+    totalResultsCount: z
+      .number()
+      .optional()
+      .describe("Total fields matching the query, ignoring the LIMIT clause"),
+    nextPageToken: z
+      .string()
+      .optional()
+      .describe("Token for the next page; absent on the last page. Pass as pageToken to continue."),
     timestamp: z.string().datetime(),
   })
   .describe("Field discovery results");
@@ -53,11 +64,17 @@ export async function searchFieldsLogic(
 ): Promise<SearchFieldsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
 
-  const result = await sa360Service.searchFields(input.query, input.pageSize, context);
+  const result = await sa360Service.searchFields(
+    input.query,
+    input.pageSize,
+    input.pageToken,
+    context
+  );
 
   return {
     fields: result.fields as Record<string, any>[],
-    totalSize: result.totalSize,
+    totalResultsCount: result.totalResultsCount,
+    ...(result.nextPageToken ? { nextPageToken: result.nextPageToken } : {}),
     timestamp: new Date().toISOString(),
   };
 }
@@ -66,7 +83,7 @@ export function searchFieldsResponseFormatter(result: SearchFieldsOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `Found ${result.fields.length} field(s)${result.totalSize ? ` (${result.totalSize} total)` : ""}\n\n${JSON.stringify(result.fields, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Found ${result.fields.length} field(s)${result.totalResultsCount !== undefined ? ` (${result.totalResultsCount} total)` : ""}${result.nextPageToken ? ` — more pages available; call again with pageToken: "${result.nextPageToken}"` : ""}\n\n${JSON.stringify(result.fields, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

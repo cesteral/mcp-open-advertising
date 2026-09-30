@@ -78,14 +78,17 @@ export async function listEntitiesLogic(
   );
 
   const { pageInfo } = result;
-  const hasMore = pageInfo.startIndex + pageInfo.count < pageInfo.totalResults;
-  const nextStartIndex = pageInfo.startIndex + pageInfo.count;
+  const entities = result.entities as unknown as Record<string, unknown>[];
+  // Advance by what Amazon actually returned — `pageInfo.count` is the page
+  // size that was *requested*, which overstates a short (e.g. last) page.
+  const nextStartIndex = pageInfo.startIndex + entities.length;
+  const hasMore = entities.length > 0 && nextStartIndex < pageInfo.totalResults;
 
   return {
-    entities: result.entities as unknown as Record<string, unknown>[],
+    entities,
     pagination: buildPaginationOutput({
       nextCursor: hasMore ? String(nextStartIndex) : null,
-      pageSize: pageInfo.count,
+      pageSize: entities.length,
       totalCount: pageInfo.totalResults,
       nextPageInputKey: "startIndex",
     }),

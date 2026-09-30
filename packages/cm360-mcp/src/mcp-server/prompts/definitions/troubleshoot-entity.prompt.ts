@@ -69,6 +69,6 @@ Verify parent entities are active:
 | Creative rejected | Missing required asset | Check creative type requirements |
 | Placement errors | Site not approved | Verify site status |
 | Floodlight not firing | Activity configuration | Check floodlight tag and activity settings |
-| Update fails | Missing required fields | Fetch full object first (PUT semantics) |
+| Update fails | Invalid field value or read-only field in patch | Run \`cm360_update_entity\` with \`dry_run: true\`, then check the field against \`cm360_get_entity\` |
 `;
 }

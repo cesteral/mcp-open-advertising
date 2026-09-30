@@ -18,7 +18,27 @@ describe("msads_get_targeting_options", () => {
   it("returns only the requested targeting type", async () => {
     const result = await getTargetingOptionsLogic({ targetingType: "gender" }, ctx);
     expect(Object.keys(result.options)).toEqual(["gender"]);
-    expect(result.options.gender.map((v) => v.Id)).toEqual(["Male", "Female"]);
+    // GenderType (gendertype.md): Male, Female, Unknown (Audience ad groups only).
+    expect(result.options.gender.map((v) => v.Id)).toEqual(["Male", "Female", "Unknown"]);
+  });
+
+  it("returns every AgeRange value with the API's own spelling (agerange.md)", async () => {
+    const result = await getTargetingOptionsLogic({ targetingType: "age" }, ctx);
+    const ids = result.options.age.map((v) => v.Id);
+    expect(ids).toContain("ThirtyFiveToFourtyNine");
+    expect(ids).not.toContain("ThirtyFiveToFortyNine");
+    expect([...ids].sort()).toEqual(
+      [
+        "Unknown",
+        "EighteenToTwentyFour",
+        "TwentyFiveToThirtyFour",
+        "ThirtyFiveToFourtyNine",
+        "FiftyToSixtyFour",
+        "SixtyFiveAndAbove",
+        "ThirtyFiveToFiftyFour",
+        "FiftyFiveAndAbove",
+      ].sort()
+    );
   });
 
   it("rejects unsupported targeting types (location is not enumerable)", () => {

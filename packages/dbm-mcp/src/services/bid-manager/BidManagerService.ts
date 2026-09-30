@@ -18,7 +18,9 @@ import {
   pollUntilComplete,
   ReportTimeoutError,
   ReportFailedError,
+  ReportingError,
   mapReportingError,
+  type ReportingErrorData,
   type RateLimiter,
 } from "@cesteral/shared";
 import {
@@ -49,6 +51,20 @@ import type {
 import { safeDivide, round } from "../../utils/math.js";
 import { daysBetween } from "../../utils/date.js";
 import { withBidManagerApiSpan } from "../../utils/platform.js";
+import { classifyReportError, isNetworkError } from "./retry-policy.js";
+import { REPORT_POLL_BACKOFF_MULTIPLIER } from "./report-timing.js";
+
+/** Options accepted by {@link BidManagerService.executeQueryWithRetry}. */
+export interface ExecuteQueryOptions {
+  maxRetries?: number;
+  retryCooldownMs?: number;
+  backoffConfig?: Partial<ExponentialBackoffConfig>;
+  /**
+   * Called as soon as `queries.create` returns an ID — before any later step
+   * can fail — so the caller can delete the saved query whatever happens next.
+   */
+  onQueryCreated?: (queryId: string) => void;
+}
 
 /**
  * Parse date string (YYYY-MM-DD) to DateObject
@@ -85,8 +101,11 @@ export class BidManagerService {
   async createQuery(spec: QuerySpec): Promise<{ queryId: string }> {
     this.logger.info({ title: spec.metadata.title }, "Creating Bid Manager query");
 
+    // Outside the try: a local rate-limit refusal must surface as the
+    // RateLimited McpError it is (the request was never sent), not be
+    // re-wrapped as a creation failure.
+    await this.rateLimiter?.consume("bidmanager:global");
     try {
-      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.create({
         requestBody: {
           metadata: {
@@ -132,8 +151,8 @@ export class BidManagerService {
   async runQuery(queryId: string): Promise<{ reportId: string }> {
     this.logger.info({ queryId }, "Running Bid Manager query");
 
+    await this.rateLimiter?.consume("bidmanager:global");
     try {
-      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.run({ queryId });
 
       const reportId = response.data.key?.reportId;
@@ -160,8 +179,8 @@ export class BidManagerService {
    * Get report status
    */
   async getReportStatus(queryId: string, reportId: string): Promise<ReportMetadata> {
+    await this.rateLimiter?.consume("bidmanager:global");
     try {
-      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.reports.get({ queryId, reportId });
 
       return {
@@ -173,7 +192,72 @@ export class BidManagerService {
       };
     } catch (error) {
       this.logger.error({ error, queryId, reportId }, "Failed to get report status");
-      throw mapReportingError(error, "dbm");
+      const mapped = mapReportingError(error, "dbm");
+      // A GET that never got a response is as transient as a 5xx, but the
+      // shared mapper only looks at HTTP statuses.
+      if (!mapped.retryable && isNetworkError(error)) {
+        throw new ReportingError(mapped.message, {
+          ...(mapped.data as ReportingErrorData),
+          retryable: true,
+        });
+      }
+      throw mapped;
+    }
+  }
+
+  /**
+   * Delete a saved query. Per the Bid Manager v2 discovery document,
+   * `queries.delete` "Deletes an existing query as well as its generated
+   * reports" — so it must only run after the report file has been downloaded.
+   */
+  async deleteQuery(queryId: string): Promise<void> {
+    await this.client.queries.delete({ queryId });
+    this.logger.info({ queryId }, "Deleted Bid Manager query");
+  }
+
+  /**
+   * Best-effort cleanup: every tool call creates a saved query in the user's
+   * DV360 account, which used to be left behind forever. Failures are logged
+   * and swallowed so they can never mask the report result or the original
+   * error. Deliberately not routed through the local rate limiter — a cleanup
+   * the limiter could veto would leak exactly the query it exists to remove;
+   * DELETE is idempotent, so gaxios' own retry (429/5xx) covers it.
+   */
+  private async deleteQueryBestEffort(queryId: string): Promise<void> {
+    try {
+      await this.deleteQuery(queryId);
+    } catch (error) {
+      this.logger.warn(
+        { queryId, error: error instanceof Error ? error.message : String(error) },
+        "Failed to delete Bid Manager query after report run (left in account)"
+      );
+    }
+  }
+
+  /**
+   * Create → run → poll → download, then delete the saved query whatever the
+   * outcome. The download happens before the delete because deleting a query
+   * also deletes its reports.
+   */
+  private async runReportAndFetch(
+    spec: QuerySpec,
+    options?: ExecuteQueryOptions
+  ): Promise<{ csv: string; queryId: string; reportId: string }> {
+    let createdQueryId: string | undefined;
+    try {
+      const result = await this.executeQueryWithRetry(spec, {
+        ...options,
+        onQueryCreated: (id) => {
+          createdQueryId = id;
+          options?.onQueryCreated?.(id);
+        },
+      });
+      const csv = await this.fetchReportData(result.gcsPath);
+      return { csv, queryId: result.queryId, reportId: result.reportId };
+    } finally {
+      if (createdQueryId) {
+        await this.deleteQueryBestEffort(createdQueryId);
+      }
     }
   }
 
@@ -191,7 +275,7 @@ export class BidManagerService {
       initialDelayMs: options?.initialDelayMs ?? this.config.reportPollInitialDelayMs ?? 2000,
       maxDelayMs: options?.maxDelayMs ?? this.config.reportPollMaxDelayMs ?? 60000,
       maxRetries: options?.maxRetries ?? this.config.reportPollMaxRetries ?? 10,
-      backoffMultiplier: options?.backoffMultiplier ?? 2,
+      backoffMultiplier: options?.backoffMultiplier ?? REPORT_POLL_BACKOFF_MULTIPLIER,
     };
 
     this.logger.info({ queryId, reportId, config }, "Starting exponential backoff polling");
@@ -230,27 +314,22 @@ export class BidManagerService {
   ): Promise<{ reportId: string; isNewRun: boolean }> {
     this.logger.info({ queryId, existingReportId: reportId }, "Attempting to continue query");
 
-    // If we have a reportId, check its status first
+    // If we have a reportId, check its status first. A failed status read is
+    // propagated rather than treated as "start a new run": not knowing the
+    // report's state is no reason to POST queries.run again.
     if (reportId) {
-      try {
-        const report = await this.getReportStatus(queryId, reportId);
-        const state = report.status.state;
+      const report = await this.getReportStatus(queryId, reportId);
+      const state = report.status.state;
 
-        if (state === "DONE" || state === "RUNNING" || state === "QUEUED") {
-          this.logger.info({ queryId, reportId, status: state }, "Existing report still valid");
-          return { reportId, isNewRun: false };
-        }
-
-        this.logger.info(
-          { queryId, reportId, status: state },
-          "Existing report not usable, will re-run query"
-        );
-      } catch (error) {
-        this.logger.warn(
-          { error: error instanceof Error ? error.message : String(error), queryId, reportId },
-          "Could not get existing report status, will re-run query"
-        );
+      if (state === "DONE" || state === "RUNNING" || state === "QUEUED") {
+        this.logger.info({ queryId, reportId, status: state }, "Existing report still valid");
+        return { reportId, isNewRun: false };
       }
+
+      this.logger.info(
+        { queryId, reportId, status: state },
+        "Existing report not usable, will re-run query"
+      );
     }
 
     // Run the query again
@@ -264,18 +343,19 @@ export class BidManagerService {
    * Handles the complete query lifecycle with resilience:
    * - Creates query on first attempt
    * - Runs query and polls with exponential backoff
-   * - On failure, retries with query continuation (reuses queryId)
+   * - On a *retryable* failure (see `classifyReportError`), retries with
+   *   query continuation (reuses queryId, resumes a still-running report)
+   * - Any other failure is thrown unchanged on the attempt it happens
    * - Configurable retry count and cooldown between retries
+   *
+   * Does not delete the saved query — callers that fetch the report go
+   * through `runReportAndFetch`, which does.
    *
    * @returns Object with GCS path, queryId, and reportId from the completed report
    */
   async executeQueryWithRetry(
     spec: QuerySpec,
-    options?: {
-      maxRetries?: number;
-      retryCooldownMs?: number;
-      backoffConfig?: Partial<ExponentialBackoffConfig>;
-    }
+    options?: ExecuteQueryOptions
   ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     return withBidManagerApiSpan("executeQueryWithRetry", undefined, async () => {
       return this.executeQueryWithRetryInner(spec, options);
@@ -284,11 +364,7 @@ export class BidManagerService {
 
   private async executeQueryWithRetryInner(
     spec: QuerySpec,
-    options?: {
-      maxRetries?: number;
-      retryCooldownMs?: number;
-      backoffConfig?: Partial<ExponentialBackoffConfig>;
-    }
+    options?: ExecuteQueryOptions
   ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     const maxRetries = options?.maxRetries ?? this.config.reportQueryRetries ?? 3;
     const retryCooldownMs = options?.retryCooldownMs ?? this.config.reportRetryCooldownMs ?? 60000;
@@ -314,6 +390,7 @@ export class BidManagerService {
         if (!queryId) {
           const createResult = await this.createQuery(spec);
           queryId = createResult.queryId;
+          options?.onQueryCreated?.(queryId);
         }
 
         // Run or continue query
@@ -349,7 +426,11 @@ export class BidManagerService {
           lastStatus = "TIMEOUT";
         } else if (error instanceof ReportGenerationError) {
           lastStatus = "FAILED";
+        } else {
+          lastStatus = undefined;
         }
+
+        const decision = classifyReportError(error);
 
         this.logger.warn(
           {
@@ -359,9 +440,18 @@ export class BidManagerService {
             attempt: attempt + 1,
             maxRetries,
             lastStatus,
+            retryable: decision.retryable,
+            reason: decision.reason,
           },
           "Query execution attempt failed"
         );
+
+        // A failure another attempt cannot fix (4xx, auth, validation) — or a
+        // POST whose outcome is ambiguous — is surfaced unchanged, with its
+        // own message and code, instead of being retried into a Timeout.
+        if (!decision.retryable) {
+          throw error;
+        }
 
         // If this is not the last attempt, wait before retrying
         if (attempt < maxRetries - 1) {
@@ -464,9 +554,8 @@ export class BidManagerService {
       },
     };
 
-    // Execute with retry and exponential backoff
-    const result = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(result.gcsPath);
+    // Execute with retry and exponential backoff; the saved query is deleted afterwards
+    const { csv: csvData } = await this.runReportAndFetch(querySpec);
     const metrics = parseCSVToDeliveryMetrics(csvData);
 
     this.logger.info(
@@ -536,10 +625,9 @@ export class BidManagerService {
       },
     };
 
-    // Execute with retry and exponential backoff
-    const result = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(result.gcsPath);
-    const historicalData = parseCSVToHistoricalData(csvData);
+    // Execute with retry and exponential backoff; the saved query is deleted afterwards
+    const { csv: csvData } = await this.runReportAndFetch(querySpec);
+    const historicalData = parseCSVToHistoricalData(csvData, timeGroupBy);
 
     this.logger.info(
       {
@@ -730,9 +818,9 @@ export class BidManagerService {
       },
     };
 
-    // Execute with retry and exponential backoff
-    const queryResult = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(queryResult.gcsPath);
+    // Execute with retry and exponential backoff; the saved query is deleted afterwards
+    const queryResult = await this.runReportAndFetch(querySpec);
+    const csvData = queryResult.csv;
 
     // Parse CSV to structured data
     const records = csvToJson(csvData);

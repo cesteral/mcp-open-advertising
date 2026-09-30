@@ -22,7 +22,7 @@ export const GetDeliveryEstimateInputSchema = z
     optimizationGoal: z
       .string()
       .optional()
-      .describe("Optimization goal (e.g., LINK_CLICKS, REACH, CONVERSIONS)"),
+      .describe("Optimization goal (e.g., LINK_CLICKS, REACH, OFFSITE_CONVERSIONS)"),
   })
   .describe("Parameters for getting delivery estimates");
 

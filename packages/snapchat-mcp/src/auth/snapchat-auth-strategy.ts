@@ -8,7 +8,9 @@
  * Supports two credential flows:
  * 1. Static Bearer token (Authorization header) — for pre-generated tokens
  * 2. Refresh token flow (X-Snapchat-App-Id/Secret/Refresh-Token headers) —
- *    auto-refreshes access tokens (recommended for production, 24h token expiry)
+ *    auto-refreshes access tokens (recommended for production). The access
+ *    token's lifetime is whatever the token response's `expires_in` says;
+ *    OAuth2RefreshAdapterBase refreshes ahead of it.
  *
  * Falls back to static token if refresh credentials are not provided.
  *

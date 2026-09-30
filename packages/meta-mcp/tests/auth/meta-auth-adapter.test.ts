@@ -16,6 +16,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
+const TEST_BASE_URL = "https://graph.test/v21.0";
+
 describe("getMetaCredentialFingerprint", () => {
   it("returns deterministic 32-char hex output", () => {
     const fp1 = getMetaCredentialFingerprint("EAABwzLixnjY...");
@@ -100,7 +102,7 @@ describe("MetaAccessTokenAdapter", () => {
     });
 
     it("caches result on subsequent calls", async () => {
-      const adapter = new MetaAccessTokenAdapter("test-token");
+      const adapter = new MetaAccessTokenAdapter("test-token", TEST_BASE_URL);
       mockSuccessResponse();
 
       await adapter.validate();
@@ -110,14 +112,14 @@ describe("MetaAccessTokenAdapter", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
-    it("uses the v25.0 default Graph API base URL when none is provided", async () => {
-      const adapter = new MetaAccessTokenAdapter("test-token");
+    it("validates against the configured Graph API base URL (no hard-coded version)", async () => {
+      const adapter = new MetaAccessTokenAdapter("test-token", "https://graph.facebook.com/v26.0");
       mockSuccessResponse();
 
       await adapter.validate();
 
       expect(mockFetchWithTimeout.mock.calls[0]?.[0]).toBe(
-        "https://graph.facebook.com/v25.0/me?fields=id,name"
+        "https://graph.facebook.com/v26.0/me?fields=id,name"
       );
     });
 
@@ -140,7 +142,7 @@ describe("MetaAccessTokenAdapter", () => {
     });
 
     it("throws on non-ok response", async () => {
-      const adapter = new MetaAccessTokenAdapter("bad-token");
+      const adapter = new MetaAccessTokenAdapter("bad-token", TEST_BASE_URL);
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
         status: 401,
@@ -156,7 +158,7 @@ describe("MetaAccessTokenAdapter", () => {
 
   describe("getAccessToken()", () => {
     it("returns the token", async () => {
-      const adapter = new MetaAccessTokenAdapter("my-access-token");
+      const adapter = new MetaAccessTokenAdapter("my-access-token", TEST_BASE_URL);
       const token = await adapter.getAccessToken();
       expect(token).toBe("my-access-token");
     });
@@ -227,7 +229,11 @@ describe("MetaRefreshTokenAdapter", () => {
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
       mockExchangeResponse();
 
       const first = await adapter.getAccessToken();
@@ -243,21 +249,29 @@ describe("MetaRefreshTokenAdapter", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
-    it("uses the v25.0 default Graph API base URL when none is provided", async () => {
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+    it("exchanges against the configured Graph API base URL (no hard-coded version)", async () => {
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        "https://graph.facebook.com/v26.0"
+      );
       mockExchangeResponse();
 
       await adapter.getAccessToken();
 
       expect(mockFetchWithTimeout.mock.calls[0]?.[0]).toBe(
-        "https://graph.facebook.com/v25.0/oauth/access_token"
+        "https://graph.facebook.com/v26.0/oauth/access_token"
       );
     });
 
     it("re-exchanges when token approaching expiry", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
       mockExchangeResponse();
 
       const first = await adapter.getAccessToken();
@@ -278,7 +292,11 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("concurrent calls share pending exchange (mutex)", async () => {
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
 
       let resolveExchange!: (value: unknown) => void;
       mockFetchWithTimeout.mockReturnValueOnce(
@@ -305,7 +323,11 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("clears pending on failure (retry works)", async () => {
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -324,7 +346,11 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("throws on non-ok HTTP response", async () => {
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -339,7 +365,11 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("throws on missing access_token in response", async () => {
-      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "short-lived-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
@@ -354,7 +384,11 @@ describe("MetaRefreshTokenAdapter", () => {
     it("caches system user token indefinitely (no expires_in)", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter("system-user-token", MOCK_APP_CREDENTIALS);
+      const adapter = new MetaRefreshTokenAdapter(
+        "system-user-token",
+        MOCK_APP_CREDENTIALS,
+        TEST_BASE_URL
+      );
 
       mockExchangeResponse({
         access_token: "system-long-lived-token",

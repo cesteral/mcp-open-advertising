@@ -6,24 +6,25 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { PINTEREST_TARGETING_TYPES } from "../../../services/pinterest/pinterest-service.js";
 
 const TOOL_NAME = "pinterest_get_targeting_options";
 const TOOL_TITLE = "Get Pinterest Targeting Options";
-const TOOL_DESCRIPTION = `Browse available Pinterest ad targeting options and categories.
+const TOOL_DESCRIPTION = `Browse available Pinterest ad targeting options.
 
-Returns a structured list of targeting options available for a given objective type.
+Without \`targetingType\`, returns the targeting types Pinterest v5 accepts. With one, returns every option of that type from \`GET /v5/resources/targeting/{targeting_type}\`.
 Use this to discover valid targeting values before creating or updating ad groups.
 
-**Common objective types:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS`;
+**Targeting types:** ${PINTEREST_TARGETING_TYPES.join(", ")}`;
 
 export const GetTargetingOptionsInputSchema = z
   .object({
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingType: z
-      .string()
+      .enum(PINTEREST_TARGETING_TYPES)
       .optional()
       .describe(
-        "Optional objective type to filter targeting options (e.g., TRAFFIC, APP_INSTALLS)"
+        "Targeting type whose options to return (e.g., LOCATION, INTEREST). Omit to list the targeting types."
       ),
   })
   .describe("Parameters for browsing Pinterest targeting options");
@@ -48,6 +49,7 @@ export async function getTargetingOptionsLogic(
 
   const options = (await pinterestService.getTargetingOptions(
     input.targetingType,
+    { adAccountId: input.adAccountId },
     context
   )) as Record<string, unknown>;
 
@@ -82,16 +84,16 @@ export const getTargetingOptionsTool = {
   },
   inputExamples: [
     {
-      label: "Get all targeting options",
+      label: "List the targeting types",
       input: {
         adAccountId: "1234567890",
       },
     },
     {
-      label: "Get targeting options for traffic objective",
+      label: "Get age bucket options",
       input: {
         adAccountId: "1234567890",
-        targetingType: "TRAFFIC",
+        targetingType: "AGE_BUCKET",
       },
     },
   ],

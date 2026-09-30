@@ -20,7 +20,10 @@ const pinterestService = {
   getEntity: vi.fn(async () => ({ id: "123", name: "Campaign A" })),
   createEntity: vi.fn(async () => ({ id: "new", name: "New Campaign" })),
   updateEntity: vi.fn(async () => ({ id: "123" })),
-  deleteEntity: vi.fn(async () => ({ results: [{ entityId: "1800123456789", success: true }] })),
+  deleteEntity: vi.fn(async () => ({
+    removal: "archived",
+    results: [{ entityId: "1800123456789", success: true }],
+  })),
   listAdAccounts: vi.fn(async () => ({ entities: [{ id: "123" }], nextCursor: undefined })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, _filters: unknown, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
@@ -36,23 +39,26 @@ const pinterestService = {
   adjustBids: vi.fn(async (_filters: unknown, adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
-  searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),
-  getTargetingOptions: vi.fn(async () => ({ list: [{ id: "targeting-option-1" }] })),
+  searchTargeting: vi.fn(async () => [{ id: "US", name: "United States" }]),
+  getTargetingOptions: vi.fn(async () => ({
+    targeting_type: "AGE_BUCKET",
+    options: [{ "18-24": "18-24" }],
+  })),
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
-  getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
-  getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
+  getAudienceEstimate: vi.fn(async () => ({
+    audience_size_lower_bound: 1000,
+    audience_size_upper_bound: 2000,
+  })),
+  getAdPreviews: vi.fn(async () => ({
+    pinId: "987",
+    preview: { url: "https://ads.pinterest.com/ad-preview/abc/" },
+  })),
   client: {
-    postMultipart: vi.fn(async (path: string) => {
-      if (path.includes("image")) {
-        return { image_id: "img-test-123", image_url: "https://example.com/img.jpg", size: 1000 };
-      }
-      return { video_id: "vid-test-123", video_name: "Test Video" };
-    }),
     post: vi.fn(async (path: string) => {
       if (path === "/v5/media") {
         return {
           media_id: "media-test-123",
-          media_type: "image",
+          media_type: "video",
           upload_url: "https://s3.example.com/upload",
           upload_parameters: { key: "value" },
         };
@@ -70,7 +76,9 @@ const pinterestService = {
     }),
     uploadToS3: vi.fn(async () => undefined),
     get: vi.fn(async () => ({
-      media_processing_record: { status: "succeeded" },
+      media_id: "media-test-123",
+      media_type: "video",
+      status: "succeeded",
     })),
   },
 };

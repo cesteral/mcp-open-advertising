@@ -5,10 +5,11 @@
  * Snapshot capture helpers for CM360 `cm360_update_entity`. R4-U2 wiring.
  *
  * The same read-and-normalize logic is reused for:
- * - Symbolic dry-run (R4-U2): read the current entity, shallow-merge the
- *   patch, normalize.
+ * - Symbolic dry-run (R4-U2): read the current entity, merge the patch with
+ *   the same semantics the real `PATCH ?id=` call has
+ *   ({@link mergeCm360Patch}), normalize.
  * - Real-write before/after (R4-U2): read pre-state at handler start, execute
- *   the PUT, normalize the updated entity the PUT returns (with a re-read
+ *   the PATCH, normalize the updated entity the PATCH returns (with a re-read
  *   fallback), normalize both.
  *
  * Governed scope is `campaign` and `ad` — the CM360 entities that carry a
@@ -85,10 +86,39 @@ function normalizeStatus(
   return { canonical, platformRaw: `active=${String(active)},archived=${archived}` };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
- * Pure builder: combine `current` + `patch` into a canonical snapshot. CM360
- * updates are full-object PUT replacements, so the patch is a shallow overlay
- * (mirrors the platform's own write semantics).
+ * Apply `patch` to `current` the way the dfareporting v5 `{collection}.patch`
+ * endpoint does ("This method supports patch semantics"), which is what
+ * `cm360_update_entity` / `cm360_bulk_update_entities` call:
+ *
+ * - a field absent from the patch keeps its current value;
+ * - a nested object in the patch is merged into the current nested object,
+ *   recursively;
+ * - an array, scalar or `null` in the patch replaces the current value.
+ *
+ * Pure (no I/O); neither input is mutated.
+ */
+export function mergeCm360Patch(
+  current: Record<string, unknown>,
+  patch: Record<string, unknown>
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    const existing = merged[key];
+    merged[key] =
+      isPlainObject(value) && isPlainObject(existing) ? mergeCm360Patch(existing, value) : value;
+  }
+  return merged;
+}
+
+/**
+ * Pure builder: combine `current` + `patch` into a canonical snapshot. The
+ * patch is applied with {@link mergeCm360Patch}, i.e. the same semantics as
+ * the real CM360 `PATCH ?id=` write, so a dry-run predicts what the write does.
  *
  * Used by both the dry-run symbolic apply (patch = requested mutation) and the
  * real-write `after` capture (patch = `{}`, current = post-write entity).
@@ -102,7 +132,7 @@ export function buildCm360Snapshot(
   const entityKind = ENTITY_KIND_MAP[entityType];
   if (!entityKind) return null;
 
-  const merged = { ...current, ...patch } as Record<string, any>;
+  const merged = mergeCm360Patch(current, patch) as Record<string, any>;
 
   // Schedule field names differ by entity: `campaign` carries `startDate` /
   // `endDate` (date), `ad` carries `startTime` / `endTime` (date-time).
@@ -165,7 +195,7 @@ export async function captureCm360Snapshot(
 
 /**
  * Normalize an entity object already in hand (e.g. the entity returned by the
- * CM360 PUT). No I/O.
+ * CM360 PATCH). No I/O.
  *
  * Returns undefined when the object carries none of the fields the canonical
  * snapshot surfaces (name, archived, active) — callers should fall back to a

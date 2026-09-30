@@ -72,6 +72,31 @@ per-contract list  >  per-server (GOVERNANCE_TOKEN_MODE_<SLUG>)  >  global (GOVE
 ```
 
 - `GOVERNANCE_TOKEN_MODE_<SLUG>` — e.g. `GOVERNANCE_TOKEN_MODE_META=enforce`.
+  `<SLUG>` is the **contract** platform slug, the first segment of the
+  `contractId`, upper-cased. It is not the server or package name: gads-mcp's
+  contracts are `google_ads.*`, so its override is
+  `GOVERNANCE_TOKEN_MODE_GOOGLE_ADS`, and `GOVERNANCE_TOKEN_MODE_GADS` matches
+  nothing. Every governed tool on a server shares one slug (ratcheted in
+  `scripts/lib/contract-id-invariant.test.mjs`, #235), so one override covers the
+  whole server:
+
+  | Server         | Override suffix |
+  | -------------- | --------------- |
+  | amazon-dsp-mcp | `AMAZON_DSP`    |
+  | cm360-mcp      | `CM360`         |
+  | dv360-mcp      | `DV360`         |
+  | gads-mcp       | `GOOGLE_ADS`    |
+  | linkedin-mcp   | `LINKEDIN_ADS`  |
+  | meta-mcp       | `META`          |
+  | msads-mcp      | `MSADS`         |
+  | pinterest-mcp  | `PINTEREST`     |
+  | sa360-mcp      | `SA360`         |
+  | snapchat-mcp   | `SNAPCHAT`      |
+  | tiktok-mcp     | `TIKTOK`        |
+  | ttd-mcp        | `TTD`           |
+
+  dbm-mcp has no governed tools.
+
 - `GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS` / `_WARN_CONTRACTS` / `_OFF_CONTRACTS`
   — comma-separated `contractId` lists, highest precedence.
 

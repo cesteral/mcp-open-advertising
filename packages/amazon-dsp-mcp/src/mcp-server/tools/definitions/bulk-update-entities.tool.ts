@@ -3,6 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertAmazonDspBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import {
@@ -106,7 +112,10 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM, "items")
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -118,6 +127,10 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first write. One 3-token amazon_dsp:write per item.
+  assertAmazonDspBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({

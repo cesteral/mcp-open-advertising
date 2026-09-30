@@ -23,6 +23,7 @@ const baseInput = {
   dateRange: "Yesterday",
   reportTemplateId: 16353,
   fileFormat: "CSV",
+  advertiserIds: ["adv-1"],
 };
 
 describe("ttd_submit_report governance contract (effect class)", () => {
@@ -61,6 +62,29 @@ describe("ttd_submit_report governance contract (effect class)", () => {
     );
     expect(result.dryRun?.wouldSucceed).toBe(false);
     expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_TEMPLATE_ID");
+  });
+
+  it("dry_run flags a request whose additionalConfig strips the advertiser scope", async () => {
+    const result = await submitReportLogic(
+      { ...baseInput, additionalConfig: { AdvertiserFilters: [] }, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain(
+      "MISSING_ADVERTISER_FILTERS"
+    );
+  });
+
+  it("execute refuses an unpollable (advertiser-less) report before creating anything", async () => {
+    await expect(
+      submitReportLogic(
+        { ...baseInput, additionalConfig: { AdvertiserFilters: [] } } as any,
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/at least one advertiser/);
+    expect(svc.createReportSchedule).not.toHaveBeenCalled();
   });
 
   it("execute returns the effect identity + null-kind capability", async () => {

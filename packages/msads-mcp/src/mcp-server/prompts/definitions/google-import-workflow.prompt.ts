@@ -29,20 +29,23 @@ msads_import_from_google({
   "data": {
     "ImportJobs": [{
       "Type": "GoogleImportJob",
-      "GoogleAccountId": "${googleAccountId}",
-      "CampaignAdGroupIds": null,
-      "NewAccountNegativeKeywords": true,
-      "AutoDeviceBidOptimization": true
+      "Name": "Google Ads import",
+      "GoogleAccountId": ${googleAccountId},
+      "CredentialId": "{credentialId}"
     }]
   }
 })
 \`\`\`
+\`GoogleAccountId\` is the numeric Google Ads customer ID (no dashes). \`Name\` and \`CredentialId\` are
+required; the CredentialId comes from the Microsoft Advertising UI ("Import credential ID" page, signed
+in with the same Microsoft user and a Google user with access to the account) — it cannot be created
+through this API. One GoogleImportJob per call.
 
 ## Step 2: Check Import Status
 \`\`\`json
 msads_import_from_google({
   "operation": "getStatus",
-  "data": { "ImportJobIds": ["{importJobId}"] }
+  "data": { "ImportJobIds": ["{importJobId}"], "ImportType": "GoogleImportJob" }
 })
 \`\`\`
 
@@ -50,7 +53,7 @@ msads_import_from_google({
 \`\`\`json
 msads_import_from_google({
   "operation": "getResults",
-  "data": { "ImportJobId": "{importJobId}" }
+  "data": { "ImportJobIds": ["{importJobId}"], "ImportType": "GoogleImportJob" }
 })
 \`\`\`
 

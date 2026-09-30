@@ -61,23 +61,26 @@ Search for geo targeting tags by keyword:
   "params": {
     "advertiserId": "${advertiserId}",
     "query": "stockholm",
-    "scene": "GEO",
+    "searchType": "FUZZY_SEARCH",
     "placements": ["PLACEMENT_TIKTOK"],
-    "objectiveType": "TRAFFIC"
+    "objectiveType": "REACH"
   }
 }
 \`\`\`
 
-Each result includes:
-- \`id\` — The targeting ID to use in your ad group
-- \`name\` — Human-readable label
+Each result (TikTok's \`targeting_tag_list\`) includes:
+- \`geo.geo_id\` — The location ID to use in your ad group's \`location_ids\`
+- \`name\` — Human-readable label; \`keyword\` — the keyword it matched
 
 ### Key Targeting Types
 
 | Targeting Type | What It Searches | Example |
 |----------------|-----------------|---------|
-| \`GEO\` | Geo tags such as regions, postal codes, cities | "stockholm", "new york" |
-| \`ISP\` | Internet service provider targeting tags | "telia", "verizon" |
+| \`FUZZY_SEARCH\` | One location / zip / postal code, any country | "stockholm", "new york" |
+| \`BATCH_REGION_SEARCH\` | Up to 1,000 US/CA locations | "Austin", "Denver" |
+| \`BATCH_ZIPCODE_SEARCH\` | Up to 1,000 exact US/CA zip or postal codes | "10001", "A0A" |
+
+ISP tags come from \`tiktok_get_targeting_options\` (type \`ISP\`), not from search.
 
 ---
 

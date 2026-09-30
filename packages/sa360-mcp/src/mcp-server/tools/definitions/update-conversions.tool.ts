@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  JsonRpcErrorCode,
+  McpError,
   elicitConversionUploadConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -23,6 +25,7 @@ import type {
 import {
   validateConversionFields,
   summarizeConversionOutcome,
+  findDuplicateConversionIds,
 } from "../utils/conversion-governance.js";
 
 const TOOL_NAME = "sa360_update_conversions";
@@ -34,22 +37,32 @@ Modify previously uploaded offline conversion data. Each conversion must be iden
 **Important:**
 - Uses the legacy v2 API endpoint (PUT), not the Reporting API
 - Maximum 200 conversions per request
-- conversionId is required for updates (returned from insert)
+- conversionId is required for updates: the advertiser-assigned ID the conversion was inserted with (you chose it at insert time; SA360 does not generate it)
 - conversionTimestamp must match the original value exactly`;
 
 const EFFECT_KIND = "conversions_updated";
 
 const ConversionUpdateRowSchema = z.object({
-  clickId: z.string().optional().describe("SA360 click ID"),
-  gclid: z.string().optional().describe("Google click ID"),
-  conversionId: z.string().describe("Conversion ID (from original insert response)"),
+  clickId: z.string().optional().describe("DS click ID for the conversion (v2 `clickId`)"),
+  conversionId: z
+    .string()
+    .min(1)
+    .describe(
+      "Advertiser-assigned conversion ID the conversion was inserted with. Must be unique within the request."
+    ),
   conversionTimestamp: z.string().describe("Original conversion timestamp (epoch milliseconds)"),
   revenueMicros: z.string().optional().describe("Updated revenue in micros"),
   currencyCode: z.string().optional().describe("ISO 4217 currency code"),
   quantityMillis: z.string().optional().describe("Updated conversion quantity in millis"),
   segmentationType: z.string().default("FLOODLIGHT").describe("Segment type"),
-  segmentationName: z.string().optional().describe("Floodlight activity name"),
-  floodlightActivityId: z.string().optional().describe("Floodlight activity ID"),
+  segmentationName: z
+    .string()
+    .optional()
+    .describe("Friendly segmentation identifier, e.g. Floodlight activity name"),
+  segmentationId: z
+    .string()
+    .optional()
+    .describe("Numeric segmentation identifier, e.g. Floodlight activity ID"),
   type: z.string().optional().describe("Conversion type"),
   state: z.string().optional().describe("Set to REMOVED to delete the conversion"),
   customMetric: z
@@ -135,6 +148,16 @@ export async function updateConversionsLogic(
     };
   }
 
+  // v2 requires a unique conversionId per conversion in a request; refuse
+  // before prompting or spending an API call.
+  const duplicates = findDuplicateConversionIds(input.conversions);
+  if (duplicates.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      duplicates.map((d) => `conversion[${d.index}]: ${d.message}`).join("; ")
+    );
+  }
+
   const confirmed = await elicitConversionUploadConfirmation({
     count: input.conversions.length,
     operation: "update",
@@ -170,7 +193,7 @@ export async function updateConversionsLogic(
   // Effect emitted ONLY when SA360 accepted at least one row. A fully-rejected
   // update is not a completed conversion write — emitting an effect would record
   // a governance action that did not happen. The summary is scalar-only and
-  // non-PII (no conversionId/gclid/revenue rows or raw payloads).
+  // non-PII (no conversionId/clickId/revenue rows or raw payloads).
   const effect: EffectResult | undefined =
     outcome.succeeded > 0
       ? {
@@ -216,6 +239,13 @@ function buildEffectDryRun(input: UpdateConversionsInput): EffectDryRunResult {
       });
     }
   });
+  for (const dup of findDuplicateConversionIds(input.conversions)) {
+    validationErrors.push({
+      code: dup.code,
+      message: `conversion[${dup.index}]: ${dup.message}`,
+      field: `conversions[${dup.index}].${dup.field}`,
+    });
+  }
 
   const requested = input.conversions.length;
   const expectedEffect: EffectResult = {
@@ -320,11 +350,12 @@ export const updateConversionsTool = {
         advertiserId: "67890",
         conversions: [
           {
-            conversionId: "conv_abc123",
+            clickId: "EAIaIQobChMI...",
+            conversionId: "order-10001",
             conversionTimestamp: "1700000000000",
             revenueMicros: "10000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
           },
         ],
       },
@@ -336,10 +367,11 @@ export const updateConversionsTool = {
         advertiserId: "67890",
         conversions: [
           {
-            conversionId: "conv_abc123",
+            clickId: "EAIaIQobChMI...",
+            conversionId: "order-10001",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
-            floodlightActivityId: "11111",
+            segmentationId: "11111",
             state: "REMOVED",
           },
         ],

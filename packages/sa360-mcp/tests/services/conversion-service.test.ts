@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConversionService } from "../../src/services/sa360-v2/conversion-service.js";
+import { V2_CONVERSION_PROPERTIES } from "../helpers/v2-conversion-schema.js";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -60,7 +61,8 @@ describe("ConversionService", () => {
 
       await service.insertConversions("agency-1", "adv-1", [
         {
-          gclid: "EAIaIQobChMI...",
+          clickId: "EAIaIQobChMI...",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
         },
@@ -81,12 +83,14 @@ describe("ConversionService", () => {
 
       await service.insertConversions("agency-1", "adv-1", [
         {
-          gclid: "gclid-1",
+          clickId: "click-1",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
         },
         {
           clickId: "click-2",
+          conversionId: "order-2",
           conversionTimestamp: "1700000001000",
           segmentationType: "FLOODLIGHT",
         },
@@ -104,23 +108,54 @@ describe("ConversionService", () => {
 
       await service.insertConversions("agency-1", "adv-1", [
         {
-          gclid: "gclid-1",
+          clickId: "click-1",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           revenueMicros: "5000000",
           currencyCode: "USD",
           segmentationType: "FLOODLIGHT",
-          floodlightActivityId: "11111",
+          segmentationId: "11111",
           type: "TRANSACTION",
         },
       ]);
 
       const body = JSON.parse(httpClient.fetch.mock.calls[0][2].body);
       const row = body.conversion[0];
-      expect(row.gclid).toBe("gclid-1");
+      expect(row.clickId).toBe("click-1");
+      expect(row.conversionId).toBe("order-1");
       expect(row.revenueMicros).toBe("5000000");
       expect(row.currencyCode).toBe("USD");
-      expect(row.floodlightActivityId).toBe("11111");
+      expect(row.segmentationId).toBe("11111");
       expect(row.type).toBe("TRANSACTION");
+    });
+
+    it("sends only v2 Conversion properties, even if a row carries extra keys", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+
+      await service.insertConversions("agency-1", "adv-1", [
+        {
+          clickId: "click-1",
+          conversionId: "order-1",
+          conversionTimestamp: "1700000000000",
+          segmentationType: "FLOODLIGHT",
+          segmentationName: "purchase",
+          quantityMillis: "1000",
+          state: "ACTIVE",
+          customMetric: [{ name: "m", value: 1 }],
+          customDimension: [{ name: "d", value: "x" }],
+          // Legacy non-v2 keys must never reach the API.
+          gclid: "g-1",
+          floodlightActivityId: "11111",
+        } as any,
+      ]);
+
+      const row = JSON.parse(httpClient.fetch.mock.calls[0][2].body).conversion[0];
+      const unknown = Object.keys(row).filter((k) => !V2_CONVERSION_PROPERTIES.has(k));
+      expect(unknown).toEqual([]);
+      expect(row).not.toHaveProperty("gclid");
+      expect(row).not.toHaveProperty("floodlightActivityId");
+      expect(row.segmentationName).toBe("purchase");
+      expect(row.customMetric).toEqual([{ name: "m", value: 1 }]);
     });
 
     it("returns API response", async () => {
@@ -132,7 +167,8 @@ describe("ConversionService", () => {
 
       const result = await service.insertConversions("agency-1", "adv-1", [
         {
-          gclid: "gclid-1",
+          clickId: "click-1",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
         },
@@ -146,13 +182,14 @@ describe("ConversionService", () => {
 
       await service.insertConversions("agency-1", "adv-123", [
         {
-          gclid: "gclid-1",
+          clickId: "click-1",
+          conversionId: "order-1",
           conversionTimestamp: "1700000000000",
           segmentationType: "FLOODLIGHT",
         },
       ]);
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:adv-123");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:adv-123");
     });
 
     it("propagates errors from httpClient", async () => {
@@ -161,7 +198,8 @@ describe("ConversionService", () => {
       await expect(
         service.insertConversions("agency-1", "adv-1", [
           {
-            gclid: "gclid-1",
+            clickId: "click-1",
+            conversionId: "order-1",
             conversionTimestamp: "1700000000000",
             segmentationType: "FLOODLIGHT",
           },
@@ -244,7 +282,7 @@ describe("ConversionService", () => {
         },
       ]);
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:adv-456");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("sa360:v2:adv-456");
     });
 
     it("handles multiple conversion rows", async () => {

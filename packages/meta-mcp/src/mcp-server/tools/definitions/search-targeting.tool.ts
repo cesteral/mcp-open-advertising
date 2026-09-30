@@ -19,10 +19,10 @@ const TOOL_DESCRIPTION = `Search for targeting options (interests, behaviors, de
 - \`adinterest\` — Search interests by keyword
 - \`adinterestsuggestion\` — Get suggestions based on existing interests
 - \`adinterestvalid\` — Validate interest IDs
-- \`adbehavior\` — Search behavioral targeting options
-- \`adTargetingCategory\` — Browse targeting categories
+- \`adTargetingCategory\` — Browse targeting categories; pass the category in \`targetingClass\`
 - \`adgeolocation\` — Search geographic locations
 - \`adlocale\` — Search locales/languages
+- Also: \`adcountry\`, \`adzipcode\`, \`adgeolocationmeta\`, \`adradiussuggestion\`, \`adkeyword\`, \`adeducationschool\`, \`adeducationmajor\`, \`adworkemployer\`, \`adworkposition\`
 
 Returns matching options with ID, name, audience size, and path.`;
 
@@ -32,6 +32,12 @@ export const SearchTargetingInputSchema = z
       .string()
       .describe("Search type (adinterest, adinterestsuggestion, adgeolocation, adlocale, etc.)"),
     query: z.string().min(1).describe("Search keyword or query"),
+    targetingClass: z
+      .string()
+      .optional()
+      .describe(
+        "Meta's /search `class` parameter, used with adTargetingCategory (e.g. demographics, life_events, industries, income)"
+      ),
     limit: z.number().min(1).max(100).optional().describe("Max results per page (default 25)"),
     after: z
       .string()
@@ -64,7 +70,8 @@ export async function searchTargetingLogic(
     input.query,
     input.limit,
     context,
-    input.after
+    input.after,
+    input.targetingClass
   );
 
   const response = (result as Record<string, unknown>) ?? {};

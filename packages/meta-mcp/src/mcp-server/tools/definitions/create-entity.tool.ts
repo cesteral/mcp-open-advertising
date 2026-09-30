@@ -216,6 +216,7 @@ export const createEntityTool = {
           objective: "OUTCOME_TRAFFIC",
           status: "PAUSED",
           special_ad_categories: [],
+          is_adset_budget_sharing_enabled: false,
         },
       },
     },

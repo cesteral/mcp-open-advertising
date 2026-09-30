@@ -7,27 +7,41 @@ import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
+/** Pinterest v5 `AdPinPreviewCreativeType` — `creative_type` of a Pin-sourced ad preview. */
+const AD_PREVIEW_CREATIVE_TYPES = [
+  "SHOPPING",
+  "COLLECTION",
+  "MAX_VIDEO",
+  "MAX_WIDTH_VIDEO_COLLECTION",
+  "MAX_WIDTH_REGULAR_COLLECTION",
+] as const;
+
 const TOOL_NAME = "pinterest_get_ad_preview";
 const TOOL_TITLE = "Get Pinterest Ad Preview";
 const TOOL_DESCRIPTION = `Get a preview of how a Pinterest ad will appear to users.
 
-Returns preview data including image/video URLs and ad text as they will
-be displayed on Pinterest's platform.
+Pinterest v5 previews a Pin, not an ad id: this reads the ad to find its \`pin_id\`, then calls \`POST /v5/ad_accounts/{ad_account_id}/ad_previews\`. That endpoint needs the \`ads:write\` scope and creates a preview page; the returned \`url\` expires after 7 days. No ad, campaign or spend is changed.
 
-**Common ad formats:** FEED, STORY, SPARK_ADS`;
+**Creative types (optional):** ${AD_PREVIEW_CREATIVE_TYPES.join(", ")}`;
 
 export const GetAdPreviewInputSchema = z
   .object({
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     adId: z.string().min(1).describe("The ad ID to preview"),
-    adFormat: z.string().optional().describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
+    creativeType: z
+      .enum(AD_PREVIEW_CREATIVE_TYPES)
+      .optional()
+      .describe("Optional preview creative_type; omit to preview the Pin as-is"),
   })
   .describe("Parameters for getting Pinterest ad preview");
 
 export const GetAdPreviewOutputSchema = z
   .object({
-    preview: z.record(z.any()).describe("Ad preview data from Pinterest"),
+    preview: z
+      .record(z.any())
+      .describe("Pinterest ad preview response: { url } — preview page, expires in 7 days"),
     adId: z.string(),
+    pinId: z.string().describe("The ad's pin_id the preview was created from"),
     timestamp: z.string().datetime(),
   })
   .describe("Ad preview result");
@@ -43,16 +57,17 @@ export async function getAdPreviewLogic(
   const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
-  const preview = await pinterestService.getAdPreviews(
+  const { pinId, preview } = await pinterestService.getAdPreviews(
     { adAccountId: input.adAccountId },
     input.adId,
-    input.adFormat,
+    input.creativeType,
     context
   );
 
   return {
     preview: preview as Record<string, unknown>,
     adId: input.adId,
+    pinId,
     timestamp: new Date().toISOString(),
   };
 }
@@ -61,7 +76,7 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `Ad preview for ${result.adId}:\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Ad preview for ${result.adId} (pin ${result.pinId}):\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -80,15 +95,15 @@ export const getAdPreviewTool = {
   },
   inputExamples: [
     {
-      label: "Preview a Pinterest feed ad",
+      label: "Preview a Pinterest video ad",
       input: {
         adAccountId: "1234567890",
         adId: "1600123456789",
-        adFormat: "FEED",
+        creativeType: "MAX_VIDEO",
       },
     },
     {
-      label: "Preview an ad without specifying format",
+      label: "Preview an ad without specifying a creative type",
       input: {
         adAccountId: "1234567890",
         adId: "1600123456789",

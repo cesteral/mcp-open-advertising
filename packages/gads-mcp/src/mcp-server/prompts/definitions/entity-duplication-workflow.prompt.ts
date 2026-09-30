@@ -133,7 +133,8 @@ Input: {
     "advertisingChannelType": "{original advertisingChannelType}",
     "status": "PAUSED",
     "campaignBudget": "customers/${customerId}/campaignBudgets/{newBudgetId}",
-    "startDate": "{desired start date}",
+    "containsEuPoliticalAdvertising": "{original containsEuPoliticalAdvertising}",
+    "startDateTime": "{desired start, yyyy-MM-dd HH:mm:ss}",
     "networkSettings": "{original networkSettings}",
     "biddingStrategyType": "{original biddingStrategyType}"
   }

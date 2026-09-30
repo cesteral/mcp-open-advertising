@@ -5,6 +5,7 @@ const mockState = vi.hoisted(() => ({
     getEntity: vi.fn(),
     createEntity: vi.fn(),
     updateEntity: vi.fn(),
+    patchEntity: vi.fn(),
     deleteEntity: vi.fn(),
     listEntities: vi.fn(),
     listUserProfiles: vi.fn(),
@@ -49,31 +50,69 @@ describe("updateEntityLogic", () => {
     vi.clearAllMocks();
   });
 
-  it("calls cm360Service.updateEntity with data that includes id from entityId", async () => {
+  it("PATCHes only the caller's fields at entityId — never a full-replacement PUT", async () => {
     const updatedEntity = { id: "entity-1", name: "Updated Campaign" };
-    mockState.cm360Service.updateEntity.mockResolvedValue(updatedEntity);
+    mockState.cm360Service.patchEntity.mockResolvedValue(updatedEntity);
 
     await updateEntityLogic(
       {
         profileId: "prof-1",
         entityType: "campaign",
         entityId: "entity-1",
-        data: { name: "Updated Campaign", advertiserId: "adv-1" },
+        data: { name: "Updated Campaign" },
       },
       mockContext
     );
 
-    expect(mockState.cm360Service.updateEntity).toHaveBeenCalledWith(
+    expect(mockState.cm360Service.patchEntity).toHaveBeenCalledWith(
       "campaign",
       "prof-1",
-      { name: "Updated Campaign", advertiserId: "adv-1", id: "entity-1" },
+      "entity-1",
+      { name: "Updated Campaign" },
       mockContext
     );
+    expect(mockState.cm360Service.updateEntity).not.toHaveBeenCalled();
+  });
+
+  it("real-write `after` equals the dry-run `expectedPostState` for the same partial patch", async () => {
+    // The governed dry-run predicts a merge of the patch onto the current
+    // entity; the real call must do exactly that. Simulate the platform's
+    // PATCH (merge) and check the two snapshots agree.
+    const { mergeCm360Patch } = await import(
+      "../../src/mcp-server/tools/utils/capture-snapshot.js"
+    );
+    const current = {
+      id: "ad-1",
+      name: "Ad",
+      accountId: "acct-1",
+      active: true,
+      archived: false,
+      startTime: "2026-01-01T00:00:00Z",
+      endTime: "2026-12-31T00:00:00Z",
+    };
+    const patch = { active: false };
+    mockState.cm360Service.getEntity.mockResolvedValue(current);
+    mockState.cm360Service.patchEntity.mockImplementation(
+      async (_t: string, _p: string, _id: string, body: Record<string, unknown>) =>
+        mergeCm360Patch(current, body)
+    );
+
+    const input = { profileId: "p", entityType: "ad" as const, entityId: "ad-1", data: patch };
+    const dry = await updateEntityLogic({ ...input, dry_run: true }, mockContext);
+    const real = await updateEntityLogic({ ...input, dry_run: false }, mockContext);
+
+    expect(dry.dryRun!.wouldSucceed).toBe(true);
+    expect(real.after).toEqual(dry.dryRun!.expectedPostState);
+    expect(real.after!.status.canonical).toBe("paused");
+    expect(real.after!.schedule).toEqual({
+      startAt: "2026-01-01T00:00:00Z",
+      endAt: "2026-12-31T00:00:00Z",
+    });
   });
 
   it("returns entity and timestamp", async () => {
     const updatedEntity = { id: "entity-1", name: "Updated" };
-    mockState.cm360Service.updateEntity.mockResolvedValue(updatedEntity);
+    mockState.cm360Service.patchEntity.mockResolvedValue(updatedEntity);
 
     const result = await updateEntityLogic(
       {
@@ -91,7 +130,7 @@ describe("updateEntityLogic", () => {
   });
 
   it("propagates service errors", async () => {
-    mockState.cm360Service.updateEntity.mockRejectedValue(new Error("API error"));
+    mockState.cm360Service.patchEntity.mockRejectedValue(new Error("API error"));
 
     await expect(
       updateEntityLogic(

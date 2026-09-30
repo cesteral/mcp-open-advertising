@@ -34,7 +34,6 @@ const ENTITY_EXAMPLES: Record<MetaEntityType, string> = {
   "status": "PAUSED",
   "special_ad_categories": [],
   "daily_budget": 10000,
-  "campaign_budget_optimization": true,
   "bid_strategy": "COST_CAP"
 }
 \`\`\``,
@@ -65,9 +64,10 @@ const ENTITY_EXAMPLES: Record<MetaEntityType, string> = {
 {
   "name": "Retargeting - Website Visitors",
   "campaign_id": "CAMPAIGN_ID",
-  "optimization_goal": "CONVERSIONS",
+  "optimization_goal": "OFFSITE_CONVERSIONS",
   "billing_event": "IMPRESSIONS",
   "daily_budget": 3000,
+  "promoted_object": { "pixel_id": "PIXEL_ID", "custom_event_type": "PURCHASE" },
   "targeting": {
     "custom_audiences": [{ "id": "AUDIENCE_ID" }],
     "geo_locations": { "countries": ["US"] }

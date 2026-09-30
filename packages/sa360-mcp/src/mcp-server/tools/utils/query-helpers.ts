@@ -31,6 +31,16 @@ function validateFieldName(field: string, context: string): void {
 /**
  * Common fields for each entity type.
  * These are the default fields selected when listing entities.
+ *
+ * Every field must exist on the pinned Reporting API v0 (`SearchAds360Row` in
+ * the v0 Discovery document / `src/generated/openapi.json` — enforced by
+ * tests/query-helpers.test.ts). v0 differs from Google Ads GAQL here: its
+ * `AdGroup` has no `campaign` field, `AdGroupAd` no `ad_group` field and
+ * `CampaignCriterion` no `campaign` field. The parent is selected instead as an
+ * attributed-resource join (`campaign.id` / `ad_group.id`), which also makes it
+ * filterable, and is encoded in the child's `resource_name`
+ * (`customers/{c}/adGroupAds/{adGroupId}~{adId}`,
+ * `customers/{c}/campaignCriteria/{campaignId}~{criterionId}`).
  */
 const DEFAULT_SELECT_FIELDS: Record<SA360EntityType, string[]> = {
   customer: [
@@ -56,7 +66,7 @@ const DEFAULT_SELECT_FIELDS: Record<SA360EntityType, string[]> = {
     "ad_group.name",
     "ad_group.status",
     "ad_group.type",
-    "ad_group.campaign",
+    "campaign.id",
     "ad_group.cpc_bid_micros",
     "ad_group.engine_id",
     "ad_group.resource_name",
@@ -66,7 +76,7 @@ const DEFAULT_SELECT_FIELDS: Record<SA360EntityType, string[]> = {
     "ad_group_ad.ad.name",
     "ad_group_ad.ad.type",
     "ad_group_ad.status",
-    "ad_group_ad.ad_group",
+    "ad_group.id",
     "ad_group_ad.engine_id",
     "ad_group_ad.resource_name",
   ],
@@ -82,7 +92,7 @@ const DEFAULT_SELECT_FIELDS: Record<SA360EntityType, string[]> = {
   campaignCriterion: [
     "campaign_criterion.criterion_id",
     "campaign_criterion.type",
-    "campaign_criterion.campaign",
+    "campaign.id",
     "campaign_criterion.resource_name",
   ],
   biddingStrategy: [

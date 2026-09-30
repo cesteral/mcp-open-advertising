@@ -15,7 +15,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `LinkedInBearerAuthStrategy` (validates tokens against LinkedIn API)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (100/min default, writes cost 3x)
+- **Rate limiting** via shared `RateLimiter` class (10/min default, writes cost 3x)
 - **Structured logging** via Pino
 - **MCP Resources** for entity schemas, examples, analytics reference, and targeting reference
 - **MCP Prompts** for campaign setup, analytics reporting, troubleshooting, and schema exploration
@@ -257,7 +257,7 @@ pnpm run typecheck
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `LINKEDIN_API_BASE_URL`: LinkedIn API base URL (default: `https://api.linkedin.com`)
 - `LINKEDIN_API_VERSION`: API version header value (default: `202409`)
-- `LINKEDIN_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 100)
+- `LINKEDIN_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 10)
 - `LINKEDIN_ACCESS_TOKEN`: Access token for stdio mode
 
 ## Architecture

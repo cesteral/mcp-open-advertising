@@ -8,10 +8,21 @@ import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
  *
  * Static configuration for TikTok Marketing API entity types.
  * All entities require advertiser_id in query params (GET) or body (POST).
- * TikTok uses separate endpoints for status updates and deletes.
+ *
+ * Paths are the ones TikTok's official Business API SDK
+ * (github.com/tiktok/tiktok-business-api-sdk) defines for v1.3:
+ * `{campaign,adgroup,ad}/{get,create,update,status/update}/`. The SDK has no
+ * `*\/delete/` or `*\/copy/` endpoint for these entities — deletion is
+ * `status/update/` with `operation_status: "DELETE"` (the StatusOptType enum
+ * is ENABLE/DISABLE/DELETE), and there is no server-side copy.
+ *
+ * There is also no `creative` entity: the v1.2-era `creative/adcreative/*`
+ * endpoints are absent from the v1.3 SDK. Creatives are part of the ad
+ * (`creatives[]` on ad/create and ad/update); assets are uploaded with
+ * tiktok_upload_image / tiktok_upload_video.
  */
 
-export type TikTokEntityType = "campaign" | "adGroup" | "ad" | "creative";
+export type TikTokEntityType = "campaign" | "adGroup" | "ad";
 
 export interface TikTokEntityConfig {
   /** API path for list/get (GET) */
@@ -20,12 +31,8 @@ export interface TikTokEntityConfig {
   createPath: string;
   /** API path for update (POST) */
   updatePath: string;
-  /** API path for status update (POST) */
+  /** API path for status update (POST) — also how an entity is deleted (operation_status DELETE) */
   statusUpdatePath: string;
-  /** API path for delete (POST) */
-  deletePath: string;
-  /** API path for duplicate/copy (POST), if supported */
-  duplicatePath?: string;
   /** The field name used as the entity's primary ID */
   idField: string;
   /** The field name used in arrays for bulk operations (e.g., campaign_ids) */
@@ -34,8 +41,6 @@ export interface TikTokEntityConfig {
   displayName: string;
   /** Default fields to return when listing/getting */
   defaultFields: string[];
-  /** Whether the entity supports duplication */
-  supportsDuplicate?: boolean;
   /** Whether the entity supports dedicated status update endpoint */
   supportsStatusUpdate?: boolean;
 }
@@ -56,7 +61,6 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
       createPath: `/open_api/${v}/campaign/create/`,
       updatePath: `/open_api/${v}/campaign/update/`,
       statusUpdatePath: `/open_api/${v}/campaign/status/update/`,
-      deletePath: `/open_api/${v}/campaign/delete/`,
       idField: "campaign_id",
       idsField: "campaign_ids",
       displayName: "Campaign",
@@ -70,7 +74,6 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "created_time",
         "modify_time",
       ],
-      supportsDuplicate: true,
       supportsStatusUpdate: true,
     },
     adGroup: {
@@ -78,7 +81,6 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
       createPath: `/open_api/${v}/adgroup/create/`,
       updatePath: `/open_api/${v}/adgroup/update/`,
       statusUpdatePath: `/open_api/${v}/adgroup/status/update/`,
-      deletePath: `/open_api/${v}/adgroup/delete/`,
       idField: "adgroup_id",
       idsField: "adgroup_ids",
       displayName: "Ad Group",
@@ -92,7 +94,6 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "schedule_type",
         "created_time",
       ],
-      supportsDuplicate: true,
       supportsStatusUpdate: true,
     },
     ad: {
@@ -100,7 +101,6 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
       createPath: `/open_api/${v}/ad/create/`,
       updatePath: `/open_api/${v}/ad/update/`,
       statusUpdatePath: `/open_api/${v}/ad/status/update/`,
-      deletePath: `/open_api/${v}/ad/delete/`,
       idField: "ad_id",
       idsField: "ad_ids",
       displayName: "Ad",
@@ -114,38 +114,26 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "video_id",
         "created_time",
       ],
-      supportsDuplicate: true,
       supportsStatusUpdate: true,
-    },
-    creative: {
-      listPath: `/open_api/${v}/creative/adcreative/get/`,
-      createPath: `/open_api/${v}/creative/adcreative/create/`,
-      updatePath: `/open_api/${v}/creative/adcreative/update/`,
-      // Creative has no dedicated /status/update/ endpoint — use regular update
-      statusUpdatePath: "",
-      deletePath: `/open_api/${v}/creative/adcreative/delete/`,
-      idField: "creative_id",
-      idsField: "creative_ids",
-      displayName: "Creative",
-      defaultFields: [
-        "creative_id",
-        "advertiser_id",
-        "display_name",
-        "image_ids",
-        "video_id",
-        "created_time",
-      ],
     },
   };
 }
 
 /** Supported entity type keys (stable — not version-dependent). */
-const ENTITY_TYPE_KEYS: TikTokEntityType[] = ["campaign", "adGroup", "ad", "creative"];
+const ENTITY_TYPE_KEYS: TikTokEntityType[] = ["campaign", "adGroup", "ad"];
 
 export function getEntityConfig(entityType: TikTokEntityType): TikTokEntityConfig {
   const configs = buildEntityConfigs();
   const config = configs[entityType];
   if (!config) {
+    if ((entityType as string) === "creative") {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "TikTok Marketing API v1.3 has no standalone creative entity (no creative/adcreative/* endpoints). " +
+          "Creatives are set on the ad itself via `creatives[]` in tiktok_create_entity / tiktok_update_entity " +
+          "with entityType 'ad'; upload assets first with tiktok_upload_image / tiktok_upload_video."
+      );
+    }
     throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown TikTok entity type: ${entityType}`);
   }
   return config;
@@ -157,17 +145,5 @@ export function getSupportedEntityTypes(): TikTokEntityType[] {
 
 export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
-  return types as [string, ...string[]];
-}
-
-export function getDuplicateSupportedEntityTypes(): TikTokEntityType[] {
-  const configs = buildEntityConfigs();
-  return (Object.entries(configs) as [TikTokEntityType, TikTokEntityConfig][])
-    .filter(([, config]) => config.supportsDuplicate)
-    .map(([type]) => type);
-}
-
-export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
-  const types = getDuplicateSupportedEntityTypes();
   return types as [string, ...string[]];
 }

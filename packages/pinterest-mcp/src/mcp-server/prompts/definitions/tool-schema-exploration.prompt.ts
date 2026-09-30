@@ -40,41 +40,43 @@ Fetch these resources for detailed schema information:
 | \`entity-schema://pinterest/campaign\` | Campaign fields |
 | \`entity-schema://pinterest/adGroup\` | Ad Group fields + targeting |
 | \`entity-schema://pinterest/ad\` | Ad fields |
-| \`entity-schema://pinterest/creative\` | Creative fields |
+| \`entity-schema://pinterest/creative\` | Pin (creative) fields |
 | \`entity-examples://pinterest/all\` | All entity examples |
 | \`entity-examples://pinterest/{type}\` | Examples for specific type |
-| \`reporting-reference://pinterest\` | Metrics, dimensions, and breakdown options |
+| \`reporting-reference://pinterest\` | Report types, columns, breakdowns and date-range limits |
 
 ## Tool Categories
 
 ### Read Operations
-- \`pinterest_list_ad_accounts\` — List accessible advertiser accounts
-- \`pinterest_list_entities\` — List entities with page pagination
+- \`pinterest_list_ad_accounts\` — List accessible ad accounts
+- \`pinterest_list_entities\` — List entities (cursor pagination via \`bookmark\`)
 - \`pinterest_get_entity\` — Get single entity by ID
 
 ### Write Operations
 - \`pinterest_create_entity\` — Create entity
 - \`pinterest_update_entity\` — Update entity fields
-- \`pinterest_delete_entity\` — Delete entities
+- \`pinterest_delete_entity\` — Archive campaigns, ad groups or ads (permanent), or hard-delete Pins
+- \`pinterest_upload_video\` — Upload a video for a video Pin
 
 ### Reporting (Async)
 - \`pinterest_get_report\` — Submit async report and download results
-- \`pinterest_get_report_breakdowns\` — Report with breakdown dimensions
+- \`pinterest_get_report_breakdowns\` — Report with targeting breakdowns
+- \`pinterest_submit_report\` / \`pinterest_check_report_status\` / \`pinterest_download_report\` — Run the async steps one at a time
 
 ### Bulk Operations
-- \`pinterest_bulk_update_status\` — Batch enable/disable/delete entities
+- \`pinterest_bulk_update_status\` — Batch set ACTIVE, PAUSED or ARCHIVED
 - \`pinterest_bulk_create_entities\` — Batch creation (up to 50)
 - \`pinterest_bulk_update_entities\` — Batch updates (up to 50)
 - \`pinterest_adjust_bids\` — Batch adjust ad group bid prices
 
 ### Targeting
-- \`pinterest_search_targeting\` — Search interest categories, behaviors, demographics
-- \`pinterest_get_targeting_options\` — Browse targeting categories
+- \`pinterest_search_targeting\` — Search the options of one targeting type by keyword
+- \`pinterest_get_targeting_options\` — List targeting types, or every option of one type
 
 ### Specialized
-- \`pinterest_duplicate_entity\` — Copy campaigns, ad groups, ads
-- \`pinterest_get_audience_estimate\` — Audience size estimation
-- \`pinterest_get_ad_preview\` — Ad preview for video/image ads
+- \`pinterest_duplicate_entity\` — Copy a campaign
+- \`pinterest_get_delivery_estimate\` — Audience size estimate for a targeting spec
+- \`pinterest_get_ad_preview\` — Preview page for an ad's Pin
 - \`pinterest_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
@@ -87,7 +89,8 @@ Fetch these resources for detailed schema information:
 | Create a full campaign structure | \`pinterest_campaign_setup_workflow\` |
 | Research audiences & build targeting | \`pinterest_targeting_discovery_workflow\` |
 | Update entities safely | \`pinterest_entity_update_workflow\` |
-| Duplicate campaigns/ad groups/ads | \`pinterest_entity_duplication_workflow\` |
+| Duplicate a campaign | \`pinterest_entity_duplication_workflow\` |
+| Upload a video, create a Pin, create the ad | \`creative_upload_workflow\` |
 | Bulk create/update/status/bids | \`pinterest_bulk_operations_workflow\` |
 | Async reporting & breakdowns | \`pinterest_reporting_workflow\` |
 | Troubleshoot entity issues | \`pinterest_troubleshoot_entity\` |

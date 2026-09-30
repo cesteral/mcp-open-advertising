@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll } from "../utils/bulk-capacity.js";
 import { ALL_TARGETING_TYPES, type TargetingType } from "../utils/targeting-metadata.js";
 import {
   getValidateInputShape,
@@ -10,7 +11,11 @@ import {
   getEntityIdsValidationError,
   getValidateIdsFieldName,
 } from "../utils/targeting-input-shape.js";
-import { getSupportedTargetingParentTypes } from "../utils/targeting-metadata.js";
+import {
+  getEntityIdField,
+  getSupportedTargetingParentTypes,
+  type TargetingParentType,
+} from "../utils/targeting-metadata.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -121,6 +126,25 @@ export async function validateTargetingConfigLogic(
       entityIds[parentType] = ids;
     }
   }
+
+  // One list call per (entity, targeting type), one token each on
+  // `dv360:${advertiserId}` (TargetingService.validateTargetingConfig →
+  // listAssignedTargetingOptions), issued sequentially. Refuse a request the
+  // rate limiter cannot admit in time before the first call — otherwise the
+  // calls past the queue budget are recorded as per-entity "error" issues.
+  // An "advertiser" parent's own id is the advertiserId its calls are keyed on.
+  const callAdvertiserIds = Object.entries(entityIds).flatMap(([parentType, ids]) =>
+    getEntityIdField(parentType as TargetingParentType) === "advertiserId"
+      ? ids
+      : ids.map(() => input.advertiserId)
+  );
+  assertBulkCapacityAll(
+    targetingService.bulkCapacityChecks(
+      TOOL_NAME,
+      callAdvertiserIds,
+      targetingTypes.map(() => 1)
+    )
+  );
 
   const result = await targetingService.validateTargetingConfig(
     input.advertiserId,

@@ -168,15 +168,18 @@ describe("AmazonDspV1Service", () => {
     expect(result).toEqual(updated);
   });
 
-  it("retrieveCampaignForecast posts to /adsApi/v1/retrieve/campaignForecasts/dsp", async () => {
+  it("retrieveCampaignForecast posts to /adsApi/v1/retrieve/campaignForecasts/dsp with the required Amazon-Ads-AccountId header", async () => {
     const body = { success: [], error: [] };
     const { client, post } = makeClient(body);
     const svc = new AmazonDspV1Service(client, logger);
-    await svc.retrieveCampaignForecast({ campaignForecastDescriptions: [] });
+    await svc.retrieveCampaignForecast({ campaignForecastDescriptions: [] }, "adv-123");
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
       expect.objectContaining({ campaignForecastDescriptions: [] }),
-      undefined
+      undefined,
+      undefined,
+      undefined,
+      { "Amazon-Ads-AccountId": "adv-123" }
     );
   });
 

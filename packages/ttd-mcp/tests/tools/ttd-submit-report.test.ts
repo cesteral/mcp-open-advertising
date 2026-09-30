@@ -34,7 +34,12 @@ describe("submitReportLogic", () => {
 
   it("returns reportScheduleId and timestamp", async () => {
     const result = await submitReportLogic(
-      { reportName: "My Report", dateRange: "Last7Days" },
+      {
+        reportName: "My Report",
+        dateRange: "Last7Days",
+        reportTemplateId: 16353,
+        advertiserIds: ["adv-1"],
+      } as any,
       createMockContext(),
       createMockSdkContext()
     );
@@ -73,12 +78,30 @@ describe("submitReportLogic", () => {
 
   it("calls createReportSchedule, not runReport", async () => {
     await submitReportLogic(
-      { reportName: "Test", dateRange: "Yesterday", reportTemplateId: 16353, fileFormat: "CSV" },
+      {
+        reportName: "Test",
+        dateRange: "Yesterday",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
+        advertiserIds: ["adv-1"],
+      },
       createMockContext(),
       createMockSdkContext()
     );
 
     expect(mockTtdReportingService.createReportSchedule).toHaveBeenCalledOnce();
+  });
+});
+
+describe("submit_report advertiser scope (pollability)", () => {
+  it("the input schema requires at least one advertiser ID", async () => {
+    const { SubmitReportInputSchema } = await import(
+      "../../src/mcp-server/tools/definitions/submit-report.tool.js"
+    );
+    const base = { reportName: "R", dateRange: "Yesterday", reportTemplateId: 1 };
+    expect(SubmitReportInputSchema.safeParse(base).success).toBe(false);
+    expect(SubmitReportInputSchema.safeParse({ ...base, advertiserIds: [] }).success).toBe(false);
+    expect(SubmitReportInputSchema.safeParse({ ...base, advertiserIds: ["a"] }).success).toBe(true);
   });
 });
 

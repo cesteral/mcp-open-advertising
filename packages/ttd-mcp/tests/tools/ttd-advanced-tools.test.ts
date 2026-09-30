@@ -1,3 +1,4 @@
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 
 const { mockResolveSessionServices } = vi.hoisted(() => ({
@@ -99,6 +100,19 @@ function createMockSdkContext(sessionId = "session-123") {
   return { sessionId } as any;
 }
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see ttd-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityCheck = (
+  toolName: string,
+  itemCount: number,
+  costPerItem: readonly number[]
+) => ({
+  rateLimiter: new RateLimiter(),
+  toolName,
+  itemCount,
+  buckets: [{ key: "ttd:test", costPerItem }],
+});
+
 describe("ttd advanced tools", () => {
   let mockTtdService: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -106,6 +120,7 @@ describe("ttd advanced tools", () => {
     vi.clearAllMocks();
 
     mockTtdService = {
+      bulkCapacityCheck: unlimitedBulkCapacityCheck,
       bulkCreateEntities: vi.fn().mockResolvedValue({
         results: [
           { success: true, entity: { CampaignId: "c1" } },

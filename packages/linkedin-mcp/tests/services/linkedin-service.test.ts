@@ -107,6 +107,67 @@ describe("LinkedInService", () => {
     });
   });
 
+  describe("adAccount item paths", () => {
+    // The versioned adAccounts resource is keyed by the NUMERIC account id —
+    // LinkedIn's official python client addresses it as `/adAccounts/{id}` with
+    // `path_keys={"id": 123}` and expects the path `/adAccounts/123`. This used
+    // to send `/rest/adAccounts/urn%3Ali%3AsponsoredAccount%3A123`.
+    const URN = "urn:li:sponsoredAccount:508915158";
+
+    it("GETs /rest/adAccounts/{numericId}", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ id: 508915158 });
+      await service.getEntity("adAccount", URN);
+      expect(mockHttpClient.get.mock.calls[0][0]).toBe("/rest/adAccounts/508915158");
+    });
+
+    it("PARTIAL_UPDATEs /rest/adAccounts/{numericId}", async () => {
+      mockHttpClient.patch.mockResolvedValueOnce({});
+      await service.updateEntity("adAccount", URN, { name: "Renamed" });
+      expect(mockHttpClient.patch.mock.calls[0][0]).toBe("/rest/adAccounts/508915158");
+    });
+
+    it("DELETEs /rest/adAccounts/{numericId}", async () => {
+      mockHttpClient.delete.mockResolvedValueOnce({});
+      await service.deleteEntity("adAccount", URN);
+      expect(mockHttpClient.delete.mock.calls[0][0]).toBe("/rest/adAccounts/508915158");
+    });
+
+    it("accepts a bare numeric id and rejects a non-account URN", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ id: 42 });
+      await service.getEntity("adAccount", "42");
+      expect(mockHttpClient.get.mock.calls[0][0]).toBe("/rest/adAccounts/42");
+      await expect(service.getEntity("adAccount", "urn:li:sponsoredCampaign:1")).rejects.toThrow(
+        /ad account URN/i
+      );
+    });
+
+    it("leaves the other entity types on their encoded-URN item paths", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({});
+      await service.getEntity("creative", "urn:li:sponsoredCreative:9");
+      expect(mockHttpClient.get.mock.calls[0][0]).toBe(
+        "/v2/adCreatives/urn%3Ali%3AsponsoredCreative%3A9"
+      );
+    });
+  });
+
+  describe("legacy list scoping params", () => {
+    it("scopes creatives with a Rest.li 2.0 list, not the 1.0 `accounts[0]` key", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
+      await service.listEntities("creative", "urn:li:sponsoredAccount:7");
+      const [path, params] = mockHttpClient.get.mock.calls[0];
+      expect(path).toBe("/v2/adCreatives");
+      expect(params.accounts).toEqual(["urn:li:sponsoredAccount:7"]);
+      expect(Object.keys(params)).not.toContain("accounts[0]");
+    });
+
+    it("scopes conversion rules with a scalar `account`", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
+      await service.listEntities("conversionRule", "urn:li:sponsoredAccount:7");
+      const [, params] = mockHttpClient.get.mock.calls[0];
+      expect(params.account).toBe("urn:li:sponsoredAccount:7");
+    });
+  });
+
   describe("createEntity()", () => {
     it("posts to the correct API path", async () => {
       mockHttpClient.post.mockResolvedValueOnce({ id: 987654321 });

@@ -214,7 +214,8 @@ describe("SA360 MCP transport error propagation", () => {
           advertiserId: "67890",
           conversions: [
             {
-              gclid: "EAIaIQobChMI...",
+              clickId: "EAIaIQobChMI...",
+              conversionId: "order-1",
               conversionTimestamp: "1700000000000",
               segmentationType: "FLOODLIGHT",
             },

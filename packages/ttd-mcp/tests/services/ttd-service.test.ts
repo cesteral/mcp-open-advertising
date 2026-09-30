@@ -55,7 +55,12 @@ describe("TtdService", () => {
 
   describe("listEntities", () => {
     it("calls httpClient.fetch with correct scoped query path for campaigns", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("campaign", { AdvertiserId: "adv1" });
 
@@ -65,7 +70,12 @@ describe("TtdService", () => {
     });
 
     it("calls httpClient.fetch with correct scoped query path for advertisers", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("advertiser", { PartnerId: "partner-123" });
 
@@ -74,7 +84,12 @@ describe("TtdService", () => {
     });
 
     it("calls httpClient.fetch with correct scoped query path for adGroups", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("adGroup", { AdvertiserId: "adv1" });
 
@@ -83,7 +98,12 @@ describe("TtdService", () => {
     });
 
     it("uses POST method with filters in body", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       const filters = { AdvertiserId: "adv1", CampaignName: "test" };
       await service.listEntities("campaign", filters);
@@ -96,7 +116,12 @@ describe("TtdService", () => {
     });
 
     it("includes PageSize (defaults to 25)", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("campaign", {});
 
@@ -106,7 +131,12 @@ describe("TtdService", () => {
     });
 
     it("uses custom pageSize when provided", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("campaign", {}, undefined, 50);
 
@@ -116,7 +146,12 @@ describe("TtdService", () => {
     });
 
     it("uses caller-supplied PartnerId for advertiser entity type", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("advertiser", { PartnerId: "partner-123" });
 
@@ -132,7 +167,12 @@ describe("TtdService", () => {
     });
 
     it("does NOT add PartnerId for non-advertiser entity types", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("campaign", {});
 
@@ -142,7 +182,12 @@ describe("TtdService", () => {
     });
 
     it("handles pagination (PageStartIndex from pageToken)", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 100, ResultCount: 25 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 100,
+        TotalUnfilteredCount: 100,
+      });
 
       await service.listEntities("campaign", {}, "25");
 
@@ -155,8 +200,9 @@ describe("TtdService", () => {
       const campaigns = [{ CampaignId: "c1" }, { CampaignId: "c2" }];
       httpClient.fetch.mockResolvedValueOnce({
         Result: campaigns,
-        TotalCount: 2,
         ResultCount: 2,
+        TotalFilteredCount: 2,
+        TotalUnfilteredCount: 2,
       });
 
       const result = await service.listEntities("campaign", {});
@@ -164,11 +210,19 @@ describe("TtdService", () => {
       expect(result.entities).toEqual(campaigns);
     });
 
-    it("returns nextPageToken when more results available", async () => {
+    // TTD v3 paged responses carry TotalFilteredCount / TotalUnfilteredCount
+    // (docs/api/TTD_Foundations.md §12). There is no `TotalCount` field — the
+    // old read of it left totalCount at 0 and stopped every listing at page 1.
+    function page(n: number, startId = 0) {
+      return Array.from({ length: n }, (_, i) => ({ CampaignId: `c${startId + i}` }));
+    }
+
+    it("returns nextPageToken when TotalFilteredCount says more results are available", async () => {
       httpClient.fetch.mockResolvedValueOnce({
-        Result: [{ CampaignId: "c1" }],
-        TotalCount: 50,
+        Result: page(25),
         ResultCount: 25,
+        TotalFilteredCount: 50,
+        TotalUnfilteredCount: 50,
       });
 
       const result = await service.listEntities("campaign", {});
@@ -176,11 +230,38 @@ describe("TtdService", () => {
       expect(result.nextPageToken).toBe("25");
     });
 
+    it("advances from the pageToken offset by the rows actually returned", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: page(25, 25),
+        ResultCount: 25,
+        TotalFilteredCount: 60,
+        TotalUnfilteredCount: 60,
+      });
+
+      const result = await service.listEntities("campaign", {}, "25");
+
+      expect(result.nextPageToken).toBe("50");
+    });
+
+    it("no nextPageToken when TotalFilteredCount is reached", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: page(10, 50),
+        ResultCount: 10,
+        TotalFilteredCount: 60,
+        TotalUnfilteredCount: 60,
+      });
+
+      const result = await service.listEntities("campaign", {}, "50");
+
+      expect(result.nextPageToken).toBeUndefined();
+    });
+
     it("no nextPageToken when all results returned", async () => {
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ CampaignId: "c1" }],
-        TotalCount: 1,
         ResultCount: 1,
+        TotalFilteredCount: 1,
+        TotalUnfilteredCount: 1,
       });
 
       const result = await service.listEntities("campaign", {});
@@ -188,8 +269,36 @@ describe("TtdService", () => {
       expect(result.nextPageToken).toBeUndefined();
     });
 
+    it("falls back to a full page meaning 'maybe more' when no total is returned", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: page(25), ResultCount: 25 });
+
+      const full = await service.listEntities("campaign", {});
+      expect(full.nextPageToken).toBe("25");
+
+      httpClient.fetch.mockResolvedValueOnce({ Result: page(3, 25), ResultCount: 3 });
+      const partial = await service.listEntities("campaign", {}, "25");
+      expect(partial.nextPageToken).toBeUndefined();
+    });
+
+    it("no nextPageToken on an empty page even if a total claims more", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 100,
+      });
+
+      const result = await service.listEntities("campaign", {}, "25");
+
+      expect(result.nextPageToken).toBeUndefined();
+    });
+
     it("calls rateLimiter.consume", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [],
+        ResultCount: 0,
+        TotalFilteredCount: 0,
+        TotalUnfilteredCount: 0,
+      });
 
       await service.listEntities("campaign", {});
 

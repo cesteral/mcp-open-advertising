@@ -96,3 +96,18 @@ describe("Tool consistency: server capabilities resource ↔ allTools", () => {
     expect(registeredNames).toContain(content.startHere);
   });
 });
+
+describe("Tool consistency: barrel header ↔ allTools", () => {
+  it("the 'N tools total' header in tools/definitions/index.ts matches the registry", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const src = readFileSync(
+      fileURLToPath(new URL("../src/mcp-server/tools/definitions/index.ts", import.meta.url)),
+      "utf8"
+    );
+    const header = src.match(/\*\s+(\d+) tools total:/);
+    expect(header).not.toBeNull();
+    const production = allTools.filter((t) => !CONFORMANCE_TOOL_NAMES.has(t.name));
+    expect(Number(header![1])).toBe(production.length);
+  });
+});

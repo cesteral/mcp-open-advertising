@@ -47,7 +47,7 @@ Fetch these resources for detailed schema information:
 ## Tool Categories
 
 ### Read Operations
-- \`tiktok_list_advertisers\` — List accessible advertiser accounts
+- \`tiktok_list_advertisers\` — Account info for the session-bound advertiser
 - \`tiktok_list_entities\` — List entities with page pagination
 - \`tiktok_get_entity\` — Get single entity by ID
 
@@ -73,7 +73,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`tiktok_duplicate_entity\` — Copy campaigns, ad groups, ads
 - \`tiktok_get_audience_estimate\` — Audience size estimation
-- \`tiktok_get_ad_preview\` — Ad preview for video/image ads
+- \`tiktok_get_ad_preview\` — Not available (TikTok v1.3 has no preview endpoint)
 - \`tiktok_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation

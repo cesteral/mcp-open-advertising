@@ -11,3 +11,29 @@ export const AMAZON_DSP_V1_PATHS = {
 } as const;
 
 export type AmazonDspV1Path = (typeof AMAZON_DSP_V1_PATHS)[keyof typeof AMAZON_DSP_V1_PATHS];
+
+/** Every Amazon Ads API v1 path lives under this prefix. */
+export const AMAZON_ADS_V1_PATH_PREFIX = "/adsApi/v1/";
+
+/**
+ * Header names for the Amazon Ads API v1 (`/adsApi/v1/*`) family. They differ
+ * from the legacy `/dsp/*` + reporting family, which uses
+ * `Amazon-Advertising-API-ClientId`.
+ *
+ * Source: amzn/ads-advanced-tools-docs `unified-api-dsp.json` —
+ * `components.parameters.ClientIdHeader` (`Amazon-Ads-ClientId`, required on
+ * every commitments / forecast / commitmentSpends operation) and
+ * `AccountIdHeader` (`Amazon-Ads-AccountId`, required on
+ * `DSPRetrieveCampaignForecast`); mirrored in `src/generated/v1/types.ts`.
+ */
+export const AMAZON_ADS_V1_HEADERS = {
+  clientId: "Amazon-Ads-ClientId",
+  accountId: "Amazon-Ads-AccountId",
+} as const;
+
+/** Legacy client-id header, still documented for `/dsp/*` and DSP reporting. */
+export const AMAZON_LEGACY_CLIENT_ID_HEADER = "Amazon-Advertising-API-ClientId";
+
+export function isAmazonAdsV1Path(path: string): boolean {
+  return path.startsWith(AMAZON_ADS_V1_PATH_PREFIX);
+}
