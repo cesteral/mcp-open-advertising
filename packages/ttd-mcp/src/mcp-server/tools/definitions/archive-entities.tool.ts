@@ -97,7 +97,7 @@ export async function archiveEntitiesLogic(
     canonicalEntityKind: null,
   };
 
-  // One partial PUT per id, one token each on `ttd:${partnerId}`
+  // One partial PUT per id, one token each on `ttd:client:{quotaClient}`
   // (TtdService.archiveEntities → updateAvailability).
   const { ttdService } = resolveSessionServices(sdkContext);
   const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.entityIds.length, [1]);

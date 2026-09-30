@@ -18,7 +18,7 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
     fetchDirect: vi.fn().mockResolvedValue({}),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   } as any;
 }
 

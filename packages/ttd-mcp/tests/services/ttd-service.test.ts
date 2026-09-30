@@ -22,7 +22,7 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
     fetchDirect: vi.fn().mockResolvedValue({}),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   } as any;
 }
 
@@ -302,7 +302,7 @@ describe("TtdService", () => {
 
       await service.listEntities("campaign", {});
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -337,7 +337,7 @@ describe("TtdService", () => {
 
       await service.getEntity("campaign", "c1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -365,7 +365,7 @@ describe("TtdService", () => {
 
       await service.createEntity("campaign", { CampaignName: "Test" });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -391,7 +391,7 @@ describe("TtdService", () => {
 
       await service.updateEntity("campaign", "c1", { CampaignName: "Updated" });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -450,7 +450,7 @@ describe("TtdService", () => {
       httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
       await service.executeEntityReport("adGroup", "ag1", "AD_GROUP");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("rejects invalid enum-like reportType values before sending the request", async () => {
@@ -500,7 +500,7 @@ describe("TtdService", () => {
       httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
       await service.getEntityReportMetadata("adGroup", "ag1", "Ag");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -526,7 +526,7 @@ describe("TtdService", () => {
 
       await service.deleteEntity("creative", "cr1");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 });

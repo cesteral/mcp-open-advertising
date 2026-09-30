@@ -255,7 +255,7 @@ function buildAdjustBidsEffectDryRun(
 }
 
 /**
- * `consume` calls one adjustment makes on `ttd:${partnerId}` (TtdService.adjustBids,
+ * `consume` calls one adjustment makes on `ttd:client:{quotaClient}` (TtdService.adjustBids,
  * ttd-service.ts): an item WITH `currencyCode` sends only the partial PUT
  * (`[1]`); an item WITHOUT reads the ad group first (`resolveAdGroupBidCurrency`
  * → `getEntity`, 1 token) and then PUTs (`[1, 1]`). A mixed batch is modelled

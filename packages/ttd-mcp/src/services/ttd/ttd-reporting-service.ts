@@ -4,6 +4,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import type { TtdHttpClient } from "./ttd-http-client.js";
+import { consumeTtdQuota } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   McpError,
@@ -134,8 +135,7 @@ export class TtdReportingService {
     // Validate before creating anything — polling needs the advertiser filters.
     assertPollableReportConfig(config);
 
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // Create report schedule
     const scheduleRaw = await this.httpClient.fetch("/myreports/reportschedule", context, {
@@ -176,8 +176,7 @@ export class TtdReportingService {
     config: TtdReportConfig,
     context?: RequestContext
   ): Promise<{ reportScheduleId: string }> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     const scheduleRaw = await this.httpClient.fetch("/myreports/reportschedule", context, {
       method: "POST",
@@ -212,8 +211,7 @@ export class TtdReportingService {
     execution: z.infer<typeof ReportExecutionSchema> | Record<string, never>;
     downloadUrl?: string;
   }> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     const advertiserIds = await this.getScheduleAdvertiserIds(reportScheduleId, context);
 
@@ -262,8 +260,7 @@ export class TtdReportingService {
     query: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     return this.httpClient.fetch("/myreports/reportschedule/query", context, {
       method: "POST",
       body: JSON.stringify(query),
@@ -301,8 +298,7 @@ export class TtdReportingService {
    * Get a single report schedule by ID.
    */
   async getReportSchedule(scheduleId: string, context?: RequestContext): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     return this.httpClient.fetch(`/myreports/reportschedule/${scheduleId}`, context, {
       method: "GET",
     });
@@ -312,8 +308,7 @@ export class TtdReportingService {
    * Delete a report schedule by ID.
    */
   async deleteReportSchedule(scheduleId: string, context?: RequestContext): Promise<void> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     await this.httpClient.fetch(`/myreports/reportschedule/${scheduleId}`, context, {
       method: "DELETE",
     });
@@ -324,7 +319,6 @@ export class TtdReportingService {
     advertiserIds: string[],
     context?: RequestContext
   ): Promise<z.infer<typeof ReportExecutionSchema>> {
-    const partnerId = this.httpClient.partnerId;
     if (!advertiserIds || advertiserIds.length === 0) {
       advertiserIds = await this.getScheduleAdvertiserIds(reportScheduleId, context);
     }
@@ -332,7 +326,7 @@ export class TtdReportingService {
     try {
       return await pollUntilComplete<z.infer<typeof ReportExecutionSchema>>({
         fetchStatus: async () => {
-          await this.rateLimiter.consume(`ttd:${partnerId}`);
+          await consumeTtdQuota(this.rateLimiter, this.httpClient);
           const body = {
             AdvertiserIds: advertiserIds,
             ReportScheduleIds: [Number(reportScheduleId)],

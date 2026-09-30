@@ -334,7 +334,7 @@ describe("ttd bid list tools", () => {
       const service = new TtdService(
         { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
         new RateLimiter(),
-        { partnerId: "p", fetch: vi.fn(), fetchDirect } as any
+        { quotaClient: "c", fetch: vi.fn(), fetchDirect } as any
       );
       mockResolveSessionServices.mockReturnValue({ ttdService: service });
     });

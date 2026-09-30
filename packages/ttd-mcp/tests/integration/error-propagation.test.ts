@@ -14,9 +14,9 @@ vi.mock("../../src/auth/ttd-auth-adapter.js", async () => {
   return {
     ...actual,
     TtdDirectTokenAuthAdapter: class {
-      partnerId: string;
-      constructor(_token: string, partnerId = "direct-token") {
-        this.partnerId = partnerId;
+      quotaClient: string;
+      constructor(token: string) {
+        this.quotaClient = actual.ttdQuotaClient(token);
       }
       async getAccessToken() {
         return "mock-direct-token";

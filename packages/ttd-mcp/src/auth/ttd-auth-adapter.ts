@@ -26,7 +26,29 @@ export interface TtdDirectTokenCredentials {
 export interface TtdAuthAdapter {
   getAccessToken(): Promise<string>;
   validate(): Promise<void>;
-  readonly partnerId: string;
+  /**
+   * The rate-limit identity of this credential — see {@link ttdQuotaClient}.
+   * A one-way hash, never the token.
+   */
+  readonly quotaClient: string;
+}
+
+/**
+ * The rate-limit identity of a TTD API token: the client TTD counts calls
+ * against (Foundations §12 limits "calls a client can make"; the `TTD-Auth`
+ * token is how TTD knows the client). Keys `ttd:client:{quotaClient}` — see
+ * `services/ttd/rate-limit-keys.ts`.
+ *
+ * Rate-limit errors echo the key, so it must not carry the secret. This is a
+ * domain-separated SHA-256 of the token, truncated to 64 bits: one-way, stable
+ * for the token's lifetime, and distinct from the session-binding fingerprint
+ * (`getTtdDirectTokenFingerprint`), so neither value can be read off the other.
+ * It is derived from the token actually sent upstream rather than from the MCP
+ * caller's credential, so JWT users sharing the server's env token share one
+ * bucket — as they share one TTD client.
+ */
+export function ttdQuotaClient(token: string): string {
+  return fingerprintCredentials("ttd-quota-client", token).slice(0, 16);
 }
 
 /**
@@ -39,15 +61,13 @@ export interface TtdAuthAdapter {
  */
 export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
   private validated = false;
+  readonly quotaClient: string;
 
   constructor(
     private readonly token: string,
-    private readonly _partnerId: string = "direct-token",
     private readonly graphqlUrl: string = DEFAULT_TTD_GRAPHQL_URL
-  ) {}
-
-  get partnerId(): string {
-    return this._partnerId;
+  ) {
+    this.quotaClient = ttdQuotaClient(token);
   }
 
   async getAccessToken(): Promise<string> {

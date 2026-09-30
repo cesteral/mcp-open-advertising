@@ -41,8 +41,12 @@ export class TtdHttpClient {
     private logger: Logger
   ) {}
 
-  get partnerId(): string {
-    return this.authAdapter.partnerId;
+  /**
+   * Rate-limit identity of this session's TTD credential (a one-way hash of
+   * the token). Read by `consumeTtdQuota` / `ttdQuotaBucket`.
+   */
+  get quotaClient(): string {
+    return this.authAdapter.quotaClient;
   }
 
   /**

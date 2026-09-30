@@ -24,7 +24,7 @@ function createMockLogger() {
 function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   } as any;
 }
 
@@ -232,7 +232,7 @@ describe("TtdReportingService", () => {
 
       // 1 for runReport (schedule creation) + 2 for polls = 3 total
       expect(rateLimiter.consume).toHaveBeenCalledTimes(3);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("polls multiple times with delays between attempts", async () => {
@@ -279,7 +279,7 @@ describe("TtdReportingService", () => {
       await service.createReportSchedule(sampleReportConfig());
 
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("does not poll or sleep", async () => {
@@ -319,7 +319,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [] });
       await service.listReportSchedules({});
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -341,7 +341,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "x" });
       await service.getReportSchedule("x");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -362,7 +362,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({});
       await service.deleteReportSchedule("x");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -441,7 +441,7 @@ describe("TtdReportingService", () => {
 
       // Two rate-limiter hits: one for schedule lookup, one for execution query.
       expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("makes two HTTP calls: schedule lookup + execution query", async () => {

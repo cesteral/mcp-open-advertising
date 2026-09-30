@@ -28,14 +28,14 @@ function createMockLogger() {
 
 describe("TtdTokenAuthStrategy", () => {
   let mockLogger: ReturnType<typeof createMockLogger>;
-  let mockAdapterInstance: { validate: ReturnType<typeof vi.fn>; partnerId: string };
+  let mockAdapterInstance: { validate: ReturnType<typeof vi.fn>; quotaClient: string };
 
   beforeEach(() => {
     mockLogger = createMockLogger();
 
     mockAdapterInstance = {
       validate: vi.fn().mockResolvedValue(undefined),
-      partnerId: "direct-token",
+      quotaClient: "0123456789abcdef",
     };
 
     (TtdDirectTokenAuthAdapter as unknown as ReturnType<typeof vi.fn>).mockImplementation(
@@ -71,11 +71,7 @@ describe("TtdTokenAuthStrategy", () => {
 
     const result = await strategy.verify({ "ttd-auth": "direct-token-123" });
 
-    expect(TtdDirectTokenAuthAdapter).toHaveBeenCalledWith(
-      "direct-token-123",
-      "direct-token",
-      TEST_URL
-    );
+    expect(TtdDirectTokenAuthAdapter).toHaveBeenCalledWith("direct-token-123", TEST_URL);
     expect(mockAdapterInstance.validate).toHaveBeenCalledTimes(1);
     expect(result.authInfo).toMatchObject({
       clientId: "ttd-direct-token",
