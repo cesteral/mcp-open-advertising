@@ -31,6 +31,20 @@
       "codeRefs": ["packages/dv360-mcp/src/config/index.ts:33"]
     },
     {
+      "id": "dbm.api_version",
+      "package": "dbm-mcp",
+      "class": "versioned-base-url",
+      "claim": "Bid Manager API v2 (doubleclickbidmanager, selected through the googleapis client) is a supported version. Corroboration, not the release notes (developers.google.com is blocked by egress): on 2026-09-30 Google's Discovery directory listed only doubleclickbidmanager:v2, marked preferred. An unlisted v3 Discovery document is served at the same revision (20260923); it matches v2 except that the sunset FULL_PATH and PATH_ATTRIBUTION report types are removed from Parameters.type, and dbm-mcp uses neither. Move to v3 once the directory marks it preferred or a v2 sunset is announced.",
+      "value": "version: \"v2\"",
+      "sourceUrl": "https://developers.google.com/bid-manager/release-notes",
+      "status": "unverified",
+      "verifiedAt": null,
+      "verifyBy": "2026-12-15",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/dbm-mcp/src/services/session-services.ts:42"]
+    },
+    {
       "id": "cm360.api_version",
       "package": "cm360-mcp",
       "class": "versioned-base-url",
