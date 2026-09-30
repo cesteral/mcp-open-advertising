@@ -35,6 +35,45 @@ export function getRegistryEntry(packageName: string): RegistryServerEntry {
   return entry;
 }
 
+/**
+ * The `serverInfo` (MCP `Implementation`) a server returns from `initialize`.
+ * Structurally the SDK's `Implementation`; declared here because
+ * `@cesteral/shared` does not depend on the SDK.
+ */
+export interface ServerInfo {
+  name: string;
+  /** Display name for server pickers; registry.json `title`, as on the server card. */
+  title: string;
+  version: string;
+  description?: string;
+  /** registry.json `repository` — the one URL the registry states for this implementation. */
+  websiteUrl: string;
+}
+
+/**
+ * Builds a server's `serverInfo` from registry.json, so the name a client shows
+ * in its server picker and the server card's `title` come from one place (#241).
+ *
+ * `icons` is deliberately absent. The only image assets in the repository are
+ * the ad platforms' own logos (docs/logos/, used by the README); publishing one
+ * as a server's icon would present a third-party mark as this server's identity,
+ * and there is no hosted icon URL to point at. Add `icons` when a Cesteral icon
+ * is published at a stable URL.
+ */
+export function buildServerInfo(
+  packageName: string,
+  info: { version: string; description?: string }
+): ServerInfo {
+  const entry = getRegistryEntry(packageName);
+  return {
+    name: packageName,
+    title: entry.title,
+    version: info.version,
+    ...(info.description ? { description: info.description } : {}),
+    websiteUrl: REGISTRY_DATA.repository,
+  };
+}
+
 export function buildServerCardExtras(
   packageName: string,
   overrides: ServerCardOverrides = {}

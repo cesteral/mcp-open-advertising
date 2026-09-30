@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   createDefinitionHashResolver,
   registerToolsFromDefinitions,
@@ -52,8 +53,7 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "sa360-mcp",
+    buildServerInfo("sa360-mcp", {
       version: packageJson.version,
       description:
         "Search Ads 360 reporting and conversion upload server. " +
@@ -61,7 +61,7 @@ export async function createMcpServer(
         "offline conversion upload via legacy v2 API. " +
         "Supports 8 entity types (customer, campaign, adGroup, adGroupAd, " +
         "adGroupCriterion, campaignCriterion, biddingStrategy, conversionAction).",
-    },
+    }),
     {
       capabilities: {
         logging: {},

@@ -10,6 +10,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   createDefinitionHashResolver,
@@ -63,12 +64,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "meta-mcp",
+    buildServerInfo("meta-mcp", {
       version: packageJson.version,
       description:
         "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v26.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

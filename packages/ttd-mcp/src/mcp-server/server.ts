@@ -10,6 +10,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -98,12 +99,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "ttd-mcp",
+    buildServerInfo("ttd-mcp", {
       version: packageJson.version,
       description:
         "The Trade Desk campaign management, reporting, and optimization via TTD's documented Platform API (REST v3 + GraphQL). Supports first-class CRUD entities, GraphQL bulk operations for >100-record writes, and async report generation.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

@@ -10,6 +10,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -63,12 +64,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "msads-mcp",
+    buildServerInfo("msads-mcp", {
       version: packageJson.version,
       description:
         "Microsoft Advertising (Bing Ads) campaign management and reporting via Microsoft Advertising API v13 JSON endpoints. Supports campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels, and Google Ads import.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

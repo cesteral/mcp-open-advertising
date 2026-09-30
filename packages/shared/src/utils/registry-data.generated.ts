@@ -22,11 +22,13 @@ export interface RegistryServerEntry {
 
 export interface RegistryData {
   readonly protocol_version: string;
+  readonly repository: string;
   readonly servers: readonly RegistryServerEntry[];
 }
 
 export const REGISTRY_DATA: RegistryData = {
   "protocol_version": "2025-11-25",
+  "repository": "https://github.com/cesteral/mcp-open-advertising",
   "servers": [
     {
       "package": "dbm-mcp",

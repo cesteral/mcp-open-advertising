@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -62,12 +63,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "pinterest-mcp",
+    buildServerInfo("pinterest-mcp", {
       version: packageJson.version,
       description:
         "Pinterest Ads campaign management and reporting via Pinterest Marketing API v5. Supports campaign, ad group, ad, creative, and audience workflows with reporting, targeting, delivery estimates, and previews.",
-    },
+    }),
     {
       capabilities: {
         logging: {},
