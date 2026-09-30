@@ -475,6 +475,45 @@
       "codeRefs": ["packages/amazon-dsp-mcp/src/config/index.ts:31"]
     },
     {
+      "id": "amazon_dsp.unified_entity_api",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Amazon DSP entity management (campaigns = orders, ad groups = line items, ads = creatives, targets, ad associations = creative associations) is served by the Unified API as POST /adsApi/v1/{create|update|query|delete}/{campaigns|adGroups|ads|targets|adAssociations}. Every such operation requires the Amazon-Ads-AccountId and Amazon-Ads-ClientId headers and declares no Amazon-Advertising-API-Scope header; creates carry adProduct AMAZON_DSP (except adAssociations); queries take adProductFilter { include: [AMAZON_DSP] } (except adAssociations) with nextToken pagination; writes answer 207 { success[{ index, <item> }], error[{ index, errors[] }] }. The older /dsp/orders, /dsp/lineItems, /dsp/creatives, /dsp/targets and /dsp/creativeAssociations endpoints are not in the spec and not in Amazon's current Unified Postman collection (#234).",
+      "value": "/adsApi/v1/${action}/${resource}",
+      "sourceUrl": "https://github.com/amzn/ads-advanced-tools-docs/blob/e25aace0ec07997c113dac48f333298472243558/unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json",
+      "status": "unverified",
+      "verifiedAt": null,
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:67"],
+      "verificationBasis": "vendor-spec",
+      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. Operations used: DSPQueryCampaign/DSPCreateCampaign/DSPUpdateCampaign, DSPQueryAdGroup/DSPCreateAdGroup/DSPUpdateAdGroup, DSPQueryAd/DSPCreateAd/DSPUpdateAd, DSPQueryTarget/DSPCreateTarget/DSPDeleteTarget, and DSPQueryAdAssociation/DSPCreateAdAssociation/DSPUpdateAdAssociation/DSPDeleteAdAssociation. Conflict on the scope header: the spec declares only AccountIdHeader + ClientIdHeader and the DSP migration guide §2 says Amazon-Advertising-API-Scope is 'Not used ... Remove it', but the generic Unified Postman collection (postman/Amazon_Ads_Unified_API.postman_collection.json, same commit) sends it on every request; this server follows the spec and the DSP guide. Also unverified: that Amazon-Ads-AccountId takes the DSP advertiser ID from GET /dsp/advertisers (the value amazon_dsp_get_campaign_forecast already sends)."
+    },
+    {
+      "id": "amazon_dsp.unified_entity_gaps",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "The Unified DSP spec offers no delete for campaigns, ad groups or ads (delete exists only for targets and adAssociations), its DSPUpdateState enum is ENABLED | PAUSED (ARCHIVED is read-only, 'Terminal end state'), DSP campaigns and ad groups can only be created PAUSED (DSPCreateState description), DSPQueryTargetRequest has no targetId filter, and there is no update operation for targets. So amazon_dsp_delete_entity archives orders / line items through the legacy PUT /dsp/orders|lineItems/{id} { state: ARCHIVED } call (kept from before #234, never verified), refuses creatives, and targets cannot be read by ID or updated.",
+      "value": null,
+      "sourceUrl": "https://github.com/amzn/ads-advanced-tools-docs/blob/e25aace0ec07997c113dac48f333298472243558/unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json",
+      "status": "unverified",
+      "verifiedAt": null,
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/unified-payload.ts:46",
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:191",
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:193",
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:353",
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:406",
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:408"
+      ],
+      "verificationBasis": "vendor-spec",
+      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. The spec's only /delete/ paths are DSPDeleteAdAssociation and DSPDeleteTarget; the Unified Postman collection's delete/campaigns|adGroups|ads requests are Sponsored Products / Sponsored Brands operations (unified-api-sp.json SPDeleteCampaign etc., unified-api-sb.json), not DSP. First things a live run must establish: whether the legacy archive PUT still answers and accepts a Unified campaignId / adGroupId as its order / line item ID, and whether Amazon exposes another DSP archive path."
+    },
+    {
       "id": "cm360.rate_limit_default",
       "package": "cm360-mcp",
       "class": "behavioral-constraint",
