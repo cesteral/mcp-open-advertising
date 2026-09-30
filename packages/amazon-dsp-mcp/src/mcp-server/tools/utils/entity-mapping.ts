@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   AMAZON_DSP_CANONICAL_ENTITY_TYPES,
   AMAZON_DSP_ENTITY_CONTRACT,
@@ -78,6 +79,13 @@ export function getEntityTypeEnum(): [string, ...string[]] {
   return getSupportedEntityTypes() as [string, ...string[]];
 }
 
+/** Entity types this server can create (excludes types with `createUnsupportedReason`). */
+export function getCreatableEntityTypeEnum(): [string, ...string[]] {
+  return getSupportedEntityTypes().filter(
+    (t) => !AMAZON_DSP_ENTITY_CONTRACT[t].createUnsupportedReason
+  ) as [string, ...string[]];
+}
+
 export function getCanonicalEntityType(
   entityType: AmazonDspEntityType
 ): AmazonDspCanonicalEntityType {
@@ -89,8 +97,25 @@ export function getEntityContract(entityType: AmazonDspEntityType) {
 }
 
 /**
- * Interpolate path template placeholders.
+ * Interpolate path template placeholders. Values are URI-encoded as single
+ * path segments, so an ID can never add, remove or climb path segments.
  */
 export function interpolatePath(path: string, params: Record<string, string>): string {
-  return Object.entries(params).reduce((acc, [key, val]) => acc.replace(`{${key}}`, val), path);
+  return Object.entries(params).reduce(
+    (acc, [key, val]) => acc.replace(`{${key}}`, encodePathSegment(val, key)),
+    path
+  );
+}
+
+/**
+ * Encode one path segment. `encodeURIComponent` leaves `.` alone, so a bare
+ * `.` / `..` would still be normalized away by URL resolution — reject those
+ * (and empty values) outright.
+ */
+export function encodePathSegment(value: string, name = "id"): string {
+  const str = String(value);
+  if (str === "" || str === "." || str === "..") {
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Invalid ${name}: ${JSON.stringify(str)}`);
+  }
+  return encodeURIComponent(str);
 }

@@ -169,7 +169,7 @@ describe("TtdService advanced methods", () => {
       });
 
       const result = await service.adjustBids([
-        { adGroupId: "ag1", baseBidCpm: 2.5, maxBidCpm: 5.0 },
+        { adGroupId: "ag1", baseBidCpm: 2.5, maxBidCpm: 5.0, currencyCode: "USD" },
       ]);
 
       expect(result.results).toHaveLength(1);
@@ -186,6 +186,76 @@ describe("TtdService advanced methods", () => {
           BaseBidCPM: { Amount: 2.5, CurrencyCode: "USD" },
           MaxBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
         },
+      });
+    });
+  });
+
+  describe("adjustBids currency (no hard-coded USD)", () => {
+    it("reuses the ad group's current bid currency when currencyCode is omitted", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          AdGroupId: "ag1",
+          AdvertiserId: "adv1",
+          RTBAttributes: { BaseBidCPM: { Amount: 1, CurrencyCode: "EUR" } },
+        })
+        .mockResolvedValueOnce({ AdGroupId: "ag1" });
+
+      const result = await service.adjustBids([{ adGroupId: "ag1", baseBidCpm: 3 }]);
+
+      expect(result.results[0].success).toBe(true);
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup/ag1");
+      const put = httpClient.fetch.mock.calls[1];
+      expect(put[2].method).toBe("PUT");
+      expect(JSON.parse(put[2].body)).toEqual({
+        AdGroupId: "ag1",
+        RTBAttributes: { BaseBidCPM: { Amount: 3, CurrencyCode: "EUR" } },
+      });
+    });
+
+    it("falls back to the advertiser's CurrencyCode when the ad group has no bid currency", async () => {
+      httpClient.fetch.mockImplementation(async (path: string, _ctx: unknown, opts: any) => {
+        if (path.startsWith("/adgroup/")) return { AdGroupId: path.slice(9), AdvertiserId: "adv1" };
+        if (path === "/advertiser/adv1") return { AdvertiserId: "adv1", CurrencyCode: "GBP" };
+        if (opts?.method === "PUT") return JSON.parse(opts.body);
+        throw new Error(`unexpected ${path}`);
+      });
+
+      const result = await service.adjustBids([
+        { adGroupId: "ag1", maxBidCpm: 9 },
+        { adGroupId: "ag2", maxBidCpm: 7 },
+      ]);
+
+      expect(result.results.every((r) => r.success)).toBe(true);
+      const puts = httpClient.fetch.mock.calls.filter(([, , o]: any[]) => o?.method === "PUT");
+      expect(puts.map(([, , o]: any[]) => JSON.parse(o.body).RTBAttributes.MaxBidCPM)).toEqual([
+        { Amount: 9, CurrencyCode: "GBP" },
+        { Amount: 7, CurrencyCode: "GBP" },
+      ]);
+      // One advertiser lookup shared by the batch.
+      expect(
+        httpClient.fetch.mock.calls.filter(([p]: any[]) => p === "/advertiser/adv1")
+      ).toHaveLength(1);
+    });
+
+    it("fails the item (no PUT) when no currency can be determined", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ AdGroupId: "ag1" });
+
+      const result = await service.adjustBids([{ adGroupId: "ag1", baseBidCpm: 3 }]);
+
+      expect(result.results[0].success).toBe(false);
+      expect(result.results[0].error).toMatch(/pass currencyCode/);
+      expect(httpClient.fetch.mock.calls.some(([, , o]: any[]) => o?.method === "PUT")).toBe(false);
+    });
+
+    it("an explicit currencyCode is used as-is with no extra read", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ AdGroupId: "ag1" });
+
+      await service.adjustBids([{ adGroupId: "ag1", baseBidCpm: 3, currencyCode: "JPY" }]);
+
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(httpClient.fetch.mock.calls[0][2].body).RTBAttributes.BaseBidCPM).toEqual({
+        Amount: 3,
+        CurrencyCode: "JPY",
       });
     });
   });

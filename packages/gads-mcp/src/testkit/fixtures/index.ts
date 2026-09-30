@@ -38,8 +38,8 @@ export const pauseCampaign: GAdsWriteFixture = {
     id: "campaign-REDACTED-1",
     name: "Sample Search Campaign",
     status: "ENABLED",
-    startDate: "2026-01-01",
-    endDate: "2026-12-31",
+    startDateTime: "2026-01-01 00:00:00",
+    endDateTime: "2026-12-31 23:59:59",
   },
   expectedPostState: {
     schemaVersion: 1,
@@ -50,7 +50,7 @@ export const pauseCampaign: GAdsWriteFixture = {
     accountId: customerId,
     status: { canonical: "paused", platformRaw: "PAUSED" },
     budget: { daily: null, lifetime: null },
-    schedule: { startAt: "2026-01-01", endAt: "2026-12-31" },
+    schedule: { startAt: "2026-01-01 00:00:00", endAt: "2026-12-31 23:59:59" },
   },
   description: "pause: campaign transition ENABLED → PAUSED",
 };
@@ -71,8 +71,8 @@ export const resumeCampaign: GAdsWriteFixture = {
     id: "campaign-REDACTED-2",
     name: "Sample Display Campaign",
     status: "PAUSED",
-    startDate: "2026-02-01",
-    endDate: "2026-11-30",
+    startDateTime: "2026-02-01 00:00:00",
+    endDateTime: "2026-11-30 23:59:59",
   },
   expectedPostState: {
     schemaVersion: 1,
@@ -83,7 +83,7 @@ export const resumeCampaign: GAdsWriteFixture = {
     accountId: customerId,
     status: { canonical: "active", platformRaw: "ENABLED" },
     budget: { daily: null, lifetime: null },
-    schedule: { startAt: "2026-02-01", endAt: "2026-11-30" },
+    schedule: { startAt: "2026-02-01 00:00:00", endAt: "2026-11-30 23:59:59" },
   },
   description: "resume: campaign transition PAUSED → ENABLED",
 };
@@ -208,8 +208,8 @@ export const removeCampaign: GAdsWriteFixture = {
     id: "campaign-REDACTED-3",
     name: "Retired Search Campaign",
     status: "PAUSED",
-    startDate: "2026-01-01",
-    endDate: "2026-12-31",
+    startDateTime: "2026-01-01 00:00:00",
+    endDateTime: "2026-12-31 23:59:59",
   },
   expectedPostState: {
     schemaVersion: 1,
@@ -220,7 +220,7 @@ export const removeCampaign: GAdsWriteFixture = {
     accountId: customerId,
     status: { canonical: "deleted", platformRaw: "REMOVED" },
     budget: { daily: null, lifetime: null },
-    schedule: { startAt: "2026-01-01", endAt: "2026-12-31" },
+    schedule: { startAt: "2026-01-01 00:00:00", endAt: "2026-12-31 23:59:59" },
   },
   description: "delete: campaign transition PAUSED → REMOVED (canonical deleted)",
 };

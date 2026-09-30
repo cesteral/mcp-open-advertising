@@ -8,36 +8,79 @@ import type { RequestContext } from "@cesteral/shared";
 
 /**
  * Conversion row for SA360 v2 conversion insert/update.
+ *
+ * Every key is a property of the v2 `Conversion` resource (doubleclicksearch
+ * v2 Discovery). There is no `gclid` or `floodlightActivityId` in that schema:
+ * the click goes in `clickId` ("DS click ID") and the Floodlight activity in
+ * `segmentationId` ("numeric segmentation identifier (for example, DoubleClick
+ * Search Floodlight activity ID)") or `segmentationName`.
  */
 export interface ConversionRow {
-  /** Click ID or Google click ID */
+  /** DS click ID for the conversion. */
   clickId?: string;
-  /** Google click ID */
-  gclid?: string;
-  /** Conversion ID (required for updates) */
-  conversionId?: string;
-  /** Conversion timestamp (epoch millis) */
+  /**
+   * Advertiser-provided conversion ID. Required for offline conversions: each
+   * conversion in a request must carry a unique ID, and (ID, timestamp) must be
+   * unique within the advertiser. Updates identify the conversion by it.
+   */
+  conversionId: string;
+  /** Conversion timestamp (epoch millis UTC) */
   conversionTimestamp: string;
-  /** Revenue amount (in advertiser's currency) */
+  /** Revenue of a TRANSACTION conversion, in micros */
   revenueMicros?: string;
-  /** Currency code */
+  /** Currency code (ISO 4217) */
   currencyCode?: string;
-  /** Quantity of conversions */
+  /** Quantity of this conversion, in millis */
   quantityMillis?: string;
-  /** Segment type (e.g., "FLOODLIGHT") */
+  /** Segmentation type (e.g., "FLOODLIGHT") */
   segmentationType: string;
-  /** Segment name (floodlight activity name) */
+  /** Friendly segmentation identifier (e.g., Floodlight activity name) */
   segmentationName?: string;
-  /** Floodlight activity ID */
-  floodlightActivityId?: string;
-  /** Type of conversion */
+  /** Numeric segmentation identifier (e.g., Floodlight activity ID) */
+  segmentationId?: string;
+  /** Type of conversion (ACTION or TRANSACTION) */
   type?: string;
-  /** State of the conversion */
+  /** State of the conversion (ACTIVE or REMOVED) */
   state?: string;
   /** Custom metric values */
   customMetric?: Array<{ name: string; value: number }>;
   /** Custom dimension values */
   customDimension?: Array<{ name: string; value: string }>;
+}
+
+/**
+ * The v2 `Conversion` properties this server sends. The request body is built
+ * from this allowlist rather than by spreading the caller's row, so a key the
+ * v2 schema does not define can never reach the API.
+ */
+const CONVERSION_ROW_KEYS = [
+  "clickId",
+  "conversionId",
+  "conversionTimestamp",
+  "revenueMicros",
+  "currencyCode",
+  "quantityMillis",
+  "segmentationType",
+  "segmentationName",
+  "segmentationId",
+  "type",
+  "state",
+  "customMetric",
+  "customDimension",
+] as const satisfies ReadonlyArray<keyof ConversionRow>;
+
+/** Build one v2 `Conversion` request object. Exported for tests. */
+export function toV2Conversion(
+  row: ConversionRow,
+  agencyId: string,
+  advertiserId: string
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { agencyId, advertiserId };
+  const source = row as unknown as Record<string, unknown>;
+  for (const key of CONVERSION_ROW_KEYS) {
+    if (source[key] !== undefined) out[key] = source[key];
+  }
+  return out;
 }
 
 /**
@@ -65,18 +108,16 @@ export class ConversionService {
     conversions: ConversionRow[],
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`sa360v2:${advertiserId}`);
+    // Keys must match the limiter's `sa360:*` pattern. These were `sa360v2:…`,
+    // which matches nothing, so the v2 API was never throttled.
+    await this.rateLimiter.consume(`sa360:v2:${advertiserId}`);
 
     this.logger.debug(
       { agencyId, advertiserId, count: conversions.length },
       "Inserting SA360 conversions"
     );
 
-    const conversionRows = conversions.map((c) => ({
-      ...c,
-      agencyId,
-      advertiserId,
-    }));
+    const conversionRows = conversions.map((c) => toV2Conversion(c, agencyId, advertiserId));
 
     const result = await this.httpClient.fetch("/conversion", context, {
       method: "POST",
@@ -101,18 +142,14 @@ export class ConversionService {
     conversions: ConversionRow[],
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`sa360v2:${advertiserId}`);
+    await this.rateLimiter.consume(`sa360:v2:${advertiserId}`);
 
     this.logger.debug(
       { agencyId, advertiserId, count: conversions.length },
       "Updating SA360 conversions"
     );
 
-    const conversionRows = conversions.map((c) => ({
-      ...c,
-      agencyId,
-      advertiserId,
-    }));
+    const conversionRows = conversions.map((c) => toV2Conversion(c, agencyId, advertiserId));
 
     const result = await this.httpClient.fetch("/conversion", context, {
       method: "PUT",

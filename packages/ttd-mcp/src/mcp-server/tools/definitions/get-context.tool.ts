@@ -38,7 +38,19 @@ export const GetContextOutputSchema = z
 type GetContextInput = z.infer<typeof GetContextInputSchema>;
 type GetContextOutput = z.infer<typeof GetContextOutputSchema>;
 
-const PARTNERS_QUERY = `{ partners { nodes { id name } } }`;
+// TTD GraphQL connections return only the first 10 items unless `first` is set
+// (docs/api/thetradedesk_graphql_api_docs.md "Paginate Lists"); `partners`
+// takes `first`/`after` (docs/api/ttd-api-reference-part4.md). Page through
+// every partner via `pageInfo { hasNextPage endCursor }`.
+const PARTNERS_QUERY = `query GetPartners($first: Int, $after: String) {
+  partners(first: $first, after: $after) {
+    nodes { id name }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+export const PARTNERS_PAGE_SIZE = 100;
+/** Safety cap on round-trips (100 × 100 = 10,000 partners). */
+export const PARTNERS_MAX_PAGES = 100;
 
 export async function getContextLogic(
   _input: GetContextInput,
@@ -47,19 +59,31 @@ export async function getContextLogic(
 ): Promise<GetContextOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const result = (await ttdService.graphqlQuery(PARTNERS_QUERY, undefined, context)) as Record<
-    string,
-    unknown
-  >;
+  const partners: Array<{ id: string; name: string }> = [];
+  let after: string | undefined;
+  for (let page = 0; page < PARTNERS_MAX_PAGES; page++) {
+    const result = (await ttdService.graphqlQuery(
+      PARTNERS_QUERY,
+      { first: PARTNERS_PAGE_SIZE, ...(after ? { after } : {}) },
+      context
+    )) as Record<string, unknown>;
 
-  throwIfGraphqlErrors(result, "GraphQL error fetching partner context");
+    throwIfGraphqlErrors(result, "GraphQL error fetching partner context");
 
-  const data = (result.data as Record<string, unknown> | undefined) ?? result;
-  const partners =
-    ((data.partners as Record<string, unknown> | undefined)?.nodes as Array<{
-      id: string;
-      name: string;
-    }>) ?? [];
+    const data = (result.data as Record<string, unknown> | undefined) ?? result;
+    const connection = data.partners as Record<string, unknown> | undefined;
+    const nodes = (connection?.nodes as Array<{ id: string; name: string }> | undefined) ?? [];
+    partners.push(...nodes);
+
+    const pageInfo = connection?.pageInfo as
+      | { hasNextPage?: boolean; endCursor?: string | null }
+      | undefined;
+    const nextCursor = pageInfo?.endCursor ?? undefined;
+    // Stop when TTD says there is no next page, or when the cursor would not
+    // advance (a defensive guard against looping on the same page).
+    if (!pageInfo?.hasNextPage || !nextCursor || nextCursor === after) break;
+    after = nextCursor;
+  }
 
   return {
     partners,

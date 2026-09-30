@@ -82,8 +82,11 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         const cfg = appConfig as AppConfig;
         const tiktokAdvertiserId = cfg.tiktokAdvertiserId;
 
-        // Prefer refresh token flow if app credentials are available
+        // Refresh credentials only when no static token is configured: TikTok
+        // documents no refresh endpoint, so TikTokRefreshTokenAdapter.validate()
+        // rejects with a clear Unauthorized error. A configured static token wins.
         if (
+          !cfg.tiktokAccessToken &&
           cfg.tiktokAppId &&
           cfg.tiktokAppSecret &&
           cfg.tiktokRefreshToken &&

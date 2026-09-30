@@ -26,7 +26,7 @@ const TOOL_DESCRIPTION = `Update a Campaign Manager 360 entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-CM360 uses PUT semantics — provide the full entity object including the id field. Use cm360_get_entity first to fetch the current state, modify the fields you need, then pass the full object.`;
+Partial update (CM360 PATCH semantics) — send only the fields you want to change in \`data\`; every field you omit keeps its current value. Nested objects are merged; arrays are replaced whole. The entity is identified by \`entityId\`.`;
 
 export const UpdateEntityInputSchema = z
   .object({
@@ -35,7 +35,9 @@ export const UpdateEntityInputSchema = z
     entityId: z.string().min(1).describe("The entity ID to update"),
     data: z
       .record(z.any())
-      .describe("Full entity data including id field (CM360 uses PUT/replace semantics)"),
+      .describe(
+        "Fields to change (CM360 PATCH semantics — omitted fields are preserved; nested objects merge, arrays replace)"
+      ),
     dry_run: z
       .boolean()
       .optional()
@@ -57,7 +59,7 @@ export const UpdateEntityOutputSchema = z
       "Pre-write canonical snapshot of the entity, captured at the start of the handler. Populated when the entity type is in canonical scope (campaign, ad) and the read partner returns the entity. Undefined for out-of-scope types or when the pre-read fails."
     ),
     after: NormalizedEntitySnapshotSchema.optional().describe(
-      "Post-write canonical snapshot of the entity, normalized from the entity the CM360 PUT returns (re-read fallback). Undefined when the entity type is out of canonical scope or both reads fail."
+      "Post-write canonical snapshot of the entity, normalized from the entity the CM360 PATCH returns (re-read fallback). Undefined when the entity type is out of canonical scope or both reads fail."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
       "The concrete (operation, entityKind) this call resolved to, derived from the `data` payload. Present on every response — dry-run and real write alike."
@@ -125,16 +127,18 @@ export async function updateEntityLogic(
     context
   );
 
-  const data = { ...input.data, id: input.entityId };
-
-  const entity = await cm360Service.updateEntity(
+  // PATCH ?id= — only the fields in `data` change, matching the dry-run's
+  // symbolic apply (`mergeCm360Patch`). A PUT here would replace the entity
+  // with the partial object.
+  const entity = await cm360Service.patchEntity(
     input.entityType as CM360EntityType,
     input.profileId,
-    data,
+    input.entityId,
+    input.data,
     context
   );
 
-  // R4-U2: the CM360 PUT returns the updated entity — normalize it directly,
+  // R4-U2: the CM360 PATCH returns the updated entity — normalize it directly,
   // falling back to a re-read if the response shape is unexpected.
   let after = snapshotFromCm360Entity(
     input.entityType,
@@ -218,9 +222,9 @@ export const updateEntityTool = {
       contractId: "cm360.update_entity.v1",
       // R4-U2: `dry_run` is symbolic apply — CM360 exposes no native validate
       // / preview / draft mode. Validation runs symbolic business rules;
-      // expected post-state is the read-partner snapshot shallow-merged with
-      // the patch. `before` / `after` are captured pre-write and from the
-      // entity the PUT returns.
+      // expected post-state is the read-partner snapshot merged with the patch
+      // under the same PATCH semantics the write uses. `before` / `after` are
+      // captured pre-write and from the entity the PATCH returns.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,
       // Contract promises the governance admission layer requires.
@@ -236,11 +240,7 @@ export const updateEntityTool = {
         entityType: "campaign",
         entityId: "789012",
         data: {
-          id: "789012",
           name: "Q1 2026 Brand Campaign - Updated",
-          advertiserId: "456789",
-          startDate: "2026-01-15",
-          endDate: "2026-03-31",
         },
       },
     },
@@ -251,7 +251,6 @@ export const updateEntityTool = {
         entityType: "ad",
         entityId: "345678",
         data: {
-          id: "345678",
           active: false,
         },
         dry_run: true,

@@ -103,7 +103,7 @@ export const ManageCustomBiddingRulesOutputSchema = z
         error: z
           .object({
             errorCode: z.string(),
-            errorMessage: z.string(),
+            errorMessage: z.string().optional(),
           })
           .optional(),
       })
@@ -392,7 +392,10 @@ export function manageCustomBiddingRulesResponseFormatter(
 
     if (result.rules.state === "REJECTED" && result.rules.error) {
       message += `\n**Error:**\n`;
-      message += `- [${result.rules.error.errorCode}]: ${result.rules.error.errorMessage}\n`;
+      // DV360's rules error carries only an errorCode; a message is optional.
+      message += `- [${result.rules.error.errorCode}]${
+        result.rules.error.errorMessage ? `: ${result.rules.error.errorMessage}` : ""
+      }\n`;
     }
   }
 

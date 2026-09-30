@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getArchiveSupportedEntityTypes, type TtdEntityType } from "../utils/entity-mapping.js";
 import {
   elicitArchiveConfirmation,
@@ -19,6 +20,7 @@ import type {
   EffectDryRunResult,
   DispatchedCapability,
   CesteralWriteToolAnnotations,
+  DryRunValidationError,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_archive_entities";
@@ -95,6 +97,11 @@ export async function archiveEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // One partial PUT per id, one token each on `ttd:${partnerId}`
+  // (TtdService.archiveEntities → updateAvailability).
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.entityIds.length, [1]);
+
   if (input.dry_run === true) {
     return {
       confirmed: true,
@@ -104,10 +111,14 @@ export async function archiveEntitiesLogic(
       failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
-      dryRun: buildArchiveEffectDryRun(input),
+      dryRun: buildArchiveEffectDryRun(input, bulkCapacityDryRunErrors([capacityCheck])),
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
 
   const confirmed = await elicitArchiveConfirmation({
     count: input.entityIds.length,
@@ -127,8 +138,6 @@ export async function archiveEntitiesLogic(
       dispatchedCapability,
     };
   }
-
-  const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.archiveEntities(
     input.entityType as TtdEntityType,
@@ -163,11 +172,15 @@ export async function archiveEntitiesLogic(
 
 /**
  * Symbolic effect dry-run for `archive_entities`. The supported entity types
- * and the 1..100 id-count bounds are enforced by the input schema, so a
- * well-formed call always passes; the projected effect is the archival of the
- * supplied ids. Pure (no I/O) — no entities are touched.
+ * and the 1..100 id-count bounds are enforced by the input schema; the only
+ * way a well-formed call fails is a batch the rate limiter cannot admit in
+ * time (`capacityErrors`, which the execute path refuses). The projected effect
+ * is the archival of the supplied ids. No I/O — no entities are touched.
  */
-function buildArchiveEffectDryRun(input: ArchiveInput): EffectDryRunResult {
+function buildArchiveEffectDryRun(
+  input: ArchiveInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
   const expectedEffect: EffectResult = {
     effectKind: "entities_archived",
     summary: { entity_type: input.entityType, requested: input.entityIds.length },
@@ -175,8 +188,8 @@ function buildArchiveEffectDryRun(input: ArchiveInput): EffectDryRunResult {
 
   return assertGovernedEffectDryRun(
     {
-      wouldSucceed: true,
-      validationErrors: [],
+      wouldSucceed: capacityErrors.length === 0,
+      validationErrors: capacityErrors,
       validationSource: "symbolic",
       expectedEffectSource: "symbolic",
       expectedEffect,
@@ -188,11 +201,13 @@ function buildArchiveEffectDryRun(input: ArchiveInput): EffectDryRunResult {
 
 export function archiveEntitiesResponseFormatter(result: ArchiveOutput): McpTextContent[] {
   if (result.dryRun) {
-    const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const errs = validationErrors.map((e) => `\n  - [${e.code}] ${e.message}`).join("");
     return [
       {
         type: "text" as const,
-        text: `Dry run: archiving ${result.totalRequested} ${result.entityType}(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was archived.\n\nTimestamp: ${result.timestamp}`,
+        text: `Dry run: archiving ${result.totalRequested} ${result.entityType}(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was archived.${errs}\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

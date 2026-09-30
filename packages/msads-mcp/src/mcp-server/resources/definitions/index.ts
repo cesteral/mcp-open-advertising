@@ -56,17 +56,12 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     validation: ["msads_validate_entity"],
     discovery: ["msads_search_tools"],
   },
-  commonWorkflows: [
-    "campaign_setup",
-    "async_reporting",
-    "report_schedule_management",
-    "google_import",
-  ],
+  commonWorkflows: ["campaign_setup", "async_reporting", "google_import"],
   discoveryFlow: [
     "Read server-capabilities://msads-mcp/overview to choose a capability group.",
     "Call msads_list_accounts to discover accessible CustomerId/AccountId pairs.",
     "Read entity-hierarchy://all and entity-schema://{entityType} before entity writes.",
-    "Read reporting-reference://all before report tools or schedule management.",
+    "Read reporting-reference://all before report tools (Microsoft Advertising has no report schedules).",
     "Use tool-examples://msads-mcp/all only when concrete payload examples are needed.",
   ],
   relatedResources: [

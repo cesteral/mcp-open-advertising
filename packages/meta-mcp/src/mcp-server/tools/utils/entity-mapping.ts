@@ -120,10 +120,12 @@ const ENTITY_CONFIGS: Record<MetaEntityType, MetaEntityConfig> = {
       "asset_feed_spec",
       "url_tags",
       "link_url",
-      "dynamic_creative_spec",
       "degrees_of_freedom_spec",
       "product_set_id",
-      "created_time",
+      // No `dynamic_creative_spec` / `created_time`: neither is an AdCreative
+      // field in Meta's API spec (facebook-python-business-sdk v26.0
+      // AdCreative._field_types), and Graph rejects a request naming a
+      // nonexisting field with (#100) — breaking every default-fields read.
     ],
   },
   customAudience: {

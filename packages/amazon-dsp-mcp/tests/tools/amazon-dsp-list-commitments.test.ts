@@ -49,16 +49,14 @@ describe("amazon_dsp_list_commitments", () => {
     expect((listCommitmentsTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
-  it("input schema enforces maxResults in the 1..50 range", () => {
-    expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 0 }).success).toBe(
-      false
-    );
-    expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 51 }).success).toBe(
-      false
-    );
-    expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 25 }).success).toBe(
-      true
-    );
+  it("input schema enforces the spec's maxResults range 10..1000 (unified-api-dsp.json MaxResultsQuery)", () => {
+    const ok = (maxResults: number) =>
+      ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults }).success;
+    expect(ok(9)).toBe(false);
+    expect(ok(10)).toBe(true);
+    expect(ok(51)).toBe(true);
+    expect(ok(1000)).toBe(true);
+    expect(ok(1001)).toBe(false);
     expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1" }).success).toBe(true);
   });
 

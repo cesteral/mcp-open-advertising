@@ -53,6 +53,11 @@ describe("msads_search_targeting", () => {
     expect(mockServices.msadsService.executeOperation).not.toHaveBeenCalled();
     expect(result.results.length).toBeGreaterThan(0);
     expect(result.targetingType).toBe("age");
+    // agerange.md spells it "Fourty"; the misspelling-corrected value is invalid.
+    const ids = result.results.map((r) => r.Id);
+    expect(ids).toContain("ThirtyFiveToFourtyNine");
+    expect(ids).not.toContain("ThirtyFiveToFortyNine");
+    expect(ids).toEqual(expect.arrayContaining(["ThirtyFiveToFiftyFour", "FiftyFiveAndAbove"]));
   });
 
   it("returns static genders without API call", async () => {

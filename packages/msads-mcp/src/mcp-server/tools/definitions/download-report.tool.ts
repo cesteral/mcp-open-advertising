@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
 import {
+  assertSafeDownloadUrl,
   ComputedMetricsFlagSchema,
   createServiceDownloadedReportView,
   extractReportIdFromUrl,
@@ -63,6 +64,10 @@ export async function downloadReportLogic(
   sdkContext?: SdkContext
 ): Promise<DownloadReportOutput> {
   const { msadsReportingService } = resolveSessionServices(sdkContext);
+
+  // The URL arrives from the MCP client — refuse non-https, IP-literal and
+  // internal hosts before fetching it server-side.
+  assertSafeDownloadUrl(input.downloadUrl, { toolName: TOOL_NAME });
 
   return createServiceDownloadedReportView({
     input,

@@ -437,3 +437,49 @@ describe("parseSnapchatRefreshCredentialsFromHeaders", () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe("createSnapchatEnvAuthAdapter (stdio env credentials)", () => {
+  it("prefers the refresh-token flow when app id, secret and refresh token are all set", async () => {
+    const { createSnapchatEnvAuthAdapter } = await import(
+      "../../src/auth/snapchat-auth-adapter.js"
+    );
+    const adapter = createSnapchatEnvAuthAdapter({
+      baseUrl: "https://adsapi.snapchat.com",
+      adAccountId: "acct_1",
+      orgId: "org_1",
+      accessToken: "static-token",
+      appId: "app",
+      appSecret: "secret",
+      refreshToken: "refresh",
+    });
+    expect(adapter).toBeInstanceOf(SnapchatRefreshTokenAdapter);
+    expect(adapter?.adAccountId).toBe("acct_1");
+    expect(adapter?.orgId).toBe("org_1");
+  });
+
+  it("falls back to the static access token when the refresh set is incomplete", async () => {
+    const { createSnapchatEnvAuthAdapter } = await import(
+      "../../src/auth/snapchat-auth-adapter.js"
+    );
+    const adapter = createSnapchatEnvAuthAdapter({
+      baseUrl: "https://adsapi.snapchat.com",
+      adAccountId: "acct_1",
+      accessToken: "static-token",
+      appId: "app",
+    });
+    expect(adapter).toBeInstanceOf(SnapchatAccessTokenAdapter);
+    await expect(adapter!.getAccessToken()).resolves.toBe("static-token");
+  });
+
+  it("returns undefined without an ad account or without any credential", async () => {
+    const { createSnapchatEnvAuthAdapter } = await import(
+      "../../src/auth/snapchat-auth-adapter.js"
+    );
+    expect(
+      createSnapchatEnvAuthAdapter({ baseUrl: "https://x", accessToken: "t" })
+    ).toBeUndefined();
+    expect(
+      createSnapchatEnvAuthAdapter({ baseUrl: "https://x", adAccountId: "a" })
+    ).toBeUndefined();
+  });
+});

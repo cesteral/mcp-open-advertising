@@ -102,13 +102,16 @@ tiktok_create_entity({
 
 ⚠️ **GOTCHA**: TikTok ads go through a review process. Initial status should be DISABLE (paused) until ready to launch.
 
-## Step 3: Preview Ad
+## Step 3: Review the Ad
+
+TikTok v1.3 has no ad-preview endpoint (\`tiktok_get_ad_preview\` always errors). Review the
+created ad with \`tiktok_get_entity\`:
 
 \`\`\`json
-tiktok_get_ad_preview({
+tiktok_get_entity({
+  "entityType": "ad",
   "advertiserId": "${advertiserId}",
-  "adId": "{ad_id_from_step_2}",
-  "adFormat": "FEED"
+  "entityId": "{ad_id_from_step_2}"
 })
 \`\`\`
 

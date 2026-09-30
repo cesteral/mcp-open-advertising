@@ -12,7 +12,9 @@ const TOOL_TITLE = "Get Google Ads Ad Preview";
 const TOOL_DESCRIPTION = `Get preview information for a Google Ads ad.
 
 Fetches the ad entity via GAQL and returns its type, resource name, and final URLs.
-The resource name can be used with the Google Ads generateAdPreview API for a full HTML render.
+This is entity data, not a rendered preview: the Google Ads API has no ad-render endpoint.
+Its only preview method, customers:generateShareablePreviews, returns shareable preview URLs
+for asset groups (UI preview) or ad group ads (YouTube live preview) and is not called here.
 
 **Usage:** Use adId from gads_list_entities with entityType=ad or gads_create_entity.
 The adId is the numeric ID, not the resource name.`;
@@ -33,15 +35,9 @@ export const GetAdPreviewOutputSchema = z
     finalUrls: z.array(z.string()).optional().describe("Final destination URLs for the ad"),
     adId: z.string(),
     customerId: z.string(),
-    resourceName: z
-      .string()
-      .describe(
-        "Ad resource name for use with generateAdPreview API (customers/{customerId}/ads/{adId})"
-      ),
+    resourceName: z.string().describe("Ad resource name (customers/{customerId}/ads/{adId})"),
   })
-  .describe(
-    "Google Ads ad entity data. Use resourceName with the Google Ads generateAdPreview API to obtain an HTML preview."
-  );
+  .describe("Google Ads ad entity data (type, final URLs, resource name). Not a rendered preview.");
 
 type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
 type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
@@ -97,7 +93,7 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTe
   if (result.finalUrls && result.finalUrls.length > 0) {
     lines.push(`Final URLs: ${result.finalUrls.join(", ")}`);
   }
-  lines.push("", `Use resourceName with the Google Ads generateAdPreview API for an HTML render.`);
+  lines.push("", "Entity data only; this is not a rendered preview of the ad.");
 
   return [
     {

@@ -27,9 +27,9 @@ const TOOL_DESCRIPTION = `Import campaigns from Google Ads into Microsoft Advert
 This is a Microsoft Ads-specific feature that allows migrating Google Ads campaigns, ad groups, ads, and keywords into your Microsoft Ads account.
 
 Operations:
-- create: Create a new import job
-- getStatus: Check import job status
-- getResults: Get import job results`;
+- create: Create a new import job — \`{ ImportJobs: [{ Type: "GoogleImportJob", Name, GoogleAccountId, CredentialId }] }\`. GoogleAccountId is the numeric Google Ads customer ID (a long, no dashes); Name and CredentialId are required. The CredentialId authorizes Microsoft Advertising to read the Google Ads account and is obtained through the Microsoft Advertising UI's Google sign-in, not through this tool. One GoogleImportJob per call.
+- getStatus: Check import job status — \`{ ImportJobIds: [...], ImportType: "GoogleImportJob" }\`
+- getResults: Get import job results — \`{ ImportJobIds: [...], ImportType: "GoogleImportJob" }\``;
 
 export const ImportFromGoogleInputSchema = z
   .object({
@@ -39,7 +39,7 @@ export const ImportFromGoogleInputSchema = z
     data: z
       .record(z.unknown())
       .describe(
-        "Operation data — for create: import job config; for getStatus/getResults: { ImportJobId }"
+        'Operation data — for create: { ImportJobs: [GoogleImportJob] }; for getStatus/getResults: { ImportJobIds, ImportType: "GoogleImportJob" }'
       ),
     dry_run: z
       .boolean()
@@ -71,10 +71,16 @@ export const ImportFromGoogleOutputSchema = z
 type ImportFromGoogleInput = z.infer<typeof ImportFromGoogleInputSchema>;
 type ImportFromGoogleOutput = z.infer<typeof ImportFromGoogleOutputSchema>;
 
+/**
+ * REST routes per the v13 docs' "Request Url" sections: AddImportJobs → POST
+ * /ImportJobs, GetImportJobsByIds → POST /ImportJobs/QueryByIds,
+ * GetImportResults → POST /ImportResults/Query. AddImportJobs returns
+ * `ImportJobIds` (null for a rejected job) plus `PartialErrors`.
+ */
 const OPERATION_PATHS: Record<string, string> = {
   create: "/ImportJobs",
   getStatus: "/ImportJobs/QueryByIds",
-  getResults: "/ImportResults/QueryByIds",
+  getResults: "/ImportResults/Query",
 };
 
 export async function importFromGoogleLogic(
@@ -120,15 +126,40 @@ export async function importFromGoogleLogic(
     );
   }
 
-  const result = (await msadsService.executeOperation(path, input.data, context)) as Record<
-    string,
-    unknown
-  >;
+  // `create` goes through the PartialErrors mapping: a rejected job (null id
+  // and/or PartialErrors on an HTTP 200) throws instead of reporting success.
+  let result: Record<string, unknown>;
+  let counts: Record<string, number | boolean> = {};
+  if (input.operation === "create") {
+    const batch = await msadsService.executeOperation(path, input.data, context, "POST", {
+      operation: "create import job",
+      entityLabel: "Google import jobs",
+      itemsField: "ImportJobs",
+      idsField: "ImportJobIds",
+    });
+    result = {
+      ...(batch.response && typeof batch.response === "object"
+        ? (batch.response as Record<string, unknown>)
+        : {}),
+      itemFailures: batch.failures,
+    };
+    counts = {
+      requested: batch.requested,
+      succeeded: batch.succeeded,
+      failed: batch.failed,
+      partial_success: batch.failed > 0,
+    };
+  } else {
+    result = (await msadsService.executeOperation(path, input.data, context)) as Record<
+      string,
+      unknown
+    >;
+  }
 
   // Effect summary carries audit identity only — never the raw import config.
   const effect: EffectResult = {
     effectKind: "import_job_managed",
-    summary: { operation: input.operation },
+    summary: { operation: input.operation, ...counts },
   };
 
   return {
@@ -198,7 +229,9 @@ export const importFromGoogleTool = {
           ImportJobs: [
             {
               Type: "GoogleImportJob",
-              GoogleAccountId: "123-456-7890",
+              Name: "Import from Google Ads",
+              GoogleAccountId: 1234567890,
+              CredentialId: "<CredentialId from the Microsoft Advertising UI Google sign-in>",
             },
           ],
         },

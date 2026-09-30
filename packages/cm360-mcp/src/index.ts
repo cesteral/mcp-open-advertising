@@ -10,6 +10,7 @@ import { startHttpServer } from "./mcp-server/transports/streamable-http-transpo
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import {
   createGoogleAuthAdapter,
+  getCredentialFingerprint,
   type ServiceAccountCredentials,
   detectTransportMode,
   createServerLogger,
@@ -60,7 +61,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     authAdapter,
     { baseUrl: mcpConfig.cm360ApiBaseUrl },
     logger,
-    rateLimiter
+    rateLimiter,
+    getCredentialFingerprint(credentials)
   );
 
   sessionServiceStore.set(sessionId, services);

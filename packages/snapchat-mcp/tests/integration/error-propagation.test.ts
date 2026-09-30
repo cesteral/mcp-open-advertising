@@ -94,7 +94,6 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   snapchatApiBaseUrl: "https://adsapi.snapchat.com",
-  snapchatApiVersion: "v1",
   snapchatRateLimitPerMinute: 100,
 };
 

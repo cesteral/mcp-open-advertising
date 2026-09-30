@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -130,8 +131,23 @@ export async function adjustBidsLogic(
     canonicalEntityKind: null,
   };
 
+  // Per adjustment (GAdsService.adjustBids, sequential): a one-row GAQL read of
+  // the ad group (gaqlSearch → searchPage, 1 token) then a single-operation
+  // `:mutate` (1 token), both on `gads:${customerId}`. The mutate is skipped for
+  // an ad group that is not found; the projection assumes it is found.
+  const { gadsService } = resolveSessionServices(sdkContext);
+  const capacityCheck = gadsService.bulkCapacityCheck(
+    TOOL_NAME,
+    input.customerId,
+    input.adjustments.length,
+    [1, 1]
+  );
+
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      bulkCapacityDryRunErrors([capacityCheck])
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -143,6 +159,10 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -163,8 +183,6 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
-
-  const { gadsService } = resolveSessionServices(sdkContext);
 
   const { results } = await gadsService.adjustBids(input.customerId, input.adjustments, context);
 
@@ -208,9 +226,10 @@ export async function adjustBidsLogic(
  * wired here, so both axes are symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"]
+  adjustments: AdjustBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   // Google Ads CPC/CPM bids are int64 **micros strings** on the wire — a
   // positive integer decimal string. The execute path forwards the string
   // verbatim to the `:mutate` API, so the dry-run must reject anything that is

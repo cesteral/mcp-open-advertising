@@ -66,8 +66,9 @@ All entities require a profileId.
 
 ### Read: GET /dfareporting/v5/userprofiles/{profileId}/{collection}/{id}
 
-### Update: PUT /dfareporting/v5/userprofiles/{profileId}/{collection}
-**Warning: PUT semantics**: Full entity object required. Missing fields reset to defaults.
+### Update: PATCH /dfareporting/v5/userprofiles/{profileId}/{collection}?id={id}
+**PATCH semantics** (\`cm360_update_entity\`, \`cm360_bulk_update_entities\`): send only the fields to change; omitted fields are preserved, nested objects merge, arrays are replaced whole.
+The full-replacement \`PUT /dfareporting/v5/userprofiles/{profileId}/{collection}\` is used only by \`cm360_bulk_update_status\`, which GETs the full entity and PUTs it back with the status changed.
 
 ### Delete: DELETE (creative, floodlightActivity only)
 Most entities cannot be deleted — archive or deactivate instead.
@@ -83,7 +84,7 @@ Uses pageToken-based pagination.
 | \`cm360_list_entities\` | List entities with filters | |
 | \`cm360_get_entity\` | Get single entity | |
 | \`cm360_create_entity\` | Create single entity | |
-| \`cm360_update_entity\` | Update entity (PUT) | |
+| \`cm360_update_entity\` | Update entity (PATCH) | |
 | \`cm360_delete_entity\` | Delete entity (creative/floodlight only) | |
 | \`cm360_validate_entity\` | Client-side validation | |
 | \`cm360_get_report\` | Submit + wait for report | |

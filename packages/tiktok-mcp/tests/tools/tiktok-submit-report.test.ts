@@ -60,6 +60,29 @@ describe("submitReportLogic", () => {
     expect(result.timestamp).toBeDefined();
   });
 
+  it("forwards serviceType and dataLevel as service_type / data_level", async () => {
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-dl" });
+
+    await submitReportLogic(
+      {
+        advertiserId: "1234567890",
+        serviceType: "AUCTION",
+        dataLevel: "AUCTION_ADGROUP",
+        dimensions: ["adgroup_id"],
+        metrics: ["spend"],
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
+      } as any,
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockSubmitReport.mock.calls[0][0]).toMatchObject({
+      service_type: "AUCTION",
+      data_level: "AUCTION_ADGROUP",
+    });
+  });
+
   it("passes report config to submitReport", async () => {
     mockSubmitReport.mockResolvedValueOnce({ task_id: "task-cfg" });
 

@@ -127,7 +127,7 @@ export const listEntitiesTool = {
         entityType: "adGroup",
         customerId: "1234567890",
         filters: {
-          "ad_group.campaign": "= 'customers/1234567890/campaigns/9876543210'",
+          "campaign.id": "= 9876543210",
         },
         orderBy: "ad_group.name ASC",
       },

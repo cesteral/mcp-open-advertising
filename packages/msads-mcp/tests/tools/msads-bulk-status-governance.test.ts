@@ -26,16 +26,21 @@ const sdk = { sessionId: "s" } as any;
 
 const baseInput = {
   entityType: "campaign",
+  accountId: "789",
   entityIds: ["123", "456"],
   status: "Paused",
 };
 
 describe("msads_bulk_update_status governance contract (effect class)", () => {
-  let svc: { bulkUpdateStatus: ReturnType<typeof vi.fn> };
+  let svc: {
+    bulkUpdateStatus: ReturnType<typeof vi.fn>;
+    quotaScope: { userId: string; customerId: string };
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { userId: "u1", customerId: "c1" },
       bulkUpdateStatus: vi.fn().mockResolvedValue({
         results: [
           { entityId: "123", success: true },
@@ -127,5 +132,39 @@ describe("msads_bulk_update_status governance contract (effect class)", () => {
       "Dry run: bulk status change of 2 campaign(s) to Paused would succeed"
     );
     expect(content[0].text).not.toContain("Bulk status update:");
+  });
+
+  it("execute passes the accountId parent through to the Update body", async () => {
+    await bulkUpdateStatusLogic({ ...baseInput } as any, ctx, sdk);
+    expect(svc.bulkUpdateStatus).toHaveBeenCalledWith(
+      "campaign",
+      baseInput.entityIds,
+      "Paused",
+      ctx,
+      "789"
+    );
+  });
+
+  it("refuses a keyword batch without adGroupId before prompting", async () => {
+    await expect(
+      bulkUpdateStatusLogic(
+        { entityType: "keyword", entityIds: ["1"], status: "Paused" } as any,
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/adGroupId is required/);
+    expect(mockElicit).not.toHaveBeenCalled();
+    expect(svc.bulkUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it("only accepts entity types with a settable Status", async () => {
+    const { BulkUpdateStatusInputSchema } = await import(
+      "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js"
+    );
+    for (const entityType of ["budget", "label", "audience", "adExtension"]) {
+      expect(() =>
+        BulkUpdateStatusInputSchema.parse({ entityType, entityIds: ["1"], status: "Paused" })
+      ).toThrow();
+    }
   });
 });

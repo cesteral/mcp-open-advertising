@@ -195,9 +195,10 @@ export interface CreateSnapchatAdRequest {
 // ─── Error Type ──────────────────────────────────────────────────────────────
 
 export interface SnapchatApiError {
-  request_status: "FAILED";
-  error_code?: number;
+  request_status: "FAILED" | "ERROR";
+  error_code?: number | string;
   display_message?: string;
+  debug_message?: string;
   request_id?: string;
 }
 
@@ -268,5 +269,5 @@ export function isSnapchatAdAccount(value: unknown): value is SnapchatAdAccount 
 export function isSnapchatApiError(value: unknown): value is SnapchatApiError {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v["request_status"] === "FAILED";
+  return v["request_status"] === "FAILED" || v["request_status"] === "ERROR";
 }

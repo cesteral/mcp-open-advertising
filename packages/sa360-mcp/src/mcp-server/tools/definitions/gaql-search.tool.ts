@@ -53,7 +53,8 @@ export async function sa360SearchLogic(
     input.query,
     getReportViewFetchLimit(input),
     input.pageToken,
-    context
+    context,
+    { returnTotalResultsCount: true }
   );
   const rows = result.results as unknown as Record<string, unknown>[];
 

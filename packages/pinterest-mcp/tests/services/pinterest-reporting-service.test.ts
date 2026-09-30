@@ -52,10 +52,70 @@ describe("PinterestReportingService", () => {
     );
   });
 
+  it("submitReport sends the v5 AdsAnalyticsCreateAsyncRequest shape (level, CSV, granularity)", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ token: "token-123" });
+
+    await service.submitReport({
+      type: "AD_GROUP",
+      columns: ["IMPRESSION_1"],
+      start_date: "2026-03-01",
+      end_date: "2026-03-04",
+    });
+
+    const body = mockHttpClient.post.mock.calls[0][1] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("type");
+    expect(body).toEqual({
+      level: "AD_GROUP",
+      report_format: "CSV",
+      columns: ["IMPRESSION_1"],
+      start_date: "2026-03-01",
+      end_date: "2026-03-04",
+      granularity: "DAY",
+    });
+  });
+
+  it.each([
+    ["CAMPAIGN", "CAMPAIGN"],
+    ["AD_GROUP", "AD_GROUP"],
+    ["AD", "PIN_PROMOTION"],
+    ["KEYWORD", "KEYWORD"],
+    ["ACCOUNT", "ADVERTISER"],
+  ] as const)("maps report type %s to v5 level %s", async (type, level) => {
+    mockHttpClient.post.mockResolvedValueOnce({ token: "t" });
+    await service.submitReport({
+      type,
+      columns: ["IMPRESSION_1"],
+      start_date: "2026-03-01",
+      end_date: "2026-03-04",
+      granularity: "TOTAL",
+    });
+    expect(mockHttpClient.post.mock.calls[0][1]).toMatchObject({ level, granularity: "TOTAL" });
+  });
+
+  it("pollReport treats CANCELLED as terminal (no polling forever)", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({ report_status: "CANCELLED" });
+
+    const result = await service.pollReport("token-c");
+    expect(result.report_status).toBe("CANCELLED");
+    expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
+  });
+
+  it("getReport throws on CANCELLED", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ token: "token-c" });
+    mockHttpClient.get.mockResolvedValueOnce({ report_status: "CANCELLED" });
+
+    await expect(
+      service.getReport({
+        columns: ["IMPRESSION_1"],
+        start_date: "2026-03-01",
+        end_date: "2026-03-04",
+      })
+    ).rejects.toThrow(/CANCELLED/);
+  });
+
   it("pollReport returns FINISHED result", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "FINISHED",
-      token: "token-123",
       url: "https://example.com/report.csv",
     });
 
@@ -67,7 +127,6 @@ describe("PinterestReportingService", () => {
   it("pollReport returns immediately on DOES_NOT_EXIST status", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "DOES_NOT_EXIST",
-      token: "invalid-token",
     });
 
     const result = await service.pollReport("invalid-token");
@@ -80,7 +139,6 @@ describe("PinterestReportingService", () => {
     mockHttpClient.post.mockResolvedValueOnce({ token: "bad-token" });
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "DOES_NOT_EXIST",
-      token: "bad-token",
     });
 
     await expect(
@@ -156,7 +214,6 @@ describe("PinterestReportingService", () => {
     mockHttpClient.post.mockResolvedValueOnce({ token: "token-xyz" });
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "FINISHED",
-      token: "token-xyz",
       url: "https://example.com/token-xyz.csv",
     });
     mockFetchWithTimeout.mockResolvedValueOnce({
@@ -177,7 +234,6 @@ describe("PinterestReportingService", () => {
   it("checkReportStatus makes single GET to Pinterest v5 endpoint and returns status", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "IN_PROGRESS",
-      token: "token-456",
     });
 
     const result = await service.checkReportStatus("token-456");
@@ -196,7 +252,6 @@ describe("PinterestReportingService", () => {
   it("checkReportStatus returns downloadUrl when FINISHED", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "FINISHED",
-      token: "token-789",
       url: "https://example.com/done-report.csv",
     });
 
@@ -209,7 +264,6 @@ describe("PinterestReportingService", () => {
   it("checkReportStatus consumes rate limiter once", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       report_status: "IN_PROGRESS",
-      token: "token-rl",
     });
 
     await service.checkReportStatus("token-rl");
@@ -218,7 +272,48 @@ describe("PinterestReportingService", () => {
     expect(mockRateLimiter.consume).toHaveBeenCalledWith("pinterest:reporting");
   });
 
-  it("getReportBreakdowns appends breakdown columns", async () => {
+  it("getReportBreakdowns sends breakdowns as targeting_types at the *_TARGETING level", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ token: "token-bd" });
+    mockHttpClient.get.mockResolvedValueOnce({ report_status: "FINISHED", url: "https://x/r.csv" });
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => "IMPRESSION_1,TARGETING_VALUE\n100,US",
+    } as unknown as Response);
+
+    await service.getReportBreakdowns(
+      {
+        type: "AD",
+        columns: ["IMPRESSION_1"],
+        start_date: "2026-03-01",
+        end_date: "2026-03-04",
+      },
+      ["COUNTRY", "AGE_BUCKET"]
+    );
+
+    const body = mockHttpClient.post.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.columns).toEqual(["IMPRESSION_1"]);
+    expect(body.targeting_types).toEqual(["COUNTRY", "AGE_BUCKET"]);
+    expect(body.level).toBe("PIN_PROMOTION_TARGETING");
+  });
+
+  it("getReportBreakdowns rejects KEYWORD (no targeting level) before calling Pinterest", async () => {
+    await expect(
+      service.getReportBreakdowns(
+        {
+          type: "KEYWORD",
+          columns: ["IMPRESSION_1"],
+          start_date: "2026-03-01",
+          end_date: "2026-03-04",
+        },
+        ["GENDER"]
+      )
+    ).rejects.toThrow(/no targeting-breakdown report at the KEYWORD level/);
+    expect(mockHttpClient.post).not.toHaveBeenCalled();
+  });
+
+  it("getReportBreakdowns passes breakdowns to getReport as targeting_types, not columns", async () => {
     const getReportSpy = vi.spyOn(service, "getReport").mockResolvedValueOnce({
       headers: ["date", "country"],
       rows: [["2026-03-01", "US"]],
@@ -232,11 +327,11 @@ describe("PinterestReportingService", () => {
         start_date: "2026-03-01",
         end_date: "2026-03-04",
       },
-      ["SPEND_IN_DOLLAR"]
+      ["GENDER"]
     );
 
     expect(getReportSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ columns: ["IMPRESSION_1", "SPEND_IN_DOLLAR"] }),
+      expect.objectContaining({ columns: ["IMPRESSION_1"], targeting_types: ["GENDER"] }),
       expect.any(Number),
       undefined
     );

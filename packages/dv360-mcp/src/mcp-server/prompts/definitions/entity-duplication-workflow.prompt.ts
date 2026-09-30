@@ -6,13 +6,14 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 /**
  * Entity Duplication Workflow Prompt
  *
- * Guides AI agents through duplicating DV360 entities via the get-then-create
- * pattern, since DV360 has no native copy API.
+ * Guides AI agents through duplicating DV360 entities. Line items and insertion
+ * orders go through `dv360_duplicate_entity` (native `lineItems:duplicate` for
+ * line items); campaigns, which have no duplicate method, use get-then-create.
  */
 export const entityDuplicationWorkflowPrompt: Prompt = {
   name: "entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating DV360 entities (campaigns, insertion orders, line items) using the get-then-create pattern. DV360 has no native copy API.",
+    "Step-by-step guide for duplicating DV360 entities (campaigns, insertion orders, line items). Line items use DV360's native lineItems:duplicate via dv360_duplicate_entity; campaigns use the get-then-create pattern.",
   arguments: [
     {
       name: "advertiserId",
@@ -59,7 +60,11 @@ export function getEntityDuplicationWorkflowPromptMessage(args?: Record<string, 
 - Source Entity ID: \`${sourceEntityId}\`
 - Duplicate children: \`${includeChildren ? "yes" : "no"}\`
 
-> **Why get-then-create?** DV360 has no native copy/clone API. Duplication is always performed by fetching the source entity, stripping server-assigned fields, adjusting the display name, and calling \`dv360_create_entity\`.
+> **Use \`dv360_duplicate_entity\` for line items and insertion orders.** For a **line item** it calls DV360's native \`lineItems:duplicate\` method (a server-side copy) and never leaves the copy running. For an **insertion order** (DV360 has no native IO duplicate) it reads the source and creates the copy in \`ENTITY_STATUS_DRAFT\`. Only **campaigns** need the manual get-then-create steps below.
+>
+> \`\`\`json
+> { "tool": "dv360_duplicate_entity", "params": { "entityType": "lineItem", "advertiserId": "${advertiserId}", "lineItemId": "{source line item id}", "displayName": "[Copy] {name}" } }
+> \`\`\`
 
 ---
 
@@ -109,7 +114,7 @@ Remove all fields that DV360 assigns automatically. **Never include these in a c
 
 ⚠️ **GOTCHA: Campaign status** — Campaigns **cannot** be created in \`ENTITY_STATUS_DRAFT\`. Set \`entityStatus\` to \`ENTITY_STATUS_PAUSED\` (safest) or \`ENTITY_STATUS_ACTIVE\`. If the source campaign is DRAFT, override this field.
 
-⚠️ **GOTCHA: Insertion Order status** — New IOs should typically be created as \`ENTITY_STATUS_DRAFT\` so you can configure line items before activating.
+⚠️ **GOTCHA: Insertion Order and Line Item status** — DV360 only accepts \`ENTITY_STATUS_DRAFT\` when creating an IO or a line item. PAUSED or ACTIVE is rejected; activate after creation with an update.
 
 ⚠️ **GOTCHA: Line item budget pacing** — Line items inherit pacing from their parent IO by default (\`budget.budgetAllocationType: "LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC"\`). If the source line item overrides pacing, that override is copied too — verify it is still appropriate.
 
@@ -137,7 +142,7 @@ Or use a timestamp suffix: \`"{original name} - Copy 2024-01-15"\`
     "advertiserId": "${advertiserId}",
     "data": {
       "displayName": "[Copy] {original display name}",
-      "entityStatus": "ENTITY_STATUS_PAUSED",
+      "entityStatus": "${entityType === "campaign" ? "ENTITY_STATUS_PAUSED" : "ENTITY_STATUS_DRAFT"}",
       "...": "all other fields from source, with server-assigned fields removed"
     }
   }
@@ -152,7 +157,7 @@ ${
   includeChildren
     ? `## Step 6: Duplicate child entities
 
-Since \`includeChildren\` is enabled, repeat the get-then-create pattern for each child in order:
+Since \`includeChildren\` is enabled, duplicate each child in order — insertion orders and line items via \`dv360_duplicate_entity\`, or get-then-create when the child must move to the **new** parent (the native line-item duplicate keeps the source's insertion order):
 
 ### Hierarchy order (always top-down)
 
@@ -177,26 +182,27 @@ Campaign → InsertionOrder → LineItem → AssignedTargeting
 
 1. Apply the same strip-then-create pattern (Steps 3–5)
 2. Update parent ID references to point to the **new** parent (not the source)
-3. Set child \`entityStatus\` appropriately (IOs as DRAFT, line items as PAUSED)
+3. Set child \`entityStatus\` to \`ENTITY_STATUS_DRAFT\` (the only status DV360 accepts when creating IOs and line items)
 
 ### 6c: Duplicate assigned targeting (optional)
 
-If line items have custom targeting, fetch and recreate it:
+If a line item was re-created with get-then-create (not \`dv360_duplicate_entity\`), its custom targeting must be fetched and recreated, one targeting type at a time:
 
 \`\`\`json
 {
   "tool": "dv360_list_assigned_targeting",
   "params": {
-    "entityType": "lineItem",
+    "parentType": "lineItem",
     "advertiserId": "${advertiserId}",
-    "lineItemId": "{source line item id}"
+    "lineItemId": "{source line item id}",
+    "targetingType": "TARGETING_TYPE_GEO_REGION"
   }
 }
 \`\`\`
 
 Then recreate each targeting assignment on the new line item using \`dv360_create_assigned_targeting\`.
 
-⚠️ **GOTCHA: Targeting is not copied automatically** — Targeting assignments are separate resources. You must explicitly list and recreate them.
+⚠️ **GOTCHA: get-then-create does not copy targeting** — Targeting assignments are separate resources, so a line item created from a GET payload has none of the source's targeting. Recreate it explicitly, or use \`dv360_duplicate_entity\` (server-side copy) and verify the copy's targeting with \`dv360_list_assigned_targeting\`.
 
 ---
 
@@ -221,7 +227,7 @@ Then recreate each targeting assignment on the new line item using \`dv360_creat
 
 Check:
 - \`displayName\` reflects the copy naming convention
-- \`entityStatus\` is the intended safe status (PAUSED or DRAFT)
+- \`entityStatus\` is non-running (DRAFT for IOs and line items, PAUSED for campaigns)
 - All required fields are present and correct
 - Parent ID references point to the correct parent entities
 
@@ -243,7 +249,7 @@ This is faster for duplicating 10+ entities but requires understanding the SDF f
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| \`INVALID_ARGUMENT: entityStatus\` | Campaign set to DRAFT | Change to ENTITY_STATUS_PAUSED or ENTITY_STATUS_ACTIVE |
+| \`INVALID_ARGUMENT: entityStatus\` | Campaign set to DRAFT, or IO / line item created as PAUSED or ACTIVE | Campaign: ENTITY_STATUS_PAUSED. IO / line item: ENTITY_STATUS_DRAFT |
 | \`REQUIRED field missing\` | Server-assigned field accidentally stripped | Re-read schema via \`entity-schema://${entityType}\` |
 | \`PERMISSION_DENIED\` | Source entity in a different advertiser | Verify \`advertiserId\` matches source entity |
 | \`Duplicate displayName\` | Name collision with source | Add "[Copy]" prefix or unique suffix |
@@ -256,8 +262,8 @@ This is faster for duplicating 10+ entities but requires understanding the SDF f
 - [ ] Source entity fetched and inspected
 - [ ] Server-assigned fields stripped from payload
 - [ ] \`displayName\` updated with copy convention
-- [ ] \`entityStatus\` set to safe value (PAUSED/DRAFT, not DRAFT for campaigns)
-- [ ] New entity created successfully via \`dv360_create_entity\`
+- [ ] \`entityStatus\` set to a non-running value (campaigns PAUSED; IOs and line items DRAFT)
+- [ ] New entity created via \`dv360_duplicate_entity\` (IO / line item) or \`dv360_create_entity\` (campaign)
 - [ ] New entity verified with \`dv360_get_entity\`
 ${includeChildren ? "- [ ] All child entities duplicated with correct parent ID references\n- [ ] Assigned targeting recreated on duplicate line items" : ""}
 `;

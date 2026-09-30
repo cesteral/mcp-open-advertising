@@ -31,6 +31,7 @@ import type {
   RequestContext,
 } from "@cesteral/shared";
 import { buildDv360Snapshot, ENTITY_KIND_MAP, type Dv360ServiceLike } from "./capture-snapshot.js";
+import { getEntityConfigDynamic, requiresArchiveBeforeDelete } from "./entity-mapping-dynamic.js";
 
 export type { Dv360ServiceLike };
 
@@ -212,9 +213,12 @@ export interface Dv360DeleteDryRunArgs {
 /**
  * Symbolic dry-run for `dv360_delete_entity`. Validation is symbolic; the
  * expected post-state is the current entity with `ENTITY_STATUS_DELETED`
- * (canonical `deleted`). DV360 rejects deleting a line item that is not
- * archived, so a governed dry-run surfaces that as a validation error rather
- * than approving a delete the real API will reject.
+ * (canonical `deleted`). DV360 rejects deleting a campaign, insertion order,
+ * line item or creative that is not archived (v4 Discovery, `*.delete`: "should
+ * be archived first … to be able to delete it"), so the dry-run reads the
+ * entity for every such type — including the out-of-governed-scope `creative`
+ * — and surfaces a non-archived entity as a validation error rather than
+ * approving a delete the real API will reject.
  */
 export async function runDv360DeleteDryRun(
   args: Dv360DeleteDryRunArgs,
@@ -225,17 +229,28 @@ export async function runDv360DeleteDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
-  if (ENTITY_KIND_MAP[args.entityType] && dv360Service.getEntity) {
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  const archiveRequired = requiresArchiveBeforeDelete(args.entityType);
+
+  if (!getEntityConfigDynamic(args.entityType).supportsDelete) {
+    validationErrors.push({
+      code: "DELETE_NOT_SUPPORTED",
+      message: `DV360 has no delete method for ${args.entityType}`,
+      field: "entityType",
+    });
+  } else if ((inScope || archiveRequired) && dv360Service.getEntity) {
     const current = (await dv360Service.getEntity(args.entityType, args.ids, context)) as Record<
       string,
       any
     >;
     if (current && typeof current === "object") {
-      if (args.entityType === "lineItem" && current.entityStatus !== "ENTITY_STATUS_ARCHIVED") {
+      if (archiveRequired && current.entityStatus !== "ENTITY_STATUS_ARCHIVED") {
         validationErrors.push({
-          code: "LINE_ITEM_NOT_ARCHIVED",
-          message:
-            "Line items must be in ENTITY_STATUS_ARCHIVED before deletion (set via dv360_bulk_update_status)",
+          // e.g. LINE_ITEM_NOT_ARCHIVED, INSERTION_ORDER_NOT_ARCHIVED
+          code: `${args.entityType.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase()}_NOT_ARCHIVED`,
+          message: `DV360 requires a ${args.entityType} to be in ENTITY_STATUS_ARCHIVED before deletion (current: ${
+            current.entityStatus ?? "unknown"
+          }; set via dv360_bulk_update_status)`,
           field: "entityStatus",
         });
       }
@@ -255,7 +270,6 @@ export async function runDv360DeleteDryRun(
   // no canonical snapshot — on dry-run as well as execute. The in-scope
   // simulation guard (`assertGovernedDryRunResult`) must therefore be skipped
   // for them; applying it would fail an honest no-snapshot result.
-  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
   const result: DryRunResult = {
     wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
     validationErrors,
@@ -367,12 +381,17 @@ export interface Dv360DuplicateDryRunArgs {
 
 /**
  * Symbolic dry-run for `dv360_duplicate_entity`. The copy does not exist yet
- * (no `before`). DV360's duplicate forces the copy to a non-running state —
- * line-item copies to `ENTITY_STATUS_DRAFT`, insertion-order copies to
- * `ENTITY_STATUS_PAUSED` — so the expected post-state is the SOURCE re-projected
- * as the copy: read the source, overlay that landing status, and emit it with
- * an empty `platformEntityId` (the new ID is assigned on execute — the parent
- * IDs in `ids` only supply `accountId`).
+ * (no `before`). Both duplicatable kinds are created as new entities, and
+ * DV360's create methods accept only `ENTITY_STATUS_DRAFT` for insertion orders
+ * and line items (v4 Discovery `InsertionOrder.entityStatus` /
+ * `LineItem.entityStatus`: "For Create… method, only `ENTITY_STATUS_DRAFT` is
+ * allowed"). The insertion-order copy is created DRAFT explicitly; the native
+ * line-item duplicate documents no landing status, so DRAFT is projected and
+ * the execute path pauses the copy if DV360 ever returns it ACTIVE. The
+ * expected post-state is the SOURCE re-projected as the copy: read the source,
+ * overlay DRAFT and the copy name, and emit it with an empty `platformEntityId`
+ * (the new ID is assigned on execute — the parent IDs in `ids` only supply
+ * `accountId`).
  */
 export async function runDv360DuplicateDryRun(
   args: Dv360DuplicateDryRunArgs,
@@ -390,10 +409,8 @@ export async function runDv360DuplicateDryRun(
       any
     >;
     if (source && typeof source === "object") {
-      // DV360 forces line-item copies to DRAFT and insertion-order copies to
-      // PAUSED (line items must start as DRAFT) — mirror that per entity type.
-      const landingStatus =
-        args.entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
+      // Insertion orders and line items can only be created as DRAFT.
+      const landingStatus = "ENTITY_STATUS_DRAFT";
       // The service renames the copy: `displayName` if supplied, else
       // `Copy of {source displayName}`.
       const sourceName = typeof source.displayName === "string" ? source.displayName : undefined;

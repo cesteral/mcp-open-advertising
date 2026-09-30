@@ -61,6 +61,20 @@ describe("checkReportStatusLogic", () => {
     expect(result.downloadUrl).toBe("https://example.com/report.csv");
   });
 
+  it("maps Pinterest CANCELLED to canonical 'failed' (not 'pending', which polls forever)", async () => {
+    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-c", status: "CANCELLED" });
+
+    const result = await checkReportStatusLogic(
+      { adAccountId: "1234567890", taskId: "task-c" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.state).toBe("failed");
+    expect(result.rawStatus).toBe("CANCELLED");
+    expect(result.isComplete).toBe(false);
+  });
+
   it("returns canonical 'running' state with isComplete false when IN_PROGRESS", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-2",

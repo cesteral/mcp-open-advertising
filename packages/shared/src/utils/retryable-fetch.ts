@@ -129,6 +129,19 @@ export interface RetryableRequestOptions {
     errorBody: string,
     defaultNextAction: string | undefined
   ) => string | undefined;
+  /**
+   * The platform's DOCUMENTED wait, in ms, for a throttled response that
+   * carries no usable `Retry-After` header — e.g. Microsoft Advertising error
+   * 117 CallRateExceeded ("resubmit ... after waiting 60 seconds") or a TTD 429
+   * ("wait 1 minute after a failed call"). Return `undefined` when the response
+   * is not a throttle. A `Retry-After` header, when present, always wins.
+   *
+   * The required wait is published as `data.retryAfterMs` on the error, and a
+   * wait longer than this call's `maxBackoffMs` ends retrying instead of being
+   * silently shortened: re-sending before the platform said to only extends the
+   * throttle.
+   */
+  throttleDelayMs?: (status: number, errorBody: string) => number | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -325,6 +338,7 @@ export async function executeWithRetry(
     onResponse,
     buildErrorData,
     buildNextAction,
+    throttleDelayMs,
   } = options;
   const doFetch = options.fetchFn ?? fetchWithTimeout;
 
@@ -495,6 +509,13 @@ export async function executeWithRetry(
       : defaultNextAction;
     const platformExtras = buildErrorData?.(response.status, errorBody);
 
+    // The wait the platform asked for, if it named one: the Retry-After header,
+    // else the platform's documented throttle wait.
+    const requiredDelayMs =
+      retryAfterSeconds !== undefined
+        ? retryAfterSeconds * 1000
+        : throttleDelayMs?.(response.status, errorBody);
+
     const mcpError = new McpError(errorCode, errorMessage, {
       requestId: context?.requestId,
       httpStatus: response.status,
@@ -510,6 +531,7 @@ export async function executeWithRetry(
         ? { tokenExpiryHint: config.tokenExpiryHint }
         : {}),
       ...(nextAction !== undefined ? { nextAction } : {}),
+      ...(requiredDelayMs !== undefined ? { retryAfterMs: requiredDelayMs } : {}),
       ...platformExtras,
     });
 
@@ -529,9 +551,18 @@ export async function executeWithRetry(
       throw mcpError;
     }
 
+    // The platform named a wait longer than this call may sleep. Retrying at
+    // `maxBackoffMs` instead (the old behaviour: Retry-After was silently
+    // capped) re-sends before the platform allows it, which only extends the
+    // throttle. Surface the error with `retryAfterMs` and let the caller wait.
+    if (requiredDelayMs !== undefined && requiredDelayMs > maxBackoffMs) {
+      throw mcpError;
+    }
+
     lastError = mcpError;
 
-    const delayMs = calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
+    const delayMs =
+      requiredDelayMs ?? calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
 
     logger.warn(
       {

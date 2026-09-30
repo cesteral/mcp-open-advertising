@@ -41,14 +41,14 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Bulk Operations
 
-| Tool                        | Description                                             |
-| --------------------------- | ------------------------------------------------------- |
-| `ttd_bulk_create_entities`  | Batch create campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_entities`  | Batch update campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_status`    | Batch pause/resume/archive entities                     |
-| `ttd_archive_entities`      | Batch archive (soft-delete) entities                    |
-| `ttd_adjust_bids`           | Batch adjust ad group bid CPMs (safe read-modify-write) |
-| `ttd_bulk_manage_bid_lists` | Batch get/update bid lists (up to 50)                   |
+| Tool                        | Description                                               |
+| --------------------------- | --------------------------------------------------------- |
+| `ttd_bulk_create_entities`  | Batch create campaigns/ad groups (up to 50)               |
+| `ttd_bulk_update_entities`  | Batch update campaigns/ad groups (up to 50)               |
+| `ttd_bulk_update_status`    | Batch pause/resume/archive entities                       |
+| `ttd_archive_entities`      | Batch archive (soft-delete) entities                      |
+| `ttd_adjust_bids`           | Batch adjust ad group bid CPMs (partial PUT per ad group) |
+| `ttd_bulk_manage_bid_lists` | Batch get/update bid lists (up to 50)                     |
 
 ### Bid Lists
 
@@ -275,7 +275,7 @@ pnpm run lint
 
 ### Key Gotchas
 
-- TTD uses PUT for updates (full entity replacement, not PATCH)
+- TTD uses PUT for updates, but updates are partial: only the properties you send change, and arrays you send replace the existing array (TTD Foundations §8)
 - `AdvertiserId` is required in most entity payloads
 - Report generation is async: submit → poll → download CSV
 - MyReports templates and schedules are separate concepts; GraphQL is the primary path for template-driven reporting

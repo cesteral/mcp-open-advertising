@@ -12,13 +12,15 @@ export interface PinterestMediaRegisterResponse {
   upload_parameters: Record<string, string>;
 }
 
+/** v5 `MediaUploadStatus`. */
+export type PinterestMediaUploadStatus = "registered" | "processing" | "succeeded" | "failed";
+
 /**
- * Response from GET /v5/media/{media_id} — status polling after upload.
+ * Response from GET /v5/media/{media_id} — status polling after upload
+ * (v5 `Media`: `{ media_id, media_type, status }`, status at the top level).
  */
 export interface PinterestMediaStatusResponse {
   media_id?: string;
-  media_processing_record?: {
-    status?: string;
-  };
   media_type?: string;
+  status?: PinterestMediaUploadStatus;
 }

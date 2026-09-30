@@ -30,24 +30,29 @@ const TOOL_DESCRIPTION = `Duplicate a Pinterest Ads entity (copy it).
 **Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
 
 Creates a copy of the entity (clone via read + create — Pinterest has no native copy API).
-The copy preserves the source's settings, including its status, unless overridden via \`options\`.
-Use \`options\` (e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.`;
+The copy keeps the source's settings unless overridden via \`options\`, except
+\`status\`: the copy is always created \`PAUSED\` (a \`status\` in \`options\` is ignored), so it
+cannot spend until you activate it with \`pinterest_update_entity\` or \`pinterest_bulk_update_status\`.
+Only the campaign itself is copied, not its ad groups or ads.
+Use \`options\` (Pinterest field names, e.g. \`{ "name": "Copy of …" }\`) to rename or adjust the copy.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
       .record(z.any())
       .optional()
-      .describe("Optional copy options (e.g., new name, target campaign ID)"),
+      .describe(
+        "Optional Pinterest fields to set on the copy (e.g. name). A status here is ignored: the copy is always PAUSED."
+      ),
     dry_run: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied) without calling the Pinterest API. No copy is created."
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied and `status` forced to `PAUSED`) without calling the Pinterest API. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a Pinterest Ads entity");
@@ -183,8 +188,9 @@ export const duplicateEntityTool = {
       },
       schemaVersion: 1,
       contractId: "pinterest.duplicate_entity.v1",
-      // `dry_run` = symbolic: read the source and project it as the non-running
-      // copy (empty new ID). `after` is normalized from the returned new entity.
+      // `dry_run` = symbolic: read the source and project the PAUSED copy that
+      // buildPinterestDuplicateCopy would create (empty new ID). `after` is
+      // normalized from the returned new entity.
       // No `before`.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,

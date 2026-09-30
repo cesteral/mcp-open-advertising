@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  assertMetaBulkCapacity,
+  metaBulkBuckets,
+  metaBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
+import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -129,7 +134,15 @@ export async function adjustBidsLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect
   // (a bid-adjustment over N ad sets). No API call, no confirmation prompt.
   if (input.dry_run === true) {
-    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    const dryRun = buildAdjustBidsEffectDryRun(
+      input.adjustments,
+      metaBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.adjustments.length,
+        metaBulkBuckets.adjustBids(),
+        "adjustments"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
@@ -141,6 +154,10 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first read/write.
+  assertMetaBulkCapacity(TOOL_NAME, input.adjustments.length, metaBulkBuckets.adjustBids());
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -244,9 +261,10 @@ export async function adjustBidsLogic(
  * are symbolic. Pure (no I/O).
  */
 function buildAdjustBidsEffectDryRun(
-  adjustments: AdjustBidsInput["adjustments"]
+  adjustments: AdjustBidsInput["adjustments"],
+  capacityErrors: DryRunValidationError[] = []
 ): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   adjustments.forEach((a, i) => {
     if (!Number.isInteger(a.bidAmount) || a.bidAmount < 1) {
       validationErrors.push({

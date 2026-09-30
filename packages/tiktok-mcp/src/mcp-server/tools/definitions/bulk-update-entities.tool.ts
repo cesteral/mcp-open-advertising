@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertTikTokBulkCapacity,
+  tiktokBulkBuckets,
+  tiktokBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import {
@@ -111,7 +116,15 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      tiktokBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        tiktokBulkBuckets.bulkUpdate(),
+        "items"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -123,6 +136,10 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first write.
+  assertTikTokBulkCapacity(TOOL_NAME, input.items.length, tiktokBulkBuckets.bulkUpdate());
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -187,8 +204,11 @@ export async function bulkUpdateEntitiesLogic(
  * projects the would-be effect (an N-item update of one entity kind). TikTok has
  * no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
       validationErrors.push({

@@ -60,7 +60,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
   discoveryFlow: [
     "Read server-capabilities://tiktok-mcp/overview to choose a capability group.",
-    "Call tiktok_list_advertisers to discover accessible advertiser IDs.",
+    "Call tiktok_list_advertisers to confirm the session-bound advertiser account.",
     "Read entity-hierarchy://all and entity-schema://{entityType} before entity writes.",
     "Read reporting-reference://all before report tools.",
     "Read targeting-reference://all before targeting search or audience estimation.",

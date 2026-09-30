@@ -138,10 +138,13 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
           const { AmazonDspAccessTokenAdapter } = await import(
             "../../auth/amazon-dsp-auth-adapter.js"
           );
+          // Pass the client ID like the stdio path does (src/index.ts) — without
+          // it no ClientId header is sent and every upstream call 401s.
           const envAdapter = new AmazonDspAccessTokenAdapter(
             amazonDspToken,
             amazonDspProfileId,
-            cfg.amazonDspApiBaseUrl
+            cfg.amazonDspApiBaseUrl,
+            cfg.amazonDspClientId
           );
           await envAdapter.validate();
           const cfgFallback = appConfig as AppConfig;

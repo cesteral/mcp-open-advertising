@@ -1,3 +1,4 @@
+import { RateLimiter } from "@cesteral/shared";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockResolveSessionServices, mockEnsureRequiredFieldValue, mockElicit } = vi.hoisted(() => ({
@@ -36,12 +37,32 @@ import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
+// An unconfigured limiter never constrains a batch: these tests are not about
+// bulk capacity (see dv360-bulk-capacity.test.ts), so the pre-check always passes.
+const unlimitedBulkCapacityChecks = (
+  toolName: string,
+  advertiserIds: ReadonlyArray<string | undefined>,
+  costPerItem: readonly number[]
+) => [
+  {
+    rateLimiter: new RateLimiter(),
+    toolName,
+    itemCount: advertiserIds.length,
+    buckets: [{ key: "dv360:test", costPerItem }],
+  },
+];
+
 describe("dv360_adjust_line_item_bids governance contract (effect class)", () => {
-  let svc: { getEntity: ReturnType<typeof vi.fn>; updateEntity: ReturnType<typeof vi.fn> };
+  let svc: {
+    getEntity: ReturnType<typeof vi.fn>;
+    updateEntity: ReturnType<typeof vi.fn>;
+    bulkCapacityChecks: typeof unlimitedBulkCapacityChecks;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      bulkCapacityChecks: unlimitedBulkCapacityChecks,
       getEntity: vi.fn().mockResolvedValue({
         displayName: "LI 1",
         bidStrategy: { fixedBid: { bidAmountMicros: 3000000 } },

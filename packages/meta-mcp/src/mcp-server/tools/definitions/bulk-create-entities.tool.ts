@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertMetaBulkCapacity,
+  metaBulkBuckets,
+  metaBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -92,7 +97,15 @@ export async function bulkCreateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      metaBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        metaBulkBuckets.bulkCreate(input.adAccountId),
+        "items"
+      )
+    );
     return {
       results: [],
       successCount: 0,
@@ -113,6 +126,14 @@ export async function bulkCreateEntitiesLogic(
       `Invalid bulk create payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the first write.
+  assertMetaBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    metaBulkBuckets.bulkCreate(input.adAccountId)
+  );
 
   const { metaService } = resolveSessionServices(sdkContext);
 
@@ -154,8 +175,11 @@ export async function bulkCreateEntitiesLogic(
  * entity kind). There is no native bulk validate, so both axes are symbolic.
  * Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkCreateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({

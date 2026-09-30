@@ -157,7 +157,7 @@ DV360_MCP_HOST=0.0.0.0
 # DV360 API
 DV360_API_BASE_URL=https://displayvideo.googleapis.com/v4
 DV360_SERVICE_ACCOUNT_JSON=
-DV360_RATE_LIMIT_PER_MINUTE=60
+# DV360_RATE_LIMIT_PER_MINUTE=6                    # Optional; default 6. No published quota backs a higher value (platform-facts.json)
 
 # MCP Session
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000
@@ -169,8 +169,9 @@ TTD_MCP_HOST=0.0.0.0
 
 # TTD API Configuration
 TTD_API_TOKEN=your-ttd-api-token
-TTD_API_BASE_URL=https://api.thetradedesk.com/v3
-TTD_RATE_LIMIT_PER_MINUTE=60
+# TTD_USE_SANDBOX=true                          # Optional: route REST + GraphQL to the Partner Sandbox
+# TTD_API_BASE_URL / TTD_GRAPHQL_URL            # Optional overrides; leave unset so they follow TTD_USE_SANDBOX
+# TTD_RATE_LIMIT_PER_MINUTE=60                    # Optional; default 60. No published quota backs a higher value (platform-facts.json)
 
 # ---------- gads-mcp (Google Ads Server) ----------
 GADS_MCP_PORT=3004
@@ -183,7 +184,7 @@ GADS_CLIENT_SECRET=your-oauth-client-secret
 GADS_REFRESH_TOKEN=your-oauth-refresh-token
 GADS_LOGIN_CUSTOMER_ID=                         # Optional: MCC login customer ID (no dashes)
 GADS_API_BASE_URL=https://googleads.googleapis.com/v23
-GADS_RATE_LIMIT_PER_MINUTE=100
+# GADS_RATE_LIMIT_PER_MINUTE=10                    # Optional; default 10. No published quota backs a higher value (platform-facts.json)
 
 # ---------- meta-mcp (Meta Ads Server) ----------
 META_MCP_PORT=3005
@@ -192,7 +193,7 @@ META_MCP_HOST=0.0.0.0
 # Meta API Configuration
 META_ACCESS_TOKEN=your-meta-access-token
 META_API_BASE_URL=https://graph.facebook.com/v25.0
-META_RATE_LIMIT_PER_MINUTE=60
+# META_RATE_LIMIT_PER_MINUTE=20                    # Optional; default 20. No published quota backs a higher value (platform-facts.json)
 ```
 
 ### Local `.env` (Your Actual Values)
@@ -495,7 +496,7 @@ MCP_ALLOWED_ORIGINS=*                        # CSV of allowed origins
 # DV360 API Configuration
 DV360_API_BASE_URL=https://displayvideo.googleapis.com/v4
 DV360_SERVICE_ACCOUNT_JSON=                  # REQUIRED: Base64 or file path
-DV360_RATE_LIMIT_PER_MINUTE=60
+# DV360_RATE_LIMIT_PER_MINUTE=6                    # Optional; default 6. No published quota backs a higher value (platform-facts.json)
 
 # Logging
 LOG_LEVEL=info

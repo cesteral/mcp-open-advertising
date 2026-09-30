@@ -8,6 +8,7 @@ const mockState = vi.hoisted(() => ({
     getEntity: vi.fn(),
     createEntity: vi.fn(),
     updateEntity: vi.fn(),
+    patchEntity: vi.fn(),
     deleteEntity: vi.fn(),
     listTargetingOptions: vi.fn(),
   },
@@ -167,12 +168,16 @@ describe("mcp transport CRUD integration (CM360)", () => {
       }
     );
 
-    mockState.cm360Service.updateEntity.mockImplementation(
-      async (_entityType: string, _profileId: string, data: Record<string, unknown>) => {
-        const id = data.id as string;
-        const existing = mockState.entities.get(id) ?? {};
-        const updated = { ...existing, ...data };
-        mockState.entities.set(id, updated);
+    mockState.cm360Service.patchEntity.mockImplementation(
+      async (
+        _entityType: string,
+        _profileId: string,
+        entityId: string,
+        patch: Record<string, unknown>
+      ) => {
+        const existing = mockState.entities.get(entityId) ?? {};
+        const updated = { ...existing, ...patch, id: entityId };
+        mockState.entities.set(entityId, updated);
         return updated;
       }
     );
@@ -239,7 +244,7 @@ describe("mcp transport CRUD integration (CM360)", () => {
           profileId: "12345",
           entityType: "campaign",
           entityId: "campaign-001",
-          data: { id: "campaign-001", name: "Updated Campaign" },
+          data: { name: "Updated Campaign" },
         },
       },
     });
@@ -269,7 +274,20 @@ describe("mcp transport CRUD integration (CM360)", () => {
     // and once inside cm360_update_entity to capture the governed pre-write
     // `before` snapshot (campaign is a governed entity kind).
     expect(mockState.cm360Service.getEntity).toHaveBeenCalledTimes(2);
-    expect(mockState.cm360Service.updateEntity).toHaveBeenCalledOnce();
+    expect(mockState.cm360Service.patchEntity).toHaveBeenCalledOnce();
+    expect(mockState.cm360Service.patchEntity).toHaveBeenCalledWith(
+      "campaign",
+      "12345",
+      "campaign-001",
+      { name: "Updated Campaign" },
+      expect.anything()
+    );
+    expect(mockState.cm360Service.updateEntity).not.toHaveBeenCalled();
+    // PATCH preserved the field the update did not send.
+    expect(mockState.entities.get("campaign-001")).toMatchObject({
+      name: "Updated Campaign",
+      advertiserId: "999",
+    });
     expect(mockState.cm360Service.deleteEntity).toHaveBeenCalledOnce();
   });
 });

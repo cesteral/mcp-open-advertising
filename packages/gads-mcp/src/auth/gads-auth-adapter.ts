@@ -19,11 +19,10 @@
  */
 
 import {
+  classifyOAuth2RefreshFailure,
   extractHeader,
   fetchWithTimeout,
   fingerprintCredentials,
-  JsonRpcErrorCode,
-  McpError,
   OAuth2RefreshAdapterBase,
 } from "@cesteral/shared";
 
@@ -96,9 +95,16 @@ export class GAdsRefreshTokenAuthAdapter
 
         if (!response.ok) {
           const errorBody = await response.text().catch(() => "");
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `Google OAuth2 token exchange failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          // A dead grant (`invalid_grant` — refresh token expired/revoked —
+          // `invalid_client`, `unauthorized_client`) becomes Unauthorized so
+          // the transport answers 401 and the session is dropped; transient
+          // endpoint failures stay InternalError. Same classifier as the
+          // rest of the fleet's refresh-token adapters.
+          throw classifyOAuth2RefreshFailure(
+            "Google Ads",
+            response.status,
+            response.statusText,
+            errorBody
           );
         }
 

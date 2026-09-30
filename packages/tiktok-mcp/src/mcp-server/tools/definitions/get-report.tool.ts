@@ -16,14 +16,18 @@ import {
   ReportViewOutputSchema,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import {
+  TIKTOK_REPORT_DATA_LEVELS,
+  TIKTOK_REPORT_SERVICE_TYPES,
+} from "../../../services/tiktok/tiktok-reporting-service.js";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_get_report";
 const TOOL_TITLE = "Get TikTok Ads Report";
-const TOOL_DESCRIPTION = `Submit and retrieve an async TikTok Ads performance report.
+const TOOL_DESCRIPTION = `Run a TikTok Ads performance report and return the rows.
 
-Follows the async polling pattern: submit task → poll until DONE → download CSV.
-This may take 30s–5 minutes depending on the data volume.
+Uses TikTok's synchronous \`report/integrated/get/\` endpoint (paged, up to 1,000 rows per page),
+so rows come back in the same call — no task to poll.
 
 **Common dimensions:** campaign_id, adgroup_id, ad_id, stat_time_day, stat_time_hour, country_code
 **Common metrics:** spend, impressions, clicks, ctr, cpm, cpc, conversions, conversion_rate, reach, frequency
@@ -43,6 +47,17 @@ export const GetReportInputSchema = z
       .optional()
       .default("BASIC")
       .describe("Report type (default: BASIC)"),
+    serviceType: z
+      .enum(TIKTOK_REPORT_SERVICE_TYPES)
+      .optional()
+      .default("AUCTION")
+      .describe("TikTok service_type (default: AUCTION)"),
+    dataLevel: z
+      .enum(TIKTOK_REPORT_DATA_LEVELS)
+      .optional()
+      .describe(
+        "TikTok data_level for BASIC/AUDIENCE reports, e.g. AUCTION_CAMPAIGN, AUCTION_ADGROUP, AUCTION_AD, AUCTION_ADVERTISER"
+      ),
     dimensions: z
       .array(z.string())
       .min(1)
@@ -83,7 +98,6 @@ export const GetReportInputSchema = z
 
 export const GetReportOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID"),
     ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
@@ -147,6 +161,8 @@ export async function getReportLogic(
   const result = await tiktokReportingService.getReport(
     {
       report_type: input.reportType,
+      service_type: input.serviceType,
+      ...(input.dataLevel ? { data_level: input.dataLevel } : {}),
       dimensions: input.dimensions,
       metrics: input.metrics,
       start_date: resolvedStartDate!,
@@ -166,7 +182,6 @@ export async function getReportLogic(
   }
 
   return {
-    taskId: result.taskId,
     ...createReportView({
       headers,
       rows: arrayRowsToRecords(headers, rows),
@@ -181,7 +196,7 @@ export function getReportResponseFormatter(result: GetReportOutput): McpTextCont
   return [
     {
       type: "text" as const,
-      text: `Report task: ${result.taskId}\n\n${formatReportViewResponse(result, "Report data")}`,
+      text: formatReportViewResponse(result, "Report data"),
     },
   ];
 }
@@ -203,6 +218,7 @@ export const getReportTool = {
       label: "Campaign delivery report for last 7 days",
       input: {
         advertiserId: "1234567890",
+        dataLevel: "AUCTION_CAMPAIGN",
         dimensions: ["campaign_id", "stat_time_day"],
         metrics: ["impressions", "clicks", "spend", "ctr", "cpc"],
         datePreset: "LAST_7_DAYS",
@@ -213,6 +229,7 @@ export const getReportTool = {
       input: {
         advertiserId: "1234567890",
         reportType: "BASIC",
+        dataLevel: "AUCTION_ADGROUP",
         dimensions: ["adgroup_id"],
         metrics: ["impressions", "clicks", "spend", "conversions", "conversion_rate"],
         startDate: "2026-03-01",

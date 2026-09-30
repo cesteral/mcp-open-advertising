@@ -47,7 +47,11 @@ describe("checkReportStatusLogic", () => {
       downloadUrl: "https://example.com/report.json",
     });
 
-    const result = await checkReportStatusLogic({ taskId: "rpt-1" }, baseContext, baseSdkContext);
+    const result = await checkReportStatusLogic(
+      { accountId: "adv-1", taskId: "rpt-1" },
+      baseContext,
+      baseSdkContext
+    );
 
     expect(result.taskId).toBe("rpt-1");
     expect(result.state).toBe("complete");
@@ -62,7 +66,11 @@ describe("checkReportStatusLogic", () => {
       status: "IN_PROGRESS",
     });
 
-    const result = await checkReportStatusLogic({ taskId: "rpt-2" }, baseContext, baseSdkContext);
+    const result = await checkReportStatusLogic(
+      { accountId: "adv-1", taskId: "rpt-2" },
+      baseContext,
+      baseSdkContext
+    );
 
     expect(result.state).toBe("running");
     expect(result.rawStatus).toBe("IN_PROGRESS");
@@ -70,15 +78,19 @@ describe("checkReportStatusLogic", () => {
     expect(result.downloadUrl).toBeUndefined();
   });
 
-  it("calls checkReportStatus with just the taskId", async () => {
+  it("calls checkReportStatus with the accountId and taskId", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "rpt-xyz",
       status: "IN_PROGRESS",
     });
 
-    await checkReportStatusLogic({ taskId: "rpt-xyz" }, baseContext, baseSdkContext);
+    await checkReportStatusLogic(
+      { accountId: "adv-1", taskId: "rpt-xyz" },
+      baseContext,
+      baseSdkContext
+    );
 
-    expect(mockCheckReportStatus).toHaveBeenCalledWith("rpt-xyz", baseContext);
+    expect(mockCheckReportStatus).toHaveBeenCalledWith("adv-1", "rpt-xyz", baseContext);
   });
 });
 

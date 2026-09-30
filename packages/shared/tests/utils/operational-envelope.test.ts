@@ -18,7 +18,7 @@ import {
   buildOperationalEnvelope,
   FLEET_IDEMPOTENCY,
 } from "../../src/utils/operational-envelope.js";
-import { RateLimiter } from "../../src/utils/rate-limiter.js";
+import { RateLimiter, createPlatformRateLimiter } from "../../src/utils/rate-limiter.js";
 import {
   describeRetryPolicy,
   IDEMPOTENT_RETRY_METHODS,
@@ -99,6 +99,40 @@ describe("rate limit is read off the live limiter", () => {
 
   it("is null rather than invented when no limiter is configured", () => {
     expect(defaultEnvelope().rateLimit).toBeNull();
+  });
+
+  it("publishes how long an over-cap call is queued, read off the limiter", () => {
+    // The limiter queues rather than rejecting at the cap. A client that read
+    // only `requestsPerMinute` would expect an immediate RateLimited and time
+    // out the call instead of waiting for it.
+    const platform = createPlatformRateLimiter("probe", 12, { maxWaitMs: 45_000 });
+    try {
+      const envelope = buildOperationalEnvelope({
+        rateLimiter: platform,
+        interactionLogMode: "file",
+        terminalOperations: [],
+      });
+      expect(envelope.rateLimit?.requestsPerMinute).toBe(12);
+      expect(envelope.rateLimit?.maxQueueWaitMs).toBe(45_000);
+      expect(envelope.rateLimit?.note).toMatch(/queued/i);
+      expect(envelope.rateLimit?.note).toMatch(/maxQueueWaitMs/);
+      // And it must not claim calls over the cap are simply rejected.
+      expect(envelope.rateLimit?.note).not.toMatch(/rejected immediately/i);
+    } finally {
+      platform.destroy();
+    }
+  });
+
+  it("publishes the queue wait of the limit it publishes, not another one", () => {
+    const limiter = new RateLimiter();
+    limiter.configure("a:*", 100, 60_000, { maxWaitMs: 60_000 });
+    limiter.configure("b:*", 7, 60_000, { maxWaitMs: 0 });
+    const envelope = buildOperationalEnvelope({
+      rateLimiter: limiter,
+      interactionLogMode: "file",
+      terminalOperations: [],
+    });
+    expect(envelope.rateLimit).toMatchObject({ requestsPerMinute: 7, maxQueueWaitMs: 0 });
   });
 });
 

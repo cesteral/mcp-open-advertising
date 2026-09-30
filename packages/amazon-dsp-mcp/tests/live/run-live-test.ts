@@ -257,6 +257,7 @@ async function main() {
   // 6. submit_report → check_report_status → download_report → get_report_breakdowns
   {
     const r = await call(client, "amazon_dsp_submit_report", {
+      accountId: scope,
       datePreset: "LAST_7_DAYS",
       type: "CAMPAIGN",
       dimensions: ["ORDER"],
@@ -286,6 +287,7 @@ async function main() {
     let finalStatus: string | undefined;
     for (let i = 0; i < 12; i++) {
       const r = await call(client, "amazon_dsp_check_report_status", {
+        accountId: scope,
         taskId: reportTaskId,
       });
       if (!r.ok) {
@@ -364,6 +366,7 @@ async function main() {
   // get_report (blocking) — separate small report
   {
     const r = await call(client, "amazon_dsp_get_report", {
+      accountId: scope,
       datePreset: "LAST_7_DAYS",
       type: "CAMPAIGN",
       dimensions: ["ORDER"],
@@ -381,6 +384,7 @@ async function main() {
   // get_report_breakdowns
   {
     const r = await call(client, "amazon_dsp_get_report_breakdowns", {
+      accountId: scope,
       datePreset: "LAST_7_DAYS",
       type: "CAMPAIGN",
       dimensions: ["ORDER"],

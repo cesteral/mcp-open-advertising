@@ -3,7 +3,13 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { MsAdsEntityType } from "../utils/entity-mapping.js";
+import {
+  entityContextReadParams,
+  getEntityTypeEnum,
+  pickEntityContext,
+  refineEntityContext,
+  type MsAdsEntityType,
+} from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
@@ -16,61 +22,39 @@ Returns full entity details for the specified entity type and ID.
 Some Microsoft Advertising query operations require parent or account context in
 addition to the ID (campaign needs accountId, adGroup needs campaignId, etc.).`;
 
-const idField = z.string().min(1).describe("The entity ID to retrieve");
-const additionalParamsField = z
-  .record(z.unknown())
-  .optional()
-  .describe("Additional parameters such as ReturnAdditionalFields");
-
+// Flat object + superRefine, not a discriminated union: a top-level union is
+// published to MCP clients as an empty input schema (#228). The per-type
+// context requirements live in entity-mapping.ts (`getEntityContextKeys`).
 export const GetEntityInputSchema = z
-  .discriminatedUnion("entityType", [
-    z.object({
-      entityType: z.literal("campaign"),
-      entityId: idField,
-      accountId: z.string().describe("AccountId required by GetCampaignsByIds"),
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("adGroup"),
-      entityId: idField,
-      campaignId: z.string().describe("CampaignId required by GetAdGroupsByIds"),
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("ad"),
-      entityId: idField,
-      adGroupId: z.string().describe("AdGroupId required by GetAdsByIds"),
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("keyword"),
-      entityId: idField,
-      adGroupId: z.string().describe("AdGroupId required by GetKeywordsByIds"),
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("adExtension"),
-      entityId: idField,
-      accountId: z.string().describe("AccountId required by GetAdExtensionsByIds"),
-      adExtensionType: z.string().describe("AdExtensionType required by GetAdExtensionsByIds"),
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("budget"),
-      entityId: idField,
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("audience"),
-      entityId: idField,
-      additionalParams: additionalParamsField,
-    }),
-    z.object({
-      entityType: z.literal("label"),
-      entityId: idField,
-      additionalParams: additionalParamsField,
-    }),
-  ])
+  .object({
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
+    accountId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("AccountId. Required for campaign (GetCampaignsByIds) and adExtension"),
+    campaignId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("CampaignId. Required for adGroup (GetAdGroupsByIds)"),
+    adGroupId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("AdGroupId. Required for ad (GetAdsByIds) and keyword (GetKeywordsByIds)"),
+    adExtensionType: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("AdExtensionType. Required for adExtension (GetAdExtensionsByIds)"),
+    additionalParams: z
+      .record(z.unknown())
+      .optional()
+      .describe("Additional parameters such as ReturnAdditionalFields"),
+  })
+  .superRefine(refineEntityContext)
   .describe("Parameters for getting a Microsoft Ads entity by ID");
 
 export const GetEntityOutputSchema = z
@@ -91,25 +75,14 @@ export async function getEntityLogic(
 ): Promise<GetEntityOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
+  const entityType = input.entityType as MsAdsEntityType;
   const additionalParams: Record<string, unknown> = {
     ...(input.additionalParams ?? {}),
+    ...entityContextReadParams(pickEntityContext(entityType, input)),
   };
 
-  if ("accountId" in input) {
-    additionalParams.AccountId = Number(input.accountId);
-  }
-  if ("campaignId" in input) {
-    additionalParams.CampaignId = Number(input.campaignId);
-  }
-  if ("adGroupId" in input) {
-    additionalParams.AdGroupId = Number(input.adGroupId);
-  }
-  if ("adExtensionType" in input) {
-    additionalParams.AdExtensionType = input.adExtensionType;
-  }
-
   const { entities: rawEntities } = await msadsService.getEntity(
-    input.entityType as MsAdsEntityType,
+    entityType,
     [input.entityId],
     additionalParams,
     context

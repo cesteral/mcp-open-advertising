@@ -87,6 +87,49 @@ describe("ttd schedule/context/template tools", () => {
     expect(result.partners).toEqual([{ id: "p1", name: "Partner One" }]);
   });
 
+  it("getContextLogic pages through every partner (TTD GraphQL defaults to 10 items)", async () => {
+    const page = (start: number, n: number) =>
+      Array.from({ length: n }, (_, i) => ({ id: `p${start + i}`, name: `Partner ${start + i}` }));
+    mockTtdService.graphqlQuery
+      .mockResolvedValueOnce({
+        data: {
+          partners: { nodes: page(0, 100), pageInfo: { hasNextPage: true, endCursor: "c1" } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          partners: { nodes: page(100, 7), pageInfo: { hasNextPage: false, endCursor: "c2" } },
+        },
+      });
+
+    const result = await getContextLogic({}, createMockContext(), createMockSdkContext());
+
+    expect(result.partners).toHaveLength(107);
+    expect(mockTtdService.graphqlQuery).toHaveBeenCalledTimes(2);
+    const [query1, vars1] = mockTtdService.graphqlQuery.mock.calls[0];
+    expect(query1).toContain("partners(first: $first, after: $after)");
+    expect(query1).toContain("pageInfo { hasNextPage endCursor }");
+    expect(vars1).toEqual({ first: 100 });
+    expect(mockTtdService.graphqlQuery.mock.calls[1][1]).toEqual({ first: 100, after: "c1" });
+  });
+
+  it("getContextLogic stops if the cursor does not advance", async () => {
+    const stuck = {
+      data: {
+        partners: {
+          nodes: [{ id: "p1", name: "P" }],
+          pageInfo: { hasNextPage: true, endCursor: "same" },
+        },
+      },
+    };
+    mockTtdService.graphqlQuery.mockResolvedValue(stuck);
+
+    const result = await getContextLogic({}, createMockContext(), createMockSdkContext());
+
+    expect(mockTtdService.graphqlQuery).toHaveBeenCalledTimes(2);
+    expect(result.partners).toHaveLength(2);
+  });
+
   it("getContextResponseFormatter handles empty partner lists", () => {
     const text = getContextResponseFormatter({
       partners: [],

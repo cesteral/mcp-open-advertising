@@ -29,7 +29,7 @@ const ENTITY_SCHEMAS: Record<MetaEntityType, string> = {
 - \`budget_remaining\` (string) — Remaining budget (read-only)
 - \`bid_strategy\` (string) — LOWEST_COST_WITHOUT_CAP, LOWEST_COST_WITH_BID_CAP, COST_CAP
 - \`buying_type\` (string) — AUCTION (default), RESERVED
-- \`campaign_budget_optimization\` (boolean) — Enable CBO
+- \`is_adset_budget_sharing_enabled\` (boolean) — Ad set budget sharing, for campaigns budgeted at the ad set level (no campaign \`daily_budget\`/\`lifetime_budget\`)
 - \`special_ad_category_country\` (array) — Countries for special ad category enforcement
 - \`start_time\` (string) — ISO 8601 datetime
 - \`stop_time\` (string) — ISO 8601 datetime`,
@@ -39,7 +39,7 @@ const ENTITY_SCHEMAS: Record<MetaEntityType, string> = {
 ## Required Fields
 - \`name\` (string) — Ad set name
 - \`campaign_id\` (string) — Parent campaign ID
-- \`optimization_goal\` (string) — LINK_CLICKS, REACH, CONVERSIONS, APP_INSTALLS, VALUE, etc.
+- \`optimization_goal\` (string) — LINK_CLICKS, REACH, OFFSITE_CONVERSIONS, APP_INSTALLS, VALUE, etc.
 - \`billing_event\` (string) — IMPRESSIONS, LINK_CLICKS, etc.
 - \`targeting\` (object) — Targeting specification
 - \`status\` (string) — ACTIVE, PAUSED

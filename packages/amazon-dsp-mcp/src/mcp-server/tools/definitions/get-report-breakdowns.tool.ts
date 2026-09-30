@@ -20,9 +20,11 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_report_breakdowns";
 const TOOL_TITLE = "Get Amazon DSP Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP report (legacy /dsp/reports API) with additional breakdown dimensions appended to the base set.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP report (DSP reports v3: /accounts/{accountId}/dsp/reports) with additional breakdown dimensions appended to the base set.
 
 Like \`amazon_dsp_get_report\` but the \`breakdowns\` array is concatenated onto \`dimensions\` before submitting — convenient when iterating "show me X also broken down by Y".
+
+\`accountId\` is the DSP advertiser ID (from \`amazon_dsp_list_advertisers\`), not the profile ID.
 
 **Allowed \`type\`:** CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE.
 **CAMPAIGN \`dimensions\` (base + breakdowns):** ORDER, LINE_ITEM, CREATIVE.
@@ -31,6 +33,12 @@ Note: Amazon DSP has a maximum 95-day lookback.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
+    accountId: z
+      .string()
+      .min(1)
+      .describe(
+        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Used as the `{accountId}` segment of the report URL. Distinct from the profile ID."
+      ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -65,7 +73,7 @@ export const GetReportBreakdownsInputSchema = z
     metrics: z
       .array(z.string())
       .optional()
-      .describe("Metric names. Joined to comma-string upstream."),
+      .describe("Metric names (e.g. ['impressions', 'totalCost'])."),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
       .optional()
@@ -114,6 +122,7 @@ export async function getReportBreakdownsLogic(
 
   const result = await amazonDspReportingService.getReportBreakdowns(
     {
+      accountId: input.accountId,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
       type: input.type,
@@ -209,6 +218,7 @@ export const getReportBreakdownsTool = {
     {
       label: "ORDER-level CAMPAIGN report broken down by CREATIVE",
       input: {
+        accountId: "577020615253975655",
         datePreset: "LAST_7_DAYS",
         type: "CAMPAIGN",
         dimensions: ["ORDER"],
@@ -220,6 +230,7 @@ export const getReportBreakdownsTool = {
     {
       label: "ORDER-level CAMPAIGN summary broken down by LINE_ITEM",
       input: {
+        accountId: "577020615253975655",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         type: "CAMPAIGN",

@@ -209,20 +209,36 @@ describe("TtdHttpClient", () => {
       expect(logger.warn).toHaveBeenCalled();
     });
 
-    it("caps Retry-After to MAX_BACKOFF_MS (10s)", async () => {
+    // TTD says to honour Retry-After; re-sending after a capped 10s (the old
+    // behaviour) only extends the throttle. A wait longer than the retry
+    // budget is surfaced to the caller instead.
+    it("does not re-send before a Retry-After longer than the retry budget", async () => {
       mockFetchWithTimeout
         .mockResolvedValueOnce(
           fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" })
         )
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
-      const fetchPromise = client.fetch("/limited");
+      const error = await client.fetch("/limited").catch((e: unknown) => e);
 
-      // Should be capped at 10s (MAX_BACKOFF_MS), not 60s
-      await vi.advanceTimersByTimeAsync(10_000);
+      expect(error).toBeInstanceOf(McpError);
+      expect((error as McpError).code).toBe(JsonRpcErrorCode.RateLimited);
+      expect((error as McpError).data?.retryAfterMs).toBe(60_000);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
 
-      const result = await fetchPromise;
-      expect(result).toEqual({ ok: true });
+    // TTD Foundations: "wait 1 minute after a failed call" when there is no
+    // Retry-After — longer than the retry budget, so no early re-send.
+    it("treats a bare 429 as a documented 1-minute wait", async () => {
+      mockFetchWithTimeout
+        .mockResolvedValueOnce(fakeResponse(429, { error: "rate limited" }))
+        .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
+
+      const error = await client.fetch("/limited").catch((e: unknown) => e);
+
+      expect((error as McpError).code).toBe(JsonRpcErrorCode.RateLimited);
+      expect((error as McpError).data?.retryAfterMs).toBe(60_000);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -275,7 +291,7 @@ describe("TtdHttpClient", () => {
       expect((error as McpError).code).toBe(JsonRpcErrorCode.ServiceUnavailable);
     });
 
-    it("throws McpError with RateLimited code for 429 (after retries)", async () => {
+    it("throws McpError with RateLimited code for 429", async () => {
       mockFetchWithTimeout.mockResolvedValue(fakeResponse(429, {}));
 
       const fetchPromise = client.fetch("/rate-limited");

@@ -46,7 +46,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     targeting: ["pinterest_search_targeting", "pinterest_get_targeting_options"],
     specialized: [
       "pinterest_duplicate_entity",
-      "pinterest_get_audience_estimate",
+      "pinterest_get_delivery_estimate",
       "pinterest_get_ad_preview",
       "pinterest_get_pacing_status",
     ],

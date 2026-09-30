@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 import {
@@ -31,9 +32,9 @@ const TOOL_DESCRIPTION = `Update multiple The Trade Desk entities of the same ty
 
 **Supported entity types for bulk update:** ${getBulkEntityTypeEnum().join(", ")}
 
-Provide an array of update items, each with an entityId and data payload. Uses TTD PUT semantics (full entity replacement). Partial failures are reported per-item.
+Provide an array of update items, each with an entityId and data payload. Partial failures are reported per-item.
 
-**Important:** TTD uses PUT for updates — include ALL fields you want to keep, not just changed ones. Consider GETting each entity first to merge changes.`;
+**Updates are partial:** TTD's PUT changes only the properties you send; everything you omit is left as is. Send just the fields you want to change — do not copy a full GET response into \`data\` (TTD advises against it, and deprecated properties in a GET payload are rejected with 410 Gone). **Arrays replace:** an array you send replaces the entity's current array, so to add items GET the current array first and send the merged list.`;
 
 const EFFECT_KIND = "entities_updated";
 
@@ -118,8 +119,13 @@ export async function bulkUpdateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
+  // One partial PUT per item, one token each on `ttd:${partnerId}`
+  // (TtdService.bulkUpdateEntities → updateEntity).
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.items.length, [1]);
+
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors([capacityCheck]));
     return {
       confirmed: true,
       entityType: input.entityType,
@@ -132,6 +138,10 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the
+  // confirmation prompt and before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -156,7 +166,6 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  const { ttdService } = resolveSessionServices(sdkContext);
   const items = input.items.map((item) => ({
     ...item,
     data: mergeParentIdsIntoData(item.data, input as Record<string, unknown>),
@@ -205,8 +214,11 @@ export async function bulkUpdateEntitiesLogic(
  * projects the would-be effect (an N-item update of one entity kind). TTD has no
  * native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
       validationErrors.push({

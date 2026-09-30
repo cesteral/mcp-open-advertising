@@ -12,7 +12,7 @@ const TOOL_DESCRIPTION = `Generate and retrieve a report from The Trade Desk.
 
 Uses the TTD MyReports API to create a report schedule, poll for execution, and return results. This is an async operation that may take several seconds to complete.
 
-Provide report configuration including dimensions, metrics, date range, and optional filters.`;
+Provide a report template ID (\`reportTemplateId\`), a date range, and the advertiser IDs to report on. The advertiser IDs are required: TTD's execution-status query is advertiser-scoped, so they are what polling uses. Dimensions and metrics come from the template.`;
 
 export const GetReportInputSchema = z
   .object({
@@ -50,7 +50,12 @@ export const GetReportInputSchema = z
       .describe(
         "ISO date or datetime when the schedule should first run. Defaults to today UTC at 00:00."
       ),
-    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
+    advertiserIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .describe(
+        "Advertiser IDs the report covers (at least one). Required: TTD's execution-status query is scoped by advertiser, so the report could not be polled without them."
+      ),
     dimensions: z
       .array(z.string())
       .optional()
@@ -100,7 +105,7 @@ export async function getReportLogic(
     IncludeHeaders: true,
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
-    ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),
+    AdvertiserFilters: input.advertiserIds,
     ...input.additionalConfig,
   };
 

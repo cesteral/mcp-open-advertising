@@ -3,62 +3,70 @@
 
 import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
+// Field names, report types, dimensions and metric names below follow the
+// tool input schemas and Amazon's Postman DSP report examples
+// (github.com/amzn/ads-advanced-tools-docs, Reporting / DSP report).
 export const amazonDspReportingWorkflowPrompt: Prompt = {
   name: "amazon_dsp_reporting_workflow",
   description:
     "Guide for submitting and retrieving AmazonDsp Ads async reports with dimensions, metrics, and breakdowns",
   arguments: [
     {
-      name: "profileId",
-      description: "AmazonDsp Advertiser ID",
+      name: "accountId",
+      description:
+        "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers) — the report URL's {accountId}",
       required: true,
     },
     {
-      name: "reportLevel",
-      description: "Report level: AUCTION, RESERVATION (default: AUCTION)",
+      name: "reportType",
+      description:
+        "Report type: CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE (default: CAMPAIGN)",
       required: false,
     },
   ],
 };
 
 export function getAmazonDspReportingWorkflowMessage(args?: Record<string, string>): string {
-  const profileId = args?.profileId || "{profileId}";
-  const reportLevel = args?.reportLevel || "LINE_ITEM";
+  const accountId = args?.accountId || args?.profileId || "{accountId}";
+  const reportType = args?.reportType || "CAMPAIGN";
 
   return `# Amazon DSP Reporting Workflow
 
-Advertiser: \`${profileId}\`
-Report Level: \`${reportLevel}\`
+DSP advertiser (accountId): \`${accountId}\`
+Report type: \`${reportType}\`
 
 ---
 
 ## Overview
 
-Amazon DSP reports are **async** — \`amazon_dsp_get_report\` submits the job, polls for completion, and returns the results when ready.
+Amazon DSP reports are **async** (DSP reports v3, \`POST /accounts/{accountId}/dsp/reports\`). \`amazon_dsp_get_report\` submits the job, polls for completion, and returns the results when ready. For a non-blocking flow use \`amazon_dsp_submit_report\` → \`amazon_dsp_check_report_status\` → \`amazon_dsp_download_report\`.
+
+\`accountId\` is the DSP **advertiser** ID (from \`amazon_dsp_list_advertisers\`), not the profile ID.
 
 ---
 
-## Step 1: Basic Order Report
+## Step 1: Order-Level Campaign Report
 
 \`\`\`json
 amazon_dsp_get_report({
-  "advertiserId": "${profileId}",
-  "reportType": "CAMPAIGN",
-  "dimensions": ["orderId", "date"],
+  "accountId": "${accountId}",
+  "type": "CAMPAIGN",
+  "dimensions": ["ORDER"],
   "metrics": ["impressions", "clickThroughs", "totalCost"],
+  "timeUnit": "DAILY",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 2: Line Item Level Report
+## Step 2: Line Item Level Report with Video Metrics
 
 \`\`\`json
 amazon_dsp_get_report({
-  "advertiserId": "${profileId}",
-  "reportType": "LINE_ITEM",
-  "dimensions": ["lineItemId", "date"],
-  "metrics": ["impressions", "clickThroughs", "totalCost", "videoCompletions", "videoFirstQuartile", "videoMidpoint"],
+  "accountId": "${accountId}",
+  "type": "CAMPAIGN",
+  "dimensions": ["ORDER", "LINE_ITEM"],
+  "metrics": ["impressions", "clickThroughs", "totalCost", "videoStart", "videoFirstQuartile", "videoMidpoint", "videoThirdQuartile", "videoComplete"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
@@ -68,46 +76,42 @@ amazon_dsp_get_report({
 
 \`\`\`json
 amazon_dsp_get_report({
-  "advertiserId": "${profileId}",
-  "reportType": "CREATIVE",
-  "dimensions": ["creativeId", "date"],
-  "metrics": ["impressions", "totalCost", "detailPageViews", "purchases", "sales14d", "newToBrandPurchases"],
+  "accountId": "${accountId}",
+  "type": "CAMPAIGN",
+  "dimensions": ["ORDER", "LINE_ITEM", "CREATIVE"],
+  "metrics": ["impressions", "totalCost", "dpv14d", "purchases14d", "sales14d", "newToBrandPurchases14d"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 4: Video Engagement Report
+## Step 4: Breakdowns
 
 \`\`\`json
-amazon_dsp_get_report({
-  "advertiserId": "${profileId}",
-  "reportType": "CREATIVE",
-  "dimensions": ["creativeId"],
-  "metrics": [
-    "impressions", "videoCompletions",
-    "videoFirstQuartile", "videoMidpoint",
-    "videoThirdQuartile", "viewableImpressions"
-  ],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+amazon_dsp_get_report_breakdowns({
+  "accountId": "${accountId}",
+  "type": "CAMPAIGN",
+  "dimensions": ["ORDER"],
+  "breakdowns": ["LINE_ITEM"],
+  "metrics": ["impressions", "viewableImpressions", "totalCost"],
+  "datePreset": "LAST_7_DAYS"
 })
 \`\`\`
 
 ## Resource References
 
-- Fetch \`reporting-reference://amazonDsp\` for full metrics and dimensions list
+- Fetch \`reporting-reference://amazonDsp\` for report types, per-type dimensions and sample metrics
 - Fetch \`entity-hierarchy://amazonDsp/all\` for entity relationships
 
-## Common Dimensions
+## Dimensions (\`CAMPAIGN\` type)
 
 | Dimension | Level |
 |-----------|-------|
-| \`orderId\` | Order |
-| \`lineItemId\` | Line Item |
-| \`creativeId\` | Creative |
-| \`advertiserId\` | Advertiser |
-| \`date\` | Daily breakdown |
+| \`ORDER\` | Order (campaign) |
+| \`LINE_ITEM\` | Line item (ad group) |
+| \`CREATIVE\` | Creative |
+
+Other types use their own dimensions (e.g. \`GEOGRAPHY\`: \`COUNTRY\`, \`DMA\`, \`POSTAL_CODE\`; \`TECHNOLOGY\`: \`DEVICE_TYPE\`, \`OPERATING_SYSTEM\`). Daily rows come from \`timeUnit: "DAILY"\`, not from a date dimension.
 
 ## Common Metrics
 
@@ -117,17 +121,17 @@ amazon_dsp_get_report({
 | \`clickThroughs\` | Total clicks |
 | \`totalCost\` | Total spend in the report currency |
 | \`viewableImpressions\` | Viewable impressions |
-| \`videoCompletions\` | 100% video completions |
-| \`detailPageViews\` | Amazon product detail page views |
-| \`purchases\` | Total purchase events |
-| \`sales14d\` | Total sales (14-day attribution) |
-| \`newToBrandPurchases\` | Purchases from new-to-brand customers |
-| \`brandedSearches\` | Branded keyword searches |
+| \`videoStart\` / \`videoComplete\` | Video starts / completions |
+| \`dpv14d\` | Detail page views (14-day attribution) |
+| \`purchases14d\` | Purchases (14-day attribution) |
+| \`sales14d\` | Sales (14-day attribution) |
+| \`newToBrandPurchases14d\` | Purchases from new-to-brand customers (14-day attribution) |
 
 ## Tips
 
 - Reports may take **30 seconds to several minutes** depending on date range and data volume
-- Amazon shopping metrics (\`detailPageViews\`, \`purchases\`, \`sales14d\`) require Amazon attribution setup
+- Amazon shopping metrics (\`dpv14d\`, \`purchases14d\`, \`sales14d\`) require Amazon attribution setup
+- Unknown metric names are rejected with a 422 that lists the invalid names
 - Confirm the report currency before comparing spend across advertisers or platforms
 `;
 }

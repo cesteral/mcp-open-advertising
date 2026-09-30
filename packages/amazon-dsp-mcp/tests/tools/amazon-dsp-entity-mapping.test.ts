@@ -95,5 +95,22 @@ describe("Amazon DSP entity mapping", () => {
         "/dsp/orders/ord_1"
       );
     });
+
+    it("URI-encodes IDs so they cannot rewrite the upstream path", () => {
+      expect(interpolatePath("/dsp/orders/{entityId}", { entityId: "../advertisers" })).toBe(
+        "/dsp/orders/..%2Fadvertisers"
+      );
+      expect(interpolatePath("/dsp/orders/{entityId}", { entityId: "a?b#c" })).toBe(
+        "/dsp/orders/a%3Fb%23c"
+      );
+    });
+
+    it("rejects dot-segment and empty IDs", () => {
+      for (const bad of ["..", ".", ""]) {
+        expect(() => interpolatePath("/dsp/orders/{entityId}", { entityId: bad })).toThrow(
+          /Invalid entityId/
+        );
+      }
+    });
   });
 });

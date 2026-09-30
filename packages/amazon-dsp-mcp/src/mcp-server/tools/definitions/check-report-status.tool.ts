@@ -11,7 +11,7 @@ const TOOL_NAME = "amazon_dsp_check_report_status";
 const TOOL_TITLE = "Check Amazon DSP Report Status";
 const TOOL_DESCRIPTION = `Check the status of a previously submitted Amazon DSP report task.
 
-Makes a single API call to GET /dsp/reports/{taskId}. Does not poll or wait.
+Makes a single API call to GET /accounts/{accountId}/dsp/reports/{taskId}. Does not poll or wait. Pass the same \`accountId\` (DSP advertiser ID) used to submit the report.
 
 **Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`, \`cancelled\`.
 Amazon DSP raw statuses (\`IN_PROGRESS\`/\`SUCCESS\`/\`FAILURE\`) are mapped; the raw string is returned as \`rawStatus\`.
@@ -20,6 +20,12 @@ Amazon DSP raw statuses (\`IN_PROGRESS\`/\`SUCCESS\`/\`FAILURE\`) are mapped; th
 
 export const CheckReportStatusInputSchema = z
   .object({
+    accountId: z
+      .string()
+      .min(1)
+      .describe(
+        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Must match the accountId the report was submitted under. Distinct from the profile ID."
+      ),
     taskId: z.string().min(1).describe("Report task ID from amazon_dsp_submit_report"),
   })
   .describe("Parameters for checking Amazon DSP report status");
@@ -41,7 +47,11 @@ export async function checkReportStatusLogic(
 ): Promise<CheckReportStatusOutput> {
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
-  const result = await amazonDspReportingService.checkReportStatus(input.taskId, context);
+  const result = await amazonDspReportingService.checkReportStatus(
+    input.accountId,
+    input.taskId,
+    context
+  );
 
   const canonical = fromAmazonDspStatus({
     status: result.status,
@@ -102,6 +112,7 @@ export const checkReportStatusTool = {
     {
       label: "Check report task status",
       input: {
+        accountId: "577020615253975655",
         taskId: "06cf164f-06e7-b753-34ce-d27ccadcbf83",
       },
     },

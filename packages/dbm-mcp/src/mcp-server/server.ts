@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { InMemoryTaskStore } from "@modelcontextprotocol/sdk/experimental/tasks";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
@@ -41,6 +42,18 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
+  // Backing store for MCP Tasks (dbm_run_custom_query_async). Without a store
+  // AND the `tasks` capability, the SDK rejects every task-augmented call
+  // ("Server does not support task creation") and the tool — registered with
+  // taskSupport "required" — was unusable.
+  //
+  // One store per McpServer, i.e. per session: InMemoryTaskStore ignores the
+  // sessionId it is handed, so a process-wide store would let one session
+  // list or read another session's task results. The trade-off is that a task
+  // lives on the instance that created it — on a scaled-out deploy a
+  // tasks/get routed to another instance reports "task not found".
+  const taskStore = new InMemoryTaskStore();
+
   const server = new McpServer(
     {
       name: "dbm-mcp",
@@ -51,7 +64,11 @@ export async function createMcpServer(
     {
       capabilities: {
         logging: {},
+        // `cancel` is deliberately not advertised: marking a task cancelled
+        // cannot stop the Bid Manager report already running upstream.
+        tasks: { list: {}, requests: { tools: { call: {} } } },
       },
+      taskStore,
       instructions:
         "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
         "Start with dbm_get_campaign_delivery or dbm_get_pacing_status. Use dbm_run_custom_query for advanced Bid Manager reports. " +
@@ -159,6 +176,17 @@ export async function createMcpServer(
 
   // Register task-based tools
   registerRunCustomQueryAsyncTool(server, logger, sessionId);
+
+  // The store's TTL timers hold finished task results; release them with the
+  // session instead of letting them sit until the (long) TTL elapses.
+  const closeServer = server.close.bind(server);
+  server.close = async () => {
+    try {
+      await closeServer();
+    } finally {
+      taskStore.cleanup();
+    }
+  };
 
   return server;
 }

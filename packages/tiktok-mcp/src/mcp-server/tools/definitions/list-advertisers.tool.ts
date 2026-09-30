@@ -8,10 +8,14 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_list_advertisers";
 const TOOL_TITLE = "List TikTok Advertisers";
-const TOOL_DESCRIPTION = `List TikTok advertiser accounts accessible to the authenticated user.
+const TOOL_DESCRIPTION = `Get account info for the TikTok advertiser this session is bound to.
 
-Returns advertiser IDs, names, and account status information.
-Use the advertiser_id from results with other tiktok_* tools.`;
+Calls TikTok's \`advertiser/info/\` endpoint for the session's advertiser ID and returns its
+name, status, currency, timezone and related account details.
+
+TikTok's \`advertiser/info/\` returns info only for the advertiser IDs it is given; it does not
+enumerate every advertiser the token can access. Each session is bound to one advertiser
+(\`X-TikTok-Advertiser-Id\` / \`TIKTOK_ADVERTISER_ID\`).`;
 
 export const ListAdvertisersInputSchema = z
   .object({})
@@ -33,9 +37,11 @@ export async function listAdvertisersLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListAdvertisersOutput> {
-  const { tiktokService } = resolveSessionServices(sdkContext);
+  // account-scope-audit-exempt: the input schema has no advertiser parameter to
+  // compare against — the tool only ever reads the session-bound advertiser.
+  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
 
-  const result = (await tiktokService.listAdvertisers(context)) as {
+  const result = (await tiktokService.listAdvertisers([boundAdvertiserId], context)) as {
     list?: unknown[];
   };
 
@@ -71,7 +77,7 @@ export const listAdvertisersTool = {
   },
   inputExamples: [
     {
-      label: "List all accessible advertisers",
+      label: "Get the session-bound advertiser's account info",
       input: {},
     },
   ],

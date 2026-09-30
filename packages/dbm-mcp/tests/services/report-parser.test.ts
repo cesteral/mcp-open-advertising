@@ -581,4 +581,37 @@ describe("parseCSVToHistoricalData", () => {
       metrics: { impressions: 20000, clicks: 100, spend: 50, conversions: 10, revenue: 200 },
     });
   });
+  // FILTER_WEEK / FILTER_MONTH produce a "Week" / "Month" column (display
+  // names in data/bid-manager-reference.json), never "Date". Only Date/Day
+  // used to be recognised, so these series came back empty with no error.
+  it("buckets a weekly report by its Week column", () => {
+    const csv = [
+      "Week,Campaign,Impressions,Clicks,Media Cost (Advertiser Currency),Total Conversions,Revenue (Advertiser Currency)",
+      "2025/01/06 - 2025/01/12,A,10000,50,$25.00,5,$100.00",
+      "2025/01/06 - 2025/01/12,B,5000,25,$12.50,2,$50.00",
+      "2025/01/13 - 2025/01/19,A,20000,100,$50.00,10,$200.00",
+    ].join("\n");
+
+    const result = parseCSVToHistoricalData(csv, "FILTER_WEEK");
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({
+      date: "2025/01/06 - 2025/01/12",
+      metrics: { impressions: 15000, clicks: 75, spend: 37.5, conversions: 7, revenue: 150 },
+    });
+    expect(result[1].metrics.impressions).toBe(20000);
+  });
+
+  it("buckets a monthly report by its Month column", () => {
+    const csv = [
+      "Month,Campaign,Impressions,Clicks,Media Cost (Advertiser Currency),Total Conversions,Revenue (Advertiser Currency)",
+      "2025/01,A,10000,50,$25.00,5,$100.00",
+      "2025/02,A,20000,100,$50.00,10,$200.00",
+    ].join("\n");
+
+    const result = parseCSVToHistoricalData(csv, "FILTER_MONTH");
+
+    expect(result.map((p) => p.date)).toEqual(["2025/01", "2025/02"]);
+    expect(result[1].metrics.spend).toBe(50);
+  });
 });

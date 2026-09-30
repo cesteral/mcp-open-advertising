@@ -70,6 +70,35 @@ describe("SnapchatHttpClient", () => {
     await expect(client.get("/v1/campaigns/bad_id")).rejects.toThrow("Campaign not found");
   });
 
+  it("throws on request_status ERROR (Snapchat's error envelope), surfacing the message and code", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        request_status: "ERROR",
+        request_id: "req_err",
+        debug_message: "Invalid campaign id",
+        display_message: "We're sorry, but the requested resource could not be found.",
+        error_code: "E3003",
+      }),
+    });
+    const err = await client.get("/v1/campaigns/bad_id").catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toContain("could not be found");
+    expect(err.data).toMatchObject({ errorCode: "E3003", debugMessage: "Invalid campaign id" });
+  });
+
+  it("uses debug_message when an ERROR envelope has no display_message", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ request_status: "error", debug_message: "bad field: foo" }),
+    });
+    await expect(client.get("/v1/campaigns/c1")).rejects.toThrow("bad field: foo");
+  });
+
   it("throws on HTTP error", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

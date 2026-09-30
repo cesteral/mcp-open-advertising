@@ -25,34 +25,28 @@ vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
-vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
-  getSupportedEntityTypesDynamic: vi
-    .fn()
-    .mockReturnValue([
-      "adGroup",
-      "adGroupAd",
-      "advertiser",
-      "campaign",
-      "creative",
-      "customBiddingAlgorithm",
-      "insertionOrder",
-      "inventorySource",
-      "inventorySourceGroup",
-      "lineItem",
-      "locationList",
-      "partner",
-    ]),
-  getEntityConfigDynamic: vi.fn().mockReturnValue({
-    parentIds: ["advertiserId"],
-    filterParamIds: [],
-    queryParamIds: [],
-    supportsFilter: true,
-    supportsCreate: true,
-    supportsUpdate: true,
-    supportsDelete: true,
-    apiPath: "/advertisers/{advertiserId}/lineItems",
-  }),
-}));
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", async () => {
+  // The delete enum and the archive-before-delete rule come from the real
+  // STATIC_ENTITY_API_METADATA so these tests pin what DV360 v4 Discovery
+  // documents; only the per-type config lookup is stubbed.
+  const actual = await vi.importActual<
+    typeof import("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js")
+  >("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js");
+  return {
+    getDeletableEntityTypesDynamic: actual.getDeletableEntityTypesDynamic,
+    requiresArchiveBeforeDelete: actual.requiresArchiveBeforeDelete,
+    getEntityConfigDynamic: vi.fn().mockReturnValue({
+      parentIds: ["advertiserId"],
+      filterParamIds: [],
+      queryParamIds: [],
+      supportsFilter: true,
+      supportsCreate: true,
+      supportsUpdate: true,
+      supportsDelete: true,
+      apiPath: "/advertisers/{advertiserId}/lineItems",
+    }),
+  };
+});
 
 vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async () => {
   const actual = await vi.importActual<
@@ -120,9 +114,10 @@ describe("dv360_delete_entity", () => {
     vi.clearAllMocks();
 
     mockDv360Service = {
+      // DV360 only deletes archived campaigns / IOs / line items / creatives.
       getEntity: vi.fn().mockResolvedValue({
         displayName: "Line Item To Delete",
-        entityStatus: "ENTITY_STATUS_PAUSED",
+        entityStatus: "ENTITY_STATUS_ARCHIVED",
         lineItemId: "li-999",
         advertiserId: "adv-1",
       }),
@@ -149,7 +144,7 @@ describe("dv360_delete_entity", () => {
       expect(result.success).toBe(true);
       expect(result.deletedEntity).toEqual({
         displayName: "Line Item To Delete",
-        entityStatus: "ENTITY_STATUS_PAUSED",
+        entityStatus: "ENTITY_STATUS_ARCHIVED",
         lineItemId: "li-999",
         advertiserId: "adv-1",
       });
@@ -277,7 +272,12 @@ describe("dv360_delete_entity", () => {
     });
 
     it("dry_run on a non-archived line item reports wouldSucceed:false", async () => {
-      // default mock is ENTITY_STATUS_PAUSED
+      mockDv360Service.getEntity.mockResolvedValue({
+        displayName: "LI",
+        entityStatus: "ENTITY_STATUS_PAUSED",
+        lineItemId: "li-999",
+        advertiserId: "adv-1",
+      });
       const result = await deleteEntityLogic(
         {
           entityType: "lineItem",
@@ -301,7 +301,7 @@ describe("dv360_delete_entity", () => {
         createMockContext(),
         createMockSdkContext()
       );
-      expect(result.before?.status.canonical).toBe("paused");
+      expect(result.before?.status.canonical).toBe("archived");
       expect(result.after?.status.canonical).toBe("deleted");
       expect(result.dispatchedCapability.canonicalEntityKind).toBe("line_item");
     });
@@ -335,6 +335,60 @@ describe("dv360_delete_entity", () => {
       expect(result.dryRun).toBeDefined();
       expect(result.dryRun?.expectedPostState).toBeUndefined();
       expect(result.dryRun?.expectedStateSource).toBe("none");
+    });
+  });
+
+  describe("archive-before-delete precondition (v4 Discovery *.delete)", () => {
+    const cases = [
+      { entityType: "campaign", ids: { campaignId: "c-1" }, code: "CAMPAIGN_NOT_ARCHIVED" },
+      {
+        entityType: "insertionOrder",
+        ids: { insertionOrderId: "io-1" },
+        code: "INSERTION_ORDER_NOT_ARCHIVED",
+      },
+      { entityType: "lineItem", ids: { lineItemId: "li-1" }, code: "LINE_ITEM_NOT_ARCHIVED" },
+      { entityType: "creative", ids: { creativeId: "cr-1" }, code: "CREATIVE_NOT_ARCHIVED" },
+    ] as const;
+
+    it.each(cases)(
+      "execute refuses to DELETE a non-archived $entityType",
+      async ({ entityType, ids }) => {
+        mockDv360Service.getEntity.mockResolvedValue({ entityStatus: "ENTITY_STATUS_PAUSED" });
+        await expect(
+          deleteEntityLogic(
+            { entityType, advertiserId: "adv-1", ...ids } as any,
+            createMockContext(),
+            createMockSdkContext()
+          )
+        ).rejects.toThrow(/archived before it can be deleted/);
+        expect(mockDv360Service.deleteEntity).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each(cases)(
+      "dry_run flags a non-archived $entityType with $code",
+      async ({ entityType, ids, code }) => {
+        mockDv360Service.getEntity.mockResolvedValue({ entityStatus: "ENTITY_STATUS_ACTIVE" });
+        const result = await deleteEntityLogic(
+          { entityType, advertiserId: "adv-1", ...ids, dry_run: true } as any,
+          createMockContext(),
+          createMockSdkContext()
+        );
+        expect(result.dryRun?.wouldSucceed).toBe(false);
+        expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain(code);
+        expect(mockDv360Service.deleteEntity).not.toHaveBeenCalled();
+      }
+    );
+
+    it("does not require archiving for types DV360 deletes directly (adGroup)", async () => {
+      mockDv360Service.getEntity.mockResolvedValue({ entityStatus: "ENTITY_STATUS_ACTIVE" });
+      const result = await deleteEntityLogic(
+        { entityType: "adGroup", advertiserId: "adv-1", adGroupId: "ag-1" } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.success).toBe(true);
+      expect(mockDv360Service.deleteEntity).toHaveBeenCalledOnce();
     });
   });
 
@@ -404,6 +458,26 @@ describe("dv360_delete_entity", () => {
       if (parsed.success) {
         expect(parsed.data.reason).toBe("Expired creative");
       }
+    });
+
+    it.each(["customBiddingAlgorithm", "inventorySource", "locationList", "partner", "adGroupAd"])(
+      "rejects %s, which has no DELETE method in DV360 v4",
+      (entityType) => {
+        const parsed = DeleteEntityInputSchema.safeParse({
+          entityType,
+          advertiserId: "adv-1",
+        });
+        expect(parsed.success).toBe(false);
+      }
+    );
+
+    it("accepts inventorySourceGroup, which DV360 v4 can delete", () => {
+      const parsed = DeleteEntityInputSchema.safeParse({
+        entityType: "inventorySourceGroup",
+        partnerId: "p-1",
+        inventorySourceGroupId: "isg-1",
+      });
+      expect(parsed.success).toBe(true);
     });
 
     it("accepts campaign entity type with campaignId", () => {

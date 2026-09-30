@@ -41,7 +41,6 @@ const config: any = {
   mcpAuthMode: entry.auth.modes[0],
   mcpAllowedOrigins: "*",
   snapchatApiBaseUrl: "https://adsapi.snapchat.com",
-  snapchatApiVersion: "v1",
 };
 
 describe("/.well-known/mcp/server-card.json (snapchat-mcp)", () => {

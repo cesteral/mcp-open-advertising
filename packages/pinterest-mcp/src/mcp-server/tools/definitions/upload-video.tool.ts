@@ -155,10 +155,12 @@ export async function uploadVideoLogic(
           undefined,
           context
         )) as PinterestMediaStatusResponse;
-        return statusResult.media_processing_record?.status ?? "processing";
+        // v5 `Media.status` (registered | processing | succeeded | failed) is a
+        // top-level field; there is no `media_processing_record`.
+        return statusResult.status ?? "processing";
       },
-      isComplete: (s) => s === "succeeded" || s === "SUCCEEDED",
-      isFailed: (s) => s === "failed" || s === "FAILED",
+      isComplete: (s) => s === "succeeded",
+      isFailed: (s) => s === "failed",
       initialDelayMs: mcpConfig.pinterestVideoUploadPollIntervalMs,
       maxDelayMs: mcpConfig.pinterestVideoUploadPollIntervalMs,
       maxAttempts: mcpConfig.pinterestVideoUploadMaxPollAttempts,
