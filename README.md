@@ -112,18 +112,19 @@ revision, `2026-07-28`, is not supported yet
 ([#242](https://github.com/cesteral/mcp-open-advertising/issues/242)).
 
 That is not the whole spec. In the MCP conformance suite
-(`@modelcontextprotocol/conformance` 0.1.16) every server passes 13 of the 30
-active server scenarios — initialize, ping, logging level, tool list and call,
+(`@modelcontextprotocol/conformance` 0.1.16) every server passes 17 of the 30
+active server scenarios — initialize, ping, logging level and log
+notifications, tool list and call, elicitation (form, defaults and enums),
 resource list, read and templates, prompt list and get, concurrent SSE streams
 — and [`conformance/expected-failures.yaml`](conformance/expected-failures.yaml)
-gives the reason for each of the other 17. Not implemented: completions,
+gives the reason for each of the other 13. Not implemented: completions,
 resource subscriptions, sampling, progress notifications, image / audio /
-embedded-resource content, and SSE stream resumption. Known defects:
-elicitation requests (including the destructive-action confirmations below)
-and log notifications go out on the standalone GET stream instead of the
-calling request's stream, so a client that never opens that optional stream
-never receives them; and the default self-host configuration has no
-DNS-rebinding protection until `MCP_ALLOWED_ORIGINS` is set.
+embedded-resource content, and SSE stream resumption. Elicitation requests
+(including the destructive-action confirmations below) and log notifications
+are sent on the calling `tools/call` request's response stream, so a client
+does not need the optional GET stream to receive them. Known defect: the
+default self-host configuration has no DNS-rebinding protection until
+`MCP_ALLOWED_ORIGINS` is set.
 
 Beyond raw tool calls, every server ships:
 

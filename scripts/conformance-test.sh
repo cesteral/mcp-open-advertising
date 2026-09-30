@@ -146,8 +146,7 @@ for SERVER in "${SERVERS[@]}"; do
   done
 
   # Optionally run the full active suite with expected-failures baseline.
-  # Not run by default because the three elicitation scenarios block for ~60s
-  # each (see conformance/expected-failures.yaml for why they time out).
+  # Not run by default because the full active suite takes minutes per server.
   # Run with: ./scripts/conformance-test.sh --full
   # The harness exits non-zero on an unexpected failure AND on a stale baseline
   # entry (a listed scenario that now passes); with --ci either fails the run.

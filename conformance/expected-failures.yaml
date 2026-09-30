@@ -4,11 +4,17 @@
 # @modelcontextprotocol/conformance 0.1.16 "active" server suite against each
 # server started with MCP_AUTH_MODE=none, MCP_INCLUDE_CONFORMANCE_TOOLS=true and
 # MCP_CONFORMANCE_FIXTURES=true. Re-baselined 2026-09-30 (#241): all 13
-# servers produce the same result — 13 of the 30 active scenarios pass and the
-# first 17 entries below fail; the last 2 are pending scenarios that fail under
-# `--suite all`. The harness exits non-zero both on a failure missing from this
-# list and on a listed scenario that now passes, so every entry is a scenario
-# that fails today.
+# servers produce the same result — 17 of the 30 active scenarios pass and the
+# first 13 entries below fail; the last 2 are pending scenarios that fail under
+# `--suite all`. tools-call-with-logging, tools-call-elicitation,
+# elicitation-sep1034-defaults and elicitation-sep1330-enums were removed once
+# tool-handler-factory.ts started sending log notifications and elicitation
+# requests with the tools/call's related request id, so they ride that
+# request's POST response stream instead of the standalone GET stream.
+#
+# The harness exits non-zero both on a failure missing from this list and on a
+# listed scenario that now passes, so every entry is a scenario that fails
+# today.
 #
 # Two of the passes are hollow. tools-call-simple-text sends no `arguments`,
 # which the servers reject as invalid input for test_simple_text's empty
@@ -40,17 +46,6 @@ server:
   - tools-call-embedded-resource
   - tools-call-mixed-content
 
-  # SERVER BUG — logging notifications are not delivered. The fixture
-  # (test_tool_with_logging) runs, but tool-handler-factory.ts sends through
-  # server.sendLoggingMessage(), which carries no relatedRequestId, so the SDK
-  # routes notifications/message to the standalone GET SSE stream instead of
-  # the tools/call response stream. The harness never opens a GET stream (it is
-  # optional for clients), so it receives 0 of 3 notifications. Not a
-  # logging/setLevel ordering problem: no level set means nothing is filtered,
-  # and logging-set-level passes. Verified by sending through the request's
-  # own extra.sendNotification: the scenario then passes.
-  - tools-call-with-logging
-
   # Progress — no fixture for test_tool_with_progress, and no tool emits
   # notifications/progress for a request's progressToken.
   - tools-call-with-progress
@@ -58,21 +53,6 @@ server:
   # Sampling — no fixture for test_sampling; no server issues
   # sampling/createMessage.
   - tools-call-sampling
-
-  # SERVER BUG — elicitation requests are not delivered. The fixtures
-  # (test_elicitation, test_elicitation_sep1034_defaults,
-  # test_elicitation_sep1330_enums) run and call elicitInput, but
-  # tool-handler-factory.ts calls server.server.elicitInput(params) with no
-  # relatedRequestId, so elicitation/create goes to the standalone GET SSE
-  # stream the harness never opens and the call times out after 60s (-32001).
-  # The same path carries the production destructive-operation confirmations in
-  # elicitation-helpers.ts, so a client without a GET stream cannot confirm a
-  # delete. Verified by passing { relatedRequestId: extra.requestId }: all
-  # three scenarios then pass (sep1330 also needs the legacy `enumNames`
-  # variant, which the fixture now includes).
-  - tools-call-elicitation
-  - elicitation-sep1034-defaults
-  - elicitation-sep1330-enums
 
   # Binary resources — no fixture for test://static-binary; every resource is
   # text (text/markdown, application/json or text/csv).
