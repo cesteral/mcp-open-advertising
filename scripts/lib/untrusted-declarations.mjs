@@ -39,6 +39,10 @@ const SCALAR_TYPES = new Set(["string", "number", "integer", "boolean", "null"])
 export const OPEN_FIELD_ALLOWLIST = {
   "meta_get_available_metrics.metrics":
     "Server-authored catalog read from meta-mcp/src/config/insights-catalog.json; the tool makes no platform call.",
+  "msads_search_targeting.results":
+    "Hard-coded age/gender/device catalog in msads-mcp's search-targeting.tool.ts; the tool makes no platform call.",
+  "msads_get_targeting_options.options":
+    "Hard-coded criterion catalog (TARGETING_OPTIONS) in msads-mcp's get-targeting-options.tool.ts; the tool makes no platform call.",
 };
 
 /** Resolves a local JSON-pointer `$ref` (`#/properties/...`) against `root`. */

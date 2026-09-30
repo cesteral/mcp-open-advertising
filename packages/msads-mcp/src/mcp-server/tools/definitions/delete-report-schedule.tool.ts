@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   McpError,
   JsonRpcErrorCode,
+  NO_UNTRUSTED_CONTENT,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -216,4 +217,6 @@ export const deleteReportScheduleTool = {
   ],
   logic: deleteReportScheduleLogic,
   responseFormatter: deleteReportScheduleResponseFormatter,
+  // No platform call: scheduleId is caller input and note is server-authored text.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

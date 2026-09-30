@@ -240,4 +240,9 @@ export const importFromGoogleTool = {
   ],
   logic: importFromGoogleLogic,
   responseFormatter: importFromGoogleResponseFormatter,
+  // result is the raw ImportJobs/ImportResults response (job status, imported entity names, per-item error text), printed in block 0. dryRun is symbolic over caller input.
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

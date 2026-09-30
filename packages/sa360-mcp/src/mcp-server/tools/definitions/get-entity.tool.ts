@@ -97,4 +97,8 @@ export const getEntityTool = {
   ],
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.entity"],
+    contentBlocks: [0],
+  },
 };

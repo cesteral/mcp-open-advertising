@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  NO_UNTRUSTED_CONTENT,
   resolveDatePreset,
   DATE_PRESET_VALUES,
   assertGovernedEffectDryRun,
@@ -268,4 +269,6 @@ export const submitReportTool = {
   ],
   logic: submitReportLogic,
   responseFormatter: submitReportResponseFormatter,
+  // reportRequestId is an id; dryRun is symbolic over caller input.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

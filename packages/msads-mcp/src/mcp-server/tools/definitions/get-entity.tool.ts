@@ -147,4 +147,9 @@ export const getEntityTool = {
   ],
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
+  // entity is the raw platform record, printed in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.entity"],
+    contentBlocks: [0],
+  },
 };

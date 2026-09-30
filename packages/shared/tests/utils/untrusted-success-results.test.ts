@@ -230,12 +230,27 @@ describe("shared tools every server can register", () => {
 });
 
 describe("the server card's path_reporting", () => {
-  it("comes from the registry per server, defaulting to unsupported", () => {
-    expect(buildServerCardExtras("dbm-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("ttd-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("meta-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("tiktok-mcp").untrustedPathReporting).toBe("per-response");
-    expect(buildServerCardExtras("linkedin-mcp").untrustedPathReporting).toBe("unsupported");
+  // Every server declares every tool, so every card reports per-response. The
+  // default for a card built without the field is asserted through the real
+  // transport below ("unset"), since no registry server is left unsupported.
+  it("comes from the registry, and every server in the fleet reports per-response", () => {
+    for (const slug of [
+      "dbm-mcp",
+      "dv360-mcp",
+      "ttd-mcp",
+      "gads-mcp",
+      "meta-mcp",
+      "linkedin-mcp",
+      "tiktok-mcp",
+      "cm360-mcp",
+      "snapchat-mcp",
+      "sa360-mcp",
+      "pinterest-mcp",
+      "amazon-dsp-mcp",
+      "msads-mcp",
+    ]) {
+      expect(buildServerCardExtras(slug).untrustedPathReporting, slug).toBe("per-response");
+    }
   });
 
   async function cardFor(serverCard: TransportFactoryConfig["serverCard"]) {

@@ -8,6 +8,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -283,4 +284,5 @@ export const submitReportTool = {
   ],
   logic: submitReportLogic,
   responseFormatter: submitReportResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

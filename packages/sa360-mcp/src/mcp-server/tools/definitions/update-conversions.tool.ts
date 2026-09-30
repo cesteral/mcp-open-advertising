@@ -380,4 +380,8 @@ export const updateConversionsTool = {
   ],
   logic: updateConversionsLogic,
   responseFormatter: updateConversionsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

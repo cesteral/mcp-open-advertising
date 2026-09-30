@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { MSADS_AGE_RANGES, MSADS_GENDERS } from "../utils/targeting-values.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_search_targeting";
 const TOOL_TITLE = "List Microsoft Ads Targeting Options (Static Reference)";
@@ -118,4 +118,6 @@ export const searchTargetingTool = {
   ],
   logic: searchTargetingLogic,
   responseFormatter: searchTargetingResponseFormatter,
+  // Static server-authored age/gender/device enum catalog; no platform call.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

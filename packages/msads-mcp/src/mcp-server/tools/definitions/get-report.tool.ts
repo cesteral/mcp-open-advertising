@@ -158,4 +158,9 @@ export const getReportTool = {
   ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
+  // metricContext is server-built from caller dates; reportRequestId is an id.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

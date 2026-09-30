@@ -100,4 +100,9 @@ export const getAdDetailsTool = {
   ],
   logic: getAdDetailsLogic,
   responseFormatter: getAdDetailsResponseFormatter,
+  // ads are raw ad records (titles, descriptions, final URLs); the formatter prints them in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.ads"],
+    contentBlocks: [0],
+  },
 };

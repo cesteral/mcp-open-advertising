@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   McpError,
   JsonRpcErrorCode,
+  NO_UNTRUSTED_CONTENT,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -265,4 +266,6 @@ export const createReportScheduleTool = {
   ],
   logic: createReportScheduleLogic,
   responseFormatter: createReportScheduleResponseFormatter,
+  // scheduleId is a ReportRequestId; scheduleName is the caller's own input echoed back; dryRun is symbolic.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

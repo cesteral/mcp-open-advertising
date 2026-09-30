@@ -65,10 +65,10 @@ describe("/.well-known/mcp/server-card.json (linkedin-mcp)", () => {
       // #204 Tier 1 — the untrusted-content boundary is declared on every card.
       expect(body.untrusted_content.returns_third_party_content).toBe(true);
       expect(body.untrusted_content.client_obligations.length).toBeGreaterThan(0);
-      // Load-bearing: "we do not report which paths" must stay distinguishable
-      // from "there is no untrusted content here". A client that conflates the
-      // two reads silence as safety.
-      expect(body.untrusted_content.path_reporting).toBe("unsupported");
+      // Every linkedin tool declares where platform text sits (or declares
+      // none), so the card claims per-response. The claim is ratcheted in
+      // scripts/lib/untrusted-declarations.test.mjs.
+      expect(body.untrusted_content.path_reporting).toBe("per-response");
     } finally {
       await shutdown();
     }

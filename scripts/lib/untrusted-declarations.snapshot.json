@@ -131,102 +131,6 @@
       "contentBlocks": []
     }
   },
-  "cm360-mcp": {
-    "cm360_bulk_create_entities": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "cm360_bulk_update_entities": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "cm360_bulk_update_status": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "cm360_check_report_status": {
-      "structuredPaths": ["$.file", "$.errors"],
-      "contentBlocks": [0]
-    },
-    "cm360_create_entity": {
-      "structuredPaths": ["$.entity", "$.after"],
-      "contentBlocks": [0]
-    },
-    "cm360_create_report_schedule": {
-      "structuredPaths": ["$.reportName", "$.schedule"],
-      "contentBlocks": [0]
-    },
-    "cm360_delete_entity": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "cm360_delete_report_schedule": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "cm360_download_report": {
-      "structuredPaths": [
-        "$.headers",
-        "$.selectedColumns",
-        "$.rows",
-        "$.previewRows",
-        "$.warnings"
-      ],
-      "contentBlocks": [0]
-    },
-    "cm360_get_ad_preview": {
-      "structuredPaths": ["$.adName", "$.previewUrl", "$.ad"],
-      "contentBlocks": [0]
-    },
-    "cm360_get_entity": {
-      "structuredPaths": ["$.entity"],
-      "contentBlocks": [0]
-    },
-    "cm360_get_pacing_status": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "cm360_get_report": {
-      "structuredPaths": ["$.file"],
-      "contentBlocks": [0]
-    },
-    "cm360_get_report_breakdowns": {
-      "structuredPaths": ["$.file"],
-      "contentBlocks": [0]
-    },
-    "cm360_list_entities": {
-      "structuredPaths": ["$.entities"],
-      "contentBlocks": [0]
-    },
-    "cm360_list_report_schedules": {
-      "structuredPaths": ["$.schedules", "$.raw"],
-      "contentBlocks": [0]
-    },
-    "cm360_list_targeting_options": {
-      "structuredPaths": ["$.options"],
-      "contentBlocks": [0]
-    },
-    "cm360_list_user_profiles": {
-      "structuredPaths": ["$.profiles"],
-      "contentBlocks": [0]
-    },
-    "cm360_search_tools": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "cm360_submit_report": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "cm360_update_entity": {
-      "structuredPaths": ["$.entity", "$.dryRun", "$.before", "$.after"],
-      "contentBlocks": [0]
-    },
-    "cm360_validate_entity": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    }
-  },
   "dbm-mcp": {
     "dbm_get_campaign_delivery": {
       "structuredPaths": [],
@@ -265,138 +169,40 @@
       "contentBlocks": [0]
     }
   },
-  "dv360-mcp": {
-    "dv360_adjust_line_item_bids": {
-      "structuredPaths": ["$.successful", "$.failed"],
-      "contentBlocks": [0]
-    },
-    "dv360_bulk_create_entities": {
+  "linkedin-mcp": {
+    "linkedin_adjust_bids": {
       "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "dv360_bulk_update_entities": {
+    "linkedin_bulk_create_entities": {
       "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "dv360_bulk_update_status": {
-      "structuredPaths": ["$.results", "$.successful", "$.failed"],
+    "linkedin_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "dv360_create_assigned_targeting": {
-      "structuredPaths": ["$.createdTargetingOption"],
+    "linkedin_bulk_update_status": {
+      "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "dv360_create_custom_bidding_algorithm": {
-      "structuredPaths": ["$.algorithm", "$.scriptUpload", "$.rulesUpload"],
-      "contentBlocks": [0]
-    },
-    "dv360_create_entity": {
+    "linkedin_create_entity": {
       "structuredPaths": ["$.entity", "$.after"],
       "contentBlocks": [0]
     },
-    "dv360_delete_assigned_targeting": {
-      "structuredPaths": [],
+    "linkedin_delete_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
       "contentBlocks": []
     },
-    "dv360_delete_entity": {
-      "structuredPaths": ["$.deletedEntity", "$.dryRun", "$.before", "$.after"],
+    "linkedin_duplicate_entity": {
+      "structuredPaths": ["$.newEntity", "$.dryRun", "$.after"],
       "contentBlocks": [0]
     },
-    "dv360_duplicate_entity": {
-      "structuredPaths": ["$.duplicatedEntity", "$.dryRun", "$.after"],
+    "linkedin_get_ad_preview": {
+      "structuredPaths": ["$.preview"],
       "contentBlocks": [0]
     },
-    "dv360_get_ad_preview": {
-      "structuredPaths": ["$.creativeName"],
-      "contentBlocks": [0]
-    },
-    "dv360_get_assigned_targeting": {
-      "structuredPaths": ["$.assignedTargetingOption"],
-      "contentBlocks": [0]
-    },
-    "dv360_get_delivery_estimate": {
-      "structuredPaths": ["$.estimate"],
-      "contentBlocks": [0]
-    },
-    "dv360_get_entity": {
-      "structuredPaths": ["$.entity"],
-      "contentBlocks": [0]
-    },
-    "dv360_get_pacing_status": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "dv360_list_assigned_targeting": {
-      "structuredPaths": ["$.assignedTargetingOptions"],
-      "contentBlocks": [0]
-    },
-    "dv360_list_custom_bidding_algorithms": {
-      "structuredPaths": ["$.algorithms"],
-      "contentBlocks": [0]
-    },
-    "dv360_list_entities": {
-      "structuredPaths": ["$.entities"],
-      "contentBlocks": [0]
-    },
-    "dv360_manage_custom_bidding_rules": {
-      "structuredPaths": ["$.rules", "$.rulesList"],
-      "contentBlocks": [0]
-    },
-    "dv360_manage_custom_bidding_script": {
-      "structuredPaths": ["$.script", "$.scripts"],
-      "contentBlocks": [0]
-    },
-    "dv360_search_tools": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "dv360_update_entity": {
-      "structuredPaths": ["$.entity", "$.previousValues", "$.dryRun", "$.before", "$.after"],
-      "contentBlocks": [0]
-    },
-    "dv360_upload_image": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "dv360_upload_video": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "dv360_validate_entity": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "dv360_validate_targeting_config": {
-      "structuredPaths": ["$.issues"],
-      "contentBlocks": [0]
-    }
-  },
-  "gads-mcp": {
-    "gads_adjust_bids": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "gads_bulk_create_entities": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "gads_bulk_mutate": {
-      "structuredPaths": ["$.mutateResult"],
-      "contentBlocks": [0]
-    },
-    "gads_bulk_update_status": {
-      "structuredPaths": ["$.results"],
-      "contentBlocks": [0]
-    },
-    "gads_create_entity": {
-      "structuredPaths": ["$.mutateResult", "$.after", "$.dryRun"],
-      "contentBlocks": [0]
-    },
-    "gads_duplicate_entity": {
-      "structuredPaths": ["$.result", "$.dryRun", "$.after"],
-      "contentBlocks": [0]
-    },
-    "gads_gaql_search": {
+    "linkedin_get_analytics": {
       "structuredPaths": [
         "$.headers",
         "$.selectedColumns",
@@ -406,55 +212,57 @@
       ],
       "contentBlocks": [0]
     },
-    "gads_get_ad_preview": {
-      "structuredPaths": ["$.finalUrls"],
+    "linkedin_get_analytics_breakdowns": {
+      "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "gads_get_entity": {
+    "linkedin_get_delivery_forecast": {
+      "structuredPaths": ["$.forecast"],
+      "contentBlocks": [0]
+    },
+    "linkedin_get_entity": {
       "structuredPaths": ["$.entity"],
       "contentBlocks": [0]
     },
-    "gads_get_insights": {
-      "structuredPaths": [
-        "$.headers",
-        "$.selectedColumns",
-        "$.rows",
-        "$.previewRows",
-        "$.warnings"
-      ],
+    "linkedin_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "linkedin_get_targeting_options": {
+      "structuredPaths": ["$.options"],
       "contentBlocks": [0]
     },
-    "gads_get_pacing_status": {
-      "structuredPaths": [],
-      "contentBlocks": []
+    "linkedin_list_ad_accounts": {
+      "structuredPaths": ["$.accounts"],
+      "contentBlocks": [0]
     },
-    "gads_list_accounts": {
-      "structuredPaths": [],
-      "contentBlocks": []
-    },
-    "gads_list_entities": {
+    "linkedin_list_entities": {
       "structuredPaths": ["$.entities"],
       "contentBlocks": [0]
     },
-    "gads_remove_entity": {
-      "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
+    "linkedin_search_targeting": {
+      "structuredPaths": ["$.results"],
       "contentBlocks": [0]
     },
-    "gads_update_entity": {
-      "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
-      "contentBlocks": [0]
-    },
-    "gads_upload_image": {
-      "structuredPaths": ["$.result"],
+    "linkedin_search_tools": {
+      "structuredPaths": [],
       "contentBlocks": []
     },
-    "gads_upload_video": {
-      "structuredPaths": ["$.result"],
+    "linkedin_update_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
       "contentBlocks": []
     },
-    "gads_validate_entity": {
-      "structuredPaths": ["$.issues"],
-      "contentBlocks": [0]
+    "linkedin_upload_image": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "linkedin_upload_video": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "linkedin_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
     }
   },
   "meta-mcp": {
@@ -586,6 +394,138 @@
       "contentBlocks": []
     }
   },
+  "msads-mcp": {
+    "msads_adjust_bids": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "msads_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "msads_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "msads_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "msads_check_report_status": {
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
+    },
+    "msads_create_entity": {
+      "structuredPaths": ["$.result", "$.after"],
+      "contentBlocks": [0]
+    },
+    "msads_create_report_schedule": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_delete_entity": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "msads_delete_report_schedule": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "msads_duplicate_entity": {
+      "structuredPaths": ["$.result", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "msads_get_ad_details": {
+      "structuredPaths": ["$.ads"],
+      "contentBlocks": [0]
+    },
+    "msads_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "msads_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_get_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "msads_get_report_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "msads_get_targeting_options": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_import_from_google": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "msads_list_accounts": {
+      "structuredPaths": ["$.accounts"],
+      "contentBlocks": [0]
+    },
+    "msads_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "msads_list_report_schedules": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_manage_ad_extensions": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "msads_manage_criterions": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "msads_search_targeting": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "msads_update_entity": {
+      "structuredPaths": ["$.result", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "msads_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
   "pinterest-mcp": {
     "pinterest_adjust_bids": {
       "structuredPaths": ["$.results"],
@@ -698,6 +638,100 @@
       "contentBlocks": []
     },
     "pinterest_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
+  "sa360-mcp": {
+    "sa360_check_report_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "sa360_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "sa360_gaql_search": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "sa360_get_change_history": {
+      "structuredPaths": ["$.changes"],
+      "contentBlocks": [0]
+    },
+    "sa360_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "sa360_get_insights": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "sa360_get_insights_breakdowns": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "sa360_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "sa360_insert_conversions": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "sa360_list_accounts": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "sa360_list_custom_columns": {
+      "structuredPaths": ["$.customColumns"],
+      "contentBlocks": [0]
+    },
+    "sa360_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "sa360_list_report_columns": {
+      "structuredPaths": ["$.fields", "$.fieldGroups"],
+      "contentBlocks": [0]
+    },
+    "sa360_search_fields": {
+      "structuredPaths": ["$.fields"],
+      "contentBlocks": [0]
+    },
+    "sa360_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "sa360_update_conversions": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": [0]
+    },
+    "sa360_validate_conversion": {
       "structuredPaths": [],
       "contentBlocks": []
     }
@@ -840,8 +874,8 @@
       "contentBlocks": [0]
     },
     "tiktok_check_report_status": {
-      "structuredPaths": ["$.errors", "$.message"],
-      "contentBlocks": [0]
+      "structuredPaths": ["$.errors"],
+      "contentBlocks": []
     },
     "tiktok_create_entity": {
       "structuredPaths": ["$.entity", "$.after"],
@@ -1064,8 +1098,8 @@
       "contentBlocks": [0]
     },
     "ttd_graphql_bulk_job": {
-      "structuredPaths": ["$.gqlErrors"],
-      "contentBlocks": [0]
+      "structuredPaths": [],
+      "contentBlocks": []
     },
     "ttd_graphql_cancel_bulk_job": {
       "structuredPaths": [],

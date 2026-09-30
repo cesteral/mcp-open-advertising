@@ -147,4 +147,8 @@ export const getChangeHistoryTool = {
   ],
   logic: getChangeHistoryLogic,
   responseFormatter: getChangeHistoryResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.changes"],
+    contentBlocks: [0],
+  },
 };

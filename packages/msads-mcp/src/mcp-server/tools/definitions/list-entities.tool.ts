@@ -123,4 +123,9 @@ export const listEntitiesTool = {
   ],
   logic: listEntitiesLogic,
   responseFormatter: listEntitiesResponseFormatter,
+  // entities are raw platform records, printed in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.entities"],
+    contentBlocks: [0],
+  },
 };

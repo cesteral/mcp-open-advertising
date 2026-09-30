@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -79,4 +80,5 @@ export const listAccountsTool = {
   ],
   logic: listAccountsLogic,
   responseFormatter: listAccountsResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };
