@@ -15,7 +15,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `TikTokBearerAuthStrategy` (validates tokens and extracts advertiser ID)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (10/min default)
+- **Rate limiting** via shared `RateLimiter` class (10/min default, per TikTok access token per process; report calls have their own bucket of the same size)
 - **Structured logging** via Pino
 - **Automatic `advertiser_id` injection** into GET query params and POST request bodies
 

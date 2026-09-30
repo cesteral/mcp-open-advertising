@@ -152,6 +152,11 @@ export interface WireSession {
   sessionId: string;
   services: SessionServices;
   rateLimiter: typeof rateLimiter;
+  /**
+   * The limiter key this session's CRUD calls draw on
+   * (`tiktok:token:{quotaClient}`, one per access token — rate-limit-keys.ts).
+   */
+  quotaKey: string;
   dispose(): void;
 }
 
@@ -165,10 +170,13 @@ export interface WireSession {
  * it never spends. Its windows are cleared on create and dispose so one test's
  * spent tokens never throttle the next.
  */
-export function createWireSession(sessionId = "wire-session"): WireSession {
+export function createWireSession(
+  sessionId = "wire-session",
+  accessToken = TEST_ACCESS_TOKEN
+): WireSession {
   rateLimiter.clear();
   const auth = new TikTokAccessTokenAdapter(
-    TEST_ACCESS_TOKEN,
+    accessToken,
     TEST_ADVERTISER_ID,
     mcpConfig.tiktokApiBaseUrl,
     mcpConfig.tiktokApiVersion
@@ -189,6 +197,7 @@ export function createWireSession(sessionId = "wire-session"): WireSession {
     sessionId,
     services,
     rateLimiter,
+    quotaKey: services.tiktokService.bulkCapacityBucket([1]).key,
     dispose: () => {
       sessionServiceStore.delete(sessionId);
       rateLimiter.clear();

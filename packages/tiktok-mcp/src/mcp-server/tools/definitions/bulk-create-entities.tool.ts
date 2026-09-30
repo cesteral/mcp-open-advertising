@@ -105,6 +105,11 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The session decides which bucket the batch is projected against (its own
+  // per-token key), so the dry run resolves it too: a dry run with no session
+  // fails as the real call would.
+  const session = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
     const dryRun = buildBulkEffectDryRun(
@@ -112,7 +117,7 @@ export async function bulkCreateEntitiesLogic(
       tiktokBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        tiktokBulkBuckets.bulkCreate(),
+        tiktokBulkBuckets.bulkCreate(session.tiktokService),
         "items"
       )
     );
@@ -140,9 +145,13 @@ export async function bulkCreateEntitiesLogic(
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the first write.
-  assertTikTokBulkCapacity(TOOL_NAME, input.items.length, tiktokBulkBuckets.bulkCreate());
+  assertTikTokBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    tiktokBulkBuckets.bulkCreate(session.tiktokService)
+  );
 
-  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = session;
   assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const bulkResult = await tiktokService.bulkCreateEntities(

@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
+import { consumeTikTokReportingQuota } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import {
@@ -166,7 +167,7 @@ export class TikTokReportingService {
     reportConfig: TikTokReportConfig,
     context?: RequestContext
   ): Promise<{ task_id: string }> {
-    await this.rateLimiter.consume(`tiktok:reporting`);
+    await consumeTikTokReportingQuota(this.rateLimiter, this.httpClient);
 
     // Body per TikTok's v1.3 create docs: report_type + dimensions are required;
     // data_level is required for BASIC/AUDIENCE/CATALOG reports; service_type
@@ -218,7 +219,7 @@ export class TikTokReportingService {
     try {
       return await pollUntilComplete<ReportTaskCheckData>({
         fetchStatus: async () => {
-          await this.rateLimiter.consume(`tiktok:reporting`);
+          await consumeTikTokReportingQuota(this.rateLimiter, this.httpClient);
           return ((await this.httpClient.get(
             `/open_api/${this.apiVersion}/report/task/check/`,
             { task_id: taskId },
@@ -253,7 +254,7 @@ export class TikTokReportingService {
     status: string | undefined;
     message?: string;
   }> {
-    await this.rateLimiter.consume(`tiktok:reporting`);
+    await consumeTikTokReportingQuota(this.rateLimiter, this.httpClient);
 
     const result = ((await this.httpClient.get(
       `/open_api/${this.apiVersion}/report/task/check/`,
@@ -277,7 +278,7 @@ export class TikTokReportingService {
     taskId: string,
     context?: RequestContext
   ): Promise<{ downloadUrl: string; fileName?: string }> {
-    await this.rateLimiter.consume(`tiktok:reporting`);
+    await consumeTikTokReportingQuota(this.rateLimiter, this.httpClient);
 
     const result = ((await this.httpClient.get(
       `/open_api/${this.apiVersion}/report/task/download/`,
@@ -415,7 +416,7 @@ export class TikTokReportingService {
     const records: Array<Record<string, unknown>> = [];
     let totalNumber: number | undefined;
     for (let page = 1; ; page++) {
-      await this.rateLimiter.consume(`tiktok:reporting`);
+      await consumeTikTokReportingQuota(this.rateLimiter, this.httpClient);
       const data = ((await this.httpClient.get(
         `/open_api/${this.apiVersion}/report/integrated/get/`,
         { ...baseParams, page: String(page) },

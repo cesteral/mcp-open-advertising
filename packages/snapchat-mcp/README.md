@@ -15,7 +15,7 @@ per-session Bearer token authentication.
 - **Per-session Bearer token auth** via `SnapchatBearerAuthStrategy` (static access token, or app ID/secret + refresh token with automatic refresh)
 - **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
 - **OpenTelemetry** instrumentation for traces and metrics
-- **Rate limiting** via shared `RateLimiter` class (`SNAPCHAT_RATE_LIMIT_PER_MINUTE`, default 10/min per process)
+- **Rate limiting** via shared `RateLimiter` class (`SNAPCHAT_RATE_LIMIT_PER_MINUTE`, default 10/min per Snap user per process; report calls have their own bucket of the same size)
 - **Structured logging** via Pino
 - **Parent-ID injection on create**: `ad_account_id` (campaign, creative), `campaign_id` (ad squad) and `ad_squad_id` (ad) are filled into the request body from the tool's top-level params
 - **Single-account sessions**: every tool asserts its `adAccountId`, and entity-ID operations refuse an entity that belongs to a different ad account
@@ -138,7 +138,7 @@ pnpm run typecheck
 - `MCP_AUTH_MODE`: Authentication mode - `snapchat-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `SNAPCHAT_API_BASE_URL`: Snapchat Ads API base URL (default: `https://adsapi.snapchat.com`; all paths are `/v1/...`)
-- `SNAPCHAT_RATE_LIMIT_PER_MINUTE`: Per-process rate limit ceiling (default: 10)
+- `SNAPCHAT_RATE_LIMIT_PER_MINUTE`: Per-process, per-Snap-user rate limit ceiling (default: 10)
 - `SNAPCHAT_AD_ACCOUNT_ID`: Ad account ID for stdio mode (and `none`/`jwt` env-credential sessions)
 - `SNAPCHAT_ORG_ID`: Organization ID, required by `snapchat_list_ad_accounts`
 - `SNAPCHAT_APP_ID`, `SNAPCHAT_APP_SECRET`, `SNAPCHAT_REFRESH_TOKEN`: Refresh-token flow; preferred over a static token when all three are set

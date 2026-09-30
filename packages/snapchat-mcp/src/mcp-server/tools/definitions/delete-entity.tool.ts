@@ -106,13 +106,18 @@ export async function deleteEntityLogic(
     canonicalEntityKind: null,
   };
 
+  // The session decides which bucket the batch is projected against (its own
+  // per-user key), so the dry run resolves it too: a dry run with no session
+  // fails as the real call would.
+  const session = resolveSessionServices(sdkContext);
+
   if (input.dry_run === true) {
     const dryRun = buildBulkEffectDryRun(
       input,
       snapchatBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.entityIds.length,
-        snapchatBulkCost.delete(input.entityType),
+        snapchatBulkCost.delete(session.snapchatService, input.entityType),
         "entityIds"
       )
     );
@@ -135,7 +140,7 @@ export async function deleteEntityLogic(
   assertSnapchatBulkCapacity(
     TOOL_NAME,
     input.entityIds.length,
-    snapchatBulkCost.delete(input.entityType)
+    snapchatBulkCost.delete(session.snapchatService, input.entityType)
   );
 
   const confirmed = await elicitBulkDeleteConfirmation({
@@ -159,7 +164,7 @@ export async function deleteEntityLogic(
     };
   }
 
-  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = session;
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   // Snapchat deletes entities one request each (entity-specific DELETE paths).

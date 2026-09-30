@@ -26,11 +26,16 @@ const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
 describe("tiktok_adjust_bids governance contract (effect class)", () => {
-  let svc: { adjustBids: ReturnType<typeof vi.fn> };
+  let svc: { adjustBids: ReturnType<typeof vi.fn>; bulkCapacityBucket: unknown };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      // The session's per-token bucket, read by the bulk capacity pre-check.
+      bulkCapacityBucket: (costPerItem: readonly number[]) => ({
+        key: "tiktok:token:test",
+        costPerItem,
+      }),
       adjustBids: vi.fn().mockResolvedValue({
         results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
       }),

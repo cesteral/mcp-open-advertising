@@ -126,6 +126,11 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The session decides which bucket the batch is projected against (its own
+  // per-user key), so the dry run resolves it too: a dry run with no session
+  // fails as the real call would.
+  const session = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
@@ -134,7 +139,7 @@ export async function bulkUpdateEntitiesLogic(
       snapchatBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        snapchatBulkCost.bulkUpdate(input.entityType),
+        snapchatBulkCost.bulkUpdate(session.snapchatService, input.entityType),
         "items"
       )
     );
@@ -155,7 +160,7 @@ export async function bulkUpdateEntitiesLogic(
   assertSnapchatBulkCapacity(
     TOOL_NAME,
     input.items.length,
-    snapchatBulkCost.bulkUpdate(input.entityType)
+    snapchatBulkCost.bulkUpdate(session.snapchatService, input.entityType)
   );
 
   const payloads = input.items.map((it) => it.data ?? {});
@@ -180,7 +185,7 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = session;
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const bulkResult = await snapchatService.bulkUpdateEntities(

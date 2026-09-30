@@ -108,13 +108,18 @@ export async function adjustBidsLogic(
     canonicalEntityKind: null,
   };
 
+  // The session decides which bucket the batch is projected against (its own
+  // per-user key), so the dry run resolves it too: a dry run with no session
+  // fails as the real call would.
+  const session = resolveSessionServices(sdkContext);
+
   if (input.dry_run === true) {
     const dryRun = buildAdjustBidsEffectDryRun(
       input.adjustments,
       snapchatBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.adjustments.length,
-        snapchatBulkCost.adjustBids(),
+        snapchatBulkCost.adjustBids(session.snapchatService),
         "adjustments"
       )
     );
@@ -132,7 +137,11 @@ export async function adjustBidsLogic(
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first read/write.
-  assertSnapchatBulkCapacity(TOOL_NAME, input.adjustments.length, snapchatBulkCost.adjustBids());
+  assertSnapchatBulkCapacity(
+    TOOL_NAME,
+    input.adjustments.length,
+    snapchatBulkCost.adjustBids(session.snapchatService)
+  );
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -154,7 +163,7 @@ export async function adjustBidsLogic(
     };
   }
 
-  const { snapchatService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  const { snapchatService, boundAdAccountId } = session;
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await snapchatService.adjustBids(

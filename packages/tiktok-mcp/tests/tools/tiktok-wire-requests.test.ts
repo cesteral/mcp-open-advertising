@@ -25,8 +25,9 @@
  * `tiktok.api_version`); the SDK hardcodes the same `/open_api/v1.3/`.
  *
  * Rate limiting: every entity read draws TIKTOK_READ_TOKENS (1) and every
- * create / update / status update TIKTOK_WRITE_TOKENS (3) from
- * `tiktok:default`; targeting search and audience estimate draw 1.
+ * create / update / status update TIKTOK_WRITE_TOKENS (3) from the session's
+ * per-token key `tiktok:token:{quotaClient}` (`session.quotaKey`); targeting
+ * search and audience estimate draw 1.
  *
  * Covered elsewhere: the async report chain (`tiktok_submit_report` →
  * `tiktok_check_report_status` → `tiktok_download_report`, #232/#259) is
@@ -157,7 +158,7 @@ function expectJsonAuth(req: WireRequest) {
 }
 
 function remaining(): number {
-  return rateLimiter.getRemainingTokens("tiktok:default");
+  return rateLimiter.getRemainingTokens(session.quotaKey);
 }
 
 describe("tiktok_create_entity → {campaign,adgroup,ad}/create/", () => {

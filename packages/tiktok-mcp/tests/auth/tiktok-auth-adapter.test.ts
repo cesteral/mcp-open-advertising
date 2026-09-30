@@ -27,6 +27,7 @@ import {
   getTikTokAdvertiserIdFromHeaders,
   getTikTokCredentialFingerprint,
   TIKTOK_REFRESH_UNSUPPORTED_MESSAGE,
+  tiktokQuotaClient,
 } from "../../src/auth/tiktok-auth-adapter.js";
 
 describe("TikTokAccessTokenAdapter", () => {
@@ -146,6 +147,27 @@ describe("TikTokAccessTokenAdapter", () => {
         "https://business-api.tiktok.com"
       );
       expect(adapter.advertiserId).toBe("9876543210");
+    });
+  });
+
+  describe("quotaClient property", () => {
+    it("is a non-secret rate-limit identity derived from the token, without a network call", () => {
+      const adapter = new TikTokAccessTokenAdapter("test-token", "9876543210");
+      expect(adapter.quotaClient).toBe(tiktokQuotaClient("test-token"));
+      expect(adapter.quotaClient).toMatch(/^[0-9a-f]{16}$/);
+      expect(adapter.quotaClient).not.toContain("test-token");
+      // Not the session-binding fingerprint, nor a prefix of it.
+      const binding = getTikTokCredentialFingerprint("test-token", "9876543210");
+      expect(binding.startsWith(adapter.quotaClient)).toBe(false);
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it("gives each token its own identity and the same token the same one", () => {
+      const a = new TikTokAccessTokenAdapter("token-A", "1");
+      const b = new TikTokAccessTokenAdapter("token-B", "1");
+      const a2 = new TikTokAccessTokenAdapter("token-A", "2");
+      expect(a.quotaClient).not.toBe(b.quotaClient);
+      expect(a2.quotaClient).toBe(a.quotaClient);
     });
   });
 });

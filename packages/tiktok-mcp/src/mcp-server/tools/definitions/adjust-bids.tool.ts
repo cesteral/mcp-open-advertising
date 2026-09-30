@@ -108,13 +108,18 @@ export async function adjustBidsLogic(
     canonicalEntityKind: null,
   };
 
+  // The session decides which bucket the batch is projected against (its own
+  // per-token key), so the dry run resolves it too: a dry run with no session
+  // fails as the real call would.
+  const session = resolveSessionServices(sdkContext);
+
   if (input.dry_run === true) {
     const dryRun = buildAdjustBidsEffectDryRun(
       input.adjustments,
       tiktokBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.adjustments.length,
-        tiktokBulkBuckets.adjustBids(),
+        tiktokBulkBuckets.adjustBids(session.tiktokService),
         "adjustments"
       )
     );
@@ -132,7 +137,11 @@ export async function adjustBidsLogic(
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first read/write.
-  assertTikTokBulkCapacity(TOOL_NAME, input.adjustments.length, tiktokBulkBuckets.adjustBids());
+  assertTikTokBulkCapacity(
+    TOOL_NAME,
+    input.adjustments.length,
+    tiktokBulkBuckets.adjustBids(session.tiktokService)
+  );
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -154,7 +163,7 @@ export async function adjustBidsLogic(
     };
   }
 
-  const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  const { tiktokService, boundAdvertiserId } = session;
   assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
   const result = await tiktokService.adjustBids(

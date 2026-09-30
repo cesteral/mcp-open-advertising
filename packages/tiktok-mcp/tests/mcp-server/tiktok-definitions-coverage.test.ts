@@ -13,6 +13,10 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 const tiktokService = {
+  bulkCapacityBucket: (costPerItem: readonly number[]) => ({
+    key: "tiktok:token:test",
+    costPerItem,
+  }),
   listEntities: vi.fn(async () => ({
     entities: [{ campaign_id: "123" }],
     pageInfo: { page: 1, page_size: 10, total_number: 1, total_page: 1 },

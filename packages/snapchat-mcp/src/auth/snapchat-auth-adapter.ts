@@ -47,6 +47,35 @@ export interface SnapchatAuthAdapter {
   readonly adAccountId: string;
   /** Snapchat organization ID — required for /v1/organizations/{orgId}/adaccounts */
   readonly orgId: string;
+  /**
+   * The rate-limit identity of this credential — see {@link snapchatQuotaPrincipal}.
+   * Read at call time: it is the Snap user once `validate()` has resolved it.
+   */
+  readonly quotaPrincipal: string;
+}
+
+/** A Snap user id as `/v1/me` returns it (a UUID); anything else is not keyed on. */
+const SNAPCHAT_USER_ID = /^[A-Za-z0-9-]{1,64}$/;
+
+/**
+ * The rate-limit identity of a Snapchat session: the Snap user the token
+ * authenticates, as `GET /v1/me` reports it after `validate()` —
+ * `user:{me.id}`. Keys `snapchat:{principal}` — see
+ * `services/snapchat/rate-limit-keys.ts`.
+ *
+ * The user id is stable across the refresh flow's access-token rotation (a
+ * token hash would hand the tenant a fresh bucket every ~30 minutes), is not a
+ * secret, and comes from Snap rather than from the MCP caller. The ad-account
+ * header is caller-supplied, so it is never part of the key.
+ *
+ * Before `validate()`, or when `/v1/me` returned no usable id, the identity is
+ * a domain-separated one-way hash of the credential (`cred:{16 hex}`), so a key
+ * never carries a token and two credentials never collapse into one
+ * "unknown" bucket.
+ */
+export function snapchatQuotaPrincipal(userId: string, credential: string): string {
+  if (userId !== "unknown" && SNAPCHAT_USER_ID.test(userId)) return `user:${userId}`;
+  return `cred:${fingerprintCredentials("snapchat-quota-client", credential).slice(0, 16)}`;
 }
 
 /**
@@ -101,6 +130,10 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
     return this._orgId;
   }
 
+  get quotaPrincipal(): string {
+    return snapchatQuotaPrincipal(this._userId, this.accessToken);
+  }
+
   async getAccessToken(): Promise<string> {
     return this.accessToken;
   }
@@ -130,6 +163,8 @@ export class SnapchatRefreshTokenAdapter
   implements SnapchatAuthAdapter
 {
   private _userId = "";
+  /** The refresh credential, as the pre-`validate()` quota fallback (hashed, never keyed raw). */
+  private readonly quotaCredential: string;
 
   constructor(
     credentials: SnapchatRefreshCredentials,
@@ -170,6 +205,7 @@ export class SnapchatRefreshTokenAdapter
         };
       },
     });
+    this.quotaCredential = `${credentials.appId}:${credentials.refreshToken}`;
   }
 
   get userId(): string {
@@ -182,6 +218,10 @@ export class SnapchatRefreshTokenAdapter
 
   get orgId(): string {
     return this._orgId;
+  }
+
+  get quotaPrincipal(): string {
+    return snapchatQuotaPrincipal(this._userId, this.quotaCredential);
   }
 
   async validate(): Promise<void> {

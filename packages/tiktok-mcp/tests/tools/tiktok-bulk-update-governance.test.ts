@@ -34,11 +34,16 @@ const baseInput = {
 };
 
 describe("tiktok_bulk_update_entities governance contract (effect class)", () => {
-  let svc: { bulkUpdateEntities: ReturnType<typeof vi.fn> };
+  let svc: { bulkUpdateEntities: ReturnType<typeof vi.fn>; bulkCapacityBucket: unknown };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      // The session's per-token bucket, read by the bulk capacity pre-check.
+      bulkCapacityBucket: (costPerItem: readonly number[]) => ({
+        key: "tiktok:token:test",
+        costPerItem,
+      }),
       bulkUpdateEntities: vi.fn().mockResolvedValue({
         results: [
           { entityId: "1800111111111", success: true },

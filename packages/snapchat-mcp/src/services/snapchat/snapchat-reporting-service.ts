@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
+import { consumeSnapchatQuota, consumeSnapchatReportingQuota } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   type RequestContext,
@@ -86,7 +87,7 @@ export class SnapchatReportingService {
       assertOnHourBoundary("end_time", reportConfig.end_time);
     }
 
-    await this.rateLimiter.consume(`snapchat:reporting`);
+    await consumeSnapchatReportingQuota(this.rateLimiter, this.httpClient);
 
     const queryParams: Record<string, string> = {
       async: "true",
@@ -132,7 +133,7 @@ export class SnapchatReportingService {
     try {
       return await pollUntilComplete<ReportTaskCheckData>({
         fetchStatus: async () => {
-          await this.rateLimiter.consume(`snapchat:reporting`);
+          await consumeSnapchatReportingQuota(this.rateLimiter, this.httpClient);
           const envelope = (await this.httpClient.get(
             `/v1/adaccounts/${this.adAccountId}/stats_report`,
             { report_run_id: taskId },
@@ -182,7 +183,7 @@ export class SnapchatReportingService {
     taskId: string,
     context?: RequestContext
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
-    await this.rateLimiter.consume(`snapchat:reporting`);
+    await consumeSnapchatReportingQuota(this.rateLimiter, this.httpClient);
 
     const envelope = (await this.httpClient.get(
       `/v1/adaccounts/${this.adAccountId}/stats_report`,
@@ -340,7 +341,7 @@ export class SnapchatReportingService {
   private async getAdAccountTimezone(context?: RequestContext): Promise<string> {
     if (this.adAccountTimezone) return this.adAccountTimezone;
 
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
     const response = (await this.httpClient.get(
       `/v1/adaccounts/${this.adAccountId}`,
       {},

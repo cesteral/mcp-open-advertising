@@ -2,7 +2,8 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import { consumeTikTokQuota, tiktokQuotaBucket } from "./rate-limit-keys.js";
+import type { BulkCapacityBucket, RateLimiter } from "@cesteral/shared";
 import {
   type RequestContext,
   executeBulkConcurrent,
@@ -103,6 +104,20 @@ export class TikTokService {
     private readonly apiVersion: string = "v1.3"
   ) {}
 
+  /**
+   * The bulk-capacity projection bucket for a batch this service would run.
+   *
+   * Every call in this service draws on the session's per-token key
+   * `tiktok:token:{quotaClient}` (see `rate-limit-keys.ts`), so a batch tool
+   * describes its per-item pattern as `costPerItem` (one entry per `consume`
+   * an item makes, in order) and this fills in the key the calls will actually
+   * hit. The projection is therefore per tenant: another tenant's traffic
+   * neither fills this bucket nor refuses this batch.
+   */
+  bulkCapacityBucket(costPerItem: readonly number[]): BulkCapacityBucket {
+    return tiktokQuotaBucket(this.httpClient, costPerItem);
+  }
+
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
   get client(): TikTokHttpClient {
     return this.httpClient;
@@ -117,7 +132,7 @@ export class TikTokService {
     pageSize = 10,
     context?: RequestContext
   ): Promise<{ entities: TikTokEntityMap[T][]; pageInfo: TikTokPageInfoShape }> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
     const params: Record<string, string> = {
@@ -150,7 +165,7 @@ export class TikTokService {
     entityId: string,
     context?: RequestContext
   ): Promise<TikTokEntityMap[T]> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
     const params: Record<string, string> = {
@@ -183,7 +198,7 @@ export class TikTokService {
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.createPath,
@@ -200,7 +215,7 @@ export class TikTokService {
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
     // TikTok uses POST for updates, with entity ID in body
     return this.httpClient.post(
@@ -242,7 +257,7 @@ export class TikTokService {
       );
     }
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.statusUpdatePath,
@@ -266,7 +281,7 @@ export class TikTokService {
     advertiserIds: string[],
     context?: RequestContext
   ): Promise<TikTokAdvertiserListData> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.get(
       `/open_api/${this.apiVersion}/advertiser/info/`,
@@ -427,7 +442,7 @@ export class TikTokService {
     criteria: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.post(
       `/open_api/${this.apiVersion}/tool/targeting/search/`,
@@ -441,7 +456,7 @@ export class TikTokService {
     params: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     switch (optionType) {
       case "ACTION_CATEGORY":
@@ -515,7 +530,7 @@ export class TikTokService {
     targetingConfig: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.post(
       `/open_api/${this.apiVersion}/ad/audience_size/estimate/`,

@@ -48,7 +48,15 @@ const ADVERTISER = "1234567890";
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `18001111111${i}`);
 
-let http: { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
+/** The session's per-token bucket (`tiktok:token:{quotaClient}`, rate-limit-keys.ts). */
+const QUOTA_CLIENT = "0123456789abcdef";
+const KEY = `tiktok:token:${QUOTA_CLIENT}`;
+
+let http: {
+  quotaClient: string;
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+};
 
 async function expectRefused(promise: Promise<unknown>, itemCount: number, itemsThatFit: number) {
   const error = await promise.then(
@@ -75,6 +83,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     vi.clearAllMocks();
     rateLimiter.clear();
     http = {
+      quotaClient: QUOTA_CLIENT,
       get: vi.fn().mockResolvedValue({ list: [{ adgroup_id: "x", bid_price: 1.5 }] }),
       post: vi.fn().mockResolvedValue({}),
     };
@@ -93,7 +102,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     ]);
   });
 
-  describe("tiktok_bulk_update_entities (3 tokens/item on tiktok:default)", () => {
+  describe("tiktok_bulk_update_entities (3 tokens/item on the session's tiktok:token:{quotaClient} bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({
         entityType: "campaign",
@@ -107,7 +116,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     });
 
     it("counts tokens already consumed in the window", async () => {
-      await rateLimiter.consume("tiktok:default", 10);
+      await rateLimiter.consume(KEY, 10);
       await expectRefused(bulkUpdateEntitiesLogic(input(9), ctx, sdk), 9, 6);
     });
 
@@ -132,7 +141,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     });
   });
 
-  describe("tiktok_bulk_create_entities (3 tokens/item on tiktok:default)", () => {
+  describe("tiktok_bulk_create_entities (3 tokens/item on the session's tiktok:token:{quotaClient} bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({
         entityType: "campaign",
@@ -158,7 +167,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
     });
   });
 
-  describe("tiktok_adjust_bids (read 1 + write 3 per ad group on tiktok:default)", () => {
+  describe("tiktok_adjust_bids (read 1 + write 3 per ad group on the session's tiktok:token:{quotaClient} bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({
         advertiserId: ADVERTISER,
@@ -200,7 +209,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
       sdk
     );
     expect(http.post).toHaveBeenCalledTimes(1);
-    expect(rateLimiter.getRemainingTokens("tiktok:default")).toBe(7);
+    expect(rateLimiter.getRemainingTokens(KEY)).toBe(7);
     expect(result.results).toHaveLength(20);
   });
 });

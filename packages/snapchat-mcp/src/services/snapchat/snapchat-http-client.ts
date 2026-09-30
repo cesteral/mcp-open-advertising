@@ -117,6 +117,14 @@ export class SnapchatHttpClient {
     private readonly logger: import("pino").Logger
   ) {}
 
+  /**
+   * Rate-limit identity of this session (the Snap user, see
+   * `snapchatQuotaPrincipal`). Read by `consumeSnapchatQuota` at call time.
+   */
+  get quotaPrincipal(): string {
+    return this.authAdapter.quotaPrincipal;
+  }
+
   /** Make an authenticated GET request. Returns raw Snapchat envelope. */
   async get(
     path: string,

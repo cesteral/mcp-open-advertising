@@ -604,7 +604,7 @@
       "id": "snapchat.rate_limit_default",
       "package": "snapchat-mcp",
       "class": "behavioral-constraint",
-      "claim": "The per-process default of 10 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. No primary source (Snap publishes no Ads API spec or SDK). Corroboration only: 20 requests/second per app, 10 per token; 429 on throttle. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
+      "claim": "The per-process default of 10 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. No primary source (Snap publishes no Ads API spec or SDK). Corroboration only: 20 requests/second per app, 10 per token; 429 on throttle. Keys are per Snap user (`snapchat:user:{me.id}` from GET /v1/me, and `...:reporting`; a one-way hash of the credential when /v1/me gives no id), so each tenant runs two keys: one process sends at most 2x the default per user, which is at or below the token-level figure. Tokens issued to the same Snap app share the app-level figure, and the server cannot see which app issued a token, so N such tenants on one instance can send up to N times that against one app limit. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
       "value": "default(10)",
       "sourceUrl": "https://developers.snap.com/api/marketing-api/Ads-API/rate-limits",
       "status": "unverified",
@@ -626,7 +626,7 @@
       "verifyBy": "2027-03-29",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/snapchat-mcp/src/services/snapchat/snapchat-reporting-service.ts:101"]
+      "codeRefs": ["packages/snapchat-mcp/src/services/snapchat/snapchat-reporting-service.ts:102"]
     },
     {
       "id": "snapchat.stats_day_bounds_account_timezone",
@@ -660,7 +660,7 @@
       "id": "tiktok.rate_limit_default",
       "package": "tiktok-mcp",
       "class": "behavioral-constraint",
-      "claim": "The per-process default of 10 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: Basic tier 10 QPS / 600 QPM / 864,000 QPD per developer app (all tenants share it); report/task/create 60 QPM. Primary: throttle return codes in the official SDK (tiktok_code.py). This server runs two keys (default + reporting) against the one app quota. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
+      "claim": "The per-process default of 10 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: Basic tier 10 QPS / 600 QPM / 864,000 QPD per developer app (all tenants share it); report/task/create 60 QPM. Primary: throttle return codes in the official SDK (tiktok_code.py). Keys are per access token (`tiktok:token:{quotaClient}` and `tiktok:token:{quotaClient}:reporting`, a one-way hash of the token), so each tenant runs two keys: one process sends at most 2x the default per token. Tokens issued to the same developer app share that app's quota, and the server cannot see which app issued a token, so N such tenants on one instance can send up to N times that against one app quota. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
       "value": "default(10)",
       "sourceUrl": "https://business-api.tiktok.com/portal/docs?id=1740029171730433",
       "status": "unverified",
@@ -682,7 +682,7 @@
       "verifyBy": "2027-03-29",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:283"]
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:284"]
     },
     {
       "id": "tiktok.async_task_statuses",
@@ -696,7 +696,7 @@
       "verifyBy": "2027-03-29",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:105"]
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:106"]
     },
     {
       "id": "tiktok.async_report_create_options",
@@ -710,7 +710,7 @@
       "verifyBy": "2027-03-29",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:191"]
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:192"]
     },
     {
       "id": "ttd.rate_limit_default",
