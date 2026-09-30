@@ -261,7 +261,7 @@ export const manageCriterionsTool = {
       input: {
         operation: "getByCampaign",
         entityLevel: "campaign",
-        data: { CampaignId: 123456, CriterionType: "Targets" },
+        data: { CampaignId: 123456, CriterionType: "Location" },
       },
     },
   ],

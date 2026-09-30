@@ -10,9 +10,18 @@ export const entityExampleAllResource: Resource = {
   mimeType: "text/markdown",
   getContent: () => `# Microsoft Ads Entity Examples
 
+Each example is a complete \`data\` payload for \`msads_create_entity\`: the
+entity array under its plural key, plus the parent element the v13 Add
+operation takes next to it (AddCampaigns: \`AccountId\`; AddAdGroups:
+\`CampaignId\`; AddKeywords / AddAds: \`AdGroupId\`). The parent id belongs at
+this top level, not inside the entity object: AdGroup, Keyword and Ad have no
+\`CampaignId\` / \`AdGroupId\` element. Budgets take no parent element (the
+account comes from the \`CustomerAccountId\` header).
+
 ## Campaign
 \`\`\`json
 {
+  "AccountId": 123456789,
   "Campaigns": [{
     "Name": "Summer Sale 2026",
     "BudgetType": "DailyBudgetStandard",
@@ -28,9 +37,9 @@ export const entityExampleAllResource: Resource = {
 ## Ad Group
 \`\`\`json
 {
+  "CampaignId": 123456789,
   "AdGroups": [{
     "Name": "Brand Keywords",
-    "CampaignId": 123456789,
     "CpcBid": { "Amount": 1.50 },
     "Language": "English",
     "Status": "Active"
@@ -41,8 +50,8 @@ export const entityExampleAllResource: Resource = {
 ## Keyword
 \`\`\`json
 {
+  "AdGroupId": 987654321,
   "Keywords": [{
-    "AdGroupId": 987654321,
     "Text": "buy shoes online",
     "MatchType": "Phrase",
     "Bid": { "Amount": 2.00 },
@@ -54,9 +63,9 @@ export const entityExampleAllResource: Resource = {
 ## Responsive Search Ad
 \`\`\`json
 {
+  "AdGroupId": 987654321,
   "Ads": [{
-    "AdGroupId": 987654321,
-    "Type": "ResponsiveSearchAd",
+    "Type": "ResponsiveSearch",
     "Headlines": [
       { "Text": "Buy Shoes Online", "PinnedField": "Headline1" },
       { "Text": "Free Shipping Available" },

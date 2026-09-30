@@ -238,6 +238,7 @@ export const createEntityTool = {
       input: {
         entityType: "campaign",
         data: {
+          AccountId: 123456789,
           Campaigns: [
             {
               Name: "My Campaign",
