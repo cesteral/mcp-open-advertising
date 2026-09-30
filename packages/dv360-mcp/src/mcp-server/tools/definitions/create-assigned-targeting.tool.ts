@@ -311,4 +311,6 @@ export const createAssignedTargetingTool = {
   },
   logic: createAssignedTargetingLogic,
   responseFormatter: createAssignedTargetingResponseFormatter,
+  // The dry run is symbolic (no read).
+  untrustedContent: { structuredPaths: ["$.createdTargetingOption"], contentBlocks: [0] },
 };

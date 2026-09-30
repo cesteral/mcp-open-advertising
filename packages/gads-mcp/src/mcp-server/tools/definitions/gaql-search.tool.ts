@@ -139,4 +139,9 @@ export const gaqlSearchTool = {
   ],
   logic: gaqlSearchLogic,
   responseFormatter: gaqlSearchResponseFormatter,
+  // Result rows are GAQL query results: entity names, ad text and keyword text.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

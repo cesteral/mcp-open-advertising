@@ -121,6 +121,7 @@
         "programmatic",
         "self-hosted"
       ],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -335,6 +336,7 @@
         "modes": ["gads-headers", "jwt", "none"]
       },
       "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -676,6 +678,7 @@
         "modes": ["google-headers", "jwt", "none"]
       },
       "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {

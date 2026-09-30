@@ -21,7 +21,7 @@ import {
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
 } from "@cesteral/shared";
-import { createLogger } from "@cesteral/shared";
+import { createLogger, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -351,4 +351,6 @@ export const deleteAssignedTargetingTool = {
   },
   logic: deleteAssignedTargetingLogic,
   responseFormatter: deleteAssignedTargetingResponseFormatter,
+  // Output carries only ids and caller input echoed back; the dry run existence check reports a fixed message, not the platform's.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

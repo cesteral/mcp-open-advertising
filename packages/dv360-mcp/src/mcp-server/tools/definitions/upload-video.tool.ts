@@ -10,6 +10,7 @@ import {
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -253,4 +254,6 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // Output is the platform-generated asset id plus the locally derived filename (caller input or its own URL); no platform text.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

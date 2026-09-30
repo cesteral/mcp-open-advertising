@@ -498,4 +498,8 @@ export const createCustomBiddingAlgorithmTool = {
   },
   logic: createCustomBiddingAlgorithmLogic,
   responseFormatter: createCustomBiddingAlgorithmResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.algorithm", "$.scriptUpload", "$.rulesUpload"],
+    contentBlocks: [0],
+  },
 };

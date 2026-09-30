@@ -189,4 +189,9 @@ export const getReportBreakdownsTool = {
   ],
   logic: getReportBreakdownsLogic,
   responseFormatter: getReportBreakdownsResponseFormatter,
+  // file is the raw CM360 report file resource; appliedDimensions is built from the caller's own criteria, and reportId, fileId and downloadUrl are platform-generated.
+  untrustedContent: {
+    structuredPaths: ["$.file"],
+    contentBlocks: [0],
+  },
 };
