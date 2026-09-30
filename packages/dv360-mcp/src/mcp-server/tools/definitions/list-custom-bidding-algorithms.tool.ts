@@ -252,4 +252,5 @@ export const listCustomBiddingAlgorithmsTool = {
   },
   logic: listCustomBiddingAlgorithmsLogic,
   responseFormatter: listCustomBiddingAlgorithmsResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.algorithms"], contentBlocks: [0] },
 };

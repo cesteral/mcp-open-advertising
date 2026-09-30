@@ -145,4 +145,9 @@ export const getReportTool = {
   ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
+  // file is the raw CM360 report file resource; reportId, fileId and downloadUrl are platform-generated.
+  untrustedContent: {
+    structuredPaths: ["$.file"],
+    contentBlocks: [0],
+  },
 };

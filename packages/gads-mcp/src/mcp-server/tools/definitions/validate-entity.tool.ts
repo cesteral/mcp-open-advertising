@@ -185,4 +185,9 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  // issues[].message is Google's raw validateOnly error body.
+  untrustedContent: {
+    structuredPaths: ["$.issues"],
+    contentBlocks: [0],
+  },
 };

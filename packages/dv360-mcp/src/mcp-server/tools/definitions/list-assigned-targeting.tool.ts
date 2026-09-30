@@ -192,4 +192,5 @@ export const listAssignedTargetingTool = {
   },
   logic: listAssignedTargetingLogic,
   responseFormatter: listAssignedTargetingResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.assignedTargetingOptions"], contentBlocks: [0] },
 };
