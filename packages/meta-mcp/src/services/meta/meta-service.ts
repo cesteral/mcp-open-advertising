@@ -4,7 +4,12 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import { nextPageCursor } from "./paging.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import {
+  type RequestContext,
+  executeBulkConcurrent,
+  JsonRpcErrorCode,
+  McpError,
+} from "@cesteral/shared";
 import {
   getEntityConfig,
   type MetaEntityType,
@@ -317,8 +322,20 @@ export class MetaService {
 
   /**
    * Get audience size / delivery estimate.
-   * Tries /reachestimate first (returns estimated_audience_size),
-   * falls back to /delivery_estimate on error (more fields but requires optimization_goal).
+   *
+   * Tries `GET /act_{id}/reachestimate` first (only `targeting_spec` is
+   * required; returns `users_lower_bound` / `users_upper_bound` /
+   * `estimate_ready` — AdAccountReachEstimate), then falls back to
+   * `GET /act_{id}/delivery_estimate`, which REQUIRES `optimization_goal`
+   * (AdAccountDeliveryEstimate: `estimate_mau_lower_bound` /
+   * `estimate_mau_upper_bound` / …). Both per Meta's
+   * facebook-business-sdk-codegen api_specs (AdAccount.json).
+   *
+   * The fallback runs only when it can help: the reachestimate call was
+   * rejected as an invalid request (not an auth, permission, throttle or
+   * upstream failure — those would fail the same way again, and retrying them
+   * would only hide the real reason) AND an `optimizationGoal` was supplied.
+   * Each upstream call draws its own limiter token.
    */
   async getDeliveryEstimate(
     adAccountId: string,
@@ -330,27 +347,25 @@ export class MetaService {
 
     const actId = this.normalizeAccountId(adAccountId);
 
-    // Try reachestimate first — lighter endpoint, no optimization_goal needed
+    const targeting = JSON.stringify(targetingSpec);
     try {
-      const reachParams: Record<string, string> = {
-        targeting_spec: JSON.stringify(targetingSpec),
-      };
-      const result = await this.httpClient.get(`/${actId}/reachestimate`, reachParams, context);
-      return result;
+      return await this.httpClient.get(
+        `/${actId}/reachestimate`,
+        { targeting_spec: targeting },
+        context
+      );
     } catch (err) {
-      this.logger.debug({ err }, "reachestimate failed, falling back to delivery_estimate");
+      const rejectedAsInvalid =
+        err instanceof McpError && err.code === JsonRpcErrorCode.InvalidRequest;
+      if (optimizationGoal === undefined || !rejectedAsInvalid) throw err;
+      this.logger.debug({ err }, "reachestimate rejected, falling back to delivery_estimate");
+      await this.rateLimiter.consume(`meta:${adAccountId}`);
+      return this.httpClient.get(
+        `/${actId}/delivery_estimate`,
+        { targeting_spec: targeting, optimization_goal: optimizationGoal },
+        context
+      );
     }
-
-    // Fallback to delivery_estimate
-    const params: Record<string, string> = {
-      targeting_spec: JSON.stringify(targetingSpec),
-    };
-
-    if (optimizationGoal) {
-      params.optimization_goal = optimizationGoal;
-    }
-
-    return this.httpClient.get(`/${actId}/delivery_estimate`, params, context);
   }
 
   // ─── Budget Schedules ─────────────────────────────────────────

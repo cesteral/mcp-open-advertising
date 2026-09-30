@@ -177,22 +177,34 @@ describe("MetaTargetingService", () => {
       expect(path).toBe("/act_123456/targetingbrowse");
     });
 
-    it("passes type param when provided", async () => {
+    // basis: facebook-business-sdk-codegen api_specs/specs/AdAccount.json,
+    // GET targetingbrowse — the filter param is `limit_type` (enum
+    // adaccounttargetingbrowse_limit_type_enum_param); there is no `type`.
+    it("sends the type filter as limit_type", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getTargetingOptions("act_123", "interests");
 
       const [, params] = httpClient.get.mock.calls[0];
-      expect(params.type).toBe("interests");
+      expect(params).toEqual({ limit_type: "interests" });
     });
 
-    it("does not include type when not provided", async () => {
+    it("lowercases the filter to match the limit_type enum", async () => {
+      httpClient.get.mockResolvedValueOnce({ data: [] });
+
+      await service.getTargetingOptions("act_123", "Behaviors");
+
+      const [, params] = httpClient.get.mock.calls[0];
+      expect(params.limit_type).toBe("behaviors");
+    });
+
+    it("does not include a filter when not provided", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getTargetingOptions("act_123");
 
       const [, params] = httpClient.get.mock.calls[0];
-      expect(params.type).toBeUndefined();
+      expect(params).toEqual({});
     });
 
     it("returns the response from httpClient", async () => {

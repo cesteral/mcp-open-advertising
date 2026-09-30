@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MetaService } from "../../src/services/meta/meta-service.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -614,9 +615,12 @@ describe("MetaService", () => {
       expect(params.targeting_spec).toBe(JSON.stringify(targetingSpec));
     });
 
-    it("falls back to delivery_estimate on reachestimate failure", async () => {
+    // basis: facebook-business-sdk-codegen api_specs/specs/AdAccount.json —
+    // GET delivery_estimate requires optimization_goal and targeting_spec;
+    // GET reachestimate requires only targeting_spec.
+    it("falls back to delivery_estimate when reachestimate rejects the request", async () => {
       httpClient.get
-        .mockRejectedValueOnce(new Error("reachestimate unavailable"))
+        .mockRejectedValueOnce(new McpError(JsonRpcErrorCode.InvalidRequest, "(#100) invalid"))
         .mockResolvedValueOnce({ data: [] });
 
       await service.getDeliveryEstimate("act_123", {}, "LINK_CLICKS");
@@ -624,7 +628,30 @@ describe("MetaService", () => {
       expect(httpClient.get).toHaveBeenCalledTimes(2);
       const [fallbackPath, fallbackParams] = httpClient.get.mock.calls[1];
       expect(fallbackPath).toBe("/act_123/delivery_estimate");
-      expect(fallbackParams.optimization_goal).toBe("LINK_CLICKS");
+      expect(fallbackParams).toEqual({ targeting_spec: "{}", optimization_goal: "LINK_CLICKS" });
+      // One limiter token per upstream call.
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not fall back without an optimizationGoal (delivery_estimate requires one)", async () => {
+      const rejection = new McpError(JsonRpcErrorCode.InvalidRequest, "(#100) invalid");
+      httpClient.get.mockRejectedValueOnce(rejection);
+
+      await expect(service.getDeliveryEstimate("act_123", {})).rejects.toBe(rejection);
+      expect(httpClient.get).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["Unauthorized", JsonRpcErrorCode.Unauthorized],
+      ["RateLimited", JsonRpcErrorCode.RateLimited],
+      ["Forbidden", JsonRpcErrorCode.Forbidden],
+      ["ServiceUnavailable", JsonRpcErrorCode.ServiceUnavailable],
+    ])("surfaces a %s reachestimate failure instead of masking it", async (_label, code) => {
+      const failure = new McpError(code, "upstream failure");
+      httpClient.get.mockRejectedValueOnce(failure);
+
+      await expect(service.getDeliveryEstimate("act_123", {}, "LINK_CLICKS")).rejects.toBe(failure);
+      expect(httpClient.get).toHaveBeenCalledTimes(1);
     });
 
     it("normalizes account ID", async () => {

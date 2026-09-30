@@ -86,7 +86,7 @@
   ],
   "notes": [
     "`breakdowns` and `action_breakdowns` may be combined; some pairs are invalid (e.g. impression_device + publisher_platform cross-breakdowns) — the API will reject invalid combinations with error code 100.",
-    "`attribution_setting` controls the attribution window; default is the ad account's default setting.",
+    "Choose the attribution window with the `action_attribution_windows` request parameter (e.g. 1d_click, 7d_click, 1d_view); `attribution_setting` is a returned field reporting the setting in effect. Without the parameter the ad account's default applies.",
     "`quality_ranking`, `engagement_rate_ranking`, `conversion_rate_ranking` require ads with sufficient delivery (typically 500+ impressions over the last 7 days).",
     "This catalog is a snapshot. For the authoritative current list, see the Meta Marketing API docs or call Meta's own field-introspection endpoints."
   ]

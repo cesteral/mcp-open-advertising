@@ -83,8 +83,16 @@ export class MetaTargetingService {
 
     const params: Record<string, string> = {};
     if (type) {
-      // Normalize to lowercase — Meta API targeting types are case-sensitive
-      params.type = type.toLowerCase();
+      // `targetingbrowse` filters by `limit_type`, not `type`: Meta's
+      // facebook-business-sdk-codegen spec (api_specs/specs/AdAccount.json,
+      // GET targetingbrowse) lists excluded_category, include_nodes,
+      // is_exclusion, is_reserved, limit_type, optimization_goal,
+      // regulated_categories, regulated_countries and whitelisted_types — no
+      // `type` — so a `type=` filter was silently ignored and every category
+      // came back. The `limit_type` enum values are lowercase
+      // (`adaccounttargetingbrowse_limit_type_enum_param`: behaviors,
+      // interests, life_events, …).
+      params.limit_type = type.toLowerCase();
     }
 
     return this.httpClient.get(`/${actId}/targetingbrowse`, params, context);
