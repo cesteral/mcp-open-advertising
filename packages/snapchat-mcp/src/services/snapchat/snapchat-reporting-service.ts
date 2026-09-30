@@ -3,7 +3,15 @@
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  type RequestContext,
+  type DatePreset,
+  McpError,
+  JsonRpcErrorCode,
+  resolveDatePreset,
+} from "@cesteral/shared";
+import type { ReportDimension } from "./report-dimensions.js";
+import { accountDayRange, assertOnHourBoundary } from "../../utils/report-time.js";
 import {
   fetchWithTimeout,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
@@ -42,6 +50,8 @@ export interface SnapchatReportConfig {
   start_time: string;
   end_time: string;
   dimension_type?: "CAMPAIGN" | "AD_SQUAD" | "AD";
+  /** Insight-level breakdown, sent as the `report_dimension` query parameter. */
+  report_dimension?: ReportDimension;
 }
 
 /**
@@ -70,18 +80,25 @@ export class SnapchatReportingService {
     reportConfig: SnapchatReportConfig,
     context?: RequestContext
   ): Promise<{ task_id: string }> {
+    const granularity = reportConfig.granularity ?? "DAY";
+    if (granularity === "DAY" || granularity === "HOUR") {
+      assertOnHourBoundary("start_time", reportConfig.start_time);
+      assertOnHourBoundary("end_time", reportConfig.end_time);
+    }
+
     await this.rateLimiter.consume(`snapchat:reporting`);
 
     const queryParams: Record<string, string> = {
       async: "true",
       async_format: "csv",
       fields: reportConfig.fields.join(","),
-      granularity: reportConfig.granularity ?? "DAY",
+      granularity,
       start_time: reportConfig.start_time,
       end_time: reportConfig.end_time,
       ...(reportConfig.dimension_type
         ? { breakdown: this.mapDimensionType(reportConfig.dimension_type) }
         : {}),
+      ...(reportConfig.report_dimension ? { report_dimension: reportConfig.report_dimension } : {}),
     };
 
     const result = (await this.httpClient.get(
@@ -297,27 +314,66 @@ export class SnapchatReportingService {
   }
 
   /**
-   * Get report with dimensional breakdowns.
-   * Adds breakdown fields to the report config.
-   *
-   * UNVERIFIED: the breakdown names are appended to `fields`. Secondary sources
-   * (third-party Snapchat connectors) send demographic/geo splits through a
-   * separate `report_dimension` query parameter instead; that is not changed
-   * here because no primary Snapchat source for the parameter or its values was
-   * reachable. The tool description says so.
+   * Get report with an insight-level breakdown (`report_dimension`): geo,
+   * demographic, device or interest splits. The dimension is its own query
+   * parameter, not a stats field. See `report-dimensions.ts` for the values.
    */
   async getReportBreakdowns(
     reportConfig: SnapchatReportConfig,
-    breakdowns: string[],
+    reportDimension: ReportDimension,
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const configWithBreakdowns: SnapchatReportConfig = {
-      ...reportConfig,
-      fields: [...reportConfig.fields, ...breakdowns],
+    return this.getReport(
+      { ...reportConfig, report_dimension: reportDimension },
+      maxRowsOrContext,
+      context
+    );
+  }
+
+  /**
+   * The ad account's IANA timezone (e.g. "America/Los_Angeles"), read once per
+   * session. Snap measures days in it, so date presets must be resolved in it.
+   */
+  private adAccountTimezone?: string;
+
+  private async getAdAccountTimezone(context?: RequestContext): Promise<string> {
+    if (this.adAccountTimezone) return this.adAccountTimezone;
+
+    await this.rateLimiter.consume(`snapchat:default`);
+    const response = (await this.httpClient.get(
+      `/v1/adaccounts/${this.adAccountId}`,
+      {},
+      context
+    )) as {
+      adaccounts?: Array<{ sub_request_status?: string; adaccount?: { timezone?: unknown } }>;
     };
 
-    return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
+    const item = response.adaccounts?.find(
+      (a) => a.sub_request_status === undefined || a.sub_request_status === "SUCCESS"
+    );
+    const timezone = item?.adaccount?.timezone;
+    if (typeof timezone !== "string" || timezone.length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Could not read the timezone of Snapchat ad account ${this.adAccountId}. Snapchat measures days in the account's timezone, so a date preset cannot be resolved; pass explicit startTime/endTime on the account's day boundaries instead.`
+      );
+    }
+    this.adAccountTimezone = timezone;
+    return timezone;
+  }
+
+  /**
+   * Resolve a date preset to the `start_time` / `end_time` Snap expects: local
+   * midnight of the first day to local midnight after the last, in the ad
+   * account's timezone.
+   */
+  async resolveDatePresetRange(
+    preset: DatePreset,
+    context?: RequestContext
+  ): Promise<{ start_time: string; end_time: string }> {
+    const timezone = await this.getAdAccountTimezone(context);
+    return accountDayRange(resolveDatePreset(preset), timezone);
   }
 
   private normalizeReportStatus(status: string | undefined): ReportTaskStatus {

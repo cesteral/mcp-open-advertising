@@ -6,16 +6,16 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const snapchatReportingWorkflowPrompt: Prompt = {
   name: "snapchat_reporting_workflow",
   description:
-    "Guide for submitting and retrieving Snapchat Ads async reports with dimensions, metrics, and breakdowns",
+    "Guide for pulling Snapchat Ads stats: metric fields, entity-level splits, and geo/demographic/device breakdowns (report_dimension)",
   arguments: [
     {
       name: "adAccountId",
-      description: "Snapchat Advertiser ID",
+      description: "Snapchat Ad Account ID",
       required: true,
     },
     {
-      name: "reportLevel",
-      description: "Report level: AUCTION, RESERVATION (default: AUCTION)",
+      name: "dimensionType",
+      description: "Entity level to split stats by: CAMPAIGN, AD_SQUAD or AD (default: CAMPAIGN)",
       required: false,
     },
   ],
@@ -23,111 +23,104 @@ export const snapchatReportingWorkflowPrompt: Prompt = {
 
 export function getSnapchatReportingWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
-  const reportLevel = args?.reportLevel || "AUCTION";
+  const dimensionType = args?.dimensionType || "CAMPAIGN";
 
   return `# Snapchat Reporting Workflow
 
-Advertiser: \`${adAccountId}\`
-Report Level: \`${reportLevel}\`
+Ad Account: \`${adAccountId}\`
+Entity level: \`${dimensionType}\`
 
 ---
 
 ## Overview
 
-Snapchat reports are **async** — \`snapchat_get_report\` submits the job, polls for completion, and returns the results when ready.
+Snapchat stats are **async**. \`snapchat_get_report\` submits the job, polls for completion and returns the rows. To control the steps yourself use \`snapchat_submit_report\`, \`snapchat_check_report_status\` and \`snapchat_download_report\`.
+
+**Time ranges.** Snapchat measures days in the **ad account's timezone**. \`datePreset\` (e.g. \`LAST_7_DAYS\`) reads that timezone and resolves to local midnight. With explicit \`startTime\`/\`endTime\`, for \`DAY\` granularity use the account's day boundaries with its UTC offset (\`2026-02-01T00:00:00-08:00\`). The end is exclusive: to include 7 March, end at \`2026-03-08T00:00:00-08:00\`. Both must fall on the start of an hour. \`snapchat_list_ad_accounts\` returns each account's \`timezone\`.
 
 ---
 
-## Step 1: Basic Campaign Report
+## Step 1: Account-level daily report
 
 \`\`\`json
 snapchat_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc", "conversions", "cost_per_conversion"],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+  "fields": ["impressions", "swipes", "spend", "conversion_purchases"],
+  "datePreset": "LAST_30_DAYS",
+  "granularity": "DAY",
+  "includeComputedMetrics": true
 })
 \`\`\`
 
-## Step 2: Ad Group Level Report
+## Step 2: Split by entity level
+
+\`dimensionType\` returns one row per campaign, ad squad or ad:
 
 \`\`\`json
 snapchat_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["adgroup_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "video_play_actions", "video_watched_2s", "video_watched_6s"],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+  "fields": ["impressions", "swipes", "spend"],
+  "datePreset": "LAST_7_DAYS",
+  "granularity": "TOTAL",
+  "dimensionType": "${dimensionType}"
 })
 \`\`\`
 
-## Step 3: Breakdown Report
+## Step 3: Geo, demographic and device breakdowns
 
-Add demographic and contextual breakdowns to your report:
+\`snapchat_get_report_breakdowns\` takes one \`reportDimension\` and sends it as Snapchat's \`report_dimension\`:
 
 \`\`\`json
 snapchat_get_report_breakdowns({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["campaign_id"],
-  "breakdowns": ["gender", "age"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+  "fields": ["impressions", "swipes", "spend"],
+  "reportDimension": "age,gender",
+  "datePreset": "LAST_30_DAYS",
+  "granularity": "TOTAL",
+  "dimensionType": "${dimensionType}"
 })
 \`\`\`
 
-## Step 4: Video Engagement Report
+| Category | \`reportDimension\` | Metrics |
+|----------|-------------------|---------|
+| Geo | \`country\`, \`country,os\` | delivery + conversion |
+| Geo | \`region\`, \`dma\` | delivery only |
+| Demographic | \`gender\`, \`age\`, \`age,gender\` | delivery + conversion |
+| Device | \`os\`, \`os,country\` | delivery + conversion |
+| Device | \`make\` | delivery only |
+| Interest | \`lifestyle_category\` | delivery only |
+
+One dimension per request, except age with gender. \`HOUR\` granularity cannot be combined with a dimension. region, dma, make and lifestyle_category return delivery metrics only (no conversion metrics).
+
+## Step 4: Video engagement
 
 \`\`\`json
 snapchat_get_report({
   "adAccountId": "${adAccountId}",
-  "dimensions": ["ad_id"],
-  "metrics": [
-    "impressions", "video_play_actions", "video_watched_2s",
-    "video_watched_6s", "video_views_p25", "video_views_p50",
-    "video_views_p75", "video_views_p100"
-  ],
-  "startDate": "2026-02-01",
-  "endDate": "2026-03-07"
+  "fields": ["impressions", "video_views", "quartile_1", "quartile_2", "quartile_3", "view_completion"],
+  "datePreset": "LAST_7_DAYS",
+  "granularity": "TOTAL",
+  "dimensionType": "AD"
 })
 \`\`\`
 
-## Resource References
+## Common metric fields
 
-- Fetch \`reporting-reference://snapchat\` for full metrics and dimensions list
-- Fetch \`entity-hierarchy://snapchat/all\` for entity relationships
-
-## Common Dimensions
-
-| Dimension | Level |
-|-----------|-------|
-| \`campaign_id\` | Campaign |
-| \`adgroup_id\` | Ad Group |
-| \`ad_id\` | Ad |
-| \`stat_time_day\` | Daily breakdown |
-| \`stat_time_hour\` | Hourly breakdown |
-
-## Common Metrics
-
-| Metric | Description |
-|--------|-------------|
-| \`impressions\` | Total impressions |
-| \`clicks\` | Total clicks |
-| \`spend\` | Total spend (account currency) |
-| \`ctr\` | Click-through rate |
-| \`cpc\` | Cost per click |
-| \`conversions\` | Total conversions |
-| \`cost_per_conversion\` | CPA |
-| \`video_play_actions\` | Video starts |
-| \`video_watched_2s\` | 2-second video views |
-| \`video_watched_6s\` | 6-second video views |
+| Field | Description |
+|-------|-------------|
+| \`impressions\` | Paid impressions |
+| \`swipes\` | Swipe-ups (Snapchat's click) |
+| \`spend\` | Spend in **micro-currency** (1,000,000 = 1.00 of the account currency) |
+| \`video_views\` | Video views (2s of watch time or a swipe up) |
+| \`quartile_1\` / \`quartile_2\` / \`quartile_3\` | Video views to 25% / 50% / 75% |
+| \`view_completion\` | Video views to completion |
+| \`conversion_purchases\` | Purchase conversions |
 
 ## Tips
 
-- Reports may take **30 seconds to several minutes** depending on date range and data volume
-- Data has a **24-48 hour lag** for finalized metrics
-- Max date range per report is **180 days**
-- Budget and spend values are in **account currency** (not cents, not micros)
+- Metrics are finalized 48 hours after the end of the day in the account's timezone
+- Very large requests can time out: prefer \`snapchat_submit_report\` and poll with \`snapchat_check_report_status\`
+- Fetch \`reporting-reference://snapchat\` for the full field list
+- Fetch \`entity-hierarchy://snapchat/all\` for entity relationships
 `;
 }

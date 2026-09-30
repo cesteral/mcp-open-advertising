@@ -15,7 +15,8 @@ export const campaignSetupWorkflowPrompt: Prompt = {
     },
     {
       name: "objective",
-      description: "Campaign objective (e.g., AWARENESS, APP_INSTALLS, WEBSITE_CONVERSIONS)",
+      description:
+        "Campaign objective type: AWARENESS_AND_ENGAGEMENT, APP_PROMOTION, TRAFFIC, or SALES (sent as objective_v2_properties.objective_v2_type)",
       required: false,
     },
   ],
@@ -23,7 +24,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
-  const objective = args?.objective || "AWARENESS";
+  const objective = args?.objective || "AWARENESS_AND_ENGAGEMENT";
 
   return `# Snapchat Campaign Setup Workflow
 
@@ -39,22 +40,25 @@ snapchat_create_entity({
   "adAccountId": "${adAccountId}",
   "data": {
     "name": "Your Campaign Name",
-    "objective": "${objective}",
+    "objective_v2_properties": { "objective_v2_type": "${objective}" },
     "status": "PAUSED",
     "ad_account_id": "${adAccountId}",
+    "start_time": "2026-01-01T00:00:00Z",
     "daily_budget_micro": 50000000
   }
 })
 \`\`\`
 
-**Campaign Objectives:** AWARENESS, APP_INSTALLS, DRIVE_REPLAY, LEAD_GENERATION, WEBSITE_CONVERSIONS, PRODUCT_CATALOG_SALES, VIDEO_VIEWS
+**Campaign Objective Types** (\`objective_v2_properties.objective_v2_type\`): AWARENESS_AND_ENGAGEMENT, APP_PROMOTION, TRAFFIC, SALES. For APP_PROMOTION add \`"promotion_type": "APP_INSTALL"\`.
+
+⚠️ **GOTCHA: Do not send the legacy \`objective\` attribute.** Snap auto-translates it (from 2025-03-21) but \`objective_v2_properties\` is the documented field.
 
 ⚠️ **GOTCHA: Budgets are in micro-currency (1 USD = 1,000,000). $50/day → daily_budget_micro: 50000000**
 
 ## Step 2: Create Ad Squad (Ad Group)
 
 ⚠️ **GOTCHA: Ad groups in Snapchat are called "Ad Squads" (entity type "adGroup" maps to API path /adsquads)**
-⚠️ **GOTCHA: Ad squad list path uses campaignId (/v1/campaigns/{id}/adsquads) but create path uses adAccountId**
+⚠️ **GOTCHA: Ad squad list and create routes both use the parent campaign (/v1/campaigns/{campaignId}/adsquads) — pass \`campaignId\` (or \`campaign_id\` in \`data\`); \`adAccountId\` is still required for account scoping**
 
 \`\`\`json
 snapchat_create_entity({
@@ -64,16 +68,23 @@ snapchat_create_entity({
     "name": "18-35 Female Audience",
     "campaign_id": "CAMPAIGN_ID_FROM_STEP_1",
     "status": "ACTIVE",
+    "type": "SNAP_ADS",
+    "placement_v2": { "config": "AUTOMATIC", "platforms": ["SNAPCHAT"] },
+    "billing_event": "IMPRESSION",
+    "bid_strategy": "LOWEST_COST_WITH_MAX_BID",
     "daily_budget_micro": 10000000,
     "bid_micro": 1000000,
-    "optimization_goal": "SWIPE",
-    "placement": "SNAP_ADS"
+    "optimization_goal": "SWIPES",
+    "targeting": { "geos": [{ "country_code": "us" }] }
   }
 })
 \`\`\`
 
-**Optimization Goals:** SWIPE, PIXEL_PAGE_VIEW, APP_INSTALL, VIDEO_VIEWS, STORY_OPENS
-**Placement Options:** SNAP_ADS, AUDIENCE_NETWORK, BOTH
+**Optimization Goals:** IMPRESSIONS, SWIPES, APP_INSTALLS, VIDEO_VIEWS, PIXEL_PURCHASE (see the \`snapchat_validate_entity\` tool and \`entity-schema://snapchat/adGroup\` for more)
+**Bid Strategies:** AUTO_BID, LOWEST_COST_WITH_MAX_BID, TARGET_COST (\`bid_micro\` is required for the last two)
+**Placement (\`placement_v2\`, required):** \`config\` is AUTOMATIC or CUSTOM; \`snapchat_positions\` (INTERSTITIAL_USER, INTERSTITIAL_CONTENT, INTERSTITIAL_SPOTLIGHT, INSTREAM, PUBLIC_STORIES_INSTREAM, CHAT_FEED, FEED, CAMERA, POST_CAPTURE_CAROUSEL) only with CUSTOM.
+
+⚠️ **GOTCHA: The legacy \`placement\` attribute (SNAP_ADS / AUDIENCE_NETWORK / BOTH) is rejected** — every ad squad must use \`placement_v2\`.
 
 ## Step 3: Create Creative
 
@@ -121,7 +132,7 @@ snapchat_create_entity({
 
 - ⚠️ Budgets are in micro-currency (1 USD = 1,000,000). $50/day → daily_budget_micro: 50000000
 - ⚠️ Ad groups are called "Ad Squads" in Snapchat — entity type "adGroup" maps to /adsquads in the API
-- ⚠️ Ad squad list path uses campaignId (/v1/campaigns/{id}/adsquads) but create path uses adAccountId
+- ⚠️ Ad squad list and create routes both use campaignId (/v1/campaigns/{id}/adsquads)
 - ⚠️ Creative must be uploaded/created before creating an Ad (creative_id required)
 - ⚠️ Reporting has a 24-48h lag for finalized data
 `;

@@ -56,7 +56,7 @@ describe("snapchat_create_entity tool", () => {
           adAccountId: "1234567890",
           data: {
             name: "Test Campaign",
-            objective: "WEB_CONVERSION",
+            objective_v2_properties: { objective_v2_type: "SALES" },
             status: "ACTIVE",
             daily_budget_micro: 100000000,
           },
@@ -73,7 +73,7 @@ describe("snapchat_create_entity tool", () => {
         { adAccountId: "1234567890" },
         {
           name: "Test Campaign",
-          objective: "WEB_CONVERSION",
+          objective_v2_properties: { objective_v2_type: "SALES" },
           status: "ACTIVE",
           daily_budget_micro: 100000000,
         },
@@ -93,7 +93,7 @@ describe("snapchat_create_entity tool", () => {
           data: {
             name: "Test Ad Group",
             type: "SNAP_ADS",
-            placement: "CONTENT",
+            placement_v2: { config: "AUTOMATIC", platforms: ["SNAPCHAT"] },
             daily_budget_micro: 50000000,
             status: "ACTIVE",
             optimization_goal: "IMPRESSIONS",

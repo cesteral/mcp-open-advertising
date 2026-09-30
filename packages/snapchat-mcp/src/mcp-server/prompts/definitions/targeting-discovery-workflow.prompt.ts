@@ -111,19 +111,12 @@ Filter by type:
 
 ## Step 3: Build Ad Group Targeting
 
-Combine your research into an ad group payload:
+Combine your research into the ad squad's \`targeting\` object:
 
 \`\`\`json
 {
-  "age": ["AGE_18_24", "AGE_25_34", "AGE_35_44"],
-  "gender": ["GENDER_UNLIMITED"],
-  "location_ids": ["US", "GB"],
-  "interest_keyword_ids": ["123456", "789012"],
-  "operating_systems": ["IOS", "ANDROID"],
-  "placement_type": "PLACEMENT_TYPE_NORMAL",
-  "bid_type": "BID_TYPE_CUSTOM",
-  "bid_price": 0.5,
-  "optimize_goal": "CLICK"
+  "geos": [{ "country_code": "us" }, { "country_code": "gb" }],
+  "interests": [{ "category_id": ["SLC_1"], "operation": "INCLUDE" }]
 }
 \`\`\`
 
@@ -131,17 +124,12 @@ Combine your research into an ad group payload:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| \`age\` | Array | Age groups: AGE_13_17 through AGE_55_PLUS |
-| \`gender\` | Array | GENDER_MALE, GENDER_FEMALE, GENDER_UNLIMITED |
-| \`location_ids\` | Array | Country codes or location IDs |
-| \`interest_keyword_ids\` | Array | Interest keyword IDs from search |
-| \`operating_systems\` | Array | IOS, ANDROID |
-| \`placement_type\` | String | PLACEMENT_TYPE_NORMAL (auto), PLACEMENT_TYPE_SEARCH |
-| \`bid_price\` | Number | Bid in account currency |
+| \`geos\` | Array | \`{ "country_code": "us" }\` entries (lowercase ISO codes) |
+| \`interests\` | Array | \`{ "category_id": [...], "operation": "INCLUDE" }\` with IDs from \`snapchat_search_targeting\` |
 
-⚠️ **GOTCHA**: Age group values are enum strings — use exact values like \`AGE_18_24\`, not ranges like \`18-24\`.
+Other targeting dimensions (demographics, devices, ...) are discovered with \`snapchat_get_targeting_options\`.
 
-⚠️ **GOTCHA**: Location IDs can be country codes (e.g., "US") or numeric IDs for cities/regions — use \`snapchat_search_targeting\` to find valid values.
+⚠️ **GOTCHA**: Use the exact IDs returned by \`snapchat_search_targeting\` / \`snapchat_get_targeting_options\` — do not invent category IDs.
 
 ---
 
@@ -155,25 +143,25 @@ Before creating the ad group, verify your targeting reaches a viable audience:
   "params": {
     "adAccountId": "${adAccountId}",
     "targetingConfig": {
-      "age": ["AGE_18_24", "AGE_25_34"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US"],
-      "interest_keyword_ids": ["123456"]
+      "targeting": {
+        "geos": [{ "country_code": "us" }],
+        "interests": [{ "category_id": ["SLC_1"], "operation": "INCLUDE" }]
+      }
     }
   }
 }
 \`\`\`
 
 Interpret results:
-- **Too narrow** (< 50K reach) → Broaden age groups or add more interests
-- **Too broad** (> 100M reach) → Add more specific interests or narrow demographics
+- **Too narrow** (< 50K reach) → Broaden the geos or add more interests
+- **Too broad** (> 100M reach) → Add more specific interests or narrow the audience
 - **Sweet spot**: 1M–50M for most Snapchat campaigns
 
 ---
 
 ## Step 5: Apply to Ad Group
 
-Use the targeting when creating or updating an ad group:
+Use the targeting when creating or updating an ad group (ad squad):
 
 \`\`\`json
 {
@@ -181,28 +169,30 @@ Use the targeting when creating or updating an ad group:
   "params": {
     "entityType": "adGroup",
     "adAccountId": "${adAccountId}",
+    "campaignId": "{campaignId}",
     "data": {
-      "campaign_id": "{campaignId}",
-      "adgroup_name": "US Fitness Enthusiasts 18-34",
-      "placement_type": "PLACEMENT_TYPE_NORMAL",
-      "budget_mode": "BUDGET_MODE_DAY",
-      "budget": 50,
-      "schedule_type": "SCHEDULE_START_END",
-      "schedule_start_time": "2026-03-10 00:00:00",
-      "schedule_end_time": "2026-12-31 23:59:59",
-      "optimize_goal": "CLICK",
-      "bid_type": "BID_TYPE_CUSTOM",
-      "bid_price": 0.5,
-      "age": ["AGE_18_24", "AGE_25_34"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US"],
-      "interest_keyword_ids": ["123456"]
+      "name": "US Fitness Enthusiasts",
+      "status": "PAUSED",
+      "type": "SNAP_ADS",
+      "placement_v2": { "config": "AUTOMATIC", "platforms": ["SNAPCHAT"] },
+      "billing_event": "IMPRESSION",
+      "bid_strategy": "LOWEST_COST_WITH_MAX_BID",
+      "bid_micro": 1000000,
+      "optimization_goal": "IMPRESSIONS",
+      "daily_budget_micro": 50000000,
+      "start_time": "2026-03-10T00:00:00Z",
+      "targeting": {
+        "geos": [{ "country_code": "us" }],
+        "interests": [{ "category_id": ["SLC_1"], "operation": "INCLUDE" }]
+      }
     }
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are in **account currency** — \`budget: 50\` means $50.00.
+⚠️ **GOTCHA**: Budget and bid values are in **micro-currency** — \`daily_budget_micro: 50000000\` means $50.00.
+
+⚠️ **GOTCHA**: \`placement_v2\` is required on every ad squad; the legacy \`placement\` attribute is rejected.
 
 ---
 

@@ -5,7 +5,6 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import {
-  resolveDatePreset,
   DATE_PRESET_VALUES,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -50,19 +49,19 @@ export const SubmitReportInputSchema = z
       .enum(DATE_PRESET_VALUES)
       .optional()
       .describe(
-        "Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"
+        "Preset date range. Use this OR startTime+endTime (not both). Resolved to the ad account's day boundaries (local midnight to local midnight after the last day, in the account's timezone, which is read from the account)"
       ),
     startTime: z
       .string()
       .optional()
       .describe(
-        "Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"
+        "Start time in ISO 8601 format, required if datePreset not provided. Must be on the start of an hour; for DAY granularity it must be the ad account's day boundary, i.e. local midnight with the account's UTC offset (e.g. 2024-01-01T00:00:00-08:00). A date-only value (2024-01-01) is also accepted"
       ),
     endTime: z
       .string()
       .optional()
       .describe(
-        "End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"
+        "End time in ISO 8601 format, required if datePreset not provided. Same rules as startTime, and exclusive: to include 2024-01-31 end at the next midnight (2024-02-01T00:00:00-08:00)"
       ),
     granularity: z
       .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
@@ -139,9 +138,10 @@ export async function submitReportLogic(
   let resolvedStartTime = input.startTime;
   let resolvedEndTime = input.endTime;
   if (input.datePreset) {
-    const { startDate, endDate } = resolveDatePreset(input.datePreset);
-    resolvedStartTime = `${startDate}T00:00:00Z`;
-    resolvedEndTime = `${endDate}T23:59:59Z`;
+    // Snap measures days in the ad account's timezone (local midnight to local
+    // midnight after the last day), so the preset is resolved there.
+    ({ start_time: resolvedStartTime, end_time: resolvedEndTime } =
+      await snapchatReportingService.resolveDatePresetRange(input.datePreset, context));
   }
 
   const result = await snapchatReportingService.submitReport(

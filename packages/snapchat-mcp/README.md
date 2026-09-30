@@ -51,17 +51,15 @@ equal the session's ad account. Writes accept `dry_run: true`.
 >
 > `spend` is micro-currency (1,000,000 = 1.00 of the account currency). With `includeComputedMetrics`, `snapchat_get_report` and `snapchat_get_report_breakdowns` convert it before computing CPA/CPM/CPC/ROAS.
 
-| Tool                             | Purpose                                            | Key parameters                                                                                                                                                           |
-| -------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `snapchat_get_report`            | Submit, poll and download an async stats report    | `fields`, `datePreset` or `startTime`+`endTime`, `granularity` (`TOTAL`/`DAY`/`HOUR`/`LIFETIME`), `dimensionType` (`CAMPAIGN`/`AD_SQUAD`/`AD`), `includeComputedMetrics` |
-| `snapchat_get_report_breakdowns` | Same, with extra `breakdowns` appended to `fields` | as above + `breakdowns`                                                                                                                                                  |
-| `snapchat_submit_report`         | Submit without waiting                             | `fields`, dates, `granularity`, `dimensionType`                                                                                                                          |
-| `snapchat_check_report_status`   | One status check                                   | `taskId`                                                                                                                                                                 |
-| `snapchat_download_report`       | Download and parse a finished report CSV           | `downloadUrl`, `storeRawCsv`                                                                                                                                             |
+| Tool                             | Purpose                                                             | Key parameters                                                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `snapchat_get_report`            | Submit, poll and download an async stats report                     | `fields`, `datePreset` or `startTime`+`endTime`, `granularity` (`TOTAL`/`DAY`/`HOUR`/`LIFETIME`), `dimensionType` (`CAMPAIGN`/`AD_SQUAD`/`AD`), `includeComputedMetrics` |
+| `snapchat_get_report_breakdowns` | Same, split by a geo/demographic/device/interest `report_dimension` | as above + `reportDimension` (`country`, `region`, `dma`, `gender`, `age`, `age,gender`, `os`, `make`, `lifestyle_category`, `country,os`, `os,country`)                 |
+| `snapchat_submit_report`         | Submit without waiting                                              | `fields`, dates, `granularity`, `dimensionType`                                                                                                                          |
+| `snapchat_check_report_status`   | One status check                                                    | `taskId`                                                                                                                                                                 |
+| `snapchat_download_report`       | Download and parse a finished report CSV                            | `downloadUrl`, `storeRawCsv`                                                                                                                                             |
 
-Known gaps (unverified — Snapchat's docs host is unreachable from this repo): `datePreset` resolves to UTC day
-bounds, while Snapchat is reported to require ad-account-timezone boundaries for `DAY` granularity; and
-demographic/geo breakdowns are sent inside `fields` rather than Snapchat's `report_dimension` parameter.
+**Time ranges.** Snapchat measures days in the ad account's timezone and requires `DAY`-granularity `start_time`/`end_time` on that day boundary, on the start of an hour. `datePreset` reads the account's timezone (once per session) and resolves to local midnight, with `end_time` at the midnight after the last day. Explicit `startTime`/`endTime` are sent as given, and a `DAY`/`HOUR` timestamp with minutes or seconds off the hour is refused before any request. `reportDimension` is sent as Snapchat's `report_dimension` parameter; `HOUR` granularity cannot be combined with it, and region, dma, make and lifestyle_category return delivery metrics only. Both rules are from Snapchat's Measurement docs, read 2026-09-30.
 
 ### Bulk Operations and Bids
 

@@ -41,6 +41,10 @@ beforeEach(() => {
     snapchatReportingService: {
       getReport: mockGetReport,
       getReportBreakdowns: mockGetReportBreakdowns,
+      resolveDatePresetRange: vi.fn().mockResolvedValue({
+        start_time: "2026-03-01T00:00:00-08:00",
+        end_time: "2026-03-08T00:00:00-08:00",
+      }),
     },
     boundAdAccountId: "acct_1",
   } as any);
@@ -109,7 +113,7 @@ describe("Snapchat computed report metrics (spend is micro-currency)", () => {
       {
         adAccountId: "acct_1",
         fields: ["spend", "swipes"],
-        breakdowns: ["gender"],
+        reportDimension: "gender",
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
         includeComputedMetrics: true,

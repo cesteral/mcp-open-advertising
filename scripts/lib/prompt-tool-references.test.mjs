@@ -56,11 +56,21 @@ const IDENTITY_SCHEMA = {
   safeParse: (value) => ({ success: true, data: value }),
 };
 
+/**
+ * Platform API field names that happen to start with a platform prefix. They are
+ * real request fields, not tool references, and cannot be renamed. An entry
+ * here must be a field the platform's own API defines; a tool name never
+ * belongs in it (the unit test below pins that).
+ */
+export const PLATFORM_FIELD_TOKENS = new Map([
+  ["snapchat_positions", "field of the ad squad `placement_v2` object in Snap's Ads API (#233)"],
+]);
+
 /** Tool-shaped tokens in `text` that are neither a known tool nor a known prompt. */
 export function unknownToolReferences(text, knownNames) {
   const unknown = new Set();
   for (const match of text.matchAll(TOOL_TOKEN)) {
-    if (!knownNames.has(match[0])) unknown.add(match[0]);
+    if (!knownNames.has(match[0]) && !PLATFORM_FIELD_TOKENS.has(match[0])) unknown.add(match[0]);
   }
   return [...unknown].sort();
 }
@@ -76,6 +86,22 @@ describe("unknownToolReferences", () => {
       )
     ).toEqual(["pinterest_get_audience_estimate"]);
   });
+
+  it("ignores a listed platform API field but still flags a tool-shaped look-alike", () => {
+    expect(unknownToolReferences("set snapchat_positions in placement_v2", known)).toEqual([]);
+    expect(unknownToolReferences("call snapchat_get_positions", known)).toEqual([
+      "snapchat_get_positions",
+    ]);
+  });
+
+  it("never lists a registered tool name as a platform field", async () => {
+    const { names } = await collectFleet();
+    for (const token of PLATFORM_FIELD_TOKENS.keys()) {
+      expect(names.has(token), `${token} is a tool; remove it from PLATFORM_FIELD_TOKENS`).toBe(
+        false
+      );
+    }
+  }, 120_000);
 
   it("ignores unprefixed words, env vars and registered names", () => {
     expect(

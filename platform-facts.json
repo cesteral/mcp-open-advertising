@@ -581,6 +581,48 @@
       "codeRefs": ["packages/snapchat-mcp/src/config/index.ts:30"]
     },
     {
+      "id": "snapchat.stats_report_dimension",
+      "package": "snapchat-mcp",
+      "class": "behavioral-constraint",
+      "claim": "The stats endpoint takes insight breakdowns (geo, demographic, device, interest) as the `report_dimension` query parameter, not inside `fields`: country, region, dma, country,os, gender, age, age,gender, os, os,country, make, lifestyle_category. One dimension at a time except age with gender; HOUR granularity cannot be combined with it; region/dma/make/lifestyle_category are delivery-metrics only. It replaced `dimension`/`pivots` (deprecated 2020-03-20, sunset 2020-06-20). Read first-hand from the raw page, 2026-09-30.",
+      "value": "report_dimension",
+      "sourceUrl": "https://developers.snap.com/api/marketing-api/Ads-API/measurement",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/snapchat-mcp/src/services/snapchat/snapchat-reporting-service.ts:101"]
+    },
+    {
+      "id": "snapchat.stats_day_bounds_account_timezone",
+      "package": "snapchat-mcp",
+      "class": "behavioral-constraint",
+      "claim": "With DAY granularity start_time and end_time are required and must be the daily boundary for the timezone of the Ad Account, on the start of an hour; Snap's own examples end a one-day query at the next midnight (start 2020-01-25T00:00:00-08:00, end 2020-01-26T00:00:00-08:00). Read first-hand from the raw page, 2026-09-30.",
+      "value": "accountDayRange",
+      "sourceUrl": "https://developers.snap.com/api/marketing-api/Ads-API/measurement",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/snapchat-mcp/src/utils/report-time.ts:83"]
+    },
+    {
+      "id": "snapchat.campaign_objective_v2",
+      "package": "snapchat-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Campaign create takes `objective_v2_properties` ({ objective_v2_type: AWARENESS_AND_ENGAGEMENT | APP_PROMOTION | TRAFFIC | SALES, promotion_type? }), which replaces the legacy `objective`. The legacy field is not rejected: from 2025-03-21 a translator service assigns objective_v2_properties to campaigns created with only `objective`. Ad squads require `placement_v2`; the old `placement` attribute is no longer accepted (breaking-changes log: all Ad Squads must use placement_v2, sunset 2020-06-20). Read first-hand from the raw pages, 2026-09-30.",
+      "value": "objective_v2_properties",
+      "sourceUrl": "https://developers.snap.com/api/marketing-api/Ads-API/campaigns",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": false,
+      "codeRefs": ["packages/snapchat-mcp/src/services/snapchat/types.ts:78"]
+    },
+    {
       "id": "tiktok.rate_limit_default",
       "package": "tiktok-mcp",
       "class": "behavioral-constraint",

@@ -216,8 +216,8 @@ Best for: E-commerce, lifestyle, food/beauty brands — high visual discovery an
 Use the \`snapchat_campaign_setup_workflow\` prompt for detailed guidance.
 
 Key steps:
-1. Create Campaign with objective and budget
-2. Create Ad Squad (Ad Group) with targeting and placement
+1. Create Campaign with \`objective_v2_properties\` (objective_v2_type: AWARENESS_AND_ENGAGEMENT, APP_PROMOTION, TRAFFIC or SALES) and budget
+2. Create Ad Squad (Ad Group) with targeting and \`placement_v2\` (required)
 3. Upload creative via \`snapchat_upload_image\` or \`snapchat_upload_video\`
 4. Create Ads referencing the creative
 5. Activate via \`snapchat_bulk_update_status\`
