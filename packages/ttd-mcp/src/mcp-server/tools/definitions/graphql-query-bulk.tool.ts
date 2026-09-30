@@ -29,7 +29,9 @@ const TOOL_DESCRIPTION = `Submit a bulk GraphQL query job to The Trade Desk (\`c
 
 Runs a GraphQL query as an async bulk job and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`. Jobs can end SUCCESS, PARTIAL_SUCCESS, FAILURE or CANCELLED.
 
-> **Unverified:** this tool sends \`variables\` as \`queryVariables\` (one JSON-encoded string) so the query runs once per variable set. TTD's published bulk samples submit \`createQueryBulk\` with \`query\` only and never show a variable-set field, so this binding has not been confirmed against TTD.
+**Omit \`variables\`** to submit exactly what TTD documents: \`createQueryBulk(input: { query })\`, with any IDs written into the query itself. TTD's published samples and its Workflows SDKs (Python, Go, Java) all submit a query this way.
+
+> **Unverified:** with \`variables\`, this tool also sends them as \`queryVariables\` (one JSON-encoded string) so the query runs once per variable set. No TTD source shows that field, so it may be rejected.
 
 ### Constraints
 - **Concurrency:** max 10 active jobs / 20 queued jobs per partner
@@ -44,7 +46,7 @@ query Advertiser($id: ID!) {
   }
 }
 \`\`\`
-With variables: \`[{ "id": "adv1" }, { "id": "adv2" }, { "id": "adv3" }]\``;
+With variables (the unverified binding above): \`[{ "id": "adv1" }, { "id": "adv2" }, { "id": "adv3" }]\``;
 
 const CREATE_QUERY_BULK_MUTATION = `mutation CreateQueryBulk($input: CreateQueryBulkInput!) {
   createQueryBulk(input: $input) {
@@ -58,11 +60,17 @@ const CREATE_QUERY_BULK_MUTATION = `mutation CreateQueryBulk($input: CreateQuery
 
 export const GraphqlQueryBulkInputSchema = z
   .object({
-    query: z.string().min(1).describe("GraphQL query string to execute for each variable set"),
+    query: z
+      .string()
+      .min(1)
+      .describe("GraphQL query string. Without `variables`, write the IDs into the query itself."),
     variables: z
       .array(z.record(z.any()))
       .min(1)
-      .describe("Array of variable objects — one per entity"),
+      .optional()
+      .describe(
+        "Optional variable sets, one per entity. Sent as `queryVariables`, which no TTD source shows (unverified). Omit it to send TTD's documented `{ query }` input only."
+      ),
     betaFeatures: z
       .string()
       .optional()
@@ -159,15 +167,17 @@ export async function graphqlQueryBulkLogic(
 
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  // UNVERIFIED binding: TTD's samples (thetradedesk/platform, e.g.
-  // Python/FirstPartyData/GetAdvertiserFirstPartyDataBatchedGQL.py:99-104) send
-  // `createQueryBulk(input: { query })` only; the Workflows SDK's query-job input
-  // (graphqlqueryjobinput.py:21-29) has no variables either. Nothing published
-  // shows `queryVariables` or its encoding — left as-is pending a sandbox run.
+  // Documented shape: TTD's samples (thetradedesk/platform, e.g.
+  // Python/FirstPartyData/GetAdvertiserFirstPartyDataBatchedGQL.py:99-104 and
+  // Python/ThirdPartyData/GetAllThirdPartyDataForPartnerWithCallbackGQL.py:112-123)
+  // send `createQueryBulk(input: { query })`, and the Workflows SDKs' query-job
+  // input (Python graphqlqueryjobinput.py, Go graphqlqueryjobinput.go) has
+  // `query` plus an optional callback and nothing else. `queryVariables` is
+  // UNVERIFIED and is sent only when the caller passes variables.
   const variables = {
     input: {
       query: input.query,
-      queryVariables: JSON.stringify(input.variables),
+      ...(input.variables ? { queryVariables: JSON.stringify(input.variables) } : {}),
     },
   };
 
@@ -185,7 +195,7 @@ export async function graphqlQueryBulkLogic(
       job_kind: "query",
       job_id: job.id,
       status: job.status,
-      variable_sets: input.variables.length,
+      variable_sets: input.variables?.length ?? 0,
     },
   };
 
@@ -200,15 +210,16 @@ export async function graphqlQueryBulkLogic(
 
 /**
  * Symbolic effect dry-run for `graphql_query_bulk`. TTD has no native bulk-job
- * preview, so validation is symbolic: the query must be non-empty and at least
- * one variable set is required (both already enforced by the input schema, so a
- * well-formed call always passes). The projected effect is a bulk query job
- * over the supplied variable sets. Pure (no I/O); never includes the raw query.
+ * preview, so validation is symbolic: the query must be non-empty and, when
+ * given, `variables` must hold at least one set (both enforced by the input
+ * schema, so a well-formed call always passes). The projected effect is a bulk
+ * query job over the supplied variable sets (0 when the query carries its own
+ * IDs). Pure (no I/O); never includes the raw query.
  */
 function buildQueryBulkEffectDryRun(input: GraphqlQueryBulkInput): EffectDryRunResult {
   const expectedEffect: EffectResult = {
     effectKind: "bulk_job_submitted",
-    summary: { job_kind: "query", variable_sets: input.variables.length },
+    summary: { job_kind: "query", variable_sets: input.variables?.length ?? 0 },
   };
 
   return assertGovernedEffectDryRun(
@@ -275,6 +286,13 @@ export const graphqlQueryBulkTool = {
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
+    {
+      label: "Bulk query a partner's third-party data (TTD's documented query-only shape)",
+      input: {
+        query:
+          'query { partner(id: "ptn123abc") { thirdPartyData { nodes { id name providerId buyable fullPath } } } }',
+      },
+    },
     {
       label: "Bulk query details for multiple advertisers",
       input: {

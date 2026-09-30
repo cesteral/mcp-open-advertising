@@ -31,9 +31,14 @@ import {
 } from "../../src/mcp-server/tools/definitions/graphql-cancel-bulk-job.tool.js";
 import {
   classifyBulkJobStatus,
+  countGraphqlLexicalTokens,
   describePayloadErrors,
+  mutationBulkProductionRefusal,
   normalizeGqlErrors,
 } from "../../src/mcp-server/tools/utils/graphql-bulk-job.js";
+
+const SANDBOX_GRAPHQL = "https://ext-api.sb.thetradedesk.com/graphql";
+const PRODUCTION_GRAPHQL = "https://desk.thetradedesk.com/graphql";
 
 function createMockContext() {
   return {
@@ -48,13 +53,15 @@ function createMockSdkContext(sessionId = "session-123") {
 }
 
 describe("ttd graphql bulk tools", () => {
-  let mockTtdService: Record<string, ReturnType<typeof vi.fn>>;
+  let mockTtdService: { graphqlQuery: ReturnType<typeof vi.fn>; graphqlEndpoint: string };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
 
     mockTtdService = {
       graphqlQuery: vi.fn(),
+      graphqlEndpoint: SANDBOX_GRAPHQL,
     };
 
     mockResolveSessionServices.mockReturnValue({
@@ -214,34 +221,39 @@ describe("ttd graphql bulk tools", () => {
       );
     });
 
-    it("rejects > 1000 inputs", () => {
-      const inputs = Array.from({ length: 1001 }, (_, i) => ({ id: `e${i}` }));
+    it("accepts 100 inputs and rejects 101 (the cap while the operation is unverified)", () => {
+      const inputs = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `e${i}` }));
+      expect(
+        GraphqlMutationBulkInputSchema.safeParse({
+          mutation: "mutation { foo }",
+          inputs: inputs(100),
+        }).success
+      ).toBe(true);
       const result = GraphqlMutationBulkInputSchema.safeParse({
         mutation: "mutation { foo }",
-        inputs,
+        inputs: inputs(101),
       });
-
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const maxIssue = result.error.issues.find(
-          (i) => i.code === "too_big" || i.message.includes("1000")
-        );
-        expect(maxIssue).toBeDefined();
-      }
+      expect(result.error?.issues.some((i) => i.code === "too_big")).toBe(true);
     });
 
-    it("rejects mutation string > 60,000 chars (token limit proxy)", () => {
-      const longMutation = "mutation { " + "x".repeat(60_001) + " }";
-      const result = GraphqlMutationBulkInputSchema.safeParse({
-        mutation: longMutation,
+    it("counts the 15,000-token limit in GraphQL tokens, not characters", () => {
+      // 16,000 tokens in 32,000 characters: the old 60,000-character proxy passed this.
+      const punctuatorHeavy = "mutation { a" + "()".repeat(8_000) + " }";
+      expect(punctuatorHeavy.length).toBeLessThan(60_000);
+      const tooMany = GraphqlMutationBulkInputSchema.safeParse({
+        mutation: punctuatorHeavy,
         inputs: [{ id: "e1" }],
       });
+      expect(tooMany.success).toBe(false);
+      expect(tooMany.error?.issues[0].message).toMatch(/16004 GraphQL lexical tokens.*15000/);
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const tokenIssue = result.error.issues.find((i) => i.message.includes("15,000"));
-        expect(tokenIssue).toBeDefined();
-      }
+      // 60,001 characters but only 4 tokens: the old proxy rejected this.
+      const longName = "mutation { " + "x".repeat(60_001) + " }";
+      expect(
+        GraphqlMutationBulkInputSchema.safeParse({ mutation: longName, inputs: [{ id: "e1" }] })
+          .success
+      ).toBe(true);
     });
 
     it("response formatter includes non-cancelable warning", () => {
@@ -319,6 +331,125 @@ describe("ttd graphql bulk tools", () => {
   });
 
   // ── bulkJob ──
+
+  describe("graphqlMutationBulkLogic production gate (#231)", () => {
+    const call = (dry_run = false) =>
+      graphqlMutationBulkLogic(
+        {
+          mutation:
+            "mutation U($input: BidListUpdateInput!) { bidListUpdate(input: $input) { data { id } } }",
+          inputs: [{ id: "bl1" }, { id: "bl2" }],
+          dry_run,
+        },
+        createMockContext(),
+        createMockSdkContext()
+      );
+    const queued = {
+      data: { createMutationBulk: { data: { id: "77", status: "QUEUED" }, errors: [] } },
+    };
+
+    it("refuses production without the opt-in, before calling TTD", async () => {
+      mockTtdService.graphqlEndpoint = PRODUCTION_GRAPHQL;
+      await expect(call()).rejects.toThrow(
+        /disabled against production TTD.*TTD_ALLOW_UNVERIFIED_MUTATION_BULK/s
+      );
+      expect(mockTtdService.graphqlQuery).not.toHaveBeenCalled();
+    });
+
+    it("runs against production when the operator opts in", async () => {
+      mockTtdService.graphqlEndpoint = PRODUCTION_GRAPHQL;
+      vi.stubEnv("TTD_ALLOW_UNVERIFIED_MUTATION_BULK", "true");
+      mockTtdService.graphqlQuery.mockResolvedValueOnce(queued);
+      expect((await call()).jobId).toBe("77");
+    });
+
+    it.each(["false", "1", "TRUE", ""])("treats the opt-in value %j as not set", async (value) => {
+      mockTtdService.graphqlEndpoint = PRODUCTION_GRAPHQL;
+      vi.stubEnv("TTD_ALLOW_UNVERIFIED_MUTATION_BULK", value);
+      await expect(call()).rejects.toThrow(/disabled against production/);
+    });
+
+    it("runs against the sandbox with no opt-in", async () => {
+      mockTtdService.graphqlQuery.mockResolvedValueOnce(queued);
+      expect((await call()).jobId).toBe("77");
+    });
+
+    it("the dry run predicts the production refusal instead of promising success", async () => {
+      mockTtdService.graphqlEndpoint = PRODUCTION_GRAPHQL;
+      const result = await call(true);
+      expect(result.dryRun).toMatchObject({
+        wouldSucceed: false,
+        validationErrors: [{ code: "production_not_enabled" }],
+        expectedEffect: { effectKind: "bulk_job_submitted", summary: { inputs: 2 } },
+      });
+      expect(graphqlMutationBulkResponseFormatter(result)[0].text).toMatch(
+        /would be REFUSED[\s\S]*disabled against production/
+      );
+      expect(mockTtdService.graphqlQuery).not.toHaveBeenCalled();
+    });
+
+    it("the dry run reports success against the sandbox", async () => {
+      const result = await call(true);
+      expect(result.dryRun).toMatchObject({ wouldSucceed: true, validationErrors: [] });
+    });
+
+    it.each([
+      ["the sandbox", SANDBOX_GRAPHQL, undefined],
+      ["a local mock", "http://localhost:4000/graphql", undefined],
+      ["production", PRODUCTION_GRAPHQL, "disabled"],
+      ["a non-URL", "not a url", "not a URL"],
+    ])("mutationBulkProductionRefusal: %s", (_label, url, expected) => {
+      const refusal = mutationBulkProductionRefusal(url, {});
+      if (expected === undefined) expect(refusal).toBeUndefined();
+      else expect(refusal).toContain(expected);
+    });
+  });
+
+  describe("countGraphqlLexicalTokens", () => {
+    it.each([
+      ["mutation { a }", 4],
+      ["query Q($id: ID!) { a(id: $id) { b } }", 21],
+      ["{ ...Frag }", 4],
+      ["# comment\n{ a, b ,c }", 5],
+      ['{ a(s: "x \\" y") }', 8],
+      ['{ a(s: """one\n\\""" two""") }', 8],
+      ["{ a(n: -1.5e3, m: 0) }", 11],
+    ])("%j has %i tokens", (source, expected) => {
+      expect(countGraphqlLexicalTokens(source)).toBe(expected);
+    });
+
+    it("counts a character it does not recognise as one token rather than skipping it", () => {
+      expect(countGraphqlLexicalTokens("{ a ~ }")).toBe(4);
+    });
+  });
+
+  describe("graphqlQueryBulkLogic submission shape (#231)", () => {
+    const queued = {
+      data: { createQueryBulk: { data: { id: "9", status: "QUEUED" }, errors: [] } },
+    };
+
+    it("without variables sends TTD's documented input, { query } only", async () => {
+      mockTtdService.graphqlQuery.mockResolvedValueOnce(queued);
+      const query = 'query { partner(id: "p1") { id } }';
+      const result = await graphqlQueryBulkLogic(
+        { query } as any,
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(mockTtdService.graphqlQuery.mock.calls[0][1]).toEqual({ input: { query } });
+      expect(result.effect?.summary.variable_sets).toBe(0);
+    });
+
+    it("accepts a call with no variables", () => {
+      expect(GraphqlQueryBulkInputSchema.safeParse({ query: "query { a }" }).success).toBe(true);
+    });
+
+    it("the documented-shape example parses and has no variables", () => {
+      const documented = graphqlQueryBulkTool.inputExamples[0].input;
+      expect(documented).not.toHaveProperty("variables");
+      expect(GraphqlQueryBulkInputSchema.safeParse(documented).success).toBe(true);
+    });
+  });
 
   describe("graphqlBulkJobLogic", () => {
     it("queries by id and returns full job status with url", async () => {

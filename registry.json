@@ -269,7 +269,7 @@
           {
             "tool": "ttd_graphql_mutation_bulk",
             "operations": ["bulk_job"],
-            "note": "Runs up to 1000 arbitrary GraphQL mutations as one non-cancellable job, including delete/archive mutations. No tool on this server reverses them, so treat every run as potentially terminal."
+            "note": "Runs up to 100 arbitrary GraphQL mutations as one job, including delete/archive mutations. Treat the job as not cancellable. No tool on this server reverses them, so treat every run as potentially terminal. Refused against production unless the operator opts in (TTD_ALLOW_UNVERIFIED_MUTATION_BULK)."
           },
           {
             "tool": "ttd_manage_bid_list",

@@ -89,12 +89,14 @@ const unlimitedBulkCapacityCheck = (
 });
 
 describe("TTD long-tail governance contracts (effect class)", () => {
-  let svc: Record<string, ReturnType<typeof vi.fn>>;
+  let svc: Record<string, any>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
       bulkCapacityCheck: unlimitedBulkCapacityCheck,
+      // Sandbox, so ttd_graphql_mutation_bulk runs without the production opt-in (#231).
+      graphqlEndpoint: "https://ext-api.sb.thetradedesk.com/graphql",
       graphqlQuery: vi.fn(),
       archiveEntities: vi.fn(),
       createBidList: vi.fn(),

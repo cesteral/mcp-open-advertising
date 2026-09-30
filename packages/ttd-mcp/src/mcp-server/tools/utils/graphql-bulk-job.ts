@@ -27,6 +27,8 @@
  * `PARTIAL_SUCCESS` classify identically.
  */
 
+import { isTtdProductionUrl } from "../../../config/sandbox-guard.js";
+
 export type BulkJobOutcome =
   | "queued"
   | "in_progress"
@@ -153,4 +155,129 @@ export function describePayloadErrors(errors: unknown[]): string {
       return parts.join(" — ");
     })
     .join("; ");
+}
+
+/**
+ * `ttd_graphql_mutation_bulk` input cap. TTD's documented limit is said to be
+ * 1000, but nothing about `createMutationBulk` is confirmed (#231): no TTD
+ * source this repo can reach shows the operation, its input type or how an
+ * entry binds to the mutation's variables. A job is not cancellable once
+ * submitted, so the cap bounds how many writes one unverified call can start.
+ */
+export const MAX_MUTATION_BULK_INPUTS = 100;
+
+/** TTD's documented bulk mutation-string limit, in GraphQL lexical tokens. */
+export const MAX_BULK_MUTATION_TOKENS = 15_000;
+
+/** Operator opt-in for running `ttd_graphql_mutation_bulk` against production. */
+export const MUTATION_BULK_PRODUCTION_OPT_IN = "TTD_ALLOW_UNVERIFIED_MUTATION_BULK";
+
+/**
+ * Why `ttd_graphql_mutation_bulk` must not run against `graphqlUrl`, or
+ * undefined when it may.
+ *
+ * TTD's published code (the `thetradedesk/platform` samples and the Workflows
+ * SDKs for Python, Go and Java) documents `createQueryBulk(input: { query,
+ * bulkJobCallback })` and polls `bulkJob`, but never `createMutationBulk`. Its
+ * bulk-write sample uses a different flow entirely (`fileUpload`, then
+ * `bulkCreateCampaigns(input: { advertiserId, fileId })`, then `jobProgress`).
+ * So the operation this tool submits has never been confirmed, and it can
+ * start up to MAX_MUTATION_BULK_INPUTS writes that cannot be cancelled.
+ *
+ * It runs against the sandbox, or any non-TTD host (a local mock), freely.
+ * Against production it runs only when the operator sets
+ * TTD_ALLOW_UNVERIFIED_MUTATION_BULK=true. The check keys on the endpoint the
+ * session actually calls, so a sandbox flag with a production override (which
+ * the config guard already refuses) cannot slip through.
+ */
+export function mutationBulkProductionRefusal(
+  graphqlUrl: string,
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  if (env[MUTATION_BULK_PRODUCTION_OPT_IN] === "true") return undefined;
+  if (!URL.canParse(graphqlUrl)) {
+    return `ttd_graphql_mutation_bulk refused: the GraphQL endpoint (${String(graphqlUrl)}) is not a URL, so it cannot be confirmed as the sandbox.`;
+  }
+  if (!isTtdProductionUrl(graphqlUrl)) return undefined;
+  return (
+    "ttd_graphql_mutation_bulk is disabled against production TTD. The createMutationBulk " +
+    "operation it submits is not shown in any TTD source this server can check, and a " +
+    "submitted job cannot be cancelled (#231). Run it against the sandbox " +
+    "(TTD_USE_SANDBOX=true) to verify it first, or have the operator set " +
+    `${MUTATION_BULK_PRODUCTION_OPT_IN}=true to allow it in production. For writes today, ` +
+    "use ttd_graphql_query with a single mutation, or the per-entity REST tools " +
+    "(ttd_bulk_update_entities, ttd_bulk_manage_bid_lists)."
+  );
+}
+
+const GRAPHQL_PUNCTUATORS = new Set([
+  "!",
+  "$",
+  "&",
+  "(",
+  ")",
+  ":",
+  "=",
+  "@",
+  "[",
+  "]",
+  "{",
+  "|",
+  "}",
+]);
+const NAME_START = /[_A-Za-z]/;
+const NAME_CONTINUE = /[_0-9A-Za-z]/;
+const NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/;
+
+/**
+ * Count lexical tokens as the GraphQL spec (October 2021, section 2.1) defines
+ * them: punctuators (`...` is one), names, numbers and strings (block strings
+ * included) each count once; whitespace, line terminators, commas and comments
+ * are ignored. A character the lexer does not recognise counts as one token,
+ * so a malformed document is never undercounted.
+ *
+ * This replaces a 60,000-character proxy for the 15,000-token limit that was
+ * not conservative: punctuators are one character each, so 60k characters can
+ * hold far more than 15k tokens.
+ */
+export function countGraphqlLexicalTokens(source: string): number {
+  let count = 0;
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const ch = source[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r" || ch === "," || ch === "\uFEFF") {
+      i++;
+      continue;
+    }
+    if (ch === "#") {
+      while (i < n && source[i] !== "\n" && source[i] !== "\r") i++;
+      continue;
+    }
+    count++;
+    if (source.startsWith("...", i)) {
+      i += 3;
+    } else if (GRAPHQL_PUNCTUATORS.has(ch)) {
+      i++;
+    } else if (NAME_START.test(ch)) {
+      i++;
+      while (i < n && NAME_CONTINUE.test(source[i])) i++;
+    } else if (source.startsWith('"""', i)) {
+      i += 3;
+      while (i < n && !source.startsWith('"""', i)) {
+        i += source.startsWith('\\"""', i) ? 4 : 1;
+      }
+      i += 3;
+    } else if (ch === '"') {
+      i++;
+      while (i < n && source[i] !== '"' && source[i] !== "\n") {
+        i += source[i] === "\\" ? 2 : 1;
+      }
+      i++;
+    } else {
+      const number = NUMBER.exec(source.slice(i, i + 64));
+      i += number ? number[0].length : 1;
+    }
+  }
+  return count;
 }
