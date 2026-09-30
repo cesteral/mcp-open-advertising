@@ -38,6 +38,8 @@ import {
   validateProtocolVersion,
   SUPPORTED_PROTOCOL_VERSIONS,
   buildAllowedOrigins,
+  createDnsRebindingPolicy,
+  parseAllowedHosts,
   extractHeadersMap,
   validateSessionReuse,
   oauthProtectedResourceBody,
@@ -227,6 +229,8 @@ export interface TransportFactoryAppConfig {
   mcpAuthMode: string;
   mcpAuthSecretKey?: string;
   mcpAllowedOrigins?: string;
+  /** Comma-separated Host allow-list (MCP_ALLOWED_HOSTS); enforced on /mcp when set. */
+  mcpAllowedHosts?: string;
   mcpStatefulSessionTimeoutMs: number;
   gcsBucketName?: string;
   [key: string]: unknown;
@@ -314,18 +318,42 @@ export function createMcpHttpTransport(
     })
   );
 
-  // DNS rebinding protection
+  // DNS rebinding protection (#241). See `createDnsRebindingPolicy` for the
+  // posture: Host is checked against MCP_ALLOWED_HOSTS when set, else against
+  // loopback names when the server binds a loopback address; Origin against
+  // MCP_ALLOWED_ORIGINS when set, else against loopback origins on a loopback
+  // bind. A non-loopback bind (hosted Cloud Run binds 0.0.0.0) with neither
+  // allow-list keeps the previous behaviour: no Host check.
+  const dnsRebinding = createDnsRebindingPolicy({
+    bindHost: config.host,
+    allowedHosts: parseAllowedHosts(config.mcpAllowedHosts),
+    allowedOrigin,
+  });
+  if (dnsRebinding.mode === "off" && config.mcpAuthMode === "none") {
+    logger.warn(
+      { host: config.host },
+      "DNS-rebinding Host check is off: the server binds a non-loopback address with " +
+        "MCP_AUTH_MODE=none and no MCP_ALLOWED_HOSTS. Bind 127.0.0.1 or set MCP_ALLOWED_HOSTS."
+    );
+  } else {
+    logger.info({ mode: dnsRebinding.mode }, "DNS-rebinding Host check configured");
+  }
   app.use("/mcp", async (c, next) => {
     const origin = c.req.header("origin");
-    if (origin && allowedOrigin !== "*") {
-      const isAllowed = Array.isArray(allowedOrigin) && allowedOrigin.includes(origin);
-      if (!isAllowed) {
-        logger.warn(
-          { origin, allowedOrigins: allowedOrigin },
-          "Rejected request with invalid Origin header"
-        );
-        return c.json({ error: "Invalid origin. DNS rebinding protection." }, 403);
-      }
+    // `app.request()` (tests) builds a Request with no Host header; the URL's
+    // host is what @hono/node-server derives from the real header anyway.
+    const host = c.req.header("host") ?? new URL(c.req.url).host;
+    const rejected = dnsRebinding.check({ host, origin });
+    if (rejected === "origin") {
+      logger.warn(
+        { origin, allowedOrigins: allowedOrigin, mode: dnsRebinding.mode },
+        "Rejected request with invalid Origin header"
+      );
+      return c.json({ error: "Invalid origin. DNS rebinding protection." }, 403);
+    }
+    if (rejected === "host") {
+      logger.warn({ host, mode: dnsRebinding.mode }, "Rejected request with invalid Host header");
+      return c.json({ error: "Invalid host. DNS rebinding protection." }, 403);
     }
     return await next();
   });

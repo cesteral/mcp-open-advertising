@@ -51,6 +51,9 @@ export const BaseConfigSchema = z.object({
 
   // CORS Configuration
   mcpAllowedOrigins: z.string().optional(),
+  // DNS-rebinding Host allow-list (comma-separated); unset = loopback-only on a
+  // loopback bind, unchecked otherwise
+  mcpAllowedHosts: z.string().optional(),
 
   // Logging
   logLevel: z.enum(["debug", "info", "notice", "warning", "error"]).default("info"),
@@ -85,6 +88,7 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
 
     // CORS
     mcpAllowedOrigins: process.env.MCP_ALLOWED_ORIGINS,
+    mcpAllowedHosts: process.env.MCP_ALLOWED_HOSTS,
 
     // Logging
     logLevel: process.env.LOG_LEVEL,

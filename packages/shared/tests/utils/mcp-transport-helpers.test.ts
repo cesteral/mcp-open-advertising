@@ -5,6 +5,9 @@ import {
   validateProtocolVersion,
   SUPPORTED_PROTOCOL_VERSIONS,
   buildAllowedOrigins,
+  createDnsRebindingPolicy,
+  isLoopbackBindHost,
+  parseAllowedHosts,
   extractHeadersMap,
   oauthProtectedResourceBody,
   parseAuthorizationServers,
@@ -93,6 +96,156 @@ describe("buildAllowedOrigins", () => {
   it("should return empty array in production when no origins configured", () => {
     const logger = createMockLogger();
     expect(buildAllowedOrigins(undefined, "production", logger)).toEqual([]);
+  });
+});
+
+describe("DNS-rebinding policy (#241)", () => {
+  describe("isLoopbackBindHost", () => {
+    it.each(["127.0.0.1", "localhost", "::1", "[::1]", "127.0.0.2", "LOCALHOST"])(
+      "treats %s as loopback",
+      (h) => expect(isLoopbackBindHost(h)).toBe(true)
+    );
+    it.each(["0.0.0.0", "::", "10.0.0.5", "mcp.example.com", "127.evil.com"])(
+      "treats %s as non-loopback",
+      (h) => expect(isLoopbackBindHost(h)).toBe(false)
+    );
+  });
+
+  describe("parseAllowedHosts", () => {
+    it("is undefined when unset or blank, so an empty value cannot reject everything", () => {
+      expect(parseAllowedHosts(undefined)).toBeUndefined();
+      expect(parseAllowedHosts("")).toBeUndefined();
+      expect(parseAllowedHosts(" , ")).toBeUndefined();
+    });
+    it("trims and lower-cases entries", () => {
+      expect(parseAllowedHosts(" MCP.Example.com , localhost:3001")).toEqual([
+        "mcp.example.com",
+        "localhost:3001",
+      ]);
+    });
+  });
+
+  describe("loopback bind, no allow-lists (self-host default)", () => {
+    const policy = createDnsRebindingPolicy({
+      bindHost: "127.0.0.1",
+      allowedHosts: undefined,
+      allowedOrigin: "*",
+    });
+
+    it("is in loopback mode", () => expect(policy.mode).toBe("loopback"));
+
+    it.each(["localhost:3001", "127.0.0.1:3001", "[::1]:3001", "localhost", "LocalHost:3001"])(
+      "accepts Host %s",
+      (host) => expect(policy.check({ host })).toBeNull()
+    );
+
+    it.each([
+      "evil.example.com",
+      "evil.example.com:3001",
+      "evil.example.com@localhost",
+      "localhost.evil.example.com",
+      "localhost/evil",
+      "",
+    ])("rejects Host %j", (host) => expect(policy.check({ host })).toBe("host"));
+
+    it("rejects a missing Host", () => {
+      expect(policy.check({})).toBe("host");
+    });
+
+    it("accepts a loopback Origin and no Origin", () => {
+      expect(policy.check({ host: "localhost:3001", origin: "http://localhost:3001" })).toBeNull();
+      expect(policy.check({ host: "localhost:3001", origin: "http://127.0.0.1:5173" })).toBeNull();
+      expect(policy.check({ host: "localhost:3001" })).toBeNull();
+    });
+
+    it("rejects a rebinding Origin even when Host looks local", () => {
+      expect(policy.check({ host: "localhost:3001", origin: "http://evil.example.com" })).toBe(
+        "origin"
+      );
+      expect(policy.check({ host: "localhost:3001", origin: "null" })).toBe("origin");
+      expect(policy.check({ host: "localhost:3001", origin: "file://localhost" })).toBe("origin");
+    });
+
+    it("rejects the conformance rebinding request (Host and Origin evil.example.com)", () => {
+      expect(
+        policy.check({ host: "evil.example.com", origin: "http://evil.example.com" })
+      ).not.toBeNull();
+    });
+  });
+
+  describe("MCP_ALLOWED_HOSTS set", () => {
+    const policy = createDnsRebindingPolicy({
+      bindHost: "0.0.0.0",
+      allowedHosts: parseAllowedHosts("mcp.example.com,internal.example.com:8443"),
+      allowedOrigin: "*",
+    });
+
+    it("is in allowed-hosts mode even on a non-loopback bind", () => {
+      expect(policy.mode).toBe("allowed-hosts");
+    });
+
+    it("accepts a listed hostname on any port, and an exact host:port entry", () => {
+      expect(policy.check({ host: "mcp.example.com" })).toBeNull();
+      expect(policy.check({ host: "MCP.example.com:443" })).toBeNull();
+      expect(policy.check({ host: "internal.example.com:8443" })).toBeNull();
+    });
+
+    it("rejects unlisted hosts, a listed host on the wrong port, and loopback not listed", () => {
+      expect(policy.check({ host: "evil.example.com" })).toBe("host");
+      expect(policy.check({ host: "internal.example.com:9000" })).toBe("host");
+      expect(policy.check({ host: "localhost:3001" })).toBe("host");
+      expect(policy.check({})).toBe("host");
+    });
+
+    it("replaces the loopback default on a loopback bind", () => {
+      const p = createDnsRebindingPolicy({
+        bindHost: "127.0.0.1",
+        allowedHosts: parseAllowedHosts("dev.local"),
+        allowedOrigin: "*",
+      });
+      expect(p.check({ host: "dev.local:3001" })).toBeNull();
+      expect(p.check({ host: "localhost:3001" })).toBe("host");
+    });
+  });
+
+  describe("non-loopback bind, no MCP_ALLOWED_HOSTS (hosted default)", () => {
+    it("does not check Host, and keeps the Origin rules as before", () => {
+      const dev = createDnsRebindingPolicy({
+        bindHost: "0.0.0.0",
+        allowedHosts: undefined,
+        allowedOrigin: "*",
+      });
+      expect(dev.mode).toBe("off");
+      expect(dev.check({ host: "svc-abc-ew.a.run.app" })).toBeNull();
+      expect(dev.check({ host: "anything", origin: "http://evil.example.com" })).toBeNull();
+
+      // NODE_ENV=production with no MCP_ALLOWED_ORIGINS: buildAllowedOrigins → []
+      const prod = createDnsRebindingPolicy({
+        bindHost: "0.0.0.0",
+        allowedHosts: undefined,
+        allowedOrigin: [],
+      });
+      expect(prod.check({ host: "svc-abc-ew.a.run.app" })).toBeNull();
+      expect(prod.check({ host: "svc", origin: "https://app.example.com" })).toBe("origin");
+
+      const listed = createDnsRebindingPolicy({
+        bindHost: "0.0.0.0",
+        allowedHosts: undefined,
+        allowedOrigin: ["https://app.example.com"],
+      });
+      expect(listed.check({ host: "svc", origin: "https://app.example.com" })).toBeNull();
+      expect(listed.check({ host: "svc", origin: "https://evil.example.com" })).toBe("origin");
+    });
+  });
+
+  it("an explicit MCP_ALLOWED_ORIGINS on a loopback bind replaces the loopback-origin rule", () => {
+    const p = createDnsRebindingPolicy({
+      bindHost: "127.0.0.1",
+      allowedHosts: undefined,
+      allowedOrigin: ["https://app.example.com"],
+    });
+    expect(p.check({ host: "localhost:3001", origin: "https://app.example.com" })).toBeNull();
+    expect(p.check({ host: "localhost:3001", origin: "http://localhost:3001" })).toBe("origin");
   });
 });
 

@@ -86,7 +86,7 @@
       "verifyBy": "2026-10-27",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["CLAUDE.md:121"],
+      "codeRefs": ["CLAUDE.md:122"],
       "verificationBasis": "corroborated-secondary",
       "note": "NOT confirmed by any Meta primary source reachable from here (checked 2026-09-30). Meta's generated specs cannot express any of the three: Targeting.instagram_positions and messenger_positions are list<string> with no enum, and the read-side AdCampaignPlacementGet_effective_instagram_positions / _effective_messenger_positions enums still list EXPLORE and MESSENGER_STORY at facebook-business-sdk-codegen 8420be6d5752c568a4f01dd608fa3cce6b2db960; TargetingAutomation.advantage_audience is an optional unsigned int and a conditional requirement has no spec form. No SDK CHANGELOG has a v26 entry. CORROBORATION ONLY, from third-party code on GitHub: jeffreywlai/meta-ads-mcp@fb7e1e83c528baa3f699ee69ff3ef0ae89408889 docs/v26_compatibility_audit.md (explore removed, Messenger Stories silently removed); byadsco/meta-ads-mcp@692fad75d5a875a7464f87438e1f757fd2581f87 src/meta/targeting-compat.ts (explore and messenger story removed in v26.0); mikusnuz/meta-ads-mcp@e9dfd7bfc84564492b894e146e69d897efd6130d src/tools/adsets.ts (HEC-F ad sets with relaxable targeting get ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG); yvfl/faceads-mcp-v2@91592c417756de82b7454c8c4f793f65947ff84f src/tools/shared.ts (all versions from 2026-10-27, citing Meta's v26 launch post). They disagree on scope for (3): byadsco dates an explicit-flag requirement for non-default targeting to v23.0, and fl100inc/extuitive-skill@caf0724cb79451305f8f7344f86f06b31f688188 says every ad set (subcode 1870227). Read Meta's v26 changelog and the Advantage+ audience reference before 2026-10-27; if confirmed, decide whether meta_create_entity / meta_update_entity / meta_bulk_* should refuse explore and messenger story rather than let Meta error or silently narrow delivery."
     },
@@ -272,7 +272,7 @@
       "verifyBy": "2027-03-16",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["CLAUDE.md:127"]
+      "codeRefs": ["CLAUDE.md:128"]
     },
     {
       "id": "pinterest.media_endpoint_is_video_only",
@@ -286,7 +286,7 @@
       "verifyBy": "2027-03-16",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["CLAUDE.md:124"]
+      "codeRefs": ["CLAUDE.md:125"]
     },
     {
       "id": "dv360.line_items_require_archive_before_delete",
@@ -300,7 +300,7 @@
       "verifyBy": "2027-03-16",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["CLAUDE.md:117"]
+      "codeRefs": ["CLAUDE.md:118"]
     },
     {
       "id": "amazon_dsp.refresh_token_expires_at_365_days",

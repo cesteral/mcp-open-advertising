@@ -78,6 +78,135 @@ export function buildAllowedOrigins(
 }
 
 // ---------------------------------------------------------------------------
+// DNS-rebinding protection (Host / Origin validation)
+// ---------------------------------------------------------------------------
+//
+// The MCP Streamable HTTP transport spec's security warning: a server MUST
+// validate Origin, and a locally running server SHOULD bind only to localhost.
+// Binding 127.0.0.1 alone does not stop DNS rebinding — the attacker's page
+// resolves its own hostname to 127.0.0.1, so the browser's request arrives on
+// the loopback socket carrying `Host: evil.example` and `Origin:
+// http://evil.example`. Only the headers tell the two apart.
+//
+// Posture (see `createDnsRebindingPolicy`):
+//   - `MCP_ALLOWED_HOSTS` set → Host must match it, whatever the bind address.
+//   - loopback bind, no allow-list → Host must be a loopback name, and an
+//     Origin, when present and `MCP_ALLOWED_ORIGINS` is unset, must be a
+//     loopback origin. This is the self-host default (`getDefaultHost()` is
+//     127.0.0.1 outside production), and it is what the SDK's own
+//     `createMcpExpressApp` does for a localhost host.
+//   - any other bind (hosted Cloud Run binds 0.0.0.0) with no allow-list →
+//     Host is not checked, exactly as before. Cloud Run is reached through its
+//     own run.app / custom-domain hostnames, which a default cannot know.
+
+/** Hostnames (lower-cased, IPv6 bracketed) that name the loopback interface. */
+function isLoopbackHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (h === "localhost" || h === "[::1]") return true;
+  return /^127(?:\.\d{1,3}){3}$/.test(h);
+}
+
+/** Whether the address the server binds to is loopback-only. */
+export function isLoopbackBindHost(bindHost: string): boolean {
+  const h = bindHost.trim().toLowerCase();
+  if (h === "::1" || h === "[::1]" || h === "::ffff:127.0.0.1") return true;
+  return isLoopbackHostname(h);
+}
+
+// A Host header is `hostname[:port]` or `[ipv6][:port]` — nothing else. Parsing
+// it with `new URL` would accept `evil.example@localhost` (userinfo) as
+// hostname `localhost`, so anything outside this grammar is rejected outright.
+const HOST_HEADER_PATTERN = /^(?:[a-z0-9.-]+|\[[0-9a-f:.]+\])(?::\d{1,5})?$/i;
+
+/** Split a Host header into lower-cased `{ host, hostname }`; undefined if malformed. */
+function parseHostHeader(value: string): { host: string; hostname: string } | undefined {
+  const host = value.trim().toLowerCase();
+  if (!HOST_HEADER_PATTERN.test(host)) return undefined;
+  const hostname = host.startsWith("[")
+    ? host.slice(0, host.indexOf("]") + 1)
+    : host.replace(/:\d+$/, "");
+  return { host, hostname };
+}
+
+/**
+ * Parse `MCP_ALLOWED_HOSTS` (comma-separated). An entry with a port
+ * (`mcp.example.com:8443`) must match the Host header exactly; an entry without
+ * one (`mcp.example.com`, `[::1]`) matches that hostname on any port — the
+ * port-agnostic rule of the SDK's `hostHeaderValidation`. Returns undefined
+ * when unset or empty, so an empty value cannot silently reject everything.
+ */
+export function parseAllowedHosts(config: string | undefined): string[] | undefined {
+  if (!config) return undefined;
+  const hosts = config
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  return hosts.length > 0 ? hosts : undefined;
+}
+
+export type DnsRebindingMode = "allowed-hosts" | "loopback" | "off";
+
+export interface DnsRebindingPolicy {
+  /** Which Host rule applies: an explicit allow-list, loopback-only, or none. */
+  mode: DnsRebindingMode;
+  /** Null when the request may proceed, otherwise which header failed. */
+  check(headers: { host?: string; origin?: string }): "host" | "origin" | null;
+}
+
+/**
+ * Build the Host/Origin policy for `/mcp` from the bind address and the two
+ * allow-lists. `allowedOrigin` is `buildAllowedOrigins`' result, so an explicit
+ * `MCP_ALLOWED_ORIGINS` (or production's empty list) keeps its existing
+ * meaning; only the `"*"` (unset, non-production) case gains a loopback rule.
+ */
+export function createDnsRebindingPolicy(opts: {
+  bindHost: string;
+  allowedHosts: string[] | undefined;
+  allowedOrigin: string | string[];
+}): DnsRebindingPolicy {
+  const loopback = isLoopbackBindHost(opts.bindHost);
+  const allowedHosts = opts.allowedHosts;
+  const mode: DnsRebindingMode = allowedHosts ? "allowed-hosts" : loopback ? "loopback" : "off";
+
+  const hostAllowed = (raw: string | undefined): boolean => {
+    if (mode === "off") return true;
+    const parsed = raw ? parseHostHeader(raw) : undefined;
+    if (!parsed) return false;
+    if (allowedHosts) {
+      return allowedHosts.includes(parsed.host) || allowedHosts.includes(parsed.hostname);
+    }
+    return isLoopbackHostname(parsed.hostname);
+  };
+
+  const originAllowed = (origin: string | undefined): boolean => {
+    if (!origin) return true; // non-browser clients send none
+    if (opts.allowedOrigin !== "*") {
+      return Array.isArray(opts.allowedOrigin) && opts.allowedOrigin.includes(origin);
+    }
+    if (!loopback) return true;
+    // Loopback bind, no origin allow-list: only a loopback page may call.
+    // `Origin: null` (file://, sandboxed iframes) fails to parse and is refused.
+    try {
+      const url = new URL(origin);
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") && isLoopbackHostname(url.hostname)
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  return {
+    mode,
+    check({ host, origin }) {
+      if (!hostAllowed(host)) return "host";
+      if (!originAllowed(origin)) return "origin";
+      return null;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Headers extraction
 // ---------------------------------------------------------------------------
 

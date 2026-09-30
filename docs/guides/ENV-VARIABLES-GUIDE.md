@@ -126,7 +126,8 @@ MCP_AUTH_SECRET_KEY=
 
 # MCP Session Management
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000         # 1 hour
-MCP_ALLOWED_ORIGINS=*                           # CSV of allowed origins
+# MCP_ALLOWED_ORIGINS=https://app.example.com  # CSV; `*` is a literal origin, not a wildcard
+# MCP_ALLOWED_HOSTS=mcp.example.com            # CSV Host allow-list (DNS rebinding), see CLAUDE.md
 
 # Logging
 LOG_LEVEL=info
@@ -161,7 +162,8 @@ DV360_SERVICE_ACCOUNT_JSON=
 
 # MCP Session
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000
-MCP_ALLOWED_ORIGINS=*
+# MCP_ALLOWED_ORIGINS=https://app.example.com  # CSV; `*` is a literal origin, not a wildcard
+# MCP_ALLOWED_HOSTS=mcp.example.com            # CSV Host allow-list (DNS rebinding), see CLAUDE.md
 
 # ---------- ttd-mcp (The Trade Desk Server) ----------
 TTD_MCP_PORT=3003
@@ -492,7 +494,8 @@ MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32
 
 # MCP Session Management
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000     # 1 hour
-MCP_ALLOWED_ORIGINS=*                        # CSV of allowed origins
+# MCP_ALLOWED_ORIGINS=https://app.example.com  # CSV; `*` is a literal origin, not a wildcard
+# MCP_ALLOWED_HOSTS=mcp.example.com            # CSV Host allow-list (DNS rebinding), see CLAUDE.md
 
 # DV360 API Configuration
 DV360_API_BASE_URL=https://displayvideo.googleapis.com/v4

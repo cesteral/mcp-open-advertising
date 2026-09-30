@@ -4,13 +4,19 @@
 # @modelcontextprotocol/conformance 0.1.16 "active" server suite against each
 # server started with MCP_AUTH_MODE=none, MCP_INCLUDE_CONFORMANCE_TOOLS=true and
 # MCP_CONFORMANCE_FIXTURES=true. Re-baselined 2026-09-30 (#241): all 13
-# servers produce the same result — 17 of the 30 active scenarios pass and the
-# first 13 entries below fail; the last 2 are pending scenarios that fail under
+# servers produce the same result — 18 of the 30 active scenarios pass and the
+# first 12 entries below fail; the last 2 are pending scenarios that fail under
 # `--suite all`. tools-call-with-logging, tools-call-elicitation,
 # elicitation-sep1034-defaults and elicitation-sep1330-enums were removed once
 # tool-handler-factory.ts started sending log notifications and elicitation
 # requests with the tools/call's related request id, so they ride that
 # request's POST response stream instead of the standalone GET stream.
+# dns-rebinding-protection was removed once the transport started validating
+# Host (and Origin) on a loopback bind: the harness starts each server without
+# NODE_ENV, so it binds 127.0.0.1 and the rebinding request gets 403 while the
+# localhost one is accepted. A non-loopback bind without MCP_ALLOWED_HOSTS
+# (every hosted deploy) still does not check Host; the scenario only applies to
+# localhost servers.
 #
 # The harness exits non-zero both on a failure missing from this list and on a
 # listed scenario that now passes, so every entry is a scenario that fails
@@ -68,18 +74,6 @@ server:
   # returns text messages only.
   - prompts-get-embedded-resource
   - prompts-get-with-image
-
-  # SERVER BUG (security) — no DNS-rebinding protection in the default
-  # self-host posture. A request with Host: evil.example.com and
-  # Origin: http://evil.example.com gets 200. The transport never validates
-  # Host, and validates Origin only when MCP_ALLOWED_ORIGINS is set or
-  # NODE_ENV=production; otherwise the allow-list is "*" and the check is
-  # skipped. Binding 127.0.0.1 does not help, since DNS rebinding reaches
-  # localhost through the browser. The scenario passes with
-  # MCP_ALLOWED_ORIGINS=http://localhost:<port>. With NODE_ENV=production and
-  # no allow-list, the rebinding request is rejected but so is a valid
-  # localhost Origin (403).
-  - dns-rebinding-protection
 
   # --- Pending in 0.1.16: run only with `--suite all`, ignored by `active` ---
 
