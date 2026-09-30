@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via LinkedIn Marketing API v2.
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202608`; some calls still on legacy `/v2/`, see Current Status).
 
 ## Purpose
 
@@ -87,7 +87,7 @@ List ad accounts accessible to the authenticated user.
 
 #### 7. `linkedin_get_analytics`
 
-Get delivery metrics for LinkedIn Ads entities via `/v2/adAnalytics`.
+Get delivery metrics for LinkedIn Ads entities via `/rest/adAnalytics` (Rest.li 2.0 query syntax).
 
 **Parameters:**
 
@@ -225,10 +225,15 @@ Client-side validation of entity payloads without making API calls.
 
 ## Current Status
 
-**Phase: Production-Ready**
+**Phase: not verified against LinkedIn.** No tool on this server has been
+exercised against a live LinkedIn account, and every endpoint is recorded in
+`platform-facts.json` as `unverified`.
 
-All listed tools are fully implemented using LinkedIn Marketing API v2 with
-Bearer token authentication, analytics reporting, and targeting discovery.
+The `/v2/` → `/rest/` migration is staged and incomplete (#210): ad accounts,
+campaign and campaign-group list/create, analytics and targeting facets use the
+versioned `/rest/` surface; get/update/delete for campaigns, campaign groups and
+creatives, plus creatives, conversions, delivery forecasts, ad previews and the
+image/video uploads, still call legacy `/v2/` paths.
 
 ## Development
 
@@ -256,7 +261,7 @@ pnpm run typecheck
 - `MCP_AUTH_MODE`: Authentication mode - `linkedin-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `LINKEDIN_API_BASE_URL`: LinkedIn API base URL (default: `https://api.linkedin.com`)
-- `LINKEDIN_API_VERSION`: API version header value (default: `202409`)
+- `LINKEDIN_API_VERSION`: API version header override (default: the pin in `src/config/api-version.ts`, currently `202608`)
 - `LINKEDIN_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 10)
 - `LINKEDIN_ACCESS_TOKEN`: Access token for stdio mode
 
@@ -264,7 +269,7 @@ pnpm run typecheck
 
 ### Key Components
 
-- **`LinkedInHttpClient`** - HTTP client for LinkedIn Marketing API v2 with versioned headers
+- **`LinkedInHttpClient`** - HTTP client for the LinkedIn Marketing API with versioned headers and Rest.li 2.0 query encoding
 - **`LinkedInService`** - CRUD, bulk ops, duplication, targeting, delivery forecasts, ad previews
 - **`LinkedInReportingService`** - Analytics queries with breakdowns and pivots
 - **`LinkedInBearerAuthStrategy`** - Bearer token auth via LinkedIn API validation
@@ -274,7 +279,7 @@ pnpm run typecheck
 ### Key Gotchas
 
 - Entity identifiers use **URN format** (e.g., `urn:li:sponsoredCampaign:123`)
-- `LinkedIn-Version: 202409` header is **required on all API requests** and injected automatically
+- `LinkedIn-Version` (pinned to `202608`) and `X-Restli-Protocol-Version: 2.0.0` headers are **required on all API requests** and injected automatically
 - Updates use **Rest.li partial update format** via `X-Restli-Method: PARTIAL_UPDATE`
 - Budget values are `CurrencyAmount` objects with `currencyCode` and `amount` (amount is in **cents**)
 - `ARCHIVED` status is **permanent** and cannot be reversed

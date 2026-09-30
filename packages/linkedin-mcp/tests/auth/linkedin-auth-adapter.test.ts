@@ -6,7 +6,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return { ...actual, fetchWithTimeout: vi.fn() };
 });
 
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, JsonRpcErrorCode } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import {
@@ -363,6 +363,51 @@ describe("LinkedInRefreshTokenAdapter", () => {
       );
     });
 
+    // Fleet review linkedin #20: a revoked/expired refresh token surfaced as
+    // InternalError (HTTP 500), not the Unauthorized (401 + authErrorHint) the
+    // fleet uses for auth failures. RFC 6749 §5.2 error codes decide.
+    it.each(["invalid_grant", "invalid_client", "unauthorized_client"])(
+      "classifies an OAuth2 %s refresh rejection as Unauthorized",
+      async (oauthError) => {
+        const adapter = new LinkedInRefreshTokenAdapter(
+          MOCK_REFRESH_CREDENTIALS,
+          "https://api.linkedin.com",
+          TEST_LINKEDIN_API_VERSION
+        );
+
+        mockFetchWithTimeout.mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: "Bad Request",
+          text: async () =>
+            JSON.stringify({ error: oauthError, error_description: "The token has expired" }),
+        } as unknown as Response);
+
+        await expect(adapter.getAccessToken()).rejects.toMatchObject({
+          code: JsonRpcErrorCode.Unauthorized,
+        });
+      }
+    );
+
+    it("keeps a transient token-endpoint failure as InternalError", async () => {
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
+
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: "Service Unavailable",
+        text: async () => "upstream unavailable",
+      } as unknown as Response);
+
+      await expect(adapter.getAccessToken()).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+    });
+
     it("throws error on missing access_token in response", async () => {
       const adapter = new LinkedInRefreshTokenAdapter(
         MOCK_REFRESH_CREDENTIALS,
@@ -406,6 +451,24 @@ describe("LinkedInRefreshTokenAdapter", () => {
       expect(meOptions.headers["Authorization"]).toBe("Bearer li-new-token");
       expect(meOptions.headers["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
       expect(meOptions.headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
+    });
+
+    // Fleet review linkedin #20: the access-token adapter memoized validate()
+    // but the refresh adapter re-ran a token refresh + /v2/me on every call.
+    it("memoizes a successful validation", async () => {
+      const adapter = new LinkedInRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
+      mockTokenExchange();
+      mockMeResponse();
+
+      await adapter.validate();
+      await adapter.validate();
+
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+      expect(adapter.personId).toBe("person-123");
     });
   });
 

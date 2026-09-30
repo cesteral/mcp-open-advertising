@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 21 tools total:
+ * 22 tools total (21 business tools plus the auto-generated linkedin_search_tools):
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list ad accounts
  *   2 analytics: get analytics, get analytics breakdowns
@@ -13,6 +13,7 @@
  *   5 specialized: duplicate entity, get delivery forecast, get ad preview, upload image, upload video
  *   1 validation: validate entity (client-side)
  *   1 pacing: get pacing status (client-side, no API call)
+ *   1 discovery: search tools (createToolSearchTool)
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";

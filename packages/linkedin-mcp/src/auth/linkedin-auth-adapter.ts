@@ -14,6 +14,7 @@
  */
 
 import {
+  classifyOAuth2RefreshFailure,
   extractHeader,
   fetchWithTimeout,
   fingerprintCredentials,
@@ -120,6 +121,7 @@ export class LinkedInRefreshTokenAdapter
   implements LinkedInAuthAdapter
 {
   private _personId = "";
+  private validated = false;
 
   constructor(
     credentials: LinkedInRefreshCredentials,
@@ -155,9 +157,16 @@ export class LinkedInRefreshTokenAdapter
 
         if (!response.ok) {
           const errorBody = await response.text().catch(() => "");
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `LinkedIn token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          // An expired/revoked refresh token or bad client credentials come back
+          // as an RFC 6749 §5.2 error (`invalid_grant`, `invalid_client`, …).
+          // That is an auth failure the account owner must fix — Unauthorized
+          // (HTTP 401 + authErrorHint), as on amazon-dsp and gads — not an
+          // InternalError that reads as a server fault.
+          throw classifyOAuth2RefreshFailure(
+            "LinkedIn",
+            response.status,
+            response.statusText,
+            errorBody
           );
         }
 
@@ -184,8 +193,12 @@ export class LinkedInRefreshTokenAdapter
   }
 
   async validate(): Promise<void> {
+    // Memoized like LinkedInAccessTokenAdapter: the credentials were proven
+    // once; re-validating would spend a token refresh and a /v2/me call each time.
+    if (this.validated) return;
     const token = await this.getAccessToken();
     this._personId = await fetchLinkedInPersonId(token, this.baseUrl, this.apiVersion);
+    this.validated = true;
   }
 }
 
