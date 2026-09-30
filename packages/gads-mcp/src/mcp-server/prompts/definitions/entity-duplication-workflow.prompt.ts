@@ -44,7 +44,7 @@ export function getEntityDuplicationWorkflowMessage(args?: Record<string, string
 - Customer ID: \`${customerId}\`
 - Entity Type: \`${entityType}\`
 - Source Entity ID: \`${sourceEntityId}\`
-- Platform: Google Ads API v23
+- Platform: Google Ads API v25
 
 Google Ads has no native "duplicate" endpoint. Duplication is done by reading the source entity and creating a new one with adjusted fields.
 

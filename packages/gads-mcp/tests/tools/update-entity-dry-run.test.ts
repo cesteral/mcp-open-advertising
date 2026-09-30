@@ -29,7 +29,7 @@ function campaignRow(overrides: Record<string, unknown> = {}) {
       id: "222",
       name: "Sample Campaign",
       status: "ENABLED",
-      // v23 Campaign carries the flight as startDateTime / endDateTime;
+      // Since v23, Campaign carries the flight as startDateTime / endDateTime;
       // startDate / endDate were removed (v23 Discovery, Campaign resource).
       startDateTime: "2026-01-01 00:00:00",
       endDateTime: "2026-12-31 23:59:59",

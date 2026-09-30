@@ -4,7 +4,7 @@
 /**
  * Google Ads Entity Schema Resources
  *
- * Per-entity field reference for Google Ads API v23 entities.
+ * Per-entity field reference for Google Ads API v25 entities.
  */
 import type { Resource } from "../types.js";
 

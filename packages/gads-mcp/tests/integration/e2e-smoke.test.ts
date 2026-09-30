@@ -112,7 +112,7 @@ const config: any = {
   otelServiceName: "gads-mcp-test",
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
-  gadsApiBaseUrl: "https://googleads.googleapis.com/v23",
+  gadsApiBaseUrl: "https://googleads.googleapis.com/v25",
   gadsRateLimitPerMinute: 100,
   gadsDeveloperToken: "test-dev-token",
   gadsClientId: "test-client-id",

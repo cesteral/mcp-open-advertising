@@ -27,7 +27,7 @@ const TOOL_DESCRIPTION = `Create a new Google Ads entity using the :mutate API.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Provide entity data matching the Google Ads API v23 field format.
+Provide entity data matching the Google Ads API v25 field format.
 Refer to \`entity-schema://{entityType}\` resources for field reference.
 
 **Important**: For campaigns, create a campaignBudget first and reference it via the \`campaignBudget\` field.`;

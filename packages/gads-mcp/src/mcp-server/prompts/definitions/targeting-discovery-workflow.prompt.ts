@@ -37,7 +37,7 @@ export function getTargetingDiscoveryWorkflowMessage(args?: Record<string, strin
 ## Context
 - Customer ID: \`${customerId}\`
 - Campaign ID: \`${campaignId}\`
-- Platform: Google Ads API v23
+- Platform: Google Ads API v25
 - Tool: \`gads_gaql_search\`, \`gads_get_insights\`
 
 This workflow helps you explore what targeting is already applied, understand segment performance, and identify targeting opportunities.
