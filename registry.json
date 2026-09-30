@@ -513,6 +513,7 @@
         "modes": ["linkedin-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {
@@ -830,6 +831,7 @@
         "modes": ["sa360-headers", "jwt", "none"]
       },
       "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": []
       }
@@ -1062,6 +1064,7 @@
         "modes": ["msads-bearer", "jwt", "none"]
       },
       "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"],
+      "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": [
           {

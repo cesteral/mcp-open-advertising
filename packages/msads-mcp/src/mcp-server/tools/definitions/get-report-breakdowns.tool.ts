@@ -182,4 +182,9 @@ export const getReportBreakdownsTool = {
   ],
   logic: getReportBreakdownsLogic,
   responseFormatter: getReportBreakdownsResponseFormatter,
+  // appliedColumns is caller input (columns + breakdownColumns) echoed back; metricContext is server-built from caller dates.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

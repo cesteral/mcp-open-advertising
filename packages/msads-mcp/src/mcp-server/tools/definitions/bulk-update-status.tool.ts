@@ -340,4 +340,9 @@ export const bulkUpdateStatusTool = {
   ],
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
+  // results[].error is Microsoft's per-item failure text and is printed in block 0. dryRun is symbolic over caller ids.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

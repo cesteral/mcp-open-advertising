@@ -9,6 +9,7 @@ import {
 } from "../utils/entity-mapping.js";
 import type { RequestContext, SdkContext } from "@cesteral/shared";
 import {
+  NO_UNTRUSTED_CONTENT,
   validateEntityResponseFormatter,
   validateEnumFieldsStructured,
   type ValidationIssue,
@@ -172,4 +173,6 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  // Client-side validation only; issues describe the caller's own payload and repo-authored rules.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

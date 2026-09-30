@@ -118,4 +118,9 @@ export const listAccountsTool = {
   ],
   logic: listAccountsLogic,
   responseFormatter: listAccountsResponseFormatter,
+  // accounts are raw account records (names, numbers), printed in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.accounts"],
+    contentBlocks: [0],
+  },
 };

@@ -332,4 +332,9 @@ export const bulkUpdateEntitiesTool = {
   ],
   logic: bulkUpdateEntitiesLogic,
   responseFormatter: bulkUpdateEntitiesResponseFormatter,
+  // results holds raw batch responses (incl. BatchErrors text), printed in block 0. dryRun is symbolic over caller input.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

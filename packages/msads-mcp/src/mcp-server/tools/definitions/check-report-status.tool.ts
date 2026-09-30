@@ -92,4 +92,9 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
+  // errors is never filled by the Microsoft status mapper today; declared so a future failure reason is covered. rawStatus is Microsoft's Pending/InProgress/Success/Error enum and downloadUrl is platform-generated.
+  untrustedContent: {
+    structuredPaths: ["$.errors"],
+    contentBlocks: [],
+  },
 };

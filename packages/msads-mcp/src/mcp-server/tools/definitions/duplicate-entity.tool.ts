@@ -218,4 +218,9 @@ export const duplicateEntityTool = {
   ],
   logic: duplicateEntityLogic,
   responseFormatter: duplicateEntityResponseFormatter,
+  // dryRun declared: runMsAdsDuplicateDryRun reads the source entity, so expectedPostState carries its Name. result is the raw Add response, printed in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.result", "$.dryRun", "$.after"],
+    contentBlocks: [0],
+  },
 };

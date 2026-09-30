@@ -11,6 +11,7 @@
 import { z } from "zod";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import { validateConversionFields } from "../utils/conversion-governance.js";
 
 const TOOL_NAME = "sa360_validate_conversion";
@@ -171,4 +172,5 @@ export const validateConversionTool = {
   ],
   logic: validateConversionLogic,
   responseFormatter: validateConversionResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

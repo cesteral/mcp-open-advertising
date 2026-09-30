@@ -208,4 +208,8 @@ export const listReportColumnsTool = {
   ],
   logic: listReportColumnsLogic,
   responseFormatter: listReportColumnsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.fields", "$.fieldGroups"],
+    contentBlocks: [0],
+  },
 };

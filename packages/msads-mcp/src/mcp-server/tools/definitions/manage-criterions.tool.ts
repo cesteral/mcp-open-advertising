@@ -267,4 +267,9 @@ export const manageCriterionsTool = {
   ],
   logic: manageCriterionsLogic,
   responseFormatter: manageCriterionsResponseFormatter,
+  // result is the raw criterion response (records and error text), printed in block 0. dryRun is symbolic and prints only operation/level.
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

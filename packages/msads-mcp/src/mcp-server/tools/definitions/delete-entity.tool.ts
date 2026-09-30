@@ -270,4 +270,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // result is the raw delete response (PartialErrors text), printed in block 0. dryRun not declared: the bulk effect dry run is symbolic over caller ids (no read).
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

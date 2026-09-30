@@ -121,4 +121,8 @@ export const sa360SearchTool = {
   ],
   logic: sa360SearchLogic,
   responseFormatter: sa360SearchResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };
