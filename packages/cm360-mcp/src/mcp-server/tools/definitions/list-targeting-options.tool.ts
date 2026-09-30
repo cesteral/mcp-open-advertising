@@ -15,7 +15,9 @@ const TOOL_NAME = "cm360_list_targeting_options";
 const TOOL_TITLE = "List CM360 Targeting Options";
 const TOOL_DESCRIPTION = `List available targeting options from the CM360 API.
 
-Supports browsing browsers, connection types, content categories, countries, languages, metros, operating systems, platform types, and more.`;
+Supports browsing browsers, connection types, content categories, countries, languages, metros, operating systems, platform types, and more.
+
+Most types take no parameters besides profileId and return their whole list in one response. Only contentCategories paginates (pageToken, maxResults; filters ids, searchString, sortField, sortOrder), and only cities filters (countryDartIds, dartIds, namePrefix, regionDartIds). Any other parameter is refused before the call.`;
 
 const TARGETING_TYPES = [
   "browsers",
@@ -40,7 +42,9 @@ export const ListTargetingOptionsInputSchema = z
     filters: z
       .record(z.unknown())
       .optional()
-      .describe("Optional filter parameters (e.g., countryDartIds for regions)"),
+      .describe(
+        "Optional filter parameters. Only cities (countryDartIds, dartIds, namePrefix, regionDartIds) and contentCategories (ids, searchString, sortField, sortOrder) accept any"
+      ),
     pageToken: z.string().optional().describe("Page token for pagination"),
     maxResults: z.number().min(1).max(1000).optional().describe("Maximum results per page"),
   })
@@ -127,11 +131,11 @@ export const listTargetingOptionsTool = {
       },
     },
     {
-      label: "List metros in a specific country",
+      label: "List cities in a specific country",
       input: {
         profileId: "123456",
-        targetingType: "metros",
-        filters: { countryDartIds: "2840" },
+        targetingType: "cities",
+        filters: { countryDartIds: ["2840"] },
       },
     },
   ],

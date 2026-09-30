@@ -128,7 +128,7 @@ describe("getAdPreviewResponseFormatter", () => {
     expect(result[0].text).toContain("(Banner Ad)");
   });
 
-  it("shows 'No preview URL available' when no URL", () => {
+  it("says there is no click-through URL (and no CM360 preview URL) when absent", () => {
     const result = getAdPreviewResponseFormatter({
       adId: "ad-1",
       adName: undefined,
@@ -137,10 +137,12 @@ describe("getAdPreviewResponseFormatter", () => {
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
-    expect(result[0].text).toContain("No preview URL available");
+    expect(result[0].text).toContain(
+      "No click-through URL on the ad (CM360 has no ad preview URL)"
+    );
   });
 
-  it("shows preview URL when available", () => {
+  it("labels computedClickThroughUrl as a landing page, not a preview", () => {
     const result = getAdPreviewResponseFormatter({
       adId: "ad-1",
       adName: undefined,
@@ -149,7 +151,10 @@ describe("getAdPreviewResponseFormatter", () => {
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
-    expect(result[0].text).toContain("Preview URL: https://example.com/preview");
+    expect(result[0].text).toContain(
+      "Click-through URL (landing page, not a preview): https://example.com/preview"
+    );
+    expect(result[0].text).not.toContain("Preview URL:");
   });
 });
 

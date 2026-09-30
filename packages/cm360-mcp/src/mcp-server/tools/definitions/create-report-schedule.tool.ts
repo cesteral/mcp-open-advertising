@@ -292,7 +292,7 @@ export const createReportScheduleTool = {
           startDate: "2026-04-01",
         },
         floodlightCriteria: {
-          dateRange: { relativeDateRange: "LAST_MONTH" },
+          dateRange: { relativeDateRange: "PREVIOUS_MONTH" },
           metricNames: ["floodlightImpressions", "floodlightRevenue"],
         },
       },

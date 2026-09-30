@@ -131,6 +131,33 @@ describe("CM360Service", () => {
       expect(path).toContain("advertiserId=999");
     });
 
+    // campaigns.list `ids` / `advertiserIds` are `repeated: true` in v5
+    // Discovery; Google's Node client sends them as one key per value.
+    it("sends an array filter as repeated keys, not a comma-joined value", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ campaigns: [] });
+
+      await service.listEntities("campaign", "12345", { ids: ["1", "2"] });
+
+      const [path] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/userprofiles/12345/campaigns?ids=1&ids=2");
+    });
+
+    it("refuses filters that would override pageToken or maxResults", async () => {
+      await expect(
+        service.listEntities("campaign", "12345", { maxResults: 1000 }, undefined, 10)
+      ).rejects.toThrow(/filters must not set maxResults/);
+      expect(httpClient.fetch).not.toHaveBeenCalled();
+    });
+
+    // floodlightConfigurations.list takes only profileId and ids (v5 Discovery).
+    it("refuses pagination for floodlightConfiguration, whose list does not paginate", async () => {
+      await expect(
+        service.listEntities("floodlightConfiguration", "12345", undefined, "next")
+      ).rejects.toThrow(/floodlightConfigurations\.list does not paginate/);
+      expect(httpClient.fetch).not.toHaveBeenCalled();
+      expect(rateLimiter.consume).not.toHaveBeenCalled();
+    });
+
     it("includes pagination parameters", async () => {
       httpClient.fetch.mockResolvedValueOnce({ campaigns: [] });
 
@@ -437,21 +464,52 @@ describe("CM360Service", () => {
       expect(path).toBe("/userprofiles/12345/browsers");
     });
 
-    it("includes filters and pagination", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ operatingSystems: [] });
+    it("includes filters and pagination where the list method takes them (contentCategories)", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ contentCategories: [] });
 
       await service.listTargetingOptions(
         "12345",
-        "operatingSystems",
-        { name: "Windows" },
+        "contentCategories",
+        { searchString: "News" },
         "next",
         25
       );
 
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toContain("name=Windows");
+      expect(path).toContain("searchString=News");
       expect(path).toContain("pageToken=next");
       expect(path).toContain("maxResults=25");
+    });
+
+    // dfareporting v5 Discovery (rev 20260721): metros.list, operatingSystems.list
+    // and nine others take only profileId; cities.list takes countryDartIds,
+    // dartIds, namePrefix, regionDartIds and no pagination.
+    it("refuses filters and pagination a profileId-only list method does not take", async () => {
+      await expect(
+        service.listTargetingOptions("12345", "metros", { countryDartIds: "2840" })
+      ).rejects.toThrow(/metros\.list does not accept countryDartIds/);
+      await expect(
+        service.listTargetingOptions("12345", "operatingSystems", undefined, "next", 25)
+      ).rejects.toThrow(/does not accept pageToken, maxResults/);
+      await expect(
+        service.listTargetingOptions("12345", "cities", undefined, undefined, 25)
+      ).rejects.toThrow(/cities\.list does not accept maxResults/);
+      expect(httpClient.fetch).not.toHaveBeenCalled();
+      expect(rateLimiter.consume).not.toHaveBeenCalled();
+    });
+
+    it("sends repeated query parameters as one key per value", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ cities: [] });
+
+      await service.listTargetingOptions("12345", "cities", {
+        countryDartIds: ["2840", "2826"],
+        namePrefix: "Lon",
+      });
+
+      const [path] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe(
+        "/userprofiles/12345/cities?countryDartIds=2840&countryDartIds=2826&namePrefix=Lon"
+      );
     });
 
     it("returns options and nextPageToken", async () => {

@@ -18,7 +18,11 @@ const TOOL_DESCRIPTION = `List Campaign Manager 360 entities with optional filte
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All operations require a profileId (use cm360_list_user_profiles to discover yours).`;
+All operations require a profileId (use cm360_list_user_profiles to discover yours).
+
+- floodlightActivity: CM360 returns an empty list unless filters include ids, advertiserId or floodlightConfigurationId.
+- floodlightConfiguration: the list is not paginated (filter by ids only); pageToken and maxResults are refused.
+- Array filter values are sent as repeated parameters (ids=1&ids=2).`;
 
 export const ListEntitiesInputSchema = z
   .object({

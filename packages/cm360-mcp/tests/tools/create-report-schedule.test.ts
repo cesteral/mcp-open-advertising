@@ -84,11 +84,33 @@ describe("CreateReportScheduleInputSchema", () => {
         startDate: "2026-04-01",
       },
       floodlightCriteria: {
-        dateRange: { relativeDateRange: "LAST_MONTH" },
+        dateRange: { relativeDateRange: "PREVIOUS_MONTH" },
       },
     });
 
     expect(result.success).toBe(true);
+  });
+
+  // dfareporting v5 DateRange.relativeDateRange has PREVIOUS_MONTH, not LAST_MONTH.
+  it("rejects a relativeDateRange that is not a CM360 value", () => {
+    const result = CreateReportScheduleInputSchema.safeParse({
+      profileId: "123",
+      name: "Monthly report",
+      type: "FLOODLIGHT",
+      schedule: {
+        active: true,
+        every: 1,
+        repeats: "MONTHLY",
+        runsOnDayOfMonth: "DAY_OF_MONTH",
+        startDate: "2026-04-01",
+      },
+      floodlightCriteria: {
+        dateRange: { relativeDateRange: "LAST_MONTH" },
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain("PREVIOUS_MONTH");
   });
 
   it("rejects legacy runsOnDayOfWeek field", () => {

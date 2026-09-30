@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
+  assertNoSchedulingConfig,
   buildTypedReportConfig,
   CM360DatePresetSchema,
   CM360ReportTypeSchema,
@@ -48,7 +49,9 @@ export const GetReportInputSchema = z
     additionalConfig: z
       .record(z.any())
       .optional()
-      .describe("Additional report configuration fields (schedule, delivery, etc.)"),
+      .describe(
+        "Additional report configuration fields. schedule and delivery are refused: use cm360_create_report_schedule for recurring or emailed reports"
+      ),
   })
   .superRefine(validateTypedCriteriaUsage)
   .describe("Parameters for generating a CM360 report");
@@ -71,6 +74,7 @@ export async function getReportLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetReportOutput> {
+  assertNoSchedulingConfig(TOOL_NAME, input.additionalConfig);
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
   const reportConfig = buildTypedReportConfig(input) as CM360ReportConfig;

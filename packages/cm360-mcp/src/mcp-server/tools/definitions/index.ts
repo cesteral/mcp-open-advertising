@@ -4,7 +4,8 @@
 /**
  * Tool definitions barrel export
  *
- * 21 tools total:
+ * 22 tools total: the 21 below plus the generated cm360_search_tools
+ * (createToolSearchTool, added to allTools at the bottom of this file).
  *   7 core CRUD: list user profiles, list entities, get entity, create entity, update entity, delete entity, validate entity
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 scheduling: create report schedule, list report schedules, delete report schedule

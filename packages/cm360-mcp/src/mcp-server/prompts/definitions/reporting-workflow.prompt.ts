@@ -93,7 +93,7 @@ Use \`cm360_get_report\` which submits, polls, and returns results in one call:
 | REACH | Reach and frequency |
 | FLOODLIGHT | Conversion (floodlight) report |
 | PATH_TO_CONVERSION | Multi-touch attribution |
-| CROSS_DIMENSION_REACH | Cross-dimension reach |
+| CROSS_MEDIA_REACH | Cross-media reach |
 
 ## Gotchas
 

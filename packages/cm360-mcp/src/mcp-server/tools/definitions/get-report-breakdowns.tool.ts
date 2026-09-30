@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
+  assertNoSchedulingConfig,
   buildTypedReportConfig,
   CM360DatePresetSchema,
   CM360ReportTypeSchema,
@@ -55,7 +56,9 @@ export const GetReportBreakdownsInputSchema = z
     additionalConfig: z
       .record(z.any())
       .optional()
-      .describe("Additional report configuration fields (schedule, delivery, etc.)"),
+      .describe(
+        "Additional report configuration fields. schedule and delivery are refused: use cm360_create_report_schedule for recurring or emailed reports"
+      ),
   })
   .superRefine((input, ctx) => {
     validateTypedCriteriaUsage(input as Parameters<typeof validateTypedCriteriaUsage>[0], ctx);
@@ -88,6 +91,7 @@ export async function getReportBreakdownsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetReportBreakdownsOutput> {
+  assertNoSchedulingConfig(TOOL_NAME, input.additionalConfig);
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
   const criteriaField = ensureReportSupportsBreakdowns(input.type);

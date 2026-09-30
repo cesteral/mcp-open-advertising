@@ -22,6 +22,11 @@ export interface CM360EntityConfig {
    * to the collection cannot create anything. Omitted = insert exists.
    */
   supportsCreate?: false;
+  /**
+   * `false` when the collection's v5 `list` method takes no `pageToken` /
+   * `maxResults` (it returns everything in one response). Omitted = paginated.
+   */
+  supportsPagination?: false;
 }
 
 const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
@@ -67,6 +72,9 @@ const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
     // v5 Discovery (rev 20260721) `resources.floodlightConfigurations.methods`
     // is { get, list, patch, update } — there is no `insert`.
     supportsCreate: false,
+    // v5 Discovery `floodlightConfigurations.list` parameters are only
+    // `profileId` and `ids`: no `pageToken` / `maxResults`.
+    supportsPagination: false,
   },
 };
 

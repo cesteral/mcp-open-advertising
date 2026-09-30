@@ -18,7 +18,7 @@ export const reportingReferenceResource: Resource = {
 | REACH | Reach and frequency reporting |
 | FLOODLIGHT | Conversion (Floodlight) reporting |
 | PATH_TO_CONVERSION | Multi-touch attribution paths |
-| CROSS_DIMENSION_REACH | Cross-dimension reach analysis |
+| CROSS_MEDIA_REACH | Cross-media reach analysis |
 
 ## Common Dimensions
 
@@ -60,7 +60,7 @@ Use \`YYYY-MM-DD\` format for startDate and endDate.
 ## Gotchas
 
 - Reports are async — processing can take minutes for large date ranges
-- Use \`cm360_get_report\` for simplicity (handles poll + download)
+- Use \`cm360_get_report\` for simplicity: it polls until the file is ready and returns its download URL; fetch the file with \`cm360_download_report\`
 - Large reports may need non-blocking flow to avoid timeouts
 `,
 };

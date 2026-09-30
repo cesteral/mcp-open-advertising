@@ -23,7 +23,12 @@ export const GetAdPreviewOutputSchema = z
   .object({
     adId: z.string().describe("Ad ID"),
     adName: z.string().optional().describe("Ad name"),
-    previewUrl: z.string().optional().describe("Preview URL"),
+    previewUrl: z
+      .string()
+      .optional()
+      .describe(
+        "The ad's computed click-through (landing page) URL, not a rendered preview. dfareporting v5 sets Ad.clickThroughUrl only for AD_SERVING_CLICK_TRACKER ads, so it is usually absent"
+      ),
     ad: z.record(z.any()).describe("Full ad entity data"),
     timestamp: z.string().datetime(),
   })
@@ -63,8 +68,8 @@ export async function getAdPreviewLogic(
 export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTextContent[] {
   const nameInfo = result.adName ? ` (${result.adName})` : "";
   const previewInfo = result.previewUrl
-    ? `\n\nPreview URL: ${result.previewUrl}`
-    : "\n\nNo preview URL available.";
+    ? `\n\nClick-through URL (landing page, not a preview): ${result.previewUrl}`
+    : "\n\nNo click-through URL on the ad (CM360 has no ad preview URL).";
 
   return [
     {

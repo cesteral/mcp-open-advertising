@@ -16,7 +16,9 @@ const TOOL_NAME = "cm360_list_report_schedules";
 const TOOL_TITLE = "List CM360 Report Schedules";
 const TOOL_DESCRIPTION = `List CM360 reports that have an active schedule.
 
-Returns canonical ReportScheduleSummary entries for reports in the profile that contain an active schedule object. The original CM360 report envelopes are preserved on the sibling \`raw\` field for platform-specific debugging. Use a returned schedule's \`scheduleId\` as the handle for cm360_delete_report_schedule.`;
+Returns canonical ReportScheduleSummary entries for reports in the profile that contain an active schedule object. The original CM360 report envelopes are preserved on the sibling \`raw\` field for platform-specific debugging. Use a returned schedule's \`scheduleId\` as the handle for cm360_delete_report_schedule.
+
+Reads one page of CM360 reports (\`scope=ALL\`, so other users' reports in the account are included) and keeps the scheduled ones, so a page can hold no schedules and still have a next page: follow the pagination cursor until it is empty.`;
 
 export const ListReportSchedulesInputSchema = z
   .object({
@@ -27,7 +29,9 @@ export const ListReportSchedulesInputSchema = z
       .min(1)
       .max(1000)
       .optional()
-      .describe("Maximum number of reports to return (default: all)"),
+      .describe(
+        "Maximum number of reports to read for this page, before filtering to scheduled ones (CM360 default: 10)"
+      ),
     pageToken: z.string().optional().describe("Pagination token from a previous response"),
   })
   .describe("Parameters for listing CM360 report schedules");

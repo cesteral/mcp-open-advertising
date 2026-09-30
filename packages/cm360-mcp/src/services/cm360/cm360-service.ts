@@ -114,6 +114,57 @@ export function cm360BulkCapacityCheck(
 }
 
 /**
+ * Query parameters each `userprofiles/{profileId}/{targetingType}` list method
+ * accepts besides `profileId` — dfareporting v5 Discovery, revision 20260721.
+ * Only `contentCategories` paginates and only `cities` filters; the other
+ * eleven take `profileId` alone and return the whole list in one response.
+ */
+export const CM360_TARGETING_LIST_PARAMS: Readonly<Record<string, readonly string[]>> = {
+  browsers: [],
+  connectionTypes: [],
+  countries: [],
+  languages: [],
+  metros: [],
+  mobileCarriers: [],
+  operatingSystemVersions: [],
+  operatingSystems: [],
+  platformTypes: [],
+  postalCodes: [],
+  regions: [],
+  contentCategories: ["ids", "maxResults", "pageToken", "searchString", "sortField", "sortOrder"],
+  cities: ["countryDartIds", "dartIds", "namePrefix", "regionDartIds"],
+};
+
+/** Query keys the list methods set themselves; a `filters` entry must not override them. */
+const RESERVED_LIST_PARAMS = new Set(["pageToken", "maxResults"]);
+
+function assertNoReservedFilterKeys(filters: Record<string, unknown> | undefined): void {
+  const reserved = Object.keys(filters ?? {}).filter((key) => RESERVED_LIST_PARAMS.has(key));
+  if (reserved.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `filters must not set ${reserved.join(", ")}; pass pageToken / maxResults as their own parameters.`
+    );
+  }
+}
+
+/**
+ * Append one filter value. Google's `repeated` query parameters take one key
+ * per value (`ids=1&ids=2`), which is how Google's own Node client encodes
+ * them (googleapis-common: `qs.stringify(params, { arrayFormat: "repeat" })`).
+ * `String(array)` sent the single value `ids=1,2` instead.
+ */
+function appendQueryValue(params: URLSearchParams, key: string, value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (item !== undefined && item !== null) params.append(key, String(item));
+    }
+    return;
+  }
+  params.append(key, String(value));
+}
+
+/**
  * Rate-limit keys: the limiter is configured for `cm360:*`, so every key must
  * carry the `cm360:` prefix — a bare `"cm360"` (what every call site used to
  * pass) matches nothing and is silently unlimited. Every trafficking call is
@@ -146,8 +197,16 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ entities: CM360EntityMap[T][]; nextPageToken?: string }> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
+    if (config.supportsPagination === false && (pageToken || maxResults)) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${config.apiCollection}.list does not paginate (dfareporting v5 takes no pageToken or ` +
+          `maxResults for it); omit them, the response holds every result.`
+      );
+    }
+    assertNoReservedFilterKeys(filters);
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const params = new URLSearchParams();
     if (pageToken) params.set("pageToken", pageToken);
@@ -155,7 +214,7 @@ export class CM360Service {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          params.set(key, String(value));
+          appendQueryValue(params, key, value);
         }
       }
     }
@@ -275,6 +334,31 @@ export class CM360Service {
     maxResults?: number,
     context?: RequestContext
   ): Promise<{ options: unknown[]; nextPageToken?: string }> {
+    // Refuse what this targeting type's list method does not take, before
+    // spending a token or sending anything.
+    const accepted = CM360_TARGETING_LIST_PARAMS[targetingType];
+    if (!accepted) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Unknown CM360 targeting type: ${targetingType}`
+      );
+    }
+    assertNoReservedFilterKeys(filters);
+    const requested = [
+      ...(pageToken ? ["pageToken"] : []),
+      ...(maxResults ? ["maxResults"] : []),
+      ...Object.entries(filters ?? {})
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key]) => key),
+    ];
+    const unsupported = requested.filter((key) => !accepted.includes(key));
+    if (unsupported.length > 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${targetingType}.list does not accept ${unsupported.join(", ")}; dfareporting v5 takes ` +
+          `${accepted.length > 0 ? `only ${accepted.join(", ")}` : "no parameters besides profileId"} for it.`
+      );
+    }
     await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
 
     const params = new URLSearchParams();
@@ -283,7 +367,7 @@ export class CM360Service {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          params.set(key, String(value));
+          appendQueryValue(params, key, value);
         }
       }
     }

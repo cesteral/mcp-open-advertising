@@ -386,6 +386,13 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts PERMANENTLY_ARCHIVED for placements, which cannot be undone. Terminal only for that value; ARCHIVED/ACTIVE/INACTIVE are reversible."
+          },
+          {
+            "tool": "cm360_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "PATCHes arbitrary fields per item, so a batch can set a placement's activeStatus to PLACEMENT_STATUS_PERMANENTLY_ARCHIVED, the same irreversible value cm360_update_entity is declared for. Terminal only for that value."
           }
         ]
       },
