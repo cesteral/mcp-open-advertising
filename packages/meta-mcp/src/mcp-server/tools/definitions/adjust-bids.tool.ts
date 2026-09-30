@@ -131,6 +131,11 @@ export async function adjustBidsLogic(
     canonicalEntityKind: null,
   };
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { metaService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect
   // (a bid-adjustment over N ad sets). No API call, no confirmation prompt.
   if (input.dry_run === true) {
@@ -139,7 +144,7 @@ export async function adjustBidsLogic(
       metaBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.adjustments.length,
-        metaBulkBuckets.adjustBids(),
+        metaBulkBuckets.adjustBids(metaService.quotaScope),
         "adjustments"
       )
     );
@@ -157,7 +162,11 @@ export async function adjustBidsLogic(
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first read/write.
-  assertMetaBulkCapacity(TOOL_NAME, input.adjustments.length, metaBulkBuckets.adjustBids());
+  assertMetaBulkCapacity(
+    TOOL_NAME,
+    input.adjustments.length,
+    metaBulkBuckets.adjustBids(metaService.quotaScope)
+  );
 
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
@@ -178,8 +187,6 @@ export async function adjustBidsLogic(
       dispatchedCapability,
     };
   }
-
-  const { metaService } = resolveSessionServices(sdkContext);
 
   const results: AdjustBidsResult[] = [];
 

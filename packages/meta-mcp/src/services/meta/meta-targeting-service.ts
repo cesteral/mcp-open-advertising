@@ -5,6 +5,11 @@ import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { Logger } from "pino";
+import {
+  consumeMetaAccountQuota,
+  consumeMetaUserQuota,
+  normalizeMetaAdAccountId,
+} from "./rate-limit-keys.js";
 
 /**
  * Meta Targeting Service — Targeting search and browse operations.
@@ -30,7 +35,7 @@ export class MetaTargetingService {
     after?: string,
     targetingClass?: string
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     // Normalize type to lowercase, matching facebook-python-business-sdk's
     // TargetingSearchTypes (e.g. "adinterest", "adtargetingcategory").
@@ -77,9 +82,9 @@ export class MetaTargetingService {
     type?: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaAccountQuota(this.rateLimiter, this.httpClient, adAccountId);
 
-    const actId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+    const actId = normalizeMetaAdAccountId(adAccountId);
 
     const params: Record<string, string> = {};
     if (type) {

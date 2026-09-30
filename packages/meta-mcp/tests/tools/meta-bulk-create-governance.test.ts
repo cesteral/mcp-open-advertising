@@ -30,6 +30,7 @@ describe("meta_bulk_create_entities governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { quotaUser: "u-1" },
       bulkCreateEntities: vi
         .fn()
         .mockResolvedValue({ results: [{ success: true }, { success: false, error: "x" }] }),

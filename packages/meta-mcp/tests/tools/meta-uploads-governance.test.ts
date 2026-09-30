@@ -48,7 +48,13 @@ describe("meta uploads governance contract (effect class)", () => {
         .fn()
         .mockResolvedValue({ status: { processing_progress: 100, video_status: "ready" } }),
     };
-    mockResolveSessionServices.mockReturnValue({ metaService: { graphApiClient } });
+    mockResolveSessionServices.mockReturnValue({
+      metaService: {
+        uploadAdImage: graphApiClient.postMultipart,
+        uploadAdVideo: graphApiClient.postMultipart,
+        getVideoStatus: graphApiClient.get,
+      },
+    });
   });
 
   describe("meta_upload_image", () => {

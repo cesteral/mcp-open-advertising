@@ -7,6 +7,7 @@ import { MetaInsightsService } from "../../src/services/meta/meta-insights-servi
 
 function createMockHttpClient() {
   return {
+    quotaUser: "u-1",
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue({}),
@@ -218,12 +219,12 @@ describe("MetaInsightsService", () => {
       expect(result.data).toEqual([]);
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getInsights("campaign-123", {});
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
 
     it("does not include optional params when not provided", async () => {
@@ -464,14 +465,14 @@ describe("MetaInsightsService", () => {
       expect(result.data).toEqual([]);
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getInsightsBreakdowns("campaign-123", {
         breakdowns: ["age"],
       });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
   });
 

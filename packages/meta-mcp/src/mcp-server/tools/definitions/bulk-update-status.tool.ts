@@ -105,6 +105,11 @@ export async function bulkUpdateStatusLogic(
     canonicalEntityKind: null,
   };
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { metaService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
@@ -113,7 +118,7 @@ export async function bulkUpdateStatusLogic(
       metaBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.entityIds.length,
-        metaBulkBuckets.bulkUpdate(),
+        metaBulkBuckets.bulkUpdate(metaService.quotaScope),
         "entityIds"
       )
     );
@@ -130,7 +135,11 @@ export async function bulkUpdateStatusLogic(
 
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first write.
-  assertMetaBulkCapacity(TOOL_NAME, input.entityIds.length, metaBulkBuckets.bulkUpdate());
+  assertMetaBulkCapacity(
+    TOOL_NAME,
+    input.entityIds.length,
+    metaBulkBuckets.bulkUpdate(metaService.quotaScope)
+  );
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityIds.length,
@@ -150,8 +159,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { metaService } = resolveSessionServices(sdkContext);
 
   const result = await metaService.bulkUpdateStatus(input.entityIds, input.status, context);
 

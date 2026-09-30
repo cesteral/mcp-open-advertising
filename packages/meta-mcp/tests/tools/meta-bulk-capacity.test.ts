@@ -47,7 +47,15 @@ const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } 
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `2345678901234${i}`);
 
-let http: { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; delete: any };
+let http: {
+  quotaUser: string;
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  delete: any;
+};
+
+/** The session's user bucket (`rate-limit-keys.ts`); its Graph user id is `u-1`. */
+const USER_KEY = "meta:user:u-1";
 
 async function expectRefused(promise: Promise<unknown>, itemCount: number, itemsThatFit: number) {
   const error = await promise.then(
@@ -74,6 +82,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     vi.clearAllMocks();
     rateLimiter.clear();
     http = {
+      quotaUser: "u-1",
       get: vi.fn().mockResolvedValue({ id: "x", name: "n", bid_amount: 100 }),
       post: vi.fn().mockResolvedValue({ id: "new", success: true }),
       delete: vi.fn(),
@@ -92,7 +101,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     ]);
   });
 
-  describe("meta_bulk_update_status (3 tokens/item on meta:default)", () => {
+  describe("meta_bulk_update_status (3 tokens/item on the user bucket)", () => {
     it("refuses a 50-item batch before confirmation and before any HTTP call", async () => {
       await expectRefused(
         bulkUpdateStatusLogic({ entityIds: ids(50), status: "PAUSED" } as any, ctx, sdk),
@@ -113,7 +122,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     });
 
     it("counts tokens already consumed in the window", async () => {
-      await rateLimiter.consume("meta:default", 20);
+      await rateLimiter.consume(USER_KEY, 20);
       await expectRefused(
         bulkUpdateStatusLogic({ entityIds: ids(18), status: "PAUSED" } as any, ctx, sdk),
         18,
@@ -144,7 +153,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     });
   });
 
-  describe("meta_bulk_update_entities (3 tokens/item on meta:default)", () => {
+  describe("meta_bulk_update_entities (3 tokens/item on the user bucket)", () => {
     const items = (n: number) => ids(n).map((entityId) => ({ entityId, data: { name: "x" } }));
 
     it("refuses a 50-item batch before confirmation and before any HTTP call", async () => {
@@ -168,7 +177,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     });
   });
 
-  describe("meta_bulk_create_entities (3 tokens/item on meta:${adAccountId})", () => {
+  describe("meta_bulk_create_entities (3 tokens/item on the account bucket)", () => {
     const input = (n: number, extra: Record<string, unknown> = {}) =>
       ({
         entityType: "campaign",
@@ -182,8 +191,8 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     });
 
     it("is keyed by the account the creates consume from", async () => {
-      // Saturating a different key does not constrain this account's batch…
-      await rateLimiter.consume("meta:default", 20);
+      // Saturating the user bucket does not constrain this account's batch…
+      await rateLimiter.consume(USER_KEY, 20);
       await expect(bulkCreateEntitiesLogic(input(6), ctx, sdk)).resolves.toMatchObject({
         successCount: 6,
       });
@@ -199,7 +208,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
     });
   });
 
-  describe("meta_adjust_bids (read 1 + write 3 per ad set on meta:default)", () => {
+  describe("meta_adjust_bids (read 1 + write 3 per ad set on the user bucket)", () => {
     const adjustments = (n: number) => ids(n).map((adSetId) => ({ adSetId, bidAmount: 500 }));
 
     it("refuses a 50-item batch before confirmation and before any HTTP call", async () => {

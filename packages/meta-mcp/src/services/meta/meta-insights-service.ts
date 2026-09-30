@@ -7,6 +7,7 @@ import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { Logger } from "pino";
+import { consumeMetaUserQuota } from "./rate-limit-keys.js";
 
 /**
  * Meta Insights Service — Queries the Insights API for performance data.
@@ -56,7 +57,7 @@ export class MetaInsightsService {
   ): Promise<{ data: unknown[]; nextCursor?: string; summary?: unknown }> {
     this.validateDateRangeInputs(entityId, options, "insights");
 
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     const defaultFields = [
       "impressions",
@@ -133,7 +134,7 @@ export class MetaInsightsService {
   ): Promise<{ reportRunId: string }> {
     this.validateDateRangeInputs(entityId, options, "async insights report");
 
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     const defaultFields = [
       "impressions",
@@ -199,7 +200,7 @@ export class MetaInsightsService {
     errorUserTitle?: string;
     errorUserMsg?: string;
   }> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     const result = (await this.httpClient.get(
       `/${reportRunId}`,
@@ -233,8 +234,6 @@ export class MetaInsightsService {
     options: { limit?: number; after?: string },
     context?: RequestContext
   ): Promise<{ data: unknown[]; fetchedAllRows: boolean; nextCursor?: string }> {
-    await this.rateLimiter.consume(`meta:default`);
-
     const data: unknown[] = [];
     let after = options.after;
     let fetchedAllRows = true;
@@ -254,6 +253,9 @@ export class MetaInsightsService {
         params.after = after;
       }
 
+      // One read per page: each page is its own Graph call (#236 — this used
+      // to draw a single token for however many pages the loop fetched).
+      await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
       const result = (await this.httpClient.get(
         `/${reportRunId}/insights`,
         params,
@@ -301,7 +303,7 @@ export class MetaInsightsService {
   ): Promise<{ data: unknown[]; nextCursor?: string }> {
     this.validateDateRangeInputs(entityId, options, "insights breakdowns");
 
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     const defaultFields = [
       "impressions",

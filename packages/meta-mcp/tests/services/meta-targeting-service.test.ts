@@ -7,6 +7,7 @@ import { MetaTargetingService } from "../../src/services/meta/meta-targeting-ser
 
 function createMockHttpClient() {
   return {
+    quotaUser: "u-1",
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue({}),
@@ -99,12 +100,12 @@ describe("MetaTargetingService", () => {
       expect(result).toEqual(targetingResults);
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.searchTargeting("adinterest", "yoga");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
 
     it("works with different targeting types", async () => {
@@ -218,12 +219,12 @@ describe("MetaTargetingService", () => {
       expect(result).toEqual(browseResults);
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the named ad account's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getTargetingOptions("act_123");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1:account:act_123", 1);
     });
   });
 });

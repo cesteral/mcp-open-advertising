@@ -28,9 +28,12 @@
  * (code-only)` for the encoding; the assertions pin the parameter names and
  * values the spec defines.
  *
- * Rate limiting: creates draw META_WRITE_TOKENS (3) from `meta:{adAccountId}`;
- * reads draw 1 and updates / deletes / copies / budget schedules draw 3 from
- * `meta:default`; an async insights job draws 1 from `meta:default`.
+ * Rate limiting (`src/services/meta/rate-limit-keys.ts`): every bucket belongs
+ * to the session's Graph user (the `/me` id). Creates and media uploads draw
+ * META_WRITE_TOKENS (3) and video status polls 1 from the named account's
+ * bucket `meta:user:{id}:account:act_{n}`; node reads draw 1 and updates /
+ * deletes / copies / budget schedules draw 3 from `meta:user:{id}`; an async
+ * insights job draws 1 from `meta:user:{id}`.
  *
  * list/get/insights/targeting/preview/estimate/pacing/validate tools send only
  * GETs and are out of scope here.
@@ -154,6 +157,10 @@ function remaining(key: string): number {
 
 const LIMIT = mcpConfig.metaRateLimitPerMinute;
 
+/** The wire session's buckets: the stubbed `GET /me` answers id 10150000000000001. */
+const USER_KEY = "meta:user:10150000000000001";
+const ACCOUNT_KEY = `${USER_KEY}:account:${ACT}`;
+
 /** Route `GET /{id}` (the snapshot / pre-state reads) to a node with that id. */
 function routeNodeReads(extra: Record<string, unknown> = {}) {
   stub.route({
@@ -216,8 +223,8 @@ describe("meta_create_entity → AdAccount.json POST <edge>", () => {
     });
     expect(out.entity.id).toBe("120200000000001");
     // Create: one write on the ad-account bucket; the `after` re-read: one read on default.
-    expect(remaining(`meta:${ACT}`)).toBe(LIMIT - META_WRITE_TOKENS);
-    expect(remaining("meta:default")).toBe(LIMIT - META_READ_TOKENS);
+    expect(remaining(ACCOUNT_KEY)).toBe(LIMIT - META_WRITE_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_READ_TOKENS);
   });
 
   it("adSet → POST /act_{id}/adsets with targeting as a JSON-encoded object", async () => {
@@ -298,7 +305,7 @@ describe("meta_update_entity → <Node>.json POST — (#update)", () => {
     expect(req.url).toBe(`${API}/120200000000002`);
     expectFormAuth(req);
     expect(req.form).toEqual({ daily_budget: "3000", status: "PAUSED" });
-    expect(remaining("meta:default")).toBe(
+    expect(remaining(USER_KEY)).toBe(
       LIMIT - META_WRITE_TOKENS - 2 * META_READ_TOKENS // pre-state read + `after` read
     );
     expect(apiRequests().map((r) => r.method)).toEqual(["GET", "POST", "GET"]);
@@ -339,7 +346,7 @@ describe("meta_delete_entity → <Node>.json DELETE — (#delete)", () => {
     expect(req.body).toBeUndefined();
     expect(out.success).toBe(true);
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("meta:default")).toBe(LIMIT - META_WRITE_TOKENS - META_READ_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_WRITE_TOKENS - META_READ_TOKENS);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
@@ -392,7 +399,7 @@ describe("meta_bulk_update_status → POST /{id} {status} per id", () => {
       `${API}/120200000000001`,
       `${API}/120200000000002`,
     ]);
-    expect(remaining("meta:default")).toBe(LIMIT - 2 * META_WRITE_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - 2 * META_WRITE_TOKENS);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
@@ -463,7 +470,7 @@ describe("meta_bulk_create_entities → AdAccount.json POST ads per item", () =>
       )
     );
     expect(out.successCount).toBe(2);
-    expect(remaining(`meta:${ACT}`)).toBe(LIMIT - 2 * META_WRITE_TOKENS);
+    expect(remaining(ACCOUNT_KEY)).toBe(LIMIT - 2 * META_WRITE_TOKENS);
   });
 
   it("dry_run sends nothing", async () => {
@@ -501,7 +508,7 @@ describe("meta_bulk_update_entities → POST /{id} per item", () => {
       [`${API}/120200000000003`]: { name: "Renamed" },
     });
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("meta:default")).toBe(LIMIT - 2 * META_WRITE_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - 2 * META_WRITE_TOKENS);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
@@ -552,7 +559,7 @@ describe("meta_duplicate_entity → <Node>.json POST copies", () => {
       rename_options: JSON.stringify({ rename_suffix: " (copy)" }),
       status_option: "PAUSED",
     });
-    expect(remaining("meta:default")).toBe(LIMIT - META_WRITE_TOKENS - META_READ_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_WRITE_TOKENS - META_READ_TOKENS);
   });
 
   it("dry_run sends no copy", async () => {
@@ -600,7 +607,7 @@ describe("meta_adjust_bids → AdSet read then AdSet.json POST — (#update)", (
       }),
     ]);
     expect(apiRequests()).toHaveLength(2);
-    expect(remaining("meta:default")).toBe(LIMIT - META_READ_TOKENS - META_WRITE_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_READ_TOKENS - META_WRITE_TOKENS);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
@@ -662,7 +669,7 @@ describe("meta_manage_budget_schedule (create) → Campaign.json POST budget_sch
       time_end: "1790086400",
     });
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("meta:default")).toBe(LIMIT - META_WRITE_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_WRITE_TOKENS);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
@@ -731,7 +738,7 @@ describe("meta_submit_report → <Node>.json POST insights (async AdReportRun)",
       breakdowns: "age,gender",
     });
     expect(out.reportRunId).toBe("777");
-    expect(remaining("meta:default")).toBe(LIMIT - META_READ_TOKENS);
+    expect(remaining(USER_KEY)).toBe(LIMIT - META_READ_TOKENS);
   });
 
   // basis: AdAccount.json / Campaign.json apis[POST insights] list no `async`
@@ -809,11 +816,100 @@ describe("media uploads (multipart)", () => {
     "meta_upload_image sends `bytes` in a form the spec defines (base64 string) and no undeclared `name` — reported on #236"
   );
 
-  // The adimages / advideos POSTs and the video status polls go through
-  // `metaService.graphApiClient` directly and never touch the limiter.
-  it.todo(
-    "meta_upload_image / meta_upload_video draw limiter tokens per Graph call — reported on #236, not fixed here"
-  );
+  // The adimages / advideos POSTs and the video status polls used to go
+  // through the Graph client directly and never touch the limiter (#236). The
+  // token total is read off `consume` itself, so these fail on that code for
+  // the bypass and not merely for the key.
+  // basis: Meta scores a write call 3 points and a read 1, per ad account
+  // (rate-limiting page, mirrored in docs/reviews/2026-09-fleet-review/
+  // _quotas-social.md §1 — corroboration only); an upload creates an AdImage /
+  // AdVideo in the account (AdAccount.json apis[POST adimages|advideos]).
+  describe("uploads draw limiter tokens per Graph call", () => {
+    let consume: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      consume = vi.spyOn(rateLimiter, "consume");
+      consume.mockClear();
+    });
+    afterEach(() => consume.mockRestore());
+
+    function tokensSpent(): number {
+      return consume.mock.calls.reduce(
+        (sum, call) => sum + ((call[1] as number | undefined) ?? 1),
+        0
+      );
+    }
+
+    it("meta_upload_image: the adimages POST is one write on the account's bucket", async () => {
+      stub.route({
+        method: "GET",
+        host: "cdn.example.com",
+        path: "/banner.png",
+        rawBody: Buffer.from("png-bytes", "latin1"),
+        contentType: "image/png",
+      });
+      stub.route({
+        method: "POST",
+        path: /\/adimages$/,
+        response: { images: { "banner.png": { hash: "abc123" } } },
+      });
+
+      await uploadImageLogic(
+        UploadImageInputSchema.parse({
+          // The bare id: the bucket is the same one `act_{id}` names.
+          adAccountId: ACT.slice("act_".length),
+          mediaUrl: "https://cdn.example.com/banner.png",
+        }),
+        ctx,
+        sdk
+      );
+
+      expect(writes()).toHaveLength(1);
+      expect(tokensSpent()).toBe(META_WRITE_TOKENS);
+      expect(remaining(ACCOUNT_KEY)).toBe(LIMIT - META_WRITE_TOKENS);
+      expect(remaining(USER_KEY)).toBe(LIMIT);
+    });
+
+    it("meta_upload_video: the advideos POST is one write and every status poll one read", async () => {
+      stub.route({
+        method: "HEAD",
+        host: "cdn.example.com",
+        path: "/spot.mp4",
+        rawBody: "",
+        contentType: "video/mp4",
+      });
+      stub.route({
+        method: "GET",
+        host: "cdn.example.com",
+        path: "/spot.mp4",
+        rawBody: Buffer.from("mp4-bytes", "latin1"),
+        contentType: "video/mp4",
+      });
+      stub.route({ method: "POST", path: /\/advideos$/, response: { id: "8801" } });
+      let polls = 0;
+      stub.route({
+        method: "GET",
+        path: /\/8801$/,
+        response: () =>
+          ++polls < 3
+            ? { id: "8801", status: { video_status: "processing", processing_progress: 40 } }
+            : { id: "8801", status: { video_status: "ready", processing_progress: 100 } },
+      });
+
+      await uploadVideoLogic(
+        UploadVideoInputSchema.parse({
+          adAccountId: ACT,
+          mediaUrl: "https://cdn.example.com/spot.mp4",
+        }),
+        ctx,
+        sdk
+      );
+
+      const graphCalls = apiRequests().map((r) => r.method);
+      expect(graphCalls).toEqual(["POST", "GET", "GET", "GET"]);
+      expect(tokensSpent()).toBe(META_WRITE_TOKENS + 3 * META_READ_TOKENS);
+      expect(remaining(ACCOUNT_KEY)).toBe(LIMIT - META_WRITE_TOKENS - 3 * META_READ_TOKENS);
+    });
+  });
 
   it("meta_upload_video → HEAD + GET the media, POST /act_{id}/advideos (`source`), poll GET /{video_id}?fields=status", async () => {
     stub.route({

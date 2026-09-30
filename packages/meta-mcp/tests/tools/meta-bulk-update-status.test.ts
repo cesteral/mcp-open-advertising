@@ -51,6 +51,7 @@ describe("bulkUpdateStatusLogic", () => {
     vi.clearAllMocks();
 
     mockMetaService = {
+      quotaScope: { quotaUser: "u-1" },
       bulkUpdateStatus: vi.fn().mockResolvedValue({
         results: [
           { entityId: "1", success: true },

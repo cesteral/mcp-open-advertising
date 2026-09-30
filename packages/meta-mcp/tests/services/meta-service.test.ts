@@ -8,6 +8,7 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 function createMockHttpClient() {
   return {
+    quotaUser: "u-1",
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue({}),
@@ -253,12 +254,12 @@ describe("MetaService", () => {
       );
     });
 
-    it("calls rateLimiter.consume with account key", async () => {
+    it("draws on the named ad account's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.listEntities("campaign", "act_123");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:act_123");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1:account:act_123", 1);
     });
   });
 
@@ -298,12 +299,12 @@ describe("MetaService", () => {
       expect(params.fields).toContain("name");
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({});
 
       await service.getEntity("campaign", "123");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
   });
 
@@ -348,7 +349,7 @@ describe("MetaService", () => {
 
       await service.createEntity("campaign", "act_123", { name: "Test" });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:act_123", 3);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1:account:act_123", 3);
     });
 
     it("uses correct edge for adSet entities", async () => {
@@ -383,7 +384,7 @@ describe("MetaService", () => {
 
       await service.updateEntity("entity-123", { status: "ACTIVE" });
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default", 3);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 3);
     });
   });
 
@@ -407,7 +408,7 @@ describe("MetaService", () => {
 
       await service.deleteEntity("entity-123");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default", 3);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 3);
     });
   });
 
@@ -554,12 +555,12 @@ describe("MetaService", () => {
       expect((await service.listAdAccounts(undefined, undefined, "p2")).nextCursor).toBeUndefined();
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.listAdAccounts();
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
 
     it("returns empty accounts array and logs a warning when data is not an array", async () => {
@@ -595,7 +596,7 @@ describe("MetaService", () => {
 
       await service.duplicateEntity("entity-123");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default", 3);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 3);
     });
   });
 
@@ -663,12 +664,12 @@ describe("MetaService", () => {
       expect(path).toBe("/act_123456/reachestimate");
     });
 
-    it("calls rateLimiter.consume with account key", async () => {
+    it("draws on the named ad account's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getDeliveryEstimate("act_123", {});
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:act_123");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1:account:act_123", 1);
     });
   });
 
@@ -687,12 +688,12 @@ describe("MetaService", () => {
       expect(params.ad_format).toBe("DESKTOP_FEED_STANDARD");
     });
 
-    it("calls rateLimiter.consume with default key", async () => {
+    it("draws on the session user's bucket", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getAdPreviews("ad-123", "MOBILE_FEED_STANDARD");
 
-      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("meta:user:u-1", 1);
     });
   });
 });
