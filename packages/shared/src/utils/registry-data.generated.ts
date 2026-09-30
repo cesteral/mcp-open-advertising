@@ -157,6 +157,13 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Runs up to 100 arbitrary GraphQL mutations as one job, including delete/archive mutations. Treat the job as not cancellable. No tool on this server reverses them, so treat every run as potentially terminal. Refused against production unless the operator opts in (TTD_ALLOW_UNVERIFIED_MUTATION_BULK)."
           },
           {
+            "tool": "ttd_graphql_query",
+            "operations": [
+              "manage"
+            ],
+            "note": "Passes any GraphQL document to TTD, including delete/archive mutations such as bidListDelete. No tool on this server reverses them. Terminal only when the document is such a mutation; queries change nothing."
+          },
+          {
             "tool": "ttd_manage_bid_list",
             "operations": [
               "manage"

@@ -70,13 +70,13 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Advanced (GraphQL)
 
-| Tool                          | Description                                            |
-| ----------------------------- | ------------------------------------------------------ |
-| `ttd_graphql_query`           | Execute GraphQL query/mutation against TTD GraphQL API |
-| `ttd_graphql_query_bulk`      | Execute bulk GraphQL queries                           |
-| `ttd_graphql_mutation_bulk`   | Execute bulk GraphQL mutations                         |
-| `ttd_graphql_bulk_job`        | Submit a GraphQL bulk job                              |
-| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                      |
+| Tool                          | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `ttd_graphql_query`           | Execute GraphQL query/mutation against TTD GraphQL API  |
+| `ttd_graphql_query_bulk`      | Execute bulk GraphQL queries                            |
+| `ttd_graphql_mutation_bulk`   | Execute bulk GraphQL mutations                          |
+| `ttd_graphql_bulk_job`        | Poll a GraphQL bulk job's status, errors and result URL |
+| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                       |
 
 ### Creatives and Discovery
 

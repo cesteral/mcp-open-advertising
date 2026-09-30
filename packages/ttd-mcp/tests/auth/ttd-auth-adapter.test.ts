@@ -119,6 +119,21 @@ describe("TtdDirectTokenAuthAdapter", () => {
     await expect(adapter.validate()).rejects.toMatchObject({ code: -32006 });
   });
 
+  // basis: vendored TTD GraphQL docs (docs/api/thetradedesk_graphql_api_docs.md,
+  // "Error Codes"): AUTHENTICATION_FAILURE is TTD's code for invalid credentials.
+  // Fleet review 2026-09, ttd GraphQL #11: with a message that does not say
+  // "auth"/"token", it used to surface as InternalError (HTTP 500).
+  it("throws Unauthorized McpError on TTD's AUTHENTICATION_FAILURE code", async () => {
+    fetchWithTimeoutMock.mockResolvedValueOnce(
+      okResponse({
+        errors: [{ message: "Access denied", extensions: { code: "AUTHENTICATION_FAILURE" } }],
+      })
+    );
+    const adapter = new TtdDirectTokenAuthAdapter("invalid", "direct-token", TEST_GRAPHQL_URL);
+
+    await expect(adapter.validate()).rejects.toMatchObject({ code: -32006 });
+  });
+
   it("throws InternalError McpError on non-auth HTTP failures", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(errorResponse(500, "Server Error"));
     const adapter = new TtdDirectTokenAuthAdapter("token", "direct-token", TEST_GRAPHQL_URL);

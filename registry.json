@@ -211,6 +211,7 @@
         "entity-examples://all",
         "entity-examples://{entityType}",
         "report-reference://all",
+        "graphql-reference://ttd",
         "tool-examples://ttd-mcp/all",
         "server-capabilities://ttd-mcp/overview"
       ],
@@ -270,6 +271,11 @@
             "tool": "ttd_graphql_mutation_bulk",
             "operations": ["bulk_job"],
             "note": "Runs up to 100 arbitrary GraphQL mutations as one job, including delete/archive mutations. Treat the job as not cancellable. No tool on this server reverses them, so treat every run as potentially terminal. Refused against production unless the operator opts in (TTD_ALLOW_UNVERIFIED_MUTATION_BULK)."
+          },
+          {
+            "tool": "ttd_graphql_query",
+            "operations": ["manage"],
+            "note": "Passes any GraphQL document to TTD, including delete/archive mutations such as bidListDelete. No tool on this server reverses them. Terminal only when the document is such a mutation; queries change nothing."
           },
           {
             "tool": "ttd_manage_bid_list",

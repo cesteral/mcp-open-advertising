@@ -94,7 +94,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     "Read server-capabilities://ttd-mcp/overview to choose a capability group.",
     "Read entity-hierarchy://all and entity-schema://{entityType} before entity writes.",
     "Read report-reference://all before report or schedule tools.",
-    "Read graphql-reference://all before GraphQL passthrough or bulk GraphQL tools.",
+    "Read graphql-reference://ttd before GraphQL passthrough or bulk GraphQL tools.",
     "Use tool-examples://ttd-mcp/all only when concrete payload examples are needed.",
   ],
   relatedResources: [
@@ -102,7 +102,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     "entity-schema://all",
     "entity-examples://all",
     "report-reference://all",
-    "graphql-reference://all",
+    "graphql-reference://ttd",
     "tool-examples://ttd-mcp/all",
   ],
   startHere: "ttd_get_context",

@@ -106,7 +106,11 @@ export async function graphqlQueryLogic(
     betaFeatures: input.betaFeatures,
   })) as Record<string, unknown>;
 
-  const data = result.data ?? result;
+  // A fully failed operation answers `{ data: null, errors: [...] }` (GraphQL
+  // spec); only fall back to the whole body when it has no `data` key at all.
+  // `result.data ?? result` turned a null `data` into the envelope, so the
+  // formatter printed the errors twice.
+  const data = "data" in result ? result.data : result;
   const errors = result.errors as Record<string, any>[] | undefined;
 
   // Try spill if bucket is configured and body exceeds threshold.
@@ -219,7 +223,6 @@ export const graphqlQueryTool = {
       input: {
         query: "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status } }",
         variables: { id: "adv123abc" },
-        betaFeatures: "my-beta-flag",
       },
     },
     {

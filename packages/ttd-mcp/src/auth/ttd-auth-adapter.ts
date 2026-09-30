@@ -15,6 +15,7 @@ import {
   JsonRpcErrorCode,
   McpError,
 } from "@cesteral/shared";
+import { AUTH_ERROR_CODES } from "../mcp-server/tools/utils/graphql-errors.js";
 
 const DEFAULT_TTD_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
 
@@ -107,7 +108,13 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
       const first = data.errors[0];
       const code = first?.extensions?.code;
       const message = first?.message ?? "unknown GraphQL error";
+      // TTD's documented auth code is AUTHENTICATION_FAILURE (vendored
+      // docs/api/thetradedesk_graphql_api_docs.md, "Error Codes"); the
+      // Apollo-style UNAUTHENTICATED/FORBIDDEN are kept as a fallback, as is
+      // the message match. An unmatched code became an InternalError (HTTP 500
+      // at session establishment) instead of a 401.
       if (
+        (code !== undefined && AUTH_ERROR_CODES.has(code)) ||
         code === "UNAUTHENTICATED" ||
         code === "FORBIDDEN" ||
         /auth|token|unauthor/i.test(message)
