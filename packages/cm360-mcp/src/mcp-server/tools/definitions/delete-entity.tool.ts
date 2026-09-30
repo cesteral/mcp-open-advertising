@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDeletableEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import {
   elicitDeleteConfirmation,
+  NO_UNTRUSTED_CONTENT,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -248,4 +249,6 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // The delete dry run is symbolic (no read) and the delete response is discarded; text names only the caller's entity type and ID.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

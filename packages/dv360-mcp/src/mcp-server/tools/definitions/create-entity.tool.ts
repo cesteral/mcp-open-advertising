@@ -431,4 +431,6 @@ export const createEntityTool = {
   },
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // Create dry run is symbolic (no read; expectedPostState built from caller data), so $.dryRun is not declared.
+  untrustedContent: { structuredPaths: ["$.entity", "$.after"], contentBlocks: [0] },
 };

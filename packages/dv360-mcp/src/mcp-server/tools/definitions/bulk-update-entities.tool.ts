@@ -521,4 +521,5 @@ export const bulkUpdateEntitiesTool = {
   },
   logic: bulkUpdateEntitiesLogic,
   responseFormatter: bulkUpdateEntitiesResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.results"], contentBlocks: [0] },
 };

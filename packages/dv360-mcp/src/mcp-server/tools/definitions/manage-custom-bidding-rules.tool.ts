@@ -484,4 +484,5 @@ export const manageCustomBiddingRulesTool = {
   },
   logic: manageCustomBiddingRulesLogic,
   responseFormatter: manageCustomBiddingRulesResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.rules", "$.rulesList"], contentBlocks: [0] },
 };
