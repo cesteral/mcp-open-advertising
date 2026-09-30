@@ -61,7 +61,7 @@ Entities require valid parents. Verify each level:
 | \`400 Bad Request\` | Missing required field | Check \`entity-schema://${entityType}\` for required fields |
 | \`400\` on campaign create | \`StartDate\` in the past | Use a future start date |
 | \`400\` on ad group create | Missing \`RTBAttributes\` | Include \`BudgetSettings\` + \`BaseBidCPM\` |
-| \`400\` on ad create | Invalid \`CreativeIds\` | Verify creatives exist first |
+| \`400\` attaching creatives to an ad group | Invalid \`RTBAttributes.CreativeIds\` | Verify creatives exist first |
 | \`403 Forbidden\` | Insufficient permissions | Verify API credentials have write access |
 | \`404 Not Found\` | Wrong parent ID | Verify \`AdvertiserId\`, \`CampaignId\`, \`AdGroupId\` |
 | \`409 Conflict\` | Duplicate name or constraint | Change entity name or check uniqueness constraints |

@@ -10,7 +10,7 @@
  * clients can discover what to send before invoking write tools.
  *
  * TTD REST API enum reference:
- *   https://api.thetradedesk.com/v3/portal/api/doc/
+ *   https://partner.thetradedesk.com/v3/portal/api/doc/
  */
 
 import type { FieldRule } from "@cesteral/shared";

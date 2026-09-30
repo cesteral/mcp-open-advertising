@@ -147,7 +147,8 @@ export async function bulkUpdateEntitiesLogic(
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
-    summary: "Applying field updates across multiple entities (TTD uses PUT semantics).",
+    summary:
+      "Applying field updates across multiple entities (partial PUT: only the sent fields change).",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
     sdkContext,

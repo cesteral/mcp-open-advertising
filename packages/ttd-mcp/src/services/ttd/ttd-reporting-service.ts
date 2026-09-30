@@ -319,21 +319,6 @@ export class TtdReportingService {
     });
   }
 
-  /**
-   * List report template headers (read-only — templates are created in the TTD UI).
-   */
-  async listReportTemplates(
-    query: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch("/myreports/reporttemplateheader/query", context, {
-      method: "POST",
-      body: JSON.stringify(query),
-    });
-  }
-
   private async pollReportExecution(
     reportScheduleId: string,
     advertiserIds: string[],
@@ -367,7 +352,10 @@ export class TtdReportingService {
           return result.Result?.[0] ?? {};
         },
         isComplete: (exec) => exec.ReportExecutionState === "Complete",
-        isFailed: (exec) => exec.ReportExecutionState === "Failed",
+        // A cancelled execution (e.g. via ttd_cancel_report_execution) never
+        // completes; without this, polling ran on to maxPollAttempts.
+        isFailed: (exec) =>
+          exec.ReportExecutionState === "Failed" || exec.ReportExecutionState === "Cancelled",
         initialDelayMs: this.pollIntervalMs,
         maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
         maxAttempts: this.maxPollAttempts,

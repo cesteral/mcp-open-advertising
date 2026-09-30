@@ -311,60 +311,6 @@ export class TtdService {
     await this.updateAvailability(entityType, entityId, "Archived", context);
   }
 
-  // ─── Validate-Only (Dry Run) ──────────────────────────────────────
-
-  /**
-   * Test an entity payload against the TTD API.
-   *
-   * WARNING: TTD has no dry-run mode. A successful create-mode call
-   * CREATES a real entity; a successful update-mode call UPDATES it.
-   * Use this primarily to diagnose validation failures (400 errors).
-   */
-  async testCreateOrUpdate(
-    entityType: TtdEntityType,
-    data: Record<string, unknown>,
-    mode: "create" | "update",
-    entityId?: string,
-    context?: RequestContext
-  ): Promise<{ valid: boolean; errors?: string[] }> {
-    const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    try {
-      if (mode === "update" && entityId) {
-        // TTD PUT endpoints take no ID in URL; ID must be in the request body
-        const payload = { ...data, [config.idField]: entityId };
-        await this.httpClient.fetch(config.apiPath, context, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await this.httpClient.fetch(config.apiPath, context, {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
-      }
-      return { valid: true };
-    } catch (error: unknown) {
-      // Only treat client-error McpErrors as validation results.
-      // Re-throw network, auth, rate-limit, and 5xx errors.
-      const CLIENT_ERROR_CODES = new Set([
-        JsonRpcErrorCode.InvalidRequest,
-        JsonRpcErrorCode.InvalidParams,
-        JsonRpcErrorCode.NotFound,
-      ]);
-      if (error instanceof McpError && CLIENT_ERROR_CODES.has(error.code)) {
-        const errorMessage = error.message ?? String(error);
-        const errorBody =
-          (error.data as { errorBody?: string } | undefined)?.errorBody ?? errorMessage;
-        return { valid: false, errors: [errorBody] };
-      }
-      throw error;
-    }
-  }
-
   // ─── Bulk Operations ──────────────────────────────────────────────
 
   /**

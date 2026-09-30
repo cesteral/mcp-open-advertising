@@ -13,8 +13,7 @@ const TOOL_DESCRIPTION = `Discover available dimension-specific report types for
 Returns which report types are available for a given entity and Kokai tile,
 and whether each report can be downloaded immediately or requires scheduling.
 
-**tile** is the abbreviation shown in the TTD programmatic table UI (e.g. Ag = Ad Group, Ca = Campaign, Af = Advertiser).
-Common tile abbreviations: Ag (Ad Group), Ca (Campaign), Af (Advertiser).
+**tile** is the Kokai tile abbreviation shown in the TTD programmatic table UI (e.g. \`Af\`, \`Ag\`, \`Ca\` — the examples TTD's own sample gives). Tiles are programmatic-table tabs, not entity types, and TTD's sample does not say what each abbreviation stands for: copy the abbreviation from the UI rather than inferring it from the entity you are reporting on.
 
 Use the returned \`type\` values with \`ttd_execute_entity_report\` to generate reports.`;
 

@@ -101,10 +101,10 @@ export const REGISTRY_DATA: RegistryData = {
       "package": "ttd-mcp",
       "title": "The Trade Desk MCP Server",
       "description": "The Trade Desk management — CRUD, GraphQL, bulk ops, and async reports",
-      "runtime_description": "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
+      "runtime_description": "The Trade Desk Platform API (REST v3 + GraphQL): campaigns, ad groups, creatives, bid lists, seeds, reporting.",
       "platform": "The Trade Desk",
       "platform_display_name": "TTD",
-      "documentation_url": "https://api.thetradedesk.com/v3/portal/api/doc/Welcome",
+      "documentation_url": "https://partner.thetradedesk.com/v3/portal/api/doc/ApiReference",
       "auth": {
         "modes": [
           "ttd-token",

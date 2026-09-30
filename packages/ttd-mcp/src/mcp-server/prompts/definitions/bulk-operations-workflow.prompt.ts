@@ -12,7 +12,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const bulkOperationsWorkflowPrompt: Prompt = {
   name: "ttd_bulk_operations_workflow",
   description:
-    "Step-by-step guide for TTD bulk operations: batch create/update campaigns and ad groups, batch status changes, archive entities, batch bid adjustments, and GraphQL bulk jobs. Covers PUT semantics, partial failure handling, and verification.",
+    "Step-by-step guide for TTD bulk operations: batch create/update campaigns and ad groups, batch status changes, archive entities, batch bid adjustments, and GraphQL bulk jobs. Covers partial-PUT updates, partial failure handling, and verification.",
   arguments: [
     {
       name: "advertiserId",
@@ -138,9 +138,9 @@ Valid statuses: \`Available\`, \`Paused\`, \`Archived\`
 
 ## Bulk Entity Updates
 
-### Step 1: Fetch Current State
+### Step 1: Fetch Current State (only if you are extending arrays)
 
-TTD uses **PUT semantics** — the entire entity is replaced. You MUST fetch the current entity first, merge your changes, then send the full payload.
+TTD's v3 PUT is a **partial update** (TTD Foundations §8): send each entity's ID and only the properties that change. Fetch the current entity only when you need its current values — e.g. to extend an array, since arrays replace rather than append.
 
 \`\`\`json
 {
@@ -152,7 +152,7 @@ TTD uses **PUT semantics** — the entire entity is replaced. You MUST fetch the
 }
 \`\`\`
 
-### Step 2: Merge and Execute
+### Step 2: Execute With Only the Changed Fields
 
 \`\`\`json
 {
@@ -164,18 +164,18 @@ TTD uses **PUT semantics** — the entire entity is replaced. You MUST fetch the
     "items": [
       {
         "entityId": "{adGroupId1}",
-        "data": { "...full entity with your changes merged in..." }
+        "data": { "RTBAttributes": { "BaseBidCPM": { "Amount": 4.0, "CurrencyCode": "USD" } } }
       },
       {
         "entityId": "{adGroupId2}",
-        "data": { "...full entity with your changes merged in..." }
+        "data": { "AdGroupName": "Renamed ad group" }
       }
     ]
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Unlike DV360 (PATCH with updateMask), TTD uses **PUT** (full replacement). Omitting a field resets it to default. Always GET first, then merge changes.
+⚠️ **GOTCHA**: Do not send whole GET payloads back — deprecated properties in them can fail the request (\`410 Gone\`). Omitted properties are left unchanged; arrays you send replace the current ones.
 
 ---
 
@@ -291,7 +291,7 @@ For large-scale operations beyond REST API limits.
 
 - [ ] Correct \`advertiserId\`
 - [ ] Entity IDs verified by listing first
-- [ ] For updates: GET current entity first (PUT semantics = full replacement)
+- [ ] For updates: send only the changed fields (partial PUT); GET first only to extend arrays
 - [ ] For archive: confirmed irreversibility with user
 - [ ] For bids: amounts in dollars (not micros or cents)
 - [ ] For GraphQL mutations: inputs double-checked (non-cancelable)

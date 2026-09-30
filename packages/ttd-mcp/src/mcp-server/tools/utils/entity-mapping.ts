@@ -12,9 +12,11 @@ import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
  * Covers the entity types currently exposed as first-class MCP CRUD tools:
  * advertiser, campaign, adGroup, creative, and conversionTracker.
  *
- * Other TTD objects such as ads, deals, bid lists, and site lists are not
- * exposed here as CRUD entities. Use GraphQL or the Workflows REST passthrough
- * for endpoints that are outside this first-class entity set.
+ * Other TTD objects such as deals, bid lists, and site lists are not exposed
+ * here as CRUD entities (TTD has no standalone "ad" object at all: creatives
+ * attach to an ad group's RTBAttributes.CreativeIds). Use GraphQL
+ * (ttd_graphql_query) or the dedicated tools (e.g. ttd_manage_bid_list) for
+ * objects outside this first-class entity set.
  */
 
 export type TtdEntityType =
@@ -24,7 +26,10 @@ export type TtdEntityType =
   | "creative"
   | "conversionTracker";
 
-/** Subset that supports bulk create/update via the Workflows Service. */
+/**
+ * Subset the bulk create/update tools accept. They send concurrent per-item
+ * REST calls; >100-record writes belong on GraphQL (ttd_graphql_mutation_bulk).
+ */
 export type BulkSupportedEntityType = "campaign" | "adGroup";
 
 export interface TtdEntityConfig {
@@ -33,7 +38,7 @@ export interface TtdEntityConfig {
   queryPath: string;
   parentIds: ParentIdKey[];
   idField: string;
-  /** Whether the entity supports bulk create/update via Workflows Service. */
+  /** Whether the bulk create/update tools accept this entity type. */
   supportsBulk?: boolean;
   /** Whether the entity can be archived (soft-deleted). */
   supportsArchive?: boolean;

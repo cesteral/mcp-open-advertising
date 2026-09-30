@@ -111,3 +111,21 @@ describe("Tool consistency: barrel header ↔ allTools", () => {
     expect(Number(header![1])).toBe(production.length);
   });
 });
+
+// Fleet review ttd REST #30: nine tools had no interaction-log workflow id.
+describe("Tool consistency: interaction-log workflow ids ↔ allTools", () => {
+  it("maps every registered tool except the generated search tool", async () => {
+    const { ttdWorkflowIdByToolName } = await import("../src/mcp-server/server.js");
+    const missing = allTools
+      .map((t) => t.name)
+      .filter((n) => !CONFORMANCE_TOOL_NAMES.has(n) && n !== "ttd_search_tools")
+      .filter((n) => !(n in ttdWorkflowIdByToolName));
+    expect(missing).toEqual([]);
+  });
+
+  it("maps no tool that is not registered", async () => {
+    const { ttdWorkflowIdByToolName } = await import("../src/mcp-server/server.js");
+    const registered = new Set(allTools.map((t) => t.name));
+    expect(Object.keys(ttdWorkflowIdByToolName).filter((n) => !registered.has(n))).toEqual([]);
+  });
+});
