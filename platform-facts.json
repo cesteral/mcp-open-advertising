@@ -413,6 +413,22 @@
       "note": "Corroborated by secondary sources (vendor doc excerpts surfaced via search), NOT read off LinkedIn's endpoint reference: learn.microsoft.com and developer.linkedin.com are both blocked by this repo's egress policy."
     },
     {
+      "id": "tiktok.report_task_has_no_download_contract",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "TikTok documents no way to fetch a finished async report task's rows: the official Business API SDK defines exactly three report-task operations (POST report/task/create/, GET report/task/check/, POST report/task/cancel/) and no report-task download endpoint, and report/task/check/ documents no download URL (its data object declares no properties; the response rule maps only status and message). tiktok_submit_report and tiktok_download_report therefore refuse and point at the synchronous report/integrated/get/ tools (#232).",
+      "value": "no report-task download endpoint",
+      "sourceUrl": "https://github.com/tiktok/tiktok-business-api-sdk/blob/f809c396520df2d7b201a9ccc5378d822b728ed3/yml_files/report_task_check.yml",
+      "status": "unverified",
+      "verifiedAt": null,
+      "verifyBy": "2027-03-28",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:52"],
+      "verificationBasis": "vendor-sdk",
+      "note": "Read 2026-09-30 off TikTok's official SDK, tiktok/tiktok-business-api-sdk @ f809c396520df2d7b201a9ccc5378d822b728ed3 (2026-02-28): yml_files/ holds only report_task_create.yml, report_task_check.yml and report_task_cancel.yml under /report/task/; python_sdk/business_api_client/api/reporting_api.py (and the JS/Java ReportingApi) generate only report_task_create/check/cancel; the Changelog adds only those three. The same SDK does name /comment/task/download/ and /blockedword/task/download/ for its other async exports, so the gap is specific to reports. report_task_create.yml's output_format enum (CSV_STRING default, CSV_DOWNLOAD, XLSX_DOWNLOAD) implies TikTok delivers results somehow, but the SDK names no field or endpoint that carries them. GitHub code search of org:tiktok finds no other report/task source. The vendor doc host (business-api.tiktok.com) is blocked by this repo's egress policy, so the absence is read off the SDK, not the API reference, and nothing was called against TikTok. CORROBORATION ONLY, not a vendor contract: the third-party Go wrapper bububa/tiktok-business @ 60c9d14eafb136cd0a38e3f20a43bb07c8db5013 (api/report/task_download.go, model/report/task_download.go) calls GET v1.3/report/task/download/?advertiser_id=&task_id= and reads data.download_url (commented as valid for 1 hour). If a primary source confirms that endpoint, implement it (download via assertSafeDownloadUrl + the report-view/spill path) and lift the refusal."
+    },
+    {
       "id": "amazon_dsp.rate_limit_default",
       "package": "amazon-dsp-mcp",
       "class": "behavioral-constraint",
