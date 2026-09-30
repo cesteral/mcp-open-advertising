@@ -177,4 +177,8 @@ export const getAdPreviewTool = {
   ],
   logic: getAdPreviewLogic,
   responseFormatter: getAdPreviewResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.creativeName", "$.thirdPartyTag", "$.vastTagUrl", "$.reviewStatus"],
+    contentBlocks: [0],
+  },
 };

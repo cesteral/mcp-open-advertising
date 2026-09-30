@@ -107,4 +107,9 @@ export const checkReportStatusTool = {
   ],
   logic: checkReportStatusLogic,
   responseFormatter: checkReportStatusResponseFormatter,
+  // file is the raw CM360 report file resource (printed in the text block); errors is never filled by the status mapper today, declared so a future failure reason is covered.
+  untrustedContent: {
+    structuredPaths: ["$.file", "$.errors"],
+    contentBlocks: [0],
+  },
 };

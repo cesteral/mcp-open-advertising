@@ -329,4 +329,9 @@ export const bulkUpdateStatusTool = {
   ],
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
+  // Per-item error text from the platform. The dry run is symbolic, so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

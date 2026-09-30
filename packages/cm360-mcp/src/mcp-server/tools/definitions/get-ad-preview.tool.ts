@@ -97,4 +97,9 @@ export const getAdPreviewTool = {
   ],
   logic: getAdPreviewLogic,
   responseFormatter: getAdPreviewResponseFormatter,
+  // previewUrl is the ad's computedClickThroughUrl, an advertiser-authored click URL.
+  untrustedContent: {
+    structuredPaths: ["$.adName", "$.previewUrl", "$.ad"],
+    contentBlocks: [0],
+  },
 };

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -80,4 +81,6 @@ export const listAccountsTool = {
   ],
   logic: listAccountsLogic,
   responseFormatter: listAccountsResponseFormatter,
+  // Returns customer resource names and ids only.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

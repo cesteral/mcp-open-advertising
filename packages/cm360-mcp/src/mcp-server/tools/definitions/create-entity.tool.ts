@@ -225,4 +225,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // The create dry run is symbolic (built from the caller's payload over an empty base, no read), so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.after"],
+    contentBlocks: [0],
+  },
 };

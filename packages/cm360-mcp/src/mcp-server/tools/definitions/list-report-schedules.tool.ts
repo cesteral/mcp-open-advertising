@@ -119,4 +119,8 @@ export const listReportSchedulesTool = {
   ],
   logic: listReportSchedulesLogic,
   responseFormatter: listReportSchedulesResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.schedules", "$.raw"],
+    contentBlocks: [0],
+  },
 };

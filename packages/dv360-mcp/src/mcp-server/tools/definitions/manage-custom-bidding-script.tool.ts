@@ -488,4 +488,5 @@ export const manageCustomBiddingScriptTool = {
   },
   logic: manageCustomBiddingScriptLogic,
   responseFormatter: manageCustomBiddingScriptResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.script", "$.scripts"], contentBlocks: [0] },
 };

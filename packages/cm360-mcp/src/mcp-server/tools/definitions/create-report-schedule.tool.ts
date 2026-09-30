@@ -300,4 +300,9 @@ export const createReportScheduleTool = {
   ],
   logic: createReportScheduleLogic,
   responseFormatter: createReportScheduleResponseFormatter,
+  // reportName and schedule are read back from the CM360 report resource. The dry run is symbolic (no read).
+  untrustedContent: {
+    structuredPaths: ["$.reportName", "$.schedule"],
+    contentBlocks: [0],
+  },
 };
