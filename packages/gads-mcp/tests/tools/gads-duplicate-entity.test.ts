@@ -72,6 +72,50 @@ describe("gads_duplicate_entity", () => {
     expect(svc.createEntity.mock.calls[0][2].name).toBe("New");
   });
 
+  it("creates the copy PAUSED when the source is ENABLED", async () => {
+    svc.getEntity.mockResolvedValueOnce({
+      campaign: { id: "111", name: "Live", status: "ENABLED", advertisingChannelType: "SEARCH" },
+    });
+    await duplicateEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "111" } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.createEntity.mock.calls[0][2].status).toBe("PAUSED");
+  });
+
+  it("ignores a status in options: the copy is always PAUSED", async () => {
+    svc.getEntity.mockResolvedValueOnce({
+      campaign: { id: "111", name: "Live", status: "ENABLED", advertisingChannelType: "SEARCH" },
+    });
+    await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        customerId: "1",
+        entityId: "111",
+        options: { name: "Copy", status: "ENABLED" },
+      } as any,
+      ctx,
+      sdk
+    );
+    const payload = svc.createEntity.mock.calls[0][2];
+    expect(payload.status).toBe("PAUSED");
+    expect(payload.name).toBe("Copy");
+  });
+
+  it("dry_run validates and projects the PAUSED copy that execute would send", async () => {
+    svc.getEntity.mockResolvedValueOnce({
+      campaign: { id: "111", name: "Live", status: "ENABLED", advertisingChannelType: "SEARCH" },
+    });
+    await duplicateEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "111", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.createEntity).not.toHaveBeenCalled();
+    expect(svc.validateEntity.mock.calls[0][2].status).toBe("PAUSED");
+  });
+
   it("dry_run validates via native validateOnly and does not create", async () => {
     const result = await duplicateEntityLogic(
       { entityType: "campaign", customerId: "1", entityId: "111", dry_run: true } as any,

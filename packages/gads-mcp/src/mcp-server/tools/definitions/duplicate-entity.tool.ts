@@ -12,6 +12,7 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
+  createLogger,
 } from "@cesteral/shared";
 import type {
   RequestContext,
@@ -21,7 +22,17 @@ import type {
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
 
+const logger = createLogger("gads-duplicate-entity");
+
 const TOOL_NAME = "gads_duplicate_entity";
+
+/**
+ * The status every duplicate is created with. A copy of an ENABLED campaign
+ * must not spend before someone deliberately enables it; `Resources__Campaign`
+ * defaults `status` to ENABLED on create, so the copy's status is always sent
+ * explicitly. dv360, msads and pinterest land copies in a non-running state too.
+ */
+export const GADS_DUPLICATE_COPY_STATUS = "PAUSED";
 const TOOL_TITLE = "Duplicate Google Ads Entity";
 const TOOL_DESCRIPTION = `Duplicate a Google Ads entity (copy it).
 
@@ -30,23 +41,38 @@ const TOOL_DESCRIPTION = `Duplicate a Google Ads entity (copy it).
 Creates a copy of the entity (clone via read + create — Google Ads has no native copy op).
 Reads the source with GAQL, strips the server-assigned id/resourceName, and creates a new
 entity via the :mutate endpoint. The copy reuses the source's shared budget. Use \`options\`
-(e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.`;
+(e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.
 
-/** Project a GAQL-read resource row into a mutate-create payload. */
-function projectCreatePayload(
+**The copy is always created \`PAUSED\`**, whatever the source's status, so it cannot spend
+until you enable it with \`gads_update_entity\` or \`gads_bulk_update_status\`. A \`status\` in
+\`options\` is ignored.`;
+
+/**
+ * Project a GAQL-read resource row into a mutate-create payload: the source
+ * minus server-assigned fields, with `options` applied and `status` forced to
+ * {@link GADS_DUPLICATE_COPY_STATUS}. Execute and dry run both send this body.
+ */
+export function projectCreatePayload(
   entityType: string,
   row: Record<string, unknown>,
   options?: Record<string, unknown>
-): Record<string, unknown> {
+): { payload: Record<string, unknown>; ignoredStatus?: unknown } {
   const resource = unwrapResource(entityType, row) ?? {};
   const payload: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(resource)) {
     // `id`/`resourceName` are server-assigned; the mutate-create endpoint
     // rejects them. Everything else in the curated SELECT is writable-on-create.
-    if (key !== "id" && key !== "resourceName") payload[key] = val;
+    if (key !== "id" && key !== "resourceName" && key !== "status") payload[key] = val;
   }
-  if (options) Object.assign(payload, options);
-  return payload;
+  for (const [key, val] of Object.entries(options ?? {})) {
+    if (key !== "status") payload[key] = val;
+  }
+  if (Object.keys(payload).length === 0) return { payload };
+  payload.status = GADS_DUPLICATE_COPY_STATUS;
+  const requested = options?.status;
+  return requested !== undefined && requested !== GADS_DUPLICATE_COPY_STATUS
+    ? { payload, ignoredStatus: requested }
+    : { payload };
 }
 
 /** Extract the new numeric ID from a mutate result's resourceName. */
@@ -67,13 +93,18 @@ export const DuplicateEntityInputSchema = z
       .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
       .describe("Google Ads customer ID (no dashes)"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
-    options: z.record(z.any()).optional().describe("Optional copy overrides (e.g., a new name)"),
+    options: z
+      .record(z.any())
+      .optional()
+      .describe(
+        "Optional copy overrides (e.g., a new name). A status here is ignored: the copy is always PAUSED."
+      ),
     dry_run: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication with Google Ads' native validateOnly mutate and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy) without creating anything. No copy is created."
+        "When true, validates the duplication with Google Ads' native validateOnly mutate and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy, with `status` forced to `PAUSED`) without creating anything. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a Google Ads entity");
@@ -114,7 +145,13 @@ export async function duplicateEntityLogic(
     input.entityId,
     context
   )) as Record<string, unknown>;
-  const payload = projectCreatePayload(input.entityType, row, input.options);
+  const { payload, ignoredStatus } = projectCreatePayload(input.entityType, row, input.options);
+  if (ignoredStatus !== undefined) {
+    logger.warn(
+      { entityType: input.entityType, requestedStatus: ignoredStatus },
+      "Ignoring status override on duplicate; copies are always created PAUSED"
+    );
+  }
   if (Object.keys(payload).length === 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,

@@ -482,6 +482,31 @@ describe("gads_duplicate_entity → googleAds.search then campaigns.mutate (crea
     expectOneTokenPerApiCall();
   });
 
+  it("an ENABLED source is copied with status PAUSED, overriding options.status", async () => {
+    routeSearch([{ campaign: { ...SOURCE, status: "ENABLED" } }]);
+    routeMutate("campaigns", { results: [{ resourceName: `customers/${CID}/campaigns/323` }] });
+
+    await duplicateEntityLogic(
+      DuplicateEntityInputSchema.parse({
+        entityType: "campaign",
+        customerId: CID,
+        entityId: "321",
+        options: { status: "ENABLED" },
+      }),
+      ctx,
+      sdk
+    );
+
+    // basis: `Resources__Campaign.status` (CampaignStatus: ENABLED | PAUSED |
+    // REMOVED) — "When a new campaign is added, the status defaults to ENABLED",
+    // so the copy's PAUSED status must be sent explicitly.
+    const req = onlyExecutingMutate();
+    const create = (req.body as { operations: Array<{ create: Record<string, unknown> }> })
+      .operations[0]?.create;
+    expect(create?.status).toBe("PAUSED");
+    expectOneTokenPerApiCall();
+  });
+
   it("dry_run reads the source and sends only a validateOnly create", async () => {
     routeSearch([{ campaign: SOURCE }]);
     await duplicateEntityLogic(
