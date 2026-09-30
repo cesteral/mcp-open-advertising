@@ -128,16 +128,12 @@ export async function uploadImageLogic(
 
   // Per TikTok's FileImageAdUpload spec (official SDK), UPLOAD_BY_FILE requires
   // `image_signature` = MD5 of the image bytes, for server-side verification.
-  const result = (await tiktokService.client.postMultipart(
-    tiktokService.client.versionedPath("file/image/ad/upload/"),
+  const result = (await tiktokService.uploadImage(
     {
       upload_type: "UPLOAD_BY_FILE",
       image_signature: createHash("md5").update(buffer).digest("hex"),
     },
-    "image_file",
-    buffer,
-    effectiveFilename,
-    contentType,
+    { buffer, filename: effectiveFilename, contentType },
     context
   )) as TikTokImageUploadResponse;
 

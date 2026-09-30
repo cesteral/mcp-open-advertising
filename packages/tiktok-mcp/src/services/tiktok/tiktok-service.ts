@@ -84,6 +84,13 @@ interface TikTokAdvertiserListData {
   list?: TikTokAdAccount[];
 }
 
+/** A downloaded media file to upload (see `downloadFileToBuffer`). */
+export interface MediaFile {
+  buffer: Buffer;
+  filename: string;
+  contentType: string;
+}
+
 /**
  * TikTok Service — Generic CRUD operations for TikTok Marketing API entities,
  * plus bulk operations and entity duplication.
@@ -118,10 +125,10 @@ export class TikTokService {
     return tiktokQuotaBucket(this.httpClient, costPerItem);
   }
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
-  get client(): TikTokHttpClient {
-    return this.httpClient;
-  }
+  // The HTTP client is deliberately not exposed: a call made on it directly
+  // draws no limiter tokens. The upload tools used to reach it through a
+  // `client` getter, and their POSTs and video-info polls bypassed the limiter
+  // (#236); every upstream call now goes through a method here that consumes.
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
@@ -513,6 +520,76 @@ export class TikTokService {
           `Unsupported targeting option type: ${optionType}`
         );
     }
+  }
+
+  // ─── Media Uploads ──────────────────────────────────────────────
+
+  /**
+   * `POST file/image/ad/upload/` (multipart). One write's worth of tokens
+   * (TIKTOK_WRITE_TOKENS) from the session's bucket, like every other write:
+   * the upload used to go straight to the HTTP client and draw nothing (#236).
+   *
+   * basis: official SDK (tiktok/tiktok-business-api-sdk @ f809c39)
+   * `python_sdk/business_api_client/api/file_api.py` `ad_image_upload` — POST
+   * `/open_api/v1.3/file/image/ad/upload/`, multipart/form-data, file part
+   * `image_file`.
+   */
+  async uploadImage(
+    fields: Record<string, string>,
+    file: MediaFile,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+    return this.httpClient.postMultipart(
+      this.httpClient.versionedPath("file/image/ad/upload/"),
+      fields,
+      "image_file",
+      file.buffer,
+      file.filename,
+      file.contentType,
+      context
+    );
+  }
+
+  /**
+   * `POST file/video/ad/upload/` (multipart), TIKTOK_WRITE_TOKENS.
+   *
+   * basis: `file_api.py` `ad_video_upload` — POST
+   * `/open_api/v1.3/file/video/ad/upload/`, multipart/form-data, file part
+   * `video_file`.
+   */
+  async uploadVideo(
+    fields: Record<string, string>,
+    file: MediaFile,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+    return this.httpClient.postMultipart(
+      this.httpClient.versionedPath("file/video/ad/upload/"),
+      fields,
+      "video_file",
+      file.buffer,
+      file.filename,
+      file.contentType,
+      context
+    );
+  }
+
+  /**
+   * `GET file/video/ad/info/` — one read (TIKTOK_READ_TOKENS) per call, so
+   * every poll of an upload's processing status is counted.
+   *
+   * basis: `file_api.py` `ad_video_info` — GET
+   * `/open_api/v1.3/file/video/ad/info/`, query `advertiser_id`, `video_ids`
+   * (collection 'multi', which `api_client.py` encodes as `json.dumps(list)`).
+   */
+  async getVideoInfo(videoIds: string[], context?: RequestContext): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
+    return this.httpClient.get(
+      this.httpClient.versionedPath("file/video/ad/info/"),
+      { video_ids: JSON.stringify(videoIds) },
+      context
+    );
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────

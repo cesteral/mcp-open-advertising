@@ -18,7 +18,8 @@ import type { BulkCapacityBucket, RateLimiter } from "@cesteral/shared";
  *
  * So there are two buckets per TikTok access token:
  *
- *   `tiktok:token:{quotaClient}`            CRUD, targeting, audience estimate
+ *   `tiktok:token:{quotaClient}`            CRUD, targeting, audience estimate,
+ *                                           media uploads, video-info polls
  *   `tiktok:token:{quotaClient}:reporting`  report task create/check/download
  *                                           and the synchronous report pages
  *

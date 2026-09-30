@@ -43,26 +43,22 @@ const tiktokService = {
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
-  client: {
-    versionedPath: (suffix: string) => `/open_api/v1.3/${suffix}`,
-    postMultipart: vi.fn(async (path: string) => {
-      if (path.includes("image")) {
-        return { image_id: "img-test-123", image_url: "https://example.com/img.jpg", size: 1000 };
-      }
-      return { video_id: "vid-test-123", video_name: "Test Video" };
-    }),
-    post: vi.fn(async () => ({})),
-    get: vi.fn(async () => ({
-      list: [
-        {
-          video_id: "vid-test-123",
-          video_status: "bind_success",
-          video_name: "Test Video",
-          duration: 15,
-        },
-      ],
-    })),
-  },
+  uploadImage: vi.fn(async () => ({
+    image_id: "img-test-123",
+    image_url: "https://example.com/img.jpg",
+    size: 1000,
+  })),
+  uploadVideo: vi.fn(async () => ({ video_id: "vid-test-123", video_name: "Test Video" })),
+  getVideoInfo: vi.fn(async () => ({
+    list: [
+      {
+        video_id: "vid-test-123",
+        video_status: "bind_success",
+        video_name: "Test Video",
+        duration: 15,
+      },
+    ],
+  })),
 };
 
 const tiktokReportingService = {

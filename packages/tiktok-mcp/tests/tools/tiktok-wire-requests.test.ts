@@ -27,7 +27,8 @@
  * Rate limiting: every entity read draws TIKTOK_READ_TOKENS (1) and every
  * create / update / status update TIKTOK_WRITE_TOKENS (3) from the session's
  * per-token key `tiktok:token:{quotaClient}` (`session.quotaKey`); targeting
- * search and audience estimate draw 1.
+ * search and audience estimate draw 1; a media upload draws 3 and each
+ * video-info poll 1.
  *
  * Covered elsewhere: the async report chain (`tiktok_submit_report` →
  * `tiktok_check_report_status` → `tiktok_download_report`, #232/#259) is
@@ -950,12 +951,82 @@ describe("media uploads (multipart)", () => {
     expect(out.videoId).toBe("v10033g50000");
   });
 
-  // Uploads go through `tiktokService.client.postMultipart` / `.get` directly
-  // (upload-image.tool.ts, upload-video.tool.ts) and never touch the limiter:
-  // neither the upload POST nor the video-info polls draw tokens.
-  it.todo(
-    "tiktok_upload_image / tiktok_upload_video draw limiter tokens per upstream call — reported on #236, not fixed here"
-  );
+  // Uploads used to go through `tiktokService.client.postMultipart` / `.get`
+  // directly and never touch the limiter (#236). Each upstream call now draws
+  // from the session's bucket: the upload POST is a write, each video-info
+  // poll a read. The media download itself goes to the caller's host, not
+  // TikTok, and draws nothing.
+  it("tiktok_upload_image draws one write from the session's bucket", async () => {
+    stub.route({
+      method: "GET",
+      host: "cdn.example.com",
+      path: "/banner.png",
+      rawBody: Buffer.from("png-bytes", "latin1"),
+      contentType: "image/png",
+    });
+    stub.route({
+      method: "POST",
+      path: `${V}/file/image/ad/upload/`,
+      data: { image_id: "ad-site-i18n-sg/202609300000" },
+    });
+
+    await uploadImageLogic(
+      UploadImageInputSchema.parse({
+        advertiserId: ADV,
+        mediaUrl: "https://cdn.example.com/banner.png",
+      }),
+      ctx,
+      sdk
+    );
+
+    expect(writes()).toHaveLength(1);
+    expect(remaining()).toBe(LIMIT - TIKTOK_WRITE_TOKENS);
+  });
+
+  it("tiktok_upload_video draws one write for the upload and one read per video-info poll", async () => {
+    stub.route({
+      method: "GET",
+      host: "cdn.example.com",
+      path: "/spot.mp4",
+      rawBody: Buffer.from("mp4-bytes", "latin1"),
+      contentType: "video/mp4",
+    });
+    stub.route({
+      method: "POST",
+      path: `${V}/file/video/ad/upload/`,
+      data: { video_id: "v10033g50000" },
+    });
+    let polls = 0;
+    stub.route({
+      method: "GET",
+      path: `${V}/file/video/ad/info/`,
+      // Still processing on the first poll, bound on the second.
+      data: () => ({
+        list: [
+          {
+            video_id: "v10033g50000",
+            video_status: ++polls === 1 ? "processing" : "bind_success",
+          },
+        ],
+      }),
+    });
+
+    await uploadVideoLogic(
+      UploadVideoInputSchema.parse({
+        advertiserId: ADV,
+        mediaUrl: "https://cdn.example.com/spot.mp4",
+      }),
+      ctx,
+      sdk
+    );
+
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      `POST ${V}/file/video/ad/upload/`,
+      `GET ${V}/file/video/ad/info/`,
+      `GET ${V}/file/video/ad/info/`,
+    ]);
+    expect(remaining()).toBe(LIMIT - TIKTOK_WRITE_TOKENS - 2 * TIKTOK_READ_TOKENS);
+  });
 
   it("dry_run downloads and uploads nothing", async () => {
     await uploadImageLogic(

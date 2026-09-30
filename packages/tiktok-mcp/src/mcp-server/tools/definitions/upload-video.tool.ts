@@ -148,13 +148,9 @@ export async function uploadVideoLogic(
   };
   if (input.videoName) fields.file_name = input.videoName;
 
-  const uploadResult = (await tiktokService.client.postMultipart(
-    tiktokService.client.versionedPath("file/video/ad/upload/"),
+  const uploadResult = (await tiktokService.uploadVideo(
     fields,
-    "video_file",
-    buffer,
-    filename,
-    contentType,
+    { buffer, filename, contentType },
     context
   )) as TikTokVideoUploadResponse;
 
@@ -173,9 +169,9 @@ export async function uploadVideoLogic(
   try {
     const videoInfo = await pollUntilComplete<TikTokVideoInfoItem | undefined>({
       fetchStatus: async () => {
-        const statusResult = (await tiktokService.client.get(
-          tiktokService.client.versionedPath("file/video/ad/info/"),
-          { video_ids: JSON.stringify([videoId]) },
+        // One read token per poll, from the session's bucket.
+        const statusResult = (await tiktokService.getVideoInfo(
+          [videoId],
           context
         )) as TikTokVideoInfoResponse;
         return statusResult.list?.[0];
