@@ -6,7 +6,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const tiktokReportingWorkflowPrompt: Prompt = {
   name: "tiktok_reporting_workflow",
   description:
-    "Guide for running TikTok Ads reports synchronously with dimensions, metrics, and breakdowns",
+    "Guide for submitting and retrieving TikTok Ads async reports with dimensions, metrics, and breakdowns",
   arguments: [
     {
       name: "advertiserId",
@@ -34,9 +34,7 @@ Report Level: \`${reportLevel}\`
 
 ## Overview
 
-\`tiktok_get_report\` and \`tiktok_get_report_breakdowns\` run the report **synchronously** (TikTok's \`report/integrated/get/\`) and return the rows in the same call.
-
-Do not use the async task tools: TikTok documents no way to download a finished async report task, so \`tiktok_submit_report\` and \`tiktok_download_report\` refuse.
+TikTok reports are **async** — \`tiktok_get_report\` submits the job, polls for completion, and returns the results when ready.
 
 ---
 
@@ -127,7 +125,7 @@ tiktok_get_report({
 
 ## Tips
 
-- Large date ranges or many dimensions can make a synchronous report slow; narrow the range or dimensions if a call times out
+- Reports may take **30 seconds to several minutes** depending on date range and data volume
 - Data has a **24-48 hour lag** for finalized metrics
 - Max date range per report is **180 days**
 - Budget and spend values are in **account currency** (not cents, not micros)

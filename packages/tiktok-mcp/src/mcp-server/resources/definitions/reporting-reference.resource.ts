@@ -21,8 +21,12 @@ function formatReportingReferenceMarkdown(): string {
 
 ## Reporting Endpoints
 
-- **Synchronous — use this** (\`tiktok_get_report\`, \`tiktok_get_report_breakdowns\`): GET \`/open_api/v1.3/report/integrated/get/\` — rows come back directly, paged (\`page\`, \`page_size\` up to 1000). Takes \`report_type\`, \`service_type\` (default AUCTION) and \`data_level\` (e.g. AUCTION_CAMPAIGN).
-- **Async task — not available.** TikTok's official Business API SDK defines \`report/task/create/\`, \`report/task/check/\` and \`report/task/cancel/\`, but no report-task download endpoint, and the check response documents only \`status\` and \`message\` — no download URL. A finished task's rows could never be fetched, so \`tiktok_submit_report\` and \`tiktok_download_report\` refuse without calling TikTok. \`tiktok_check_report_status\` still reads the status of an existing task (PENDING, RUNNING, DONE, FAILED; any other value is reported as failed, never as pending), but it never returns rows or a download URL.
+- **Synchronous** (\`tiktok_get_report\`, \`tiktok_get_report_breakdowns\`): GET \`/open_api/v1.3/report/integrated/get/\` — rows come back directly, paged (\`page\`, \`page_size\` up to 1000).
+- **Async task** (\`tiktok_submit_report\` → \`tiktok_check_report_status\` → \`tiktok_download_report\`): POST \`/open_api/v1.3/report/task/create/\` → \`task_id\`, GET \`/open_api/v1.3/report/task/check/\` for the status, then GET \`/open_api/v1.3/report/task/download/\`, which returns a signed \`download_url\` (valid for one hour) for the CSV. The task is created with \`output_format: CSV_DOWNLOAD\` and \`enable_report_title_translation: false\`, so the CSV header row uses field names (\`campaign_id\`, \`spend\`). Async reports have no time-range limit, and their filters are limited to \`campaign_ids\`, \`adgroup_ids\` and \`ad_ids\`.
+
+Both take \`report_type\`, \`service_type\` (default AUCTION) and \`data_level\` (e.g. AUCTION_CAMPAIGN).
+
+Task statuses (TikTok v1.3): QUEUING (pending), PROCESSING (running), SUCCESS (complete), FAILED and CANCELED (failed; FAILED carries TikTok's reason). Any other value is reported as failed (terminal) with the raw status, never as pending.
 
 ## Common Dimensions
 

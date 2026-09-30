@@ -11,23 +11,23 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_check_report_status";
 const TOOL_TITLE = "Check TikTok Report Status";
-const TOOL_DESCRIPTION = `Check the status of an existing TikTok async report task (status only — no rows).
+const TOOL_DESCRIPTION = `Check the status of a previously submitted TikTok report task.
 
-Makes a single API call to TikTok's report task-check endpoint. Does not poll or wait.
+Makes a single API call to check task status. Does not poll or wait.
 
 **Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
-TikTok raw statuses PENDING/RUNNING/DONE/FAILED are mapped; the raw string is returned as \`rawStatus\`.
-Any other raw status is reported as \`failed\` with an explanation in \`errors\` — never as pending.
-
-TikTok documents only \`status\` and \`message\` on this response and no report-task download
-endpoint, so a finished task's rows cannot be fetched and this tool never returns a \`downloadUrl\`.
-New async tasks cannot be submitted (\`tiktok_submit_report\` refuses). To get report rows, use
-\`tiktok_get_report\`, which runs the report synchronously.`;
+TikTok's documented task statuses are mapped: QUEUING → pending, PROCESSING → running, SUCCESS → complete,
+FAILED and CANCELED → failed (TikTok's failure reason, when it gives one, is in \`errors\`). The raw string
+is returned as \`rawStatus\`. Any other raw status is reported as \`failed\` with an explanation in \`errors\`,
+never as pending.
+- When \`complete\`, call \`tiktok_download_report\` with the same \`taskId\`. This tool returns no URL: TikTok's
+  check response carries only \`status\` and \`message\`.
+- If still pending/running, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
   .object({
     advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
-    taskId: z.string().min(1).describe("Report task ID (from report/task/create/)"),
+    taskId: z.string().min(1).describe("Report task ID from tiktok_submit_report"),
   })
   .describe("Parameters for checking TikTok report status");
 
@@ -74,7 +74,7 @@ export function checkReportStatusResponseFormatter(
     return [
       {
         type: "text" as const,
-        text: `Report task complete: ${result.taskId}\n\nTikTok documents no way to download an async report task's rows. Use \`tiktok_get_report\` with the same parameters to fetch the rows synchronously.\n\nTimestamp: ${result.timestamp}`,
+        text: `Report complete: ${result.taskId}\n\nUse \`tiktok_download_report\` with taskId "${result.taskId}" to fetch and parse the report data.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

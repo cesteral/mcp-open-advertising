@@ -28,10 +28,10 @@
  * create / update / status update TIKTOK_WRITE_TOKENS (3) from
  * `tiktok:default`; targeting search and audience estimate draw 1.
  *
- * Covered elsewhere: `tiktok_submit_report` / `tiktok_download_report` refuse
- * before sending anything and `tiktok_check_report_status` is a GET
- * (`tiktok-async-report-wire.test.ts`, #232). Everything else not listed here
- * sends only GETs.
+ * Covered elsewhere: the async report chain (`tiktok_submit_report` →
+ * `tiktok_check_report_status` → `tiktok_download_report`, #232/#259) is
+ * tested in `tests/services/tiktok-reporting-service.test.ts` and the tools'
+ * own tests. Everything else not listed here sends only GETs.
  */
 
 import { createHash } from "node:crypto";

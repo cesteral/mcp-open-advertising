@@ -5,24 +5,32 @@ import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import {
+  fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
   DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
+  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  DEFAULT_REPORT_MAX_SIZE_BYTES,
   DEFAULT_REPORT_MAX_ROWS,
+  parseCSV,
   pollUntilComplete,
   ReportFailedError,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
-/** TikTok report task status values this server recognizes. */
-export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+/**
+ * `report/task/check/` status values, from TikTok's v1.3 docs
+ * (https://business-api.tiktok.com/portal/docs/get-the-status-of-an-async-report-task/v1.3,
+ * read 2026-09-30): QUEUING, PROCESSING, SUCCESS, FAILED, CANCELED.
+ */
+export type ReportTaskStatus = "QUEUING" | "PROCESSING" | "SUCCESS" | "FAILED" | "CANCELED";
 
 /**
- * TikTok `report/task/check/` response data.
- *
- * The official SDK spec (report_task_check.yml) maps only `status` and
- * `message` from this response — it documents no `task_id` echo and no
- * download URL, so nothing else is read from it.
+ * TikTok `report/task/check/` response data: `status`, and `message` (the
+ * failure reason, returned when status is FAILED). It carries no task id and no
+ * download URL; the file comes from `report/task/download/`.
  */
 interface ReportTaskCheckData {
   status?: string;
@@ -30,42 +38,15 @@ interface ReportTaskCheckData {
 }
 
 /**
- * Why the async report chain (`tiktok_submit_report` → `tiktok_check_report_status`
- * → `tiktok_download_report`) cannot deliver rows (#232).
- *
- * Evidence: TikTok's official Business API SDK (tiktok/tiktok-business-api-sdk
- * @ f809c39, Feb 2026) defines exactly three report-task operations —
- * yml_files/report_task_create.yml, report_task_check.yml and
- * report_task_cancel.yml, generated as ReportingApi.report_task_{create,check,cancel}
- * in the Python, JS and Java clients. There is no report-task download
- * operation, and the check response's `data` is an object with no declared
- * properties whose response rule maps only `status` and `message`. The same
- * SDK does name a download endpoint for its other async exports
- * (/comment/task/download/, /blockedword/task/download/), so the absence for
- * reports is not a documentation style. A third-party wrapper calls
- * `report/task/download/?task_id=` — corroboration only, not a vendor
- * contract. Recorded as `tiktok.report_task_has_no_download_contract` in
- * platform-facts.json.
+ * `report/task/download/` response data when the task was created with
+ * output_format CSV_DOWNLOAD or XLSX_DOWNLOAD. `download_url` is valid for one
+ * hour; calling the endpoint again returns a fresh one.
  */
-export const TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON =
-  "TikTok's official Business API SDK defines report/task/create/, report/task/check/ and " +
-  "report/task/cancel/ but no report-task download endpoint, and its task-check response " +
-  "documents no download URL, so a finished async report task's rows cannot be fetched.";
-
-const USE_SYNC_REPORT_HINT =
-  "Use tiktok_get_report (or tiktok_get_report_breakdowns for demographic or placement " +
-  "breakdowns), which runs the same report synchronously via report/integrated/get/ and " +
-  "returns the rows.";
-
-/** Thrown by `tiktok_submit_report` (execute and dry_run) before anything reaches TikTok. */
-export const TIKTOK_SUBMIT_REPORT_UNSUPPORTED_MESSAGE =
-  `Async report tasks are not available: ${TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON} ` +
-  `No report task was created. ${USE_SYNC_REPORT_HINT}`;
-
-/** Thrown by `tiktok_download_report` before any URL is fetched. */
-export const TIKTOK_DOWNLOAD_REPORT_UNSUPPORTED_MESSAGE =
-  `Report downloads are not available: ${TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON} ` +
-  `Nothing was downloaded. ${USE_SYNC_REPORT_HINT}`;
+interface ReportTaskDownloadData {
+  download_url?: string;
+  file_name?: string;
+  output_format?: string;
+}
 
 /** `report/task/create/` data_level values (official SDK enum ReportDataLevel). */
 export const TIKTOK_REPORT_DATA_LEVELS = [
@@ -108,26 +89,34 @@ export interface TikTokReportTaskState {
 /**
  * Map a raw `report/task/check/` status to a canonical state.
  *
- * TikTok's spec does not enumerate the status strings, so only the four this
- * server was written against are recognized. Anything else — including a
- * missing status — is TERMINAL (`failed`) with the raw value in `errors`.
- * The shared `fromTikTokStatus` maps unknown values to `pending`, which made
- * pollers wait out their full budget and `check_report_status` report
- * "pending" forever for a status nobody anticipated.
+ * QUEUING and PROCESSING are in progress, SUCCESS is complete, FAILED and
+ * CANCELED are terminal. Anything else, including a missing status, is also
+ * TERMINAL (`failed`) with the raw value in `errors`: the shared
+ * `fromTikTokStatus` maps unknown values to `pending`, which made pollers wait
+ * out their full budget for a status nobody anticipated. Values this server
+ * once assumed (PENDING, RUNNING, DONE) are not TikTok statuses and are not
+ * mapped; they land here so a real mismatch is visible.
  */
 export function mapTikTokReportTaskStatus(raw: {
   status?: string;
   message?: string;
 }): TikTokReportTaskState {
   switch (raw.status) {
-    case "PENDING":
+    case "QUEUING":
       return { state: "pending" };
-    case "RUNNING":
+    case "PROCESSING":
       return { state: "running" };
-    case "DONE":
+    case "SUCCESS":
       return { state: "complete" };
     case "FAILED":
       return { state: "failed", ...(raw.message ? { errors: [raw.message] } : {}) };
+    case "CANCELED":
+      return {
+        state: "failed",
+        errors: [
+          "The report task was canceled" + (raw.message ? ` (message: ${raw.message})` : "") + ".",
+        ],
+      };
     default:
       return {
         state: "failed",
@@ -153,15 +142,11 @@ interface IntegratedReportData {
  *
  * Two paths, both from TikTok's official SDK spec:
  * - Synchronous: `GET report/integrated/get/` returns rows directly
- *   (`list` + `page_info`). Used by getReport / getReportBreakdowns — the only
- *   path that delivers rows.
- * - Async task: `POST report/task/create/` → `GET report/task/check/`. The
- *   spec documents only `status`/`message` on the check response and no
- *   download endpoint, so a finished task's rows cannot be fetched (#232).
- *   `tiktok_submit_report` and `tiktok_download_report` therefore refuse (see
- *   TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON); submitReport and
- *   checkReportStatus stay spec-correct for the day a download contract is
- *   documented.
+ *   (`list` + `page_info`). Used by getReport / getReportBreakdowns.
+ * - Async task: `POST report/task/create/` → `GET report/task/check/` →
+ *   `GET report/task/download/`, which returns a signed `download_url` (valid
+ *   for one hour) for a task created with output_format CSV_DOWNLOAD. The file
+ *   at that URL is then fetched and parsed by `downloadReport`.
  */
 export class TikTokReportingService {
   constructor(
@@ -183,14 +168,30 @@ export class TikTokReportingService {
   ): Promise<{ task_id: string }> {
     await this.rateLimiter.consume(`tiktok:reporting`);
 
-    // Body per report_task_create.yml: report_type + dimensions are required;
-    // service_type is required by the spec's request rule (SDK default AUCTION).
-    // page/page_size are not fields of this body and are not sent.
+    // Body per TikTok's v1.3 create docs: report_type + dimensions are required;
+    // data_level is required for BASIC/AUDIENCE/CATALOG reports; service_type
+    // defaults to AUCTION. page/page_size are not fields of this body and are
+    // not sent.
+    //
+    // output_format CSV_DOWNLOAD makes `report/task/download/` answer with a JSON
+    // envelope holding `download_url` (the default, CSV_STRING, answers with a
+    // raw CSV stream that the JSON client cannot read). XLSX is not parsed here.
+    //
+    // enable_report_title_translation=false keeps the header row as field names
+    // ("campaign_id") instead of display titles ("Campaign ID"), which TikTok
+    // recommends because titles are translated and change, and which the
+    // `columns` projection on the download tool depends on. TikTok documents the
+    // flag as valid only for BASIC and AUDIENCE reports.
+    const reportType = reportConfig.report_type ?? "BASIC";
     const result = (await this.httpClient.post(
       `/open_api/${this.apiVersion}/report/task/create/`,
       {
-        report_type: reportConfig.report_type ?? "BASIC",
+        report_type: reportType,
         service_type: reportConfig.service_type ?? "AUCTION",
+        output_format: "CSV_DOWNLOAD",
+        ...(reportType === "BASIC" || reportType === "AUDIENCE"
+          ? { enable_report_title_translation: false }
+          : {}),
         ...(reportConfig.data_level ? { data_level: reportConfig.data_level } : {}),
         dimensions: reportConfig.dimensions,
         metrics: reportConfig.metrics,
@@ -268,13 +269,121 @@ export class TikTokReportingService {
   }
 
   /**
+   * Ask TikTok for the download URL of a finished async task
+   * (`GET report/task/download/`). The URL is signed and valid for one hour;
+   * call again for a fresh one. The caller fetches it, after URL validation.
+   */
+  async getReportDownloadUrl(
+    taskId: string,
+    context?: RequestContext
+  ): Promise<{ downloadUrl: string; fileName?: string }> {
+    await this.rateLimiter.consume(`tiktok:reporting`);
+
+    const result = ((await this.httpClient.get(
+      `/open_api/${this.apiVersion}/report/task/download/`,
+      { task_id: taskId },
+      context
+    )) ?? {}) as ReportTaskDownloadData;
+
+    if (result.output_format === "XLSX_DOWNLOAD") {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `TikTok report task ${taskId} produced an XLSX_DOWNLOAD file, which this server cannot parse. Submit the report again with tiktok_submit_report, which requests CSV_DOWNLOAD.`
+      );
+    }
+    if (!result.download_url) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `TikTok returned no download_url for report task ${taskId}. A task created with output_format CSV_STRING is returned as a raw CSV stream instead of a URL; tasks submitted with tiktok_submit_report request CSV_DOWNLOAD. If the task was created elsewhere, submit it again with tiktok_submit_report.`
+      );
+    }
+
+    return {
+      downloadUrl: result.download_url,
+      ...(result.file_name ? { fileName: result.file_name } : {}),
+    };
+  }
+
+  /**
+   * Download a report CSV from a URL.
+   *
+   * When `includeRawCsv` is true, the original (BOM-stripped, LF-only) CSV
+   * body is returned alongside the parsed rows so callers can persist it
+   * via `ReportCsvStore`.
+   */
+  async downloadReport(
+    downloadUrl: string,
+    maxRows = DEFAULT_REPORT_MAX_ROWS,
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
+
+    if (!response.ok) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Failed to download TikTok report: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const contentLength = response.headers?.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TikTok report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+      );
+    }
+
+    const csvText = await response.text();
+    const normalizedCsvText = csvText
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n/g, "\n")
+      .trim();
+    // Guard against BOM-only or whitespace-only bodies before delegating to
+    // the shared parser — parseCSV treats a whitespace line as a header row
+    // of a single empty column, which would mislead downstream bounded-view
+    // consumers for a truly-empty report.
+    if (normalizedCsvText === "") {
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: "" } : {}),
+      };
+    }
+    const { headers, rows } = parseCSV(normalizedCsvText);
+
+    if (headers.length === 0 && rows.length === 0) {
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
+      };
+    }
+
+    const limitedRecords = rows.slice(0, maxRows);
+    const rowArrays = limitedRecords.map((record) => headers.map((h) => record[h] ?? ""));
+
+    return {
+      rows: rowArrays,
+      headers,
+      totalRows: rows.length,
+      ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
+    };
+  }
+
+  /**
    * Run a report synchronously via `GET report/integrated/get/`, paging until
    * `maxRows` rows are collected or the last page is reached.
    *
    * This replaced a submit → poll → download chain that could not complete
    * against the spec: it waited for a `download_url` that report/task/check/
-   * does not document, and TikTok's SDK defines no task download endpoint
-   * (TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON).
+   * does not document, and TikTok's SDK defines no task download endpoint.
    * The integrated endpoint's response is spec'd (`list` ← stats_data,
    * `page_info`). Each row is `{ dimensions: {...}, metrics: {...} }`; both are
    * flattened into one record (a flat row is used as-is).

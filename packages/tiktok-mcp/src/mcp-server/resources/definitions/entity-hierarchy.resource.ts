@@ -109,7 +109,7 @@ TikTok uses page-based pagination (NOT cursor-based):
 | \`tiktok_update_entity\` | Update single entity | |
 | \`tiktok_delete_entity\` | Delete entities | ✓ |
 | \`tiktok_list_advertisers\` | Account info for the session-bound advertiser | |
-| \`tiktok_get_report\` | Synchronous report (rows returned directly) | |
+| \`tiktok_get_report\` | Async report with polling | |
 | \`tiktok_get_report_breakdowns\` | Report with breakdown dimensions | |
 | \`tiktok_bulk_update_status\` | Batch status update | ✓ |
 | \`tiktok_bulk_create_entities\` | Batch entity creation | ✓ |

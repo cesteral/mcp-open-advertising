@@ -57,7 +57,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     validation: ["tiktok_validate_entity"],
     discovery: ["tiktok_search_tools"],
   },
-  commonWorkflows: ["campaign_setup", "reporting", "audience_targeting"],
+  commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
   discoveryFlow: [
     "Read server-capabilities://tiktok-mcp/overview to choose a capability group.",
     "Call tiktok_list_advertisers to confirm the session-bound advertiser account.",
