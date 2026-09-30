@@ -10,7 +10,8 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getUpdatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { AccountIdSchema } from "../utils/account-id.js";
 import {
   elicitBulkStatusChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -32,29 +33,29 @@ import type {
 const TOOL_NAME = "amazon_dsp_bulk_update_status";
 const TOOL_TITLE = "AmazonDsp Bulk Status Update";
 const EFFECT_KIND = "entity_statuses_updated";
-const TOOL_DESCRIPTION = `Batch update the status of Amazon DSP entities.
+const TOOL_DESCRIPTION = `Batch update the status of Amazon DSP entities via the Amazon Ads Unified API (\`POST /adsApi/v1/update/{resource}\` with \`{ <id>, state }\`, one entity per request).
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getUpdatableEntityTypeEnum().join(", ")}
 
-**Status values:**
+**Status values** (the Unified \`DSPUpdateState\` enum):
 - **ENABLED** — Activate/resume entities
 - **PAUSED** — Pause entities
-- **ARCHIVED** — Archive entities (equivalent to soft delete)
 
-Amazon DSP updates each entity individually via PUT to the entity-specific path.`;
+ARCHIVED is not an update state on the Unified API — remove entities with \`amazon_dsp_delete_entity\`.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getUpdatableEntityTypeEnum()).describe("Type of entities to update"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
     operationStatus: z
-      .enum(["ENABLED", "PAUSED", "ARCHIVED"])
-      .describe("Target state to apply (ENABLED=active, PAUSED=paused, ARCHIVED=soft delete)"),
+      .enum(["ENABLED", "PAUSED"])
+      .describe("Target state to apply (ENABLED=active, PAUSED=paused)"),
     dry_run: z
       .boolean()
       .optional()
@@ -156,6 +157,7 @@ export async function bulkUpdateStatusLogic(
 
   const result = await amazonDspService.bulkUpdateStatus(
     input.entityType as AmazonDspEntityType,
+    input.accountId,
     input.entityIds,
     input.operationStatus as string,
     context
@@ -284,7 +286,9 @@ export const bulkUpdateStatusTool = {
     readOnlyHint: false,
     openWorldHint: false,
     idempotentHint: true,
-    destructiveHint: true,
+    // ENABLED / PAUSED only since #234 (no ARCHIVED on the Unified update) —
+    // every value this tool accepts is reversible by the other.
+    destructiveHint: false,
     cesteral: {
       kind: "write",
       writeClass: "effect",
@@ -311,16 +315,18 @@ export const bulkUpdateStatusTool = {
       input: {
         entityType: "order",
         profileId: "1234567890",
-        entityIds: ["ord_111111", "ord_222222"],
+        accountId: "5550001112223",
+        entityIds: ["581234567890123", "581234567890124"],
         operationStatus: "PAUSED",
       },
     },
     {
-      label: "Resume multiple line items",
+      label: "Enable a line item (ad group) after setup",
       input: {
         entityType: "lineItem",
         profileId: "1234567890",
-        entityIds: ["li_111111"],
+        accountId: "5550001112223",
+        entityIds: ["592345678901234"],
         operationStatus: "ENABLED",
       },
     },

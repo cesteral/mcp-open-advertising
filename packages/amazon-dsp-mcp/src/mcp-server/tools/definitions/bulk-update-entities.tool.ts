@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   assertAmazonDspBulkCapacity,
@@ -10,7 +11,9 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getUpdatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { AccountIdSchema } from "../utils/account-id.js";
+import { symbolicValidateUpdate } from "../utils/dry-run.js";
 import {
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
@@ -33,12 +36,13 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_bulk_update_entities";
 const TOOL_TITLE = "AmazonDsp Bulk Update Entities";
-const TOOL_DESCRIPTION = `Batch update multiple AmazonDsp Ads entities of the same type.
+const TOOL_DESCRIPTION = `Batch update multiple Amazon DSP entities of the same type via the Amazon Ads Unified API (\`POST /adsApi/v1/update/{resource}\`, one item per request).
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getUpdatableEntityTypeEnum().join(", ")}
 
-Each item must include an \`entityId\` and a \`data\` object with fields to update.
-Updates are applied concurrently (max concurrency 5). profile_id is automatically injected.
+Each item must include an \`entityId\` and a \`data\` object with the fields to update
+(Unified field names; \`state\` is ENABLED or PAUSED only). Updates are applied
+concurrently (max concurrency 5).
 
 Max 50 items per call.`;
 
@@ -46,8 +50,9 @@ const EFFECT_KIND = "entities_updated";
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getUpdatableEntityTypeEnum()).describe("Type of entities to update"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     items: z
       .array(
         z.object({
@@ -128,6 +133,16 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
+  // Refuse a batch the dry-run would report as failing (e.g. state ARCHIVED,
+  // an unmappable legacy field) before the prompt and the first write.
+  const preflight = buildBulkEffectDryRun(input);
+  if (!preflight.wouldSucceed) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Invalid bulk update payload: ${preflight.validationErrors.map((e) => e.message).join("; ")}`
+    );
+  }
+
   // Refuse a batch the rate limiter cannot admit in time — before the prompt
   // and before the first write. One 3-token amazon_dsp:write per item.
   assertAmazonDspBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
@@ -159,6 +174,7 @@ export async function bulkUpdateEntitiesLogic(
 
   const bulkResult = await amazonDspService.bulkUpdateEntities(
     input.entityType as AmazonDspEntityType,
+    input.accountId,
     input.items,
     context
   );
@@ -192,8 +208,10 @@ export async function bulkUpdateEntitiesLogic(
 /**
  * Symbolic effect dry-run for `bulk_update_entities`. Validates the batch (every
  * item must target a non-empty entityId and carry a non-empty data payload) and
- * projects the would-be effect (an N-item update of one entity kind). Amazon DSP
- * has no native bulk validate, so both axes are symbolic. Pure (no I/O).
+ * passes the same Unified update translation execute runs) and projects the
+ * would-be effect (an N-item update of one entity kind). The Unified update
+ * operations declare no validate-only mode, so both axes are symbolic. Pure
+ * (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -210,6 +228,19 @@ function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResu
         code: "EMPTY_UPDATE",
         message: `items[${i}].data must contain at least one field to update`,
         field: `items.${i}.data`,
+      });
+      return;
+    }
+    for (const e of symbolicValidateUpdate(
+      input.entityType,
+      item.entityId,
+      item.data,
+      input.accountId
+    )) {
+      validationErrors.push({
+        ...e,
+        message: `items[${i}]: ${e.message}`,
+        field: `items.${i}.${e.field ?? "data"}`,
       });
     }
   });
@@ -311,13 +342,14 @@ export const bulkUpdateEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "Bulk update order (campaign) budgets",
+      label: "Bulk rename orders (campaigns)",
       input: {
         entityType: "order",
         profileId: "1234567890",
+        accountId: "5550001112223",
         items: [
-          { entityId: "ord_111111", data: { budget: 15000 } },
-          { entityId: "ord_222222", data: { budget: 25000 } },
+          { entityId: "581234567890123", data: { name: "Q3 Retargeting" } },
+          { entityId: "581234567890124", data: { name: "Q3 Prospecting" } },
         ],
       },
     },

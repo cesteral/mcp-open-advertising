@@ -2,18 +2,20 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Dry-run helpers for the Amazon DSP `update_entity` tool. R2-U4 wiring.
+ * Dry-run helpers for the Amazon DSP entity write tools. R2-U4 wiring,
+ * Unified API (`/adsApi/v1/*`) since #234.
  *
- * Amazon DSP exposes NO native validate / preview / draft mode for entity
- * mutations — `/dsp/orders` and `/dsp/lineItems` are plain PUT endpoints, and
- * `/dsp/creatives/{id}/preview` is a creative-render preview, not a mutation
- * simulator. So both axes here are SYMBOLIC:
+ * The Unified DSP spec (unified-api-dsp.json, amzn/ads-advanced-tools-docs @
+ * e25aace0) declares no validate-only / preview mode on any create, update or
+ * delete operation, so both axes here are SYMBOLIC:
  *
- * - **Validation** runs a small set of business rules (status enum, budget
- *   non-negativity) against the requested patch. `validationSource: "symbolic"`.
+ * - **Validation** runs the same request-body translation the execute path
+ *   runs (`translateCreatePayload` / `translateUpdatePayload`: legacy-field
+ *   mapping, `DSPCreateState` / `DSPUpdateState` checks, account match, budget
+ *   non-negativity). `validationSource: "symbolic"`.
  * - **Expected post-state** reads the current entity through the read partner
- *   and shallow-merges the patch (Amazon DSP PUT replaces provided fields),
- *   then normalizes. `expectedStateSource: "server_symbolic_apply"`.
+ *   (Unified `query/*`) and shallow-merges the translated patch, then
+ *   normalizes. `expectedStateSource: "server_symbolic_apply"`.
  */
 
 import { assertGovernedDryRunResult } from "@cesteral/shared";
@@ -29,57 +31,60 @@ import {
   ENTITY_KIND_MAP,
   type AmazonDspServiceLike,
 } from "./capture-snapshot.js";
+import {
+  buildDuplicatePayload,
+  translateCreatePayload,
+  translateUpdatePayload,
+  type UnifiedPayloadIssue,
+} from "../../../services/amazon-dsp/unified-payload.js";
+import {
+  getAmazonDspEntityContract,
+  normalizeAmazonDspEntityType,
+} from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
 export type { AmazonDspServiceLike };
 
-const VALID_STATES = ["ENABLED", "PAUSED", "ARCHIVED"];
-
-/** Symbolic validation of the requested patch. Pure (no I/O). */
-export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
-  const errors: DryRunValidationError[] = [];
-
-  if ("state" in data) {
-    const state = data.state;
-    if (typeof state !== "string" || !VALID_STATES.includes(state)) {
-      errors.push({
-        code: "INVALID_STATE",
-        message: `state must be one of ${VALID_STATES.join(", ")} — got ${String(state)}`,
-        field: "data.state",
-      });
-    }
-  }
-
-  if ("budget" in data && data.budget != null) {
-    // `order` budget is a flat number; `lineItem` budget is { budgetType, budget }.
-    const raw =
-      typeof data.budget === "object"
-        ? (data.budget as Record<string, unknown>).budget
-        : data.budget;
-    const n = typeof raw === "string" ? Number(raw) : Number(raw);
-    if (!Number.isFinite(n) || n < 0) {
-      errors.push({
-        code: "INVALID_BUDGET",
-        message: "budget must be a non-negative number (advertiser currency major units)",
-        field: "data.budget",
-      });
-    }
-  }
-
-  return errors;
+function toValidationErrors(issues: UnifiedPayloadIssue[]): DryRunValidationError[] {
+  return issues.map((i) => ({ code: i.code, message: i.message, field: i.field }));
 }
 
 /**
- * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
- * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
- * mirrors what the dry-run handler does in-tool.
+ * Symbolic validation of an update patch — the execute path's translation,
+ * reporting its issues instead of throwing. Pure (no I/O).
+ */
+export function symbolicValidateUpdate(
+  entityType: string,
+  entityId: string,
+  data: Record<string, unknown>,
+  accountId: string
+): DryRunValidationError[] {
+  const t = normalizeAmazonDspEntityType(entityType);
+  return toValidationErrors(translateUpdatePayload(t, entityId, data, accountId).issues);
+}
+
+/** Symbolic validation of a create payload. Pure (no I/O). */
+export function symbolicValidateCreate(
+  entityType: string,
+  data: Record<string, unknown>,
+  accountId: string
+): DryRunValidationError[] {
+  const t = normalizeAmazonDspEntityType(entityType);
+  return toValidationErrors(translateCreatePayload(t, data, accountId).issues);
+}
+
+/**
+ * Symbolic apply: shallow-merge `data` (Unified shape) into `preState`, then
+ * normalize. Pure (no I/O). Used by the testkit's `assertContract` against
+ * fixture pairs and mirrors what the dry-run handler does in-tool.
  */
 export function applyAmazonDspPatch(
   entityType: string,
   entityId: string,
   preState: Record<string, unknown>,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  accountId: string | null = null
 ): NormalizedEntitySnapshot | undefined {
-  const snapshot = buildAmazonDspSnapshot(entityType, entityId, preState, data);
+  const snapshot = buildAmazonDspSnapshot(entityType, entityId, preState, data, accountId);
   return snapshot ?? undefined;
 }
 
@@ -100,9 +105,9 @@ export function resolveAmazonDspDispatchedCapability(
   } else if (state === "PAUSED") {
     operation = "pause";
   } else if (state) {
-    // ARCHIVED and any other state transition.
+    // Any other state value (refused by validation — DSPUpdateState is ENABLED | PAUSED).
     operation = "update_status";
-  } else if ("budget" in data) {
+  } else if ("budgets" in data || "budget" in data) {
     operation = "update_budget";
   } else {
     operation = "update";
@@ -128,27 +133,28 @@ export function resolveAmazonDspCreateCapability(entityType: string): Dispatched
 
 export interface AmazonDspCreateDryRunArgs {
   entityType: string;
+  accountId: string;
   data: Record<string, unknown>;
 }
 
 /**
- * Symbolic create dry-run. Amazon DSP exposes no native validate mode for the
- * create endpoints, so both axes are symbolic: validation runs the same
- * business rules as update; the expected post-state is the would-be-created
- * entity (symbolic apply of the create payload over an empty base — create has
- * no `before`). Pure (no I/O).
+ * Symbolic create dry-run: validation is the create translation; the expected
+ * post-state is the would-be-created entity (the translated create item over
+ * an empty base — create has no `before`). Pure (no I/O).
  */
 export async function runAmazonDspCreateDryRun(
   input: AmazonDspCreateDryRunArgs,
   _service: AmazonDspServiceLike,
   _context: RequestContext
 ): Promise<DryRunResult> {
-  const validationErrors = symbolicValidate(input.data);
+  const t = normalizeAmazonDspEntityType(input.entityType);
+  const { item, issues } = translateCreatePayload(t, input.data, input.accountId);
+  const validationErrors = toValidationErrors(issues);
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[input.entityType]) {
-    const snapshot = buildAmazonDspSnapshot(input.entityType, "", {}, input.data);
+    const snapshot = buildAmazonDspSnapshot(input.entityType, "", {}, item, input.accountId);
     if (snapshot) {
       expectedPostState = snapshot;
       expectedStateSource = "server_symbolic_apply";
@@ -173,6 +179,7 @@ export async function runAmazonDspCreateDryRun(
 
 export interface AmazonDspDryRunArgs {
   entityType: string;
+  accountId: string;
   entityId: string;
   data: Record<string, unknown>;
 }
@@ -182,7 +189,12 @@ export async function runAmazonDspUpdateDryRun(
   service: AmazonDspServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
-  const validationErrors = symbolicValidate(input.data);
+  const t = normalizeAmazonDspEntityType(input.entityType);
+  const { item, issues } = translateUpdatePayload(t, input.entityId, input.data, input.accountId);
+  const validationErrors = toValidationErrors(issues);
+  // The translated item leads with the primary key; the snapshot overlay is the patch only.
+  const patch = { ...item };
+  delete patch[getAmazonDspEntityContract(t).idField];
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
@@ -191,15 +203,19 @@ export async function runAmazonDspUpdateDryRun(
   // fail the call (see assertGovernedDryRunResult below), not swallow the
   // error and return an incomplete payload the governance layer would reject.
   if (ENTITY_KIND_MAP[input.entityType] && service.getEntity) {
-    const current = (await service.getEntity(input.entityType, input.entityId, context)) as
-      | Record<string, unknown>
-      | undefined;
+    const current = (await service.getEntity(
+      input.entityType,
+      input.accountId,
+      input.entityId,
+      context
+    )) as Record<string, unknown> | undefined;
     if (current && typeof current === "object") {
       const snapshot = buildAmazonDspSnapshot(
         input.entityType,
         input.entityId,
         current,
-        input.data
+        patch,
+        input.accountId
       );
       if (snapshot) {
         expectedPostState = snapshot;
@@ -222,7 +238,7 @@ export async function runAmazonDspUpdateDryRun(
 
 /**
  * Resolve the `(duplicate, entityKind)` for an `amazon_dsp_duplicate_entity`
- * call. Out-of-scope types (creative / target / creativeAssociation) resolve to
+ * call. Out-of-scope types (creative / creativeAssociation) resolve to
  * `canonicalEntityKind: null` — token-gated, no canonical snapshot. Pure.
  */
 export function resolveAmazonDspDuplicateCapability(entityType: string): DispatchedCapability {
@@ -234,40 +250,45 @@ export function resolveAmazonDspDuplicateCapability(entityType: string): Dispatc
 
 export interface AmazonDspDuplicateDryRunArgs {
   entityType: string;
+  accountId: string;
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
-  /** Copy overrides forwarded to the create call (may rename or re-state the copy). */
+  /** Copy overrides forwarded to the create call (may rename the copy). */
   options?: Record<string, unknown>;
 }
 
 /**
  * Symbolic dry-run for `amazon_dsp_duplicate_entity`. The copy does not exist
- * yet (no `before`). The service builds the copy as `{ ...source, state:
- * "PAUSED", ...options }` — so the expected post-state reads the source, forces
- * the non-running `state: "PAUSED"`, then applies the caller's `options` last
- * (matching execute: options may rename or override the state), and emits it
- * with an empty `platformEntityId`. Out-of-scope kinds are token-gated but not
- * snapshot-governed.
+ * yet (no `before`). Execute builds the copy as the source projected onto the
+ * create schema, `state: "PAUSED"`, then `options` (`buildDuplicatePayload`),
+ * and sends it through the create translation — so the dry-run reads the
+ * source, builds the same payload, validates it with the same translation and
+ * emits it with an empty `platformEntityId`. Out-of-scope kinds are
+ * token-gated but not snapshot-governed.
  */
 export async function runAmazonDspDuplicateDryRun(
   args: AmazonDspDuplicateDryRunArgs,
   service: AmazonDspServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
-  const validationErrors: DryRunValidationError[] = [];
+  let validationErrors: DryRunValidationError[] = [];
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
   const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
   if (inScope && service.getEntity) {
-    const source = (await service.getEntity(args.entityType, args.entityId, context)) as
-      | Record<string, unknown>
-      | undefined;
+    const source = (await service.getEntity(
+      args.entityType,
+      args.accountId,
+      args.entityId,
+      context
+    )) as Record<string, unknown> | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildAmazonDspSnapshot(args.entityType, "", source, {
-        state: "PAUSED",
-        ...(args.options ?? {}),
-      });
+      const t = normalizeAmazonDspEntityType(args.entityType);
+      const copy = buildDuplicatePayload(t, source, args.options);
+      const { item, issues } = translateCreatePayload(t, copy, args.accountId);
+      validationErrors = toValidationErrors(issues);
+      const snapshot = buildAmazonDspSnapshot(args.entityType, "", {}, item, args.accountId);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

@@ -27,9 +27,10 @@ const sdk = { sessionId: "s" } as any;
 const baseInput = {
   entityType: "order",
   profileId: "1234567890",
+  accountId: "5550001112223",
   items: [
-    { entityId: "ord_111111", data: { budget: 15000 } },
-    { entityId: "ord_222222", data: { budget: 25000 } },
+    { entityId: "cmp_111111", data: { name: "Renamed A" } },
+    { entityId: "cmp_222222", data: { name: "Renamed B" } },
   ],
 };
 

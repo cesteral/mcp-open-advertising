@@ -76,7 +76,8 @@ export function assertContract(
           fixture.args.entityType,
           fixture.args.entityId,
           fixture.preState,
-          fixture.args.data
+          fixture.args.data,
+          fixture.args.accountId
         );
   if (got == null) {
     throw new Error(`assertContract(${fixture.description}): symbolic apply returned undefined`);

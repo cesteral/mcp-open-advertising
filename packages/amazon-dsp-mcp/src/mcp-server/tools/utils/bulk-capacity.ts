@@ -31,7 +31,7 @@ import { rateLimiter } from "../../../utils/platform.js";
 export const AMAZON_DSP_READ_KEY = "amazon_dsp:read";
 export const AMAZON_DSP_WRITE_KEY = "amazon_dsp:write";
 
-/** One write (create / update / status PUT / archive PUT) per item. */
+/** One write (Unified create / update / delete, or the legacy archive PUT) per item. */
 export const ONE_WRITE_PER_ITEM: readonly BulkCapacityBucket[] = [
   { key: AMAZON_DSP_WRITE_KEY, costPerItem: [3] },
 ];

@@ -14,33 +14,35 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 const amazonDspService = {
   listEntities: vi.fn(async () => ({
-    entities: [{ orderId: "ord_123" }],
-    pageInfo: { startIndex: 0, count: 25, totalResults: 1 },
+    entities: [{ campaignId: "cmp_123" }],
+    nextToken: undefined,
   })),
-  getEntity: vi.fn(async () => ({ orderId: "ord_123" })),
-  createEntity: vi.fn(async () => ({ orders: [{ orderId: "ord_new" }] })),
+  getEntity: vi.fn(async () => ({ campaignId: "cmp_123" })),
+  createEntity: vi.fn(async () => ({ campaignId: "cmp_new" })),
   updateEntity: vi.fn(async () => ({})),
-  deleteEntity: vi.fn(async () => ({})),
+  deleteEntity: vi.fn(async () => ({ mode: "unified_delete", entity: {} })),
   listAdvertisers: vi.fn(async () => ({
     entities: [{ advertiserId: "adv_123", name: "Test Advertiser" }],
     pageInfo: { startIndex: 0, count: 25, totalResults: 1 },
   })),
-  bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
+  bulkUpdateStatus: vi.fn(async (_entityType: string, _accountId: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
-  bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
+  bulkCreateEntities: vi.fn(async (_entityType: string, _accountId: string, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityId: string }>) => ({
-    results: items.map((item) => ({ entityId: item.entityId, success: true })),
-  })),
-  adjustBids: vi.fn(async (adjustments: Array<{ lineItemId: string }>) => ({
+  bulkUpdateEntities: vi.fn(
+    async (_entityType: string, _accountId: string, items: Array<{ entityId: string }>) => ({
+      results: items.map((item) => ({ entityId: item.entityId, success: true })),
+    })
+  ),
+  adjustBids: vi.fn(async (_accountId: string, adjustments: Array<{ lineItemId: string }>) => ({
     results: adjustments.map((a) => ({ lineItemId: a.lineItemId, success: true, newBid: 1 })),
   })),
   searchAudienceSegments: vi.fn(async () => ({
     audienceSegments: [{ id: "seg-1", name: "Gamers" }],
   })),
-  duplicateEntity: vi.fn(async () => ({ orderId: "ord_copy" })),
+  duplicateEntity: vi.fn(async () => ({ campaignId: "cmp_copy" })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   uploadCreativeAsset: vi.fn(async () => ({
     uploadUrl: "https://s3.example/u",

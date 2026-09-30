@@ -10,7 +10,8 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getDeletableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { AccountIdSchema } from "../utils/account-id.js";
 import {
   elicitBulkDeleteConfirmation,
   assertGovernedEffectDryRun,
@@ -31,19 +32,23 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_delete_entity";
 const TOOL_TITLE = "Delete AmazonDsp Ads Entity";
-const TOOL_DESCRIPTION = `Archive one or more Amazon DSP entities (equivalent to deletion).
+const TOOL_DESCRIPTION = `Remove one or more Amazon DSP entities. Irreversible.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getDeletableEntityTypeEnum().join(", ")}
 
-Amazon DSP has no DELETE endpoint. Archiving sets state to ARCHIVED via PUT.
-Archived entities cannot be recovered. Consider using \`amazon_dsp_bulk_update_status\` with PAUSED first.`;
+- **target**, **creativeAssociation**: deleted via the Amazon Ads Unified API (\`POST /adsApi/v1/delete/targets\` / \`delete/adAssociations\`).
+- **order**, **lineItem**: the Unified API has no delete and no ARCHIVED update state for campaigns / ad groups, so these are archived through the LEGACY \`PUT /dsp/orders|lineItems/{id} { state: "ARCHIVED" }\` call (never verified live).
+- **creative** (ad) cannot be removed here — delete its creativeAssociation, or pause it.
+
+Consider \`amazon_dsp_bulk_update_status\` with PAUSED first.`;
 
 const EFFECT_KIND = "entities_deleted";
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getDeletableEntityTypeEnum()).describe("Type of entity to delete"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     entityIds: z
       .array(z.string().min(1))
       .min(1)
@@ -54,7 +59,7 @@ export const DeleteEntityInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk archive) without prompting for confirmation or calling the Amazon DSP API. No entities are archived."
+        "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk removal) without prompting for confirmation or calling the Amazon DSP API. Nothing is removed."
       ),
   })
   .describe("Parameters for deleting AmazonDsp Ads entities");
@@ -71,12 +76,18 @@ export const DeleteEntityOutputSchema = z
       z.object({
         entityId: z.string(),
         success: z.boolean(),
+        mode: z
+          .enum(["unified_delete", "legacy_archive"])
+          .optional()
+          .describe(
+            "How the entity was removed: Unified delete (targets, ad associations) or the legacy archive PUT (orders, line items)"
+          ),
         error: z.string().optional(),
       })
     ),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
-      "Present only when the request was made with `dry_run: true`. No entities were archived."
+      "Present only when the request was made with `dry_run: true`. Nothing was removed."
     ),
     effect: EffectResultSchema.optional().describe(
       "Effect-class result identity (effectKind `entities_deleted` + scalar batch audit summary). Present on a confirmed execute. A bulk delete is governed as a single batch effect — it carries no per-entity canonical snapshot."
@@ -150,17 +161,25 @@ export async function deleteEntityLogic(
   const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.profileId, boundProfileId, "profileId");
 
-  const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
+  const results: Array<{
+    entityId: string;
+    success: boolean;
+    mode?: "unified_delete" | "legacy_archive";
+    error?: string;
+  }> = [];
 
-  // Archive each entity individually (Amazon DSP has no bulk delete endpoint)
+  // One request per entity: the Unified delete takes an id array, but a
+  // per-item call keeps per-id success/failure and the legacy archive is
+  // per-entity anyway.
   for (const entityId of input.entityIds) {
     try {
-      await amazonDspService.deleteEntity(
+      const { mode } = await amazonDspService.deleteEntity(
         input.entityType as AmazonDspEntityType,
+        input.accountId,
         entityId,
         context
       );
-      results.push({ entityId, success: true });
+      results.push({ entityId, success: true, mode });
     } catch (error) {
       results.push({
         entityId,
@@ -199,9 +218,9 @@ export async function deleteEntityLogic(
 
 /**
  * Symbolic effect dry-run for `delete_entity`. Validates the batch (every id must
- * be a non-empty entity id) and projects the would-be effect (an N-item archive
- * of one entity kind). Amazon DSP has no native bulk validate, so both axes are
- * symbolic. Pure (no I/O).
+ * be a non-empty entity id) and projects the would-be effect (an N-item removal
+ * of one entity kind). The Unified delete operations declare no validate-only
+ * mode, so both axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -245,7 +264,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
       {
         type: "text" as const,
         text:
-          `Dry run: bulk-archiving ${String(n)} ${String(kind)}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were archived.` +
+          `Dry run: removing ${String(n)} ${String(kind)}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). Nothing was removed.` +
           (errs ? `\n${errs}` : "") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
@@ -255,7 +274,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
     return [
       {
         type: "text" as const,
-        text: `Bulk archive of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+        text: `Removal of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
@@ -266,7 +285,9 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
 
   for (const r of result.results) {
     if (r.success) {
-      lines.push(`  ${r.entityId}: archived`);
+      lines.push(
+        `  ${r.entityId}: ${r.mode === "legacy_archive" ? "archived (legacy /dsp PUT)" : "deleted"}`
+      );
     } else {
       lines.push(`  ${r.entityId}: FAILED - ${r.error}`);
     }
@@ -311,19 +332,21 @@ export const deleteEntityTool = {
   },
   inputExamples: [
     {
-      label: "Archive a single order (campaign)",
+      label: "Delete targets from an ad group",
       input: {
-        entityType: "order",
+        entityType: "target",
         profileId: "1234567890",
-        entityIds: ["ord_123456789"],
+        accountId: "5550001112223",
+        entityIds: ["603456789012345", "603456789012346"],
       },
     },
     {
-      label: "Archive multiple line items",
+      label: "Archive an order (campaign) — legacy call",
       input: {
-        entityType: "lineItem",
+        entityType: "order",
         profileId: "1234567890",
-        entityIds: ["li_111111", "li_222222"],
+        accountId: "5550001112223",
+        entityIds: ["581234567890123"],
       },
     },
   ],

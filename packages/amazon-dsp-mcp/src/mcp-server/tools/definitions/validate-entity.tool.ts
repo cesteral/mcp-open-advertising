@@ -4,8 +4,12 @@
 /**
  * amazon_dsp_validate_entity — Client-side schema validation for Amazon DSP entities.
  *
- * Amazon DSP API does not have a dry-run mode, so this tool validates payloads
- * against known required-field rules before hitting the API. Purely local.
+ * The Unified API (`/adsApi/v1/*`) declares no validate-only mode, so this
+ * tool validates payloads against the spec's required create fields
+ * (unified-api-dsp.json `DSP<Entity>Create.required`, minus the `adProduct` /
+ * `state` this server supplies) and runs the same request-body translation
+ * the create / update tools run (legacy-field mapping, state enums). Purely
+ * local.
  */
 
 import { z } from "zod";
@@ -16,91 +20,99 @@ import {
   type AmazonDspEntityType,
 } from "../utils/entity-mapping.js";
 import { type FieldRule, createValidateEntityTool } from "@cesteral/shared";
+import {
+  translateCreatePayload,
+  translateUpdatePayload,
+} from "../../../services/amazon-dsp/unified-payload.js";
 
 export const validateEntityTool = createValidateEntityTool<AmazonDspEntityType>({
   toolName: "amazon_dsp_validate_entity",
   toolTitle: "AmazonDsp Ads Entity Validation (Client-Side)",
-  toolDescription: `Validate an entity payload against known AmazonDsp Ads requirements without calling the API.
+  toolDescription: `Validate an entity payload against the Amazon Ads Unified API (\`/adsApi/v1/*\`) requirements without calling the API.
 
-Checks required fields, data types, and common configuration mistakes.
+Checks the spec's required create fields, data types, read-only fields, and the
+same payload rules \`amazon_dsp_create_entity\` / \`amazon_dsp_update_entity\` apply
+(state values, legacy \`/dsp\` field names and how they map).
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-This is a pure client-side check — it catches missing required fields and
-obvious type errors. The AmazonDsp API may still reject payloads for business-rule
-reasons (e.g., invalid objective/placement combinations).`,
+This is a pure client-side check — the Amazon DSP API may still reject payloads
+for business-rule reasons (e.g. an invalid inventory type / bid strategy combination).`,
   entityTypeEnum: getEntityTypeEnum() as readonly [AmazonDspEntityType, ...AmazonDspEntityType[]],
   getRules: (entityType) => getEntityContract(entityType).requiredOnCreate as FieldRule[],
   getReadOnlyFields: (entityType) => getEntityContract(entityType).readOnlyFields,
   extraInputSchema: {
-    profileId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
+    profileId: z.string().optional().describe("Amazon Ads profile ID (optional)"),
+    accountId: z
+      .string()
+      .optional()
+      .describe(
+        "DSP advertiser ID the payload will be sent under (optional; enables the advertiserId match check)"
+      ),
   },
-  extraValidate: ({ entityType, mode, data, issues }) => {
+  extraValidate: ({ entityType, mode, data, extra, issues }) => {
     const canonical = getCanonicalEntityType(entityType);
+    const contract = getEntityContract(entityType);
+    const accountId =
+      typeof extra.accountId === "string" && extra.accountId.length > 0
+        ? extra.accountId
+        : typeof data.advertiserId === "string"
+          ? data.advertiserId
+          : "";
 
-    if (mode === "create" && canonical === "creative" && !data.clickThroughUrl) {
-      issues.push({
-        field: "clickThroughUrl",
-        code: "missing",
-        message: 'Creative should include "clickThroughUrl" for click tracking',
-        severity: "warning",
-      });
-    }
-
-    const budgetValue = data.budget;
-    if (budgetValue !== undefined) {
-      if (typeof budgetValue === "number") {
-        if (canonical === "lineItem") {
-          issues.push({
-            field: "budget",
-            code: "wrongType",
-            message:
-              'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }',
-            suggestedValues: ["DAILY", "LIFETIME"],
-            severity: "error",
-          });
-        } else if (budgetValue <= 0) {
-          issues.push({
-            field: "budget",
-            code: "invalidValue",
-            message: 'Field "budget" must be a positive number',
-            severity: "error",
-          });
-        }
-      } else if (typeof budgetValue === "object" && budgetValue !== null) {
-        const budgetObj = budgetValue as Record<string, unknown>;
-        if (typeof budgetObj.budget !== "number" || (budgetObj.budget as number) <= 0) {
-          issues.push({
-            field: "budget.budget",
-            code: "invalidValue",
-            message: 'Field "budget.budget" must be a positive number',
-            severity: "error",
-          });
-        }
-        if (!budgetObj.budgetType) {
-          issues.push({
-            field: "budget.budgetType",
-            code: "missing",
-            message: 'Field "budget.budgetType" is required ("DAILY" or "LIFETIME")',
-            suggestedValues: ["DAILY", "LIFETIME"],
-            severity: "error",
-          });
+    if (mode === "create") {
+      // A legacy alias (e.g. `orderId` for `campaignId`) satisfies the
+      // required-field rule, exactly as the create translation maps it.
+      for (const [legacy, unified] of Object.entries(contract.legacyFieldRenames)) {
+        if (legacy in data) {
+          for (let i = issues.length - 1; i >= 0; i--) {
+            if (issues[i].field === unified && issues[i].code === "missing") issues.splice(i, 1);
+          }
         }
       }
+      if (contract.createStateMustBe) {
+        for (let i = issues.length - 1; i >= 0; i--) {
+          if (issues[i].field === "state" && issues[i].code === "missing") issues.splice(i, 1);
+        }
+      }
+    }
+
+    const translated =
+      mode === "create"
+        ? translateCreatePayload(canonical, data, accountId)
+        : translateUpdatePayload(canonical, "validate", data, accountId);
+    for (const issue of translated.issues) {
+      if (issue.code === "CONFLICTING_FIELDS" && issue.field === `data.${contract.idField}`) {
+        continue; // update-mode id check needs a real entityId; not meaningful here
+      }
+      issues.push({
+        field: issue.field.replace(/^data\./, ""),
+        code: "custom",
+        message: `[${issue.code}] ${issue.message}`,
+        severity: "error",
+      });
     }
   },
   inputExamples: [
     {
-      label: "Valid order create",
+      label: "Valid order (campaign) create",
       input: {
         entityType: "order",
         mode: "create",
-        profileId: "1234567890",
+        accountId: "5550001112223",
         data: {
           name: "Summer Sale 2026",
-          advertiserId: "adv_123",
-          startDateTime: "2026-07-01T00:00:00Z",
-          endDateTime: "2026-07-31T23:59:59Z",
+          flights: [
+            {
+              startDateTime: "2026-07-01T00:00:00Z",
+              endDateTime: "2026-07-31T23:59:59Z",
+              budget: {
+                budgetType: "MONETARY",
+                budgetValue: { monetaryBudgetValue: { monetaryBudget: { value: 50000 } } },
+              },
+            },
+          ],
+          optimizations: { bidSettings: { bidStrategy: "SPEND_BUDGET_IN_FULL" } },
         },
       },
     },
@@ -109,8 +121,7 @@ reasons (e.g., invalid objective/placement combinations).`,
       input: {
         entityType: "lineItem",
         mode: "create",
-        profileId: "1234567890",
-        data: { name: "Test Line Item" },
+        data: { name: "Test Ad Group" },
       },
     },
   ],

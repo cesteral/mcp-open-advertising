@@ -8,8 +8,10 @@ import { getCreatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/e
 import {
   runAmazonDspCreateDryRun,
   resolveAmazonDspCreateCapability,
-  symbolicValidate,
+  symbolicValidateCreate,
 } from "../utils/dry-run.js";
+import { AccountIdSchema } from "../utils/account-id.js";
+import { getEntityContract } from "../utils/entity-mapping.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromAmazonDspEntity } from "../utils/capture-snapshot.js";
 import {
@@ -27,28 +29,29 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_create_entity";
 const TOOL_TITLE = "Create AmazonDsp Ads Entity";
-const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
+const TOOL_DESCRIPTION = `Create a new Amazon DSP entity via the Amazon Ads Unified API (\`POST /adsApi/v1/create/{campaigns|adGroups|ads|targets|adAssociations}\`).
 
 **Supported entity types:** ${getCreatableEntityTypeEnum().join(", ")}
 
-**Key requirements by entity type:**
-- **order** (campaign): requires \`name\`, \`advertiserId\`, \`startDateTime\`, \`endDateTime\`
-- **lineItem** (ad group): requires \`name\`, \`orderId\`, \`advertiserId\`, \`budget\`
-- **target**: typically requires \`lineItemId\` plus tactic-specific targeting fields
-- **creativeAssociation**: requires \`creativeId\` and \`lineItemId\`
-
-Creatives cannot be created here: Amazon routes creative writes to subtype-specific endpoints this server does not implement. Associate an existing creative with a \`creativeAssociation\` instead.
+**Key requirements by entity type (Unified field names):**
+- **order** (campaign): \`name\`, \`flights[]\` (dates + budget per flight), \`optimizations\`
+- **lineItem** (ad group): \`name\`, \`campaignId\`, \`advertisedProductCategoryIds\`, \`bid\`, \`creativeRotationType\`, \`inventoryType\`, \`optimization\`, \`pacing\`, \`startDateTime\`, \`endDateTime\`, \`targetingSettings\`
+- **creative** (ad): \`name\`, \`adType\`, \`creative\` (one \`<type>Creative\` key), \`state\`
+- **target**: \`adGroupId\`, \`negative\`, \`state\`, \`targetType\`, \`targetDetails\`
+- **creativeAssociation** (ad association): \`adGroupId\`, \`adId\`, \`state\`
 
 **Gotchas:**
-- State values: ENABLED, PAUSED, ARCHIVED
-- Line item budget must be a nested object: \`{ budgetType: "DAILY" | "LIFETIME", budget: number }\`
-- Amazon-Advertising-API-Scope header is automatically injected from the session profile ID`;
+- \`adProduct: "AMAZON_DSP"\` is added for you; \`advertiserId\` is not a body field — the advertiser is \`accountId\` (the \`Amazon-Ads-AccountId\` header)
+- Orders and line items are created PAUSED (the only state Amazon accepts); update \`state\` to ENABLED to deliver
+- Legacy names are mapped: \`orderId\` → \`campaignId\`, \`lineItemId\` → \`adGroupId\`, \`creativeId\` → \`adId\`, \`country\` → \`countries\`, a DAILY/LIFETIME \`budget\` → \`budgets[]\`
+- See \`entity-schema://amazonDsp/{entityType}\` for the full field reference`;
 
 export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getCreatableEntityTypeEnum()).describe("Type of entity to create"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
-    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
+    data: z.record(z.any()).describe("Entity fields as key-value pairs (Unified API field names)"),
     dry_run: z
       .boolean()
       .optional()
@@ -61,7 +64,11 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data (includes entity ID)"),
+    entity: z
+      .record(z.any())
+      .describe(
+        "Created entity as Amazon returns it (includes its ID: campaignId / adGroupId / adId / targetId / adAssociationId)"
+      ),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
@@ -89,7 +96,7 @@ export async function createEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runAmazonDspCreateDryRun(
-      { entityType: input.entityType, data: input.data },
+      { entityType: input.entityType, accountId: input.accountId, data: input.data },
       amazonDspService,
       context
     );
@@ -114,7 +121,11 @@ export async function createEntityLogic(
       "`data` must contain at least one field to create an Amazon DSP entity."
     );
   }
-  const createValidationErrors = symbolicValidate(input.data);
+  const createValidationErrors = symbolicValidateCreate(
+    input.entityType,
+    input.data,
+    input.accountId
+  );
   if (createValidationErrors.length > 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
@@ -122,19 +133,23 @@ export async function createEntityLogic(
     );
   }
 
-  const entity = (await amazonDspService.createEntity(
+  const entity = await amazonDspService.createEntity(
     input.entityType as AmazonDspEntityType,
+    input.accountId,
     input.data,
     context
-  )) as unknown as Record<string, unknown>;
+  );
 
-  // Normalize the created entity for the canonical `after` snapshot. Create has
-  // no `before`. Best-effort: undefined for out-of-scope kinds.
-  const createdId = String(entity?.orderId ?? entity?.lineItemId ?? entity?.id ?? "");
+  // Normalize the created entity (the 207 `success[0].<item>`) for the
+  // canonical `after` snapshot. Create has no `before`. Best-effort: undefined
+  // for out-of-scope kinds.
+  const idField = getEntityContract(input.entityType as AmazonDspEntityType).idField;
+  const createdId = String(entity?.[idField] ?? "");
   const after: NormalizedEntitySnapshot | undefined = snapshotFromAmazonDspEntity(
     input.entityType,
     createdId,
-    entity
+    entity,
+    input.accountId
   );
 
   return {
@@ -187,10 +202,10 @@ export const createEntityTool = {
       contractPlatformSlug: "amazon_dsp",
       contractToolSlug: "create_entity",
       operation: ["create"],
-      // Governed scope mirrors `amazon_dsp_update_entity` — order
-      // (campaign-equivalent) and lineItem (ad-group-equivalent) carry a
-      // canonical kind. creative / target / creativeAssociation are out of
-      // scope (resolve canonicalEntityKind: null, no snapshot).
+      // Governed scope mirrors `amazon_dsp_update_entity` — order (Unified
+      // campaign) and lineItem (Unified ad group) carry a canonical kind.
+      // creative / target / creativeAssociation are out of scope (resolve
+      // canonicalEntityKind: null, no snapshot).
       entityKinds: ["order", "line_item"],
       // `profileId` is the required top-level scope arg that locates where the
       // entity is created (hierarchy parent ids live in `data`). create has no
@@ -199,11 +214,12 @@ export const createEntityTool = {
       entityIdArgs: ["profileId"],
       readPartner: {
         toolName: "amazon_dsp_get_entity",
-        argMap: { entityType: "entityType", profileId: "profileId" },
+        argMap: { entityType: "entityType", profileId: "profileId", accountId: "accountId" },
       },
       schemaVersion: 1,
       contractId: "amazon_dsp.create_entity.v1",
-      // Symbolic create dry-run — Amazon DSP has no native validate mode.
+      // Symbolic create dry-run — the Unified DSP spec declares no
+      // validate-only mode on create/campaigns|adGroups.
       // Validation runs symbolic business rules; expected post-state is the
       // would-be-created entity. `after` is normalized from the created entity
       // (create has no `before`).
@@ -215,29 +231,49 @@ export const createEntityTool = {
   },
   inputExamples: [
     {
-      label: "Create an order (campaign)",
+      label: "Create an order (Unified campaign)",
       input: {
         entityType: "order",
         profileId: "1234567890",
+        accountId: "5550001112223",
         data: {
           name: "Summer Sale 2026",
-          advertiserId: "adv_123",
-          startDateTime: "2026-07-01T00:00:00Z",
-          endDateTime: "2026-07-31T23:59:59Z",
+          countries: ["US"],
+          flights: [
+            {
+              startDateTime: "2026-07-01T00:00:00Z",
+              endDateTime: "2026-07-31T23:59:59Z",
+              budget: {
+                budgetType: "MONETARY",
+                budgetValue: { monetaryBudgetValue: { monetaryBudget: { value: 50000 } } },
+              },
+            },
+          ],
+          optimizations: {
+            bidSettings: { bidStrategy: "SPEND_BUDGET_IN_FULL" },
+            goalSettings: { kpi: "CLICK_THROUGH_RATE" },
+          },
         },
       },
     },
     {
-      label: "Create a line item (ad group)",
+      label: "Create a line item (Unified ad group)",
       input: {
         entityType: "lineItem",
         profileId: "1234567890",
+        accountId: "5550001112223",
         data: {
           name: "US Display — Retargeting",
-          orderId: "ord_123456789",
-          advertiserId: "adv_123",
-          budget: { budgetType: "DAILY", budget: 2000 },
-          bidding: { bidOptimization: "MANUAL", bidAmount: 2.5 },
+          campaignId: "581234567890123",
+          inventoryType: "DISPLAY",
+          advertisedProductCategoryIds: ["12345"],
+          bid: { baseBid: 3.5 },
+          creativeRotationType: "RANDOM",
+          startDateTime: "2026-07-01T00:00:00Z",
+          endDateTime: "2026-07-31T23:59:59Z",
+          optimization: { bidStrategy: "SPEND_BUDGET_IN_FULL" },
+          pacing: { deliveryProfile: "EVEN" },
+          targetingSettings: { timeZoneType: "VIEWER", userLocationSignal: "ANYWHERE" },
         },
       },
     },

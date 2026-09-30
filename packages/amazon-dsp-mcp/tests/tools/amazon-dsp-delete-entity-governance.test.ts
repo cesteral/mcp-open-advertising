@@ -27,7 +27,8 @@ const sdk = { sessionId: "s" } as any;
 const baseInput = {
   entityType: "order",
   profileId: "1234567890",
-  entityIds: ["ord_111111", "ord_222222"],
+  accountId: "5550001112223",
+  entityIds: ["cmp_111111", "cmp_222222"],
 };
 
 describe("amazon_dsp_delete_entity governance contract (effect class)", () => {
@@ -39,7 +40,7 @@ describe("amazon_dsp_delete_entity governance contract (effect class)", () => {
       // first id succeeds, second throws -> partial success
       deleteEntity: vi
         .fn()
-        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ mode: "legacy_archive", entity: {} })
         .mockRejectedValueOnce(new Error("archive failed")),
     };
     mockResolveSessionServices.mockReturnValue({
@@ -79,6 +80,12 @@ describe("amazon_dsp_delete_entity governance contract (effect class)", () => {
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.deleteEntity).toHaveBeenCalledTimes(2);
+    expect(svc.deleteEntity).toHaveBeenCalledWith("order", "5550001112223", "cmp_111111", ctx);
+    expect(result.results[0]).toEqual({
+      entityId: "cmp_111111",
+      success: true,
+      mode: "legacy_archive",
+    });
     expect(result.effect).toEqual({
       effectKind: "entities_deleted",
       summary: {
@@ -124,7 +131,7 @@ describe("amazon_dsp_delete_entity governance contract (effect class)", () => {
         },
       },
     } as any);
-    expect(content[0].text).toContain("Dry run: bulk-archiving 2 order(s) would succeed");
+    expect(content[0].text).toContain("Dry run: removing 2 order(s) would succeed");
     expect(content[0].text).not.toContain("deletions:");
   });
 });

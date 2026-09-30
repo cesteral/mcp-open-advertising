@@ -50,10 +50,10 @@ function buildAmazonDspNextAction(
     return "Verify the Amazon-Advertising-API-Scope (profileId) and ClientId headers correspond to a profile the user has access to. Profile IDs come from Amazon's GET /v2/profiles (this server has no profile-listing tool); use amazon_dsp_list_advertisers to confirm the profile can see the expected DSP advertisers.";
   }
   if (status === 404) {
-    return "Verify the order/lineItem/creative ID with amazon_dsp_list_entities and the accountId (DSP advertiser ID) with amazon_dsp_list_advertisers.";
+    return "Verify the entity ID with amazon_dsp_list_entities and the accountId (the Amazon-Ads-AccountId / DSP advertiser ID) with amazon_dsp_list_advertisers.";
   }
   if (status === 429) {
-    return "Amazon DSP per-LwA-app quota tripped. Amazon does not send Retry-After; wait at least 5 minutes before retrying, and reduce request rate. /dsp/orders, /dsp/lineItems, /dsp/creatives have particularly tight rolling-window limits.";
+    return "Amazon DSP per-LwA-app quota tripped. Amazon does not send Retry-After; wait at least 5 minutes before retrying, and reduce request rate.";
   }
   return defaultHint;
 }
@@ -65,15 +65,14 @@ function buildAmazonDspNextAction(
  * retry with exponential backoff, and error parsing.
  *
  * Key Amazon DSP patterns:
- * - ALL requests carry Amazon-Advertising-API-Scope: {profileId}
- * - The client ID header name depends on the API family: legacy `/dsp/*` and
- *   DSP reporting use `Amazon-Advertising-API-ClientId`; Ads API v1
- *   (`/adsApi/v1/*`) requires `Amazon-Ads-ClientId` (see
+ * - Headers depend on the API family. Legacy `/dsp/*`, `/assets/*` and DSP
+ *   reporting carry `Amazon-Advertising-API-Scope: {profileId}` and
+ *   `Amazon-Advertising-API-ClientId`. The Unified API (`/adsApi/v1/*` —
+ *   entity management since #234, commitments, forecasts) carries
+ *   `Amazon-Ads-ClientId` and no scope header (see
  *   amazon-dsp-v1-api-contract.ts for the spec reference)
  * - Per-call headers (e.g. `Amazon-Ads-AccountId`) are passed via `extraHeaders`
  * - Response is raw JSON (no TikTok-style { code: 0, data: ... } envelope)
- * - No DELETE endpoint — archive via PUT with { state: "ARCHIVED" }
- * - Offset pagination: startIndex + count query params
  */
 export class AmazonDspHttpClient {
   constructor(
@@ -84,8 +83,8 @@ export class AmazonDspHttpClient {
   ) {}
 
   /**
-   * Make an authenticated GET request.
-   * Amazon-Advertising-API-Scope is automatically injected as a header.
+   * Make an authenticated GET request. Auth, client-id and (legacy paths
+   * only) scope headers are injected per request.
    */
   async get(
     path: string,
@@ -105,16 +104,14 @@ export class AmazonDspHttpClient {
   /**
    * Make an authenticated POST request with JSON body.
    *
-   * Amazon's API gateway routes Bearer-authenticated DSP writes via
-   * Content-Type negotiation. Sending plain `application/json` on
-   * /dsp/orders, /dsp/lineItems, /dsp/creatives/* falls through to the
-   * SigV4 auth path and returns 403 "Invalid key=value pair in
-   * Authorization header". Each entity endpoint has a vendor media type
-   * (e.g. application/vnd.dsporders.v2.2+json) that MUST be passed as
-   * `contentType` for the request to land on the Bearer path.
+   * The legacy `/dsp/orders` and `/dsp/lineItems` endpoints (still used for
+   * the archive fallback, see `put`) route Bearer-authenticated writes via a
+   * vendor media type (e.g. application/vnd.dsporders.v2.2+json) — plain
+   * `application/json` there was observed to fall through to SigV4 and 403.
+   * The Unified API (`/adsApi/v1/*`) is plain `application/json` throughout
+   * (unified-api-dsp.json request bodies).
    *
-   * @param contentType - Override Content-Type. Defaults to application/json
-   *                       (safe for non-DSP-entity paths like reporting).
+   * @param contentType - Override Content-Type. Defaults to application/json.
    * @param accept      - Override Accept header. Defaults to contentType
    *                       (Amazon expects matching Accept on entity writes).
    * @param extraHeaders - Per-call headers (e.g. `Amazon-Ads-AccountId`).
@@ -148,8 +145,10 @@ export class AmazonDspHttpClient {
 
   /**
    * Make an authenticated PUT request with JSON body.
-   * Used for updates and archive-based deletes. See `post` for the
-   * Content-Type / SigV4 gateway routing background.
+   * Since #234 used only for the LEGACY order / line-item archive
+   * (`PUT /dsp/orders|lineItems/{id} { state: "ARCHIVED" }`) — the Unified
+   * API has no archive for campaigns / ad groups. See `post` for the
+   * vendor media type background.
    */
   async put(
     path: string,
@@ -204,21 +203,26 @@ export class AmazonDspHttpClient {
         fetchFn: fetchWithTimeout,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
+          const v1 = isAmazonAdsV1Path(path);
           const headers: Record<string, string> = {
             ...normalizeHeaders(options?.headers),
             Authorization: `Bearer ${accessToken}`,
-            "Amazon-Advertising-API-Scope": this.profileId,
           };
+          // The Unified API (`/adsApi/v1/*`) declares only Amazon-Ads-ClientId
+          // and Amazon-Ads-AccountId (unified-api-dsp.json), and the DSP
+          // migration guide §2 lists Amazon-Advertising-API-Scope as "Not used"
+          // (amzn/ads-advanced-tools-docs @ e25aace0). Legacy `/dsp/*` and DSP
+          // reporting keep the profile scope header.
+          if (!v1) {
+            headers["Amazon-Advertising-API-Scope"] = this.profileId;
+          }
           if (options?.body && !headers["Content-Type"]) {
             headers["Content-Type"] = "application/json";
           }
           const clientId = this.authAdapter.clientId;
           if (clientId) {
-            headers[
-              isAmazonAdsV1Path(path)
-                ? AMAZON_ADS_V1_HEADERS.clientId
-                : AMAZON_LEGACY_CLIENT_ID_HEADER
-            ] = clientId;
+            headers[v1 ? AMAZON_ADS_V1_HEADERS.clientId : AMAZON_LEGACY_CLIENT_ID_HEADER] =
+              clientId;
           }
           return headers;
         },

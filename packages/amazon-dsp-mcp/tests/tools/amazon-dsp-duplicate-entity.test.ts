@@ -38,10 +38,9 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
     vi.clearAllMocks();
     svc = {
       duplicateEntity: vi.fn().mockResolvedValue({
-        orderId: "ord-COPY-1",
+        campaignId: "cmp-COPY-1",
         name: "Source Order (copy)",
         state: "PAUSED",
-        advertiserId: "adv-1",
       }),
       getEntity: vi.fn(),
     };
@@ -50,14 +49,20 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
 
   it("dry_run reads the source and projects the PAUSED copy, no API call", async () => {
     svc.getEntity.mockResolvedValue({
-      orderId: "ord-SRC-1",
+      campaignId: "cmp-SRC-1",
       name: "Source Order",
       state: "ENABLED",
-      advertiserId: "adv-1",
+      status: { deliveryStatus: "DELIVERING" },
     });
 
     const result = await duplicateEntityLogic(
-      { entityType: "order", profileId: "1", entityId: "ord-SRC-1", dry_run: true } as any,
+      {
+        entityType: "order",
+        profileId: "1",
+        accountId: "adv-1",
+        entityId: "cmp-SRC-1",
+        dry_run: true,
+      } as any,
       ctx,
       sdk
     );
@@ -66,51 +71,74 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
     expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
     expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Order");
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+    expect(result.dryRun?.expectedPostState?.accountId).toBe("adv-1");
+    expect(svc.getEntity).toHaveBeenCalledWith("order", "adv-1", "cmp-SRC-1", ctx);
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "order",
     });
   });
 
-  it("dry_run applies options (rename + re-state) to the projected copy", async () => {
+  it("dry_run applies an options rename to the projected copy", async () => {
     svc.getEntity.mockResolvedValue({
-      orderId: "ord-SRC-1",
+      campaignId: "cmp-SRC-1",
       name: "Source Order",
       state: "ENABLED",
-      advertiserId: "adv-1",
     });
     const result = await duplicateEntityLogic(
       {
         entityType: "order",
         profileId: "1",
-        entityId: "ord-SRC-1",
-        // options spread last on execute → can override the default PAUSED + rename.
-        options: { name: "Custom Copy", state: "ENABLED" },
+        accountId: "adv-1",
+        entityId: "cmp-SRC-1",
+        options: { name: "Custom Copy" },
         dry_run: true,
       } as any,
       ctx,
       sdk
     );
+    expect(result.dryRun?.wouldSucceed).toBe(true);
     expect(result.dryRun?.expectedPostState?.displayName).toBe("Custom Copy");
-    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+  });
+
+  it("dry_run reports an options.state other than PAUSED as a failure (DSPCreateState)", async () => {
+    // basis: unified-api-dsp.json DSPCreateState — "For ADSP, campaign and ad
+    // group resources can only be created in the PAUSED state"
+    // (amzn/ads-advanced-tools-docs@e25aace0).
+    svc.getEntity.mockResolvedValue({ campaignId: "cmp-SRC-1", name: "S", state: "ENABLED" });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "order",
+        profileId: "1",
+        accountId: "adv-1",
+        entityId: "cmp-SRC-1",
+        options: { state: "ENABLED" },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors[0].code).toBe("INVALID_STATE");
   });
 
   it("execute normalizes the returned new entity into after (no before)", async () => {
     const result = await duplicateEntityLogic(
-      { entityType: "order", profileId: "1", entityId: "ord-SRC-1" } as any,
+      { entityType: "order", profileId: "1", accountId: "adv-1", entityId: "cmp-SRC-1" } as any,
       ctx,
       sdk
     );
-    expect(svc.duplicateEntity).toHaveBeenCalledOnce();
+    expect(svc.duplicateEntity).toHaveBeenCalledWith("order", "adv-1", "cmp-SRC-1", undefined, ctx);
     expect(result.after?.status.canonical).toBe("paused");
-    expect(result.after?.platformEntityId).toBe("ord-COPY-1");
+    expect(result.after?.platformEntityId).toBe("cmp-COPY-1");
     expect((result as any).before).toBeUndefined();
   });
 
   it("out-of-scope kind resolves canonicalEntityKind:null and skips snapshots", async () => {
-    svc.duplicateEntity.mockResolvedValue({ creativeId: "cr-COPY-1" });
+    svc.duplicateEntity.mockResolvedValue({ adId: "ad-COPY-1" });
     const result = await duplicateEntityLogic(
-      { entityType: "creative", profileId: "1", entityId: "cr-SRC-1" } as any,
+      { entityType: "creative", profileId: "1", accountId: "adv-1", entityId: "ad-SRC-1" } as any,
       ctx,
       sdk
     );
@@ -123,7 +151,13 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
 
   it("out-of-scope dry_run does not throw and emits no snapshot", async () => {
     const result = await duplicateEntityLogic(
-      { entityType: "creative", profileId: "1", entityId: "cr-SRC-1", dry_run: true } as any,
+      {
+        entityType: "creative",
+        profileId: "1",
+        accountId: "adv-1",
+        entityId: "ad-SRC-1",
+        dry_run: true,
+      } as any,
       ctx,
       sdk
     );

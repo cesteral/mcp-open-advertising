@@ -4,7 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
-import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import {
+  getDuplicableEntityTypeEnum,
+  getEntityContract,
+  type AmazonDspEntityType,
+} from "../utils/entity-mapping.js";
+import { AccountIdSchema } from "../utils/account-id.js";
 import {
   runAmazonDspDuplicateDryRun,
   resolveAmazonDspDuplicateCapability,
@@ -25,22 +30,24 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_duplicate_entity";
 const TOOL_TITLE = "Duplicate AmazonDsp Ads Entity";
-const TOOL_DESCRIPTION = `Duplicate a AmazonDsp Ads entity (copy it).
+const TOOL_DESCRIPTION = `Duplicate an Amazon DSP entity (copy it). The Unified API has no copy operation, so this reads the source (\`POST /adsApi/v1/query/{resource}\`) and creates a copy (\`POST /adsApi/v1/create/{resource}\`).
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getDuplicableEntityTypeEnum().join(", ")}
 
-Creates a copy of the entity. The copy is created in DISABLED status by default.
-Use the returned entity ID to make modifications before enabling.`;
+The copy carries the source's create-schema fields (read-only fields such as IDs, timestamps, \`status\` and currency codes are dropped; campaign flights lose their \`flightId\`) and is created PAUSED. Children are not copied. \`options\` override fields on the copy; orders and line items can only be created PAUSED, so a different \`options.state\` is refused.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to duplicate"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getDuplicableEntityTypeEnum()).describe("Type of entity to duplicate"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
       .record(z.any())
       .optional()
-      .describe("Optional copy options (e.g., new name, target campaign ID)"),
+      .describe(
+        "Optional field overrides for the copy (Unified field names, e.g. { name } or a line item's { campaignId })"
+      ),
     dry_run: z
       .boolean()
       .optional()
@@ -82,7 +89,12 @@ export async function duplicateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runAmazonDspDuplicateDryRun(
-      { entityType: input.entityType, entityId: input.entityId, options: input.options },
+      {
+        entityType: input.entityType,
+        accountId: input.accountId,
+        entityId: input.entityId,
+        options: input.options,
+      },
       amazonDspService,
       context
     );
@@ -100,21 +112,25 @@ export async function duplicateEntityLogic(
   // dry-run preview with a different id is allowed (matches the other write tools).
   assertAccountScope(input.profileId, boundProfileId, "profileId");
 
-  const newEntity = (await amazonDspService.duplicateEntity(
+  const newEntity = await amazonDspService.duplicateEntity(
     input.entityType as AmazonDspEntityType,
+    input.accountId,
     input.entityId,
     input.options,
     context
-  )) as unknown as Record<string, unknown>;
+  );
 
-  // The duplicate returns the full new entity, so normalize it directly for the
-  // canonical `after` snapshot (no re-read needed). Duplicate has no `before`.
-  // Best-effort: undefined for out-of-scope kinds.
-  const newId = String(newEntity?.orderId ?? newEntity?.lineItemId ?? newEntity?.id ?? "");
+  // The create returns the full new entity (207 `success[0].<item>`), so
+  // normalize it directly for the canonical `after` snapshot (no re-read
+  // needed). Duplicate has no `before`. Best-effort: undefined for
+  // out-of-scope kinds.
+  const idField = getEntityContract(input.entityType as AmazonDspEntityType).idField;
+  const newId = String(newEntity?.[idField] ?? "");
   const after: NormalizedEntitySnapshot | undefined = snapshotFromAmazonDspEntity(
     input.entityType,
     newId,
-    newEntity
+    newEntity,
+    input.accountId
   );
 
   return {
@@ -169,14 +185,19 @@ export const duplicateEntityTool = {
       contractPlatformSlug: "amazon_dsp",
       contractToolSlug: "duplicate_entity",
       operation: ["duplicate"],
-      // Governed scope is order / line_item. creative / target /
-      // creativeAssociation duplicate but resolve canonicalEntityKind:null —
-      // still token-gated.
+      // Governed scope is order / line_item. creative / creativeAssociation
+      // duplicate but resolve canonicalEntityKind:null — still token-gated.
+      // target cannot be duplicated (no read by ID).
       entityKinds: ["order", "line_item"],
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "amazon_dsp_get_entity",
-        argMap: { entityType: "entityType", profileId: "profileId", entityId: "entityId" },
+        argMap: {
+          entityType: "entityType",
+          profileId: "profileId",
+          accountId: "accountId",
+          entityId: "entityId",
+        },
       },
       schemaVersion: 1,
       contractId: "amazon_dsp.duplicate_entity.v1",
@@ -195,17 +216,19 @@ export const duplicateEntityTool = {
       input: {
         entityType: "order",
         profileId: "1234567890",
-        entityId: "ord_123456789",
+        accountId: "5550001112223",
+        entityId: "581234567890123",
       },
     },
     {
-      label: "Duplicate a line item with new name",
+      label: "Duplicate a line item (ad group) with a new name",
       input: {
         entityType: "lineItem",
         profileId: "1234567890",
-        entityId: "li_123456789",
+        accountId: "5550001112223",
+        entityId: "592345678901234",
         options: {
-          name: "Copy of Line Item A",
+          name: "Copy of Ad Group A",
         },
       },
     },

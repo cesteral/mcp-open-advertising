@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
-import { nextAmazonDspStartIndex } from "../../../services/amazon-dsp/types.js";
+import { AccountIdSchema } from "../utils/account-id.js";
 import {
   PaginationOutputSchema,
   buildPaginationOutput,
@@ -16,30 +16,36 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_list_entities";
 const TOOL_TITLE = "List AmazonDsp Ads Entities";
-const TOOL_DESCRIPTION = `List Amazon DSP entities with optional filtering and offset-based pagination.
+const TOOL_DESCRIPTION = `List Amazon DSP entities via the Amazon Ads Unified API (\`POST /adsApi/v1/query/{campaigns|adGroups|ads|targets|adAssociations}\`), with optional filters and cursor pagination.
 
-**Entity Hierarchy:** Advertiser > Order (Campaign) > Line Item (Ad Group) > Creative
+**Entity Hierarchy:** Advertiser account > Order (campaign) > Line Item (ad group) > Target / Creative Association (ad association) > Creative (ad)
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All entities are scoped to an advertiser account. Pagination uses \`startIndex\` (offset) and \`pageSize\`.
-Use the entity-specific filter param: campaigns / orders filter by \`advertiserId\`, ad groups / line items filter by \`orderId\`, targets by \`lineItemId\`, and creative associations by \`lineItemId\`.`;
+Every query is scoped to \`accountId\` (the \`Amazon-Ads-AccountId\` header). Pagination uses \`nextToken\` from the previous page and \`pageSize\` (sent as \`maxResults\`).
+
+**Filters** (\`{ key: "id1,id2" }\`, comma-separated values allowed):
+- order: \`campaignId\`, \`state\`
+- lineItem: \`campaignId\` (or legacy \`orderId\`), \`adGroupId\`, \`state\`
+- creative: \`adId\` only — list an ad group's ads through creativeAssociation
+- target: \`adGroupId\` (or legacy \`lineItemId\`), \`state\`, \`targetType\`
+- creativeAssociation: \`adGroupId\` (or \`lineItemId\`), \`adId\` (or \`creativeId\`), \`adAssociationId\``;
 
 export const ListEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
-    profileId: z.string().min(1).describe("Amazon DSP Advertiser ID (used as the scope/profile)"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     filters: z
       .record(z.string())
       .optional()
-      .describe("Optional filter criteria (e.g., { advertiserId: '123', orderId: '456' })"),
-    startIndex: z
-      .number()
-      .int()
-      .min(0)
+      .describe(
+        "Optional filters, mapped to Unified `{ include: [...] }` query filters (e.g. { campaignId: '581234567890123', state: 'ENABLED,PAUSED' })"
+      ),
+    nextToken: z
+      .string()
       .optional()
-      .default(0)
-      .describe("Start index for offset pagination (default 0)"),
+      .describe("Cursor from the previous page's `pagination.nextCursor`; omit for the first page"),
     pageSize: z
       .number()
       .int()
@@ -47,7 +53,7 @@ export const ListEntitiesInputSchema = z
       .max(100)
       .optional()
       .default(25)
-      .describe("Number of entities per page (default 25, max 100)"),
+      .describe("Entities per page, sent as `maxResults` (default 25, max 100)"),
   })
   .describe("Parameters for listing Amazon DSP entities");
 
@@ -70,27 +76,19 @@ export async function listEntitiesLogic(
   const { amazonDspService, boundProfileId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.profileId, boundProfileId, "profileId");
 
-  const result = await amazonDspService.listEntities(
+  const page = await amazonDspService.listEntities(
     input.entityType as AmazonDspEntityType,
-    input.filters,
-    input.startIndex,
-    input.pageSize,
+    input.accountId,
+    { filters: input.filters, maxResults: input.pageSize, nextToken: input.nextToken },
     context
   );
 
-  const { pageInfo } = result;
-  const entities = result.entities as unknown as Record<string, unknown>[];
-  // Advance by what Amazon actually returned — `pageInfo.count` is the page
-  // size that was *requested*, which overstates a short (e.g. last) page.
-  const nextStartIndex = nextAmazonDspStartIndex(pageInfo, entities.length);
-
   return {
-    entities,
+    entities: page.entities,
     pagination: buildPaginationOutput({
-      nextCursor: nextStartIndex !== null ? String(nextStartIndex) : null,
-      pageSize: entities.length,
-      totalCount: pageInfo.totalResults,
-      nextPageInputKey: "startIndex",
+      nextCursor: page.nextToken ?? null,
+      pageSize: page.entities.length,
+      nextPageInputKey: "nextToken",
     }),
     timestamp: new Date().toISOString(),
   };
@@ -128,21 +126,22 @@ export const listEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "List active orders (campaigns)",
+      label: "List enabled and paused orders (campaigns)",
       input: {
         entityType: "order",
         profileId: "1234567890",
-        filters: { advertiserId: "adv_123" },
-        startIndex: 0,
+        accountId: "5550001112223",
+        filters: { state: "ENABLED,PAUSED" },
         pageSize: 25,
       },
     },
     {
-      label: "List line items for an order",
+      label: "List line items (ad groups) for a campaign",
       input: {
         entityType: "lineItem",
         profileId: "1234567890",
-        filters: { orderId: "ord_456" },
+        accountId: "5550001112223",
+        filters: { campaignId: "581234567890123" },
       },
     },
   ],

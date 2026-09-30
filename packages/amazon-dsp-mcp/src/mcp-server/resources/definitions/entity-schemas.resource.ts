@@ -8,6 +8,7 @@ import type { Resource } from "../types.js";
 import {
   AMAZON_DSP_CANONICAL_ENTITY_TYPES,
   AMAZON_DSP_ENTITY_CONTRACT,
+  unifiedEntityPath,
   type AmazonDspCanonicalEntityType,
 } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
@@ -25,16 +26,26 @@ function buildEntitySchemaMarkdown(entityType: AmazonDspCanonicalEntityType): st
 ## Entity Names
 - Canonical MCP type: \`${contract.canonicalType}\`
 
-## Endpoint Contract
-- List: \`GET ${contract.listPath}\`
-- Get: \`GET ${contract.getPath}\`
-- Create: \`POST ${contract.createPath}\`
-- Update: \`PUT ${contract.updatePath}\`
-- List filter: \`${contract.listFilterParam}\`
-- Primary ID field: \`${contract.idField}\`
-- List response key: \`${contract.responseKey}\`
+## Endpoint Contract (Unified API)
+- Resource: \`${contract.unified.resource}\` (\`POST /adsApi/v1/{create|update|query|delete}/${contract.unified.resource}\`)
+- Query: \`POST ${unifiedEntityPath("query", contract.unified.resource)}\` (${contract.unified.operations.query})
+- Create: \`POST ${unifiedEntityPath("create", contract.unified.resource)}\` (${contract.unified.operations.create}, batch max ${contract.unified.writeBatchMax})
+- Update: ${contract.unified.operations.update ? `\`POST ${unifiedEntityPath("update", contract.unified.resource)}\` (${contract.unified.operations.update})` : `not supported — ${contract.updateUnsupportedReason ?? "no Unified update"}`}
+- Delete: ${contract.unified.operations.delete ? `\`POST ${unifiedEntityPath("delete", contract.unified.resource)}\` (${contract.unified.operations.delete})` : contract.legacyArchive ? `no Unified delete — LEGACY \`PUT ${contract.legacyArchive.pathTemplate} { state: "ARCHIVED" }\` (unverified)` : `not supported — ${contract.deleteUnsupportedReason ?? "no Unified delete"}`}
+- Primary ID field: \`${contract.idField}\`${contract.unified.idFilter ? ` (query filter \`${contract.unified.idFilter}\`)` : " (no query ID filter — cannot be read by ID)"}
+- List filters (\`filters\` keys): ${Object.keys(contract.unified.filterKeys)
+    .map((k) => `\`${k}\``)
+    .join(", ")}
+- Legacy field names mapped on create: ${
+    Object.entries(contract.legacyFieldRenames).length
+      ? Object.entries(contract.legacyFieldRenames)
+          .map(([a, b]) => `\`${a}\` → \`${b}\``)
+          .join(", ")
+      : "none"
+  }
 
 ## Required Fields For Create
+${contract.createFields.includes("adProduct") ? '\`adProduct: "AMAZON_DSP"\` is added by the server' : "No \`adProduct\` on this resource"}${contract.createStateMustBe ? `; \`state\` defaults to ${contract.createStateMustBe} (the only accepted create state)` : ""}.
 ${requiredFields}
 
 ## Read-Only Fields
