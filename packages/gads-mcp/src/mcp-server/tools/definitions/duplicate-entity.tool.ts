@@ -5,7 +5,8 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { runGAdsDuplicateDryRun, resolveGAdsDuplicateCapability } from "../utils/dry-run.js";
-import { unwrapResource, captureGAdsSnapshot } from "../utils/capture-snapshot.js";
+import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
+import { buildGAdsDuplicateCopy } from "../utils/duplicate-copy.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -26,13 +27,6 @@ const logger = createLogger("gads-duplicate-entity");
 
 const TOOL_NAME = "gads_duplicate_entity";
 
-/**
- * The status every duplicate is created with. A copy of an ENABLED campaign
- * must not spend before someone deliberately enables it; `Resources__Campaign`
- * defaults `status` to ENABLED on create, so the copy's status is always sent
- * explicitly. dv360, msads and pinterest land copies in a non-running state too.
- */
-export const GADS_DUPLICATE_COPY_STATUS = "PAUSED";
 const TOOL_TITLE = "Duplicate Google Ads Entity";
 const TOOL_DESCRIPTION = `Duplicate a Google Ads entity (copy it).
 
@@ -41,39 +35,20 @@ const TOOL_DESCRIPTION = `Duplicate a Google Ads entity (copy it).
 Creates a copy of the entity (clone via read + create — Google Ads has no native copy op).
 Reads the source with GAQL, strips the server-assigned id/resourceName, and creates a new
 entity via the :mutate endpoint. The copy reuses the source's shared budget. Use \`options\`
-(e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.
+(e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy; a \`null\` value removes a field.
 
 **The copy is always created \`PAUSED\`**, whatever the source's status, so it cannot spend
 until you enable it with \`gads_update_entity\` or \`gads_bulk_update_status\`. A \`status\` in
-\`options\` is ignored.`;
+\`options\` is ignored.
 
-/**
- * Project a GAQL-read resource row into a mutate-create payload: the source
- * minus server-assigned fields, with `options` applied and `status` forced to
- * {@link GADS_DUPLICATE_COPY_STATUS}. Execute and dry run both send this body.
- */
-export function projectCreatePayload(
-  entityType: string,
-  row: Record<string, unknown>,
-  options?: Record<string, unknown>
-): { payload: Record<string, unknown>; ignoredStatus?: unknown } {
-  const resource = unwrapResource(entityType, row) ?? {};
-  const payload: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(resource)) {
-    // `id`/`resourceName` are server-assigned; the mutate-create endpoint
-    // rejects them. Everything else in the curated SELECT is writable-on-create.
-    if (key !== "id" && key !== "resourceName" && key !== "status") payload[key] = val;
-  }
-  for (const [key, val] of Object.entries(options ?? {})) {
-    if (key !== "status") payload[key] = val;
-  }
-  if (Object.keys(payload).length === 0) return { payload };
-  payload.status = GADS_DUPLICATE_COPY_STATUS;
-  const requested = options?.status;
-  return requested !== undefined && requested !== GADS_DUPLICATE_COPY_STATUS
-    ? { payload, ignoredStatus: requested }
-    : { payload };
-}
+**Bidding** is copied: the source's portfolio \`biddingStrategy\`, or its standard scheme with
+its parameters (e.g. \`targetCpa.targetCpaMicros\`). A bidding scheme in \`options\` replaces it.
+Strategy types that cannot be copied faithfully (e.g. TARGET_CPM, FIXED_CPM) are refused.
+
+**Dates:** a source \`startDateTime\` that may already have passed is omitted (Google applies
+its default start). A source \`endDateTime\` that may already have passed is refused unless
+\`options.endDateTime\` sets a future end, or \`null\` to run indefinitely. Every change made
+to the source's values is listed in \`copyAdjustments\`.`;
 
 /** Extract the new numeric ID from a mutate result's resourceName. */
 function extractNewId(result: unknown): string {
@@ -97,7 +72,7 @@ export const DuplicateEntityInputSchema = z
       .record(z.any())
       .optional()
       .describe(
-        "Optional copy overrides (e.g., a new name). A status here is ignored: the copy is always PAUSED."
+        "Optional copy overrides (e.g., a new name, a future endDateTime, or a bidding scheme). A null value removes the field. A status here is ignored: the copy is always PAUSED."
       ),
     dry_run: z
       .boolean()
@@ -118,6 +93,12 @@ export const DuplicateEntityOutputSchema = z
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No copy was created."
     ),
+    copyAdjustments: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Changes made to the source's values in the copy (e.g. a past startDateTime omitted). Absent when none."
+      ),
     after: NormalizedEntitySnapshotSchema.optional().describe(
       "Post-duplicate canonical snapshot of the created copy (in-scope kind: campaign), re-read by the new ID. Duplicate has no `before`."
     ),
@@ -139,13 +120,18 @@ export async function duplicateEntityLogic(
   const dispatchedCapability = resolveGAdsDuplicateCapability(input.entityType);
 
   // Read the source and project it to a mutate-create payload.
-  const row = (await gadsService.getEntity(
-    input.entityType as GAdsEntityType,
+  // Only `campaign` is duplicable (the input enum is restricted to it).
+  const row = (await gadsService.getCampaignForDuplicate(
     input.customerId,
     input.entityId,
     context
   )) as Record<string, unknown>;
-  const { payload, ignoredStatus } = projectCreatePayload(input.entityType, row, input.options);
+  const { payload, ignoredStatus, adjustments } = buildGAdsDuplicateCopy(
+    input.entityType,
+    row,
+    input.options
+  );
+  const copyAdjustments = adjustments.length > 0 ? { copyAdjustments: adjustments } : {};
   if (ignoredStatus !== undefined) {
     logger.warn(
       { entityType: input.entityType, requestedStatus: ignoredStatus },
@@ -171,6 +157,7 @@ export async function duplicateEntityLogic(
       entityType: input.entityType,
       timestamp: new Date().toISOString(),
       dryRun,
+      ...copyAdjustments,
       dispatchedCapability,
     };
   }
@@ -194,9 +181,16 @@ export async function duplicateEntityLogic(
     sourceEntityId: input.entityId,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...copyAdjustments,
     ...(after ? { after } : {}),
     dispatchedCapability,
   };
+}
+
+function formatAdjustments(adjustments?: string[]): string {
+  return adjustments && adjustments.length > 0
+    ? `\nCopy adjustments:\n${adjustments.map((a) => `  - ${a}`).join("\n")}`
+    : "";
 }
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
@@ -210,6 +204,7 @@ export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput):
         text:
           `Dry run: duplicating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No copy was created.` +
           (errs ? `\n${errs}` : "") +
+          formatAdjustments(result.copyAdjustments) +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];
@@ -217,7 +212,7 @@ export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput):
   return [
     {
       type: "text" as const,
-      text: `${result.entityType} ${result.sourceEntityId} duplicated successfully\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `${result.entityType} ${result.sourceEntityId} duplicated successfully (created PAUSED)${formatAdjustments(result.copyAdjustments)}\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

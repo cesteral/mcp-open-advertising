@@ -116,13 +116,17 @@ export function buildListQuery(
 /**
  * Build a GAQL query to get a single entity by ID.
  */
-export function buildGetByIdQuery(entityType: GAdsEntityType, entityId: string): string {
+export function buildGetByIdQuery(
+  entityType: GAdsEntityType,
+  entityId: string,
+  extraFields: readonly string[] = []
+): string {
   if (!/^\d+$/.test(entityId)) {
     throw new Error(`Invalid entity ID: "${entityId}". Entity IDs must be numeric.`);
   }
 
   const config = getEntityConfig(entityType);
-  const fields = DEFAULT_SELECT_FIELDS[entityType] || [config.idField];
+  const fields = [...(DEFAULT_SELECT_FIELDS[entityType] || [config.idField]), ...extraFields];
 
   return `SELECT ${fields.join(", ")} FROM ${config.gaqlResource} WHERE ${config.idField} = ${entityId} LIMIT 1 PARAMETERS omit_unselected_resource_names=true`;
 }

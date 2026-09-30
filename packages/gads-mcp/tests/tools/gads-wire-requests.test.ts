@@ -426,10 +426,15 @@ describe("gads_duplicate_entity → googleAds.search then campaigns.mutate (crea
     name: "Source",
     status: "PAUSED",
     advertisingChannelType: "SEARCH",
-    startDateTime: "2026-10-01 00:00:00",
-    endDateTime: "2026-12-31 23:59:59",
+    // Far-future dates, so the copy keeps them whatever today is.
+    startDateTime: "2099-10-01 00:00:00",
+    endDateTime: "2099-12-31 23:59:59",
     containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
     campaignBudget: `customers/${CID}/campaignBudgets/444`,
+    // `biddingStrategyType` is output only; the scheme is `Common__TargetCpa`
+    // (targetCpaMicros int64 → JSON string).
+    biddingStrategyType: "TARGET_CPA",
+    targetCpa: { targetCpaMicros: "2500000" },
   };
 
   it("creates the copy without the server-assigned id / resourceName", async () => {
@@ -456,6 +461,11 @@ describe("gads_duplicate_entity → googleAds.search then campaigns.mutate (crea
     expect((read?.body as { query: string }).query).toMatch(
       /FROM campaign WHERE campaign\.id = 321\b/
     );
+    // basis: unverified (code-only) — GAQL selectability of these fields;
+    // names are the snake_case of the Discovery `Resources__Campaign` properties.
+    expect((read?.body as { query: string }).query).toMatch(
+      /campaign\.bidding_strategy_type, campaign\.bidding_strategy, .*campaign\.target_cpa\.target_cpa_micros/
+    );
 
     const req = onlyExecutingMutate();
     // basis: `Services__CampaignOperation.create` — "No resource name is
@@ -471,10 +481,13 @@ describe("gads_duplicate_entity → googleAds.search then campaigns.mutate (crea
             name: "Source (copy)",
             status: "PAUSED",
             advertisingChannelType: "SEARCH",
-            startDateTime: "2026-10-01 00:00:00",
-            endDateTime: "2026-12-31 23:59:59",
             containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
             campaignBudget: `customers/${CID}/campaignBudgets/444`,
+            // basis: `Resources__Campaign.targetCpa` ("Standard Target CPA
+            // bidding strategy"); `biddingStrategyType` is "Output only" and not sent.
+            targetCpa: { targetCpaMicros: "2500000" },
+            startDateTime: "2099-10-01 00:00:00",
+            endDateTime: "2099-12-31 23:59:59",
           },
         },
       ],
@@ -505,6 +518,41 @@ describe("gads_duplicate_entity → googleAds.search then campaigns.mutate (crea
       .operations[0]?.create;
     expect(create?.status).toBe("PAUSED");
     expectOneTokenPerApiCall();
+  });
+
+  it("omits a past start and reports it; refuses a past end with nothing created", async () => {
+    routeSearch([{ campaign: { ...SOURCE, startDateTime: "2001-01-01 00:00:00" } }]);
+    routeMutate("campaigns", { results: [{ resourceName: `customers/${CID}/campaigns/324` }] });
+    const result = await duplicateEntityLogic(
+      DuplicateEntityInputSchema.parse({
+        entityType: "campaign",
+        customerId: CID,
+        entityId: "321",
+      }),
+      ctx,
+      sdk
+    );
+    const create = (
+      onlyExecutingMutate().body as { operations: Array<{ create: Record<string, unknown> }> }
+    ).operations[0]?.create;
+    expect(create).not.toHaveProperty("startDateTime");
+    expect(result.copyAdjustments?.[0]).toMatch(/startDateTime omitted/);
+
+    // Later routes take precedence: the next read returns an ended source.
+    const mutatesBefore = executingMutates().length;
+    routeSearch([{ campaign: { ...SOURCE, endDateTime: "2001-12-31 23:59:59" } }]);
+    await expect(
+      duplicateEntityLogic(
+        DuplicateEntityInputSchema.parse({
+          entityType: "campaign",
+          customerId: CID,
+          entityId: "321",
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/may already have passed/);
+    expect(executingMutates()).toHaveLength(mutatesBefore);
   });
 
   it("dry_run reads the source and sends only a validateOnly create", async () => {

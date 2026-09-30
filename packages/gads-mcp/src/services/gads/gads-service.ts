@@ -14,6 +14,7 @@ import {
   type MutateOp,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { buildListQuery, buildGetByIdQuery } from "../../mcp-server/tools/utils/gaql-helpers.js";
+import { CAMPAIGN_BIDDING_SELECT_FIELDS } from "../../mcp-server/tools/utils/duplicate-copy.js";
 import type { GoogleAdsQueryRow } from "./types.js";
 
 export type { GoogleAdsQueryRow };
@@ -232,6 +233,29 @@ export class GAdsService {
       throw new McpError(
         JsonRpcErrorCode.NotFound,
         `${entityType} with ID ${entityId} not found in customer ${customerId}`
+      );
+    }
+
+    return results[0];
+  }
+
+  /**
+   * Read a campaign for `gads_duplicate_entity`: the default fields plus its
+   * bidding strategy type, portfolio strategy and standard-scheme parameters.
+   * Kept separate from `getEntity` so `gads_get_entity` reads are unchanged.
+   */
+  async getCampaignForDuplicate(
+    customerId: string,
+    entityId: string,
+    context?: RequestContext
+  ): Promise<GoogleAdsQueryRow> {
+    const query = buildGetByIdQuery("campaign", entityId, CAMPAIGN_BIDDING_SELECT_FIELDS);
+    const { results } = await this.gaqlSearch(customerId, query, 1, undefined, context);
+
+    if (results.length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `campaign with ID ${entityId} not found in customer ${customerId}`
       );
     }
 
