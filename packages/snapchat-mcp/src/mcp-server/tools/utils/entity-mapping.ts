@@ -63,7 +63,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "name",
       "status",
       "ad_account_id",
-      "objective",
+      "objective_v2_properties",
       "daily_budget_micro",
       "lifetime_spend_cap_micro",
       "start_time",
@@ -88,7 +88,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "daily_budget_micro",
       "bid_micro",
       "optimization_goal",
-      "placement",
+      "placement_v2",
     ],
   },
   ad: {

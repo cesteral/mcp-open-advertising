@@ -171,6 +171,7 @@ TTD_MCP_HOST=0.0.0.0
 TTD_API_TOKEN=your-ttd-api-token
 # TTD_USE_SANDBOX=true                          # Optional: route REST + GraphQL to the Partner Sandbox
 # TTD_API_BASE_URL / TTD_GRAPHQL_URL            # Optional overrides; leave unset so they follow TTD_USE_SANDBOX
+# TTD_ALLOW_UNVERIFIED_MUTATION_BULK=true       # Optional: allow ttd_graphql_mutation_bulk against production (unverified operation, #231)
 # TTD_RATE_LIMIT_PER_MINUTE=60                    # Optional; default 60. No published quota backs a higher value (platform-facts.json)
 
 # ---------- gads-mcp (Google Ads Server) ----------

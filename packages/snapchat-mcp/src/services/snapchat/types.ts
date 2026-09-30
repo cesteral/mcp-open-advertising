@@ -11,17 +11,22 @@
 
 export type SnapchatCampaignStatus = "ACTIVE" | "PAUSED";
 
-export type SnapchatObjective =
-  | "BRAND_AWARENESS"
-  | "APP_INSTALL"
-  | "APP_CONVERSION"
-  | "CATALOG_SALES"
-  | "ENGAGEMENT"
-  | "LEAD_GENERATION"
-  | "PROMOTE_PLACES"
-  | "PROMOTE_STORIES"
-  | "VIDEO_VIEW"
-  | "WEB_CONVERSION";
+/**
+ * Campaign objective family, set via `objective_v2_properties.objective_v2_type`.
+ * Replaces the legacy `objective` attribute, which Snap still auto-translates
+ * (from 2025-03-21) but which new integrations should not send.
+ */
+export type SnapchatObjectiveV2Type =
+  | "AWARENESS_AND_ENGAGEMENT"
+  | "APP_PROMOTION"
+  | "TRAFFIC"
+  | "SALES";
+
+export interface SnapchatObjectiveV2Properties {
+  objective_v2_type: SnapchatObjectiveV2Type;
+  /** Refines the objective, e.g. `"APP_INSTALL"` for `APP_PROMOTION`. */
+  promotion_type?: string;
+}
 
 export type SnapchatAdSquadOptimizationGoal =
   | "IMPRESSIONS"
@@ -70,7 +75,7 @@ export interface SnapchatCampaign {
   id: string;
   name: string;
   status: SnapchatCampaignStatus;
-  objective: SnapchatObjective;
+  objective_v2_properties: SnapchatObjectiveV2Properties;
   ad_account_id: string;
   start_time?: string;
   end_time?: string;
@@ -163,7 +168,7 @@ export interface SnapchatSingleResponse<T> {
 
 export interface CreateSnapchatCampaignRequest {
   name: string;
-  objective: SnapchatObjective;
+  objective_v2_properties: SnapchatObjectiveV2Properties;
   ad_account_id: string;
   status?: SnapchatCampaignStatus;
   start_time?: string;
@@ -174,9 +179,23 @@ export interface CreateSnapchatCampaignRequest {
 
 export type UpdateSnapchatCampaignRequest = Partial<CreateSnapchatCampaignRequest>;
 
+/**
+ * Ad squad placement. Required on create; replaces the legacy `placement`
+ * attribute, which Snap has rejected since June 2020.
+ */
+export interface SnapchatPlacementV2 {
+  config: "AUTOMATIC" | "CUSTOM";
+  platforms: string[];
+  /** Only with `config: "CUSTOM"`, e.g. `FEED`, `INSTREAM`, `CHAT_FEED`. */
+  snapchat_positions?: string[];
+  inclusion?: { content_types: string[] };
+  exclusion?: { content_types: string[] };
+}
+
 export interface CreateSnapchatAdSquadRequest {
   name: string;
   campaign_id: string;
+  placement_v2: SnapchatPlacementV2;
   optimization_goal: SnapchatAdSquadOptimizationGoal;
   billing_event: SnapchatBillingEvent;
   bid_micro?: number;
@@ -211,7 +230,8 @@ export function isSnapchatCampaign(value: unknown): value is SnapchatCampaign {
     typeof v["id"] === "string" &&
     typeof v["name"] === "string" &&
     typeof v["status"] === "string" &&
-    typeof v["objective"] === "string" &&
+    typeof v["objective_v2_properties"] === "object" &&
+    v["objective_v2_properties"] !== null &&
     typeof v["ad_account_id"] === "string"
   );
 }

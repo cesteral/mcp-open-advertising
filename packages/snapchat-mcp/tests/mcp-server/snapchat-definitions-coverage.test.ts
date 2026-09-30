@@ -75,6 +75,10 @@ const snapchatReportingService = {
     taskId: "task-456",
   })),
   submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
+  resolveDatePresetRange: vi.fn(async () => ({
+    start_time: "2026-03-01T00:00:00-08:00",
+    end_time: "2026-03-08T00:00:00-08:00",
+  })),
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
     status: "COMPLETE",

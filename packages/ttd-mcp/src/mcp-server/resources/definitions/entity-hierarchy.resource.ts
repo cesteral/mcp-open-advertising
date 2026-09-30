@@ -143,8 +143,9 @@ List queries use POST to scoped query endpoints. Each endpoint is scoped to a pa
 
 | Constraint | Limit |
 |-----------|-------|
-| Max mutation inputs per job | 1,000 |
-| Max lexical tokens per query/mutation string | 15,000 (~60,000 chars) |
+| Max mutation inputs per job | 100 (this server's cap while \`createMutationBulk\` is unverified) |
+| Max lexical tokens per mutation string | 15,000 GraphQL lexical tokens (counted per the GraphQL spec) |
+| Mutation bulk against production | Refused unless the operator sets \`TTD_ALLOW_UNVERIFIED_MUTATION_BULK=true\`; runs freely against the sandbox |
 | Mutation jobs cancelable? | **No** — non-cancelable once submitted |
 | Result URL expiry | 1 hour after job completion |
 | Max active jobs per partner | 10 |

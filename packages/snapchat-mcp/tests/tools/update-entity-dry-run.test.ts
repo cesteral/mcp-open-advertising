@@ -27,7 +27,7 @@ function campaignEntity(overrides: Record<string, unknown> = {}) {
     id: "campaign_1",
     name: "Sample Campaign",
     status: "ACTIVE",
-    objective: "WEB_CONVERSION",
+    objective_v2_properties: { objective_v2_type: "SALES" },
     ad_account_id: "adacc_1",
     daily_budget_micro: 150_000_000,
     start_time: "2026-01-01T00:00:00.000Z",

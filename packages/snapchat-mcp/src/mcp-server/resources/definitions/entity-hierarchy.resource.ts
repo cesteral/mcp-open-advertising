@@ -46,8 +46,8 @@ Full campaign structure (top-down):
 
 1. **Ad Account** — pre-exists; discover with \`snapchat_list_ad_accounts\`
 2. **Creative(s)** — optional; upload media via \`snapchat_upload_image\` / \`snapchat_upload_video\`, then create creative
-3. **Campaign** — requires \`name\`, \`status\`, \`objective\`, \`daily_budget_micro\`
-4. **Ad Squad(s)** — requires \`campaign_id\`, \`name\`, \`status\`, \`placement\`, \`bid_micro\`, \`daily_budget_micro\`
+3. **Campaign** — requires \`name\`, \`status\`, \`start_time\`, \`objective_v2_properties\`, \`daily_budget_micro\`
+4. **Ad Squad(s)** — requires \`campaign_id\`, \`name\`, \`status\`, \`type\`, \`placement_v2\`, \`billing_event\`, \`bid_strategy\`, \`optimization_goal\`, \`targeting\`, \`bid_micro\`, \`daily_budget_micro\`
 5. **Ad(s)** — requires \`ad_squad_id\`, \`name\`, \`status\`, \`creative_id\`, \`type\`
 
 ## Snapchat Ads API v1 Patterns
@@ -61,7 +61,7 @@ Authorization: Bearer <token>
 ### Create campaign
 \`\`\`
 POST /v1/adaccounts/{adAccountId}/campaigns
-{ "campaigns": [{ "name": "...", "status": "PAUSED", "objective": "WEBSITE_CONVERSIONS", "daily_budget_micro": 10000000 }] }
+{ "campaigns": [{ "name": "...", "status": "PAUSED", "start_time": "2026-01-01T00:00:00Z", "objective_v2_properties": { "objective_v2_type": "SALES" }, "daily_budget_micro": 10000000 }] }
 \`\`\`
 
 ### Update campaign
@@ -83,7 +83,7 @@ GET /v1/campaigns/{campaignId}/adsquads
 ### Create ad squad
 \`\`\`
 POST /v1/campaigns/{campaignId}/adsquads
-{ "adsquads": [{ "name": "...", "status": "PAUSED", "placement": "SNAP_ADS", "bid_micro": 1000000, "daily_budget_micro": 5000000 }] }
+{ "adsquads": [{ "name": "...", "status": "PAUSED", "type": "SNAP_ADS", "placement_v2": { "config": "AUTOMATIC", "platforms": ["SNAPCHAT"] }, "billing_event": "IMPRESSION", "bid_strategy": "LOWEST_COST_WITH_MAX_BID", "optimization_goal": "IMPRESSIONS", "targeting": { "geos": [{ "country_code": "us" }] }, "bid_micro": 1000000, "daily_budget_micro": 5000000 }] }
 \`\`\`
 
 ### Update ad squad
@@ -154,16 +154,16 @@ Snapchat uses cursor-based pagination:
 
 ## Campaign Objectives
 
-| Objective | Use Case |
-|-----------|----------|
-| WEBSITE_CONVERSIONS | Optimize for website conversion events |
-| APP_INSTALLS | Drive app downloads |
-| APP_ENGAGEMENT | Re-engage app users |
-| BRAND_AWARENESS | Reach and brand recall |
-| VIDEO_VIEWS | Maximize video plays |
-| LEAD_GENERATION | In-app lead forms |
-| CATALOG_SALES | Dynamic product ads |
-| WEB_VIEW | Drive website visits |
+Set via \`objective_v2_properties.objective_v2_type\` (add \`promotion_type\` where relevant):
+
+| objective_v2_type | Use Case |
+|-------------------|----------|
+| AWARENESS_AND_ENGAGEMENT | Reach, brand awareness, stories/places promotion |
+| APP_PROMOTION | App installs and app conversions (\`promotion_type\`: e.g. APP_INSTALL) |
+| TRAFFIC | Drive website visits or app re-engagement |
+| SALES | Website conversions and catalog sales |
+
+The legacy \`objective\` attribute is auto-translated by Snap to the above (from 2025-03-21) but should not be sent by new integrations.
 
 ## Available Tools Summary
 
@@ -176,7 +176,7 @@ Snapchat uses cursor-based pagination:
 | \`snapchat_delete_entity\` | Delete entities | ✓ |
 | \`snapchat_list_ad_accounts\` | List accessible ad accounts | |
 | \`snapchat_get_report\` | Async report with polling | |
-| \`snapchat_get_report_breakdowns\` | Report with breakdown fields | |
+| \`snapchat_get_report_breakdowns\` | Report split by a \`report_dimension\` (geo, demographic, device, interest) | |
 | \`snapchat_bulk_update_status\` | Batch status update | ✓ |
 | \`snapchat_bulk_create_entities\` | Batch entity creation | ✓ |
 | \`snapchat_bulk_update_entities\` | Batch entity updates | ✓ |

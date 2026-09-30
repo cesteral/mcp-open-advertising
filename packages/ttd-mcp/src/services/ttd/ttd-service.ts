@@ -48,6 +48,11 @@ export class TtdService {
     private readonly graphqlUrl: string = "https://desk.thetradedesk.com/graphql"
   ) {}
 
+  /** The GraphQL endpoint this service sends to (sandbox or production). */
+  get graphqlEndpoint(): string {
+    return this.graphqlUrl;
+  }
+
   /**
    * The bulk-capacity projection input for a batch this service would run.
    *

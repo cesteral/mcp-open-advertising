@@ -287,13 +287,16 @@ export const bulkCreateEntitiesTool = {
         items: [
           {
             name: "Campaign A",
-            objective: "TRAFFIC",
+            objective_v2_properties: { objective_v2_type: "TRAFFIC" },
             daily_budget_micro: 10000000,
             status: "ACTIVE",
           },
           {
             name: "Campaign B",
-            objective: "APP_INSTALLS",
+            objective_v2_properties: {
+              objective_v2_type: "APP_PROMOTION",
+              promotion_type: "APP_INSTALL",
+            },
             daily_budget_micro: 20000000,
             status: "ACTIVE",
           },

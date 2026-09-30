@@ -26,12 +26,19 @@ const baseInput = {
 };
 
 describe("snapchat_submit_report governance contract (effect class)", () => {
-  let svc: { submitReport: ReturnType<typeof vi.fn> };
+  let svc: {
+    submitReport: ReturnType<typeof vi.fn>;
+    resolveDatePresetRange: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
       submitReport: vi.fn().mockResolvedValue({ task_id: "task-1" }),
+      resolveDatePresetRange: vi.fn().mockResolvedValue({
+        start_time: "2026-03-01T00:00:00-08:00",
+        end_time: "2026-03-08T00:00:00-08:00",
+      }),
     };
     mockResolveSessionServices.mockReturnValue({
       snapchatReportingService: svc,
