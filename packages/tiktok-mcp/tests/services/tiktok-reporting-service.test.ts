@@ -1,13 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@cesteral/shared", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@cesteral/shared")>();
-  return { ...actual, fetchWithTimeout: vi.fn() };
-});
-
-import { fetchWithTimeout } from "@cesteral/shared";
-const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
-
 import {
   TikTokReportingService,
   mapTikTokReportTaskStatus,
@@ -91,39 +83,24 @@ describe("TikTokReportingService", () => {
     expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
   });
 
-  it("downloadReport parses CSV", async () => {
-    mockFetchWithTimeout.mockResolvedValueOnce({
-      ok: true,
-      text: async () => "date,impressions\n2026-03-01,100\n2026-03-02,200",
-    } as unknown as Response);
+  // #232: the service no longer fetches report URLs, and the status check
+  // reads only the documented status/message — never a download_url.
+  it("has no downloadReport, and checkReportStatus drops an undocumented download_url", async () => {
+    expect((service as unknown as Record<string, unknown>).downloadReport).toBeUndefined();
+    mockHttpClient.get.mockResolvedValueOnce({
+      status: "DONE",
+      message: "ok",
+      download_url: "https://example.com/report.csv",
+    });
 
-    const result = await service.downloadReport("https://example.com/report.csv");
+    const result = await service.checkReportStatus("task-9");
 
-    expect(result.headers).toEqual(["date", "impressions"]);
-    expect(result.rows).toHaveLength(2);
-    expect(result.totalRows).toBe(2);
-  });
-
-  it("downloadReport returns empty dataset for empty body", async () => {
-    mockFetchWithTimeout.mockResolvedValueOnce({
-      ok: true,
-      text: async () => "",
-    } as unknown as Response);
-
-    const result = await service.downloadReport("https://example.com/report.csv");
-
-    expect(result).toEqual({ headers: [], rows: [], totalRows: 0 });
-  });
-
-  it("downloadReport returns empty dataset for BOM-only or whitespace-only body", async () => {
-    mockFetchWithTimeout.mockResolvedValueOnce({
-      ok: true,
-      text: async () => "\uFEFF \n\t",
-    } as unknown as Response);
-
-    const result = await service.downloadReport("https://example.com/report.csv");
-
-    expect(result).toEqual({ headers: [], rows: [], totalRows: 0 });
+    expect(result).toEqual({ taskId: "task-9", status: "DONE", message: "ok" });
+    expect(mockHttpClient.get).toHaveBeenCalledWith(
+      "/open_api/v1.3/report/task/check/",
+      { task_id: "task-9" },
+      undefined
+    );
   });
 
   it("getReport uses the synchronous report/integrated/get endpoint and flattens rows", async () => {
@@ -163,7 +140,6 @@ describe("TikTokReportingService", () => {
       ["c2", "50", "0.5"],
     ]);
     expect(result.totalRows).toBe(2);
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
   });
 
   it("getReport pages until total_page and stops at maxRows", async () => {
@@ -211,20 +187,6 @@ describe("TikTokReportingService", () => {
       { task_id: "task-456" },
       undefined
     );
-  });
-
-  it("checkReportStatus surfaces a download_url and message when TikTok returns them", async () => {
-    mockHttpClient.get.mockResolvedValueOnce({
-      status: "DONE",
-      message: "ok",
-      download_url: "https://example.com/done-report.csv",
-    });
-
-    const result = await service.checkReportStatus("task-789");
-
-    expect(result.status).toBe("DONE");
-    expect(result.message).toBe("ok");
-    expect(result.downloadUrl).toBe("https://example.com/done-report.csv");
   });
 
   it("checkReportStatus consumes rate limiter once", async () => {

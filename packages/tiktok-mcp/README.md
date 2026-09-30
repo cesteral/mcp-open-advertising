@@ -4,7 +4,7 @@ TikTok Ads MCP Server - Campaign management and reporting via TikTok Marketing A
 
 ## Purpose
 
-Management server for TikTok Ads. Provides full CRUD operations, async
+Management server for TikTok Ads. Provides full CRUD operations, synchronous
 reporting, targeting discovery, bulk operations, and specialized features like
 entity duplication and audience estimation. Designed for AI agents to manage
 TikTok Ads campaigns programmatically through the Model Context Protocol with
@@ -88,7 +88,7 @@ TikTok's `advertiser/info/` does not enumerate every advertiser a token can acce
 
 ### Reporting
 
-> All TikTok reporting tools return data using the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
+> The TikTok reporting tools that return rows (`tiktok_get_report`, `tiktok_get_report_breakdowns`) use the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
 
 #### 7. `tiktok_get_report`
 
@@ -119,33 +119,20 @@ Submit a report with additional breakdown dimensions.
 
 #### 9. `tiktok_submit_report`
 
-Submit an async report without waiting for completion (non-blocking).
-
-**Parameters:**
-
-- `advertiserId` (string, required): TikTok Advertiser ID
-- `dimensions` (string[], required): Report dimensions
-- `metrics` (string[], required): Metrics to include
-- `startDate` (string, required): Start date (YYYY-MM-DD)
-- `endDate` (string, required): End date (YYYY-MM-DD)
+**Not available — always refuses, including `dry_run`, and creates no report task.** TikTok's official Business API SDK defines `report/task/create/`, `report/task/check/` and `report/task/cancel/`, but no report-task download endpoint and no download URL on the check response, so a finished async task's rows could never be fetched (#232). Use `tiktok_get_report` / `tiktok_get_report_breakdowns`.
 
 #### 10. `tiktok_check_report_status`
 
-Single status check for a submitted report.
+Single status check for an existing async report task (`report/task/check/`). Returns status only — never rows or a download URL.
 
 **Parameters:**
 
 - `advertiserId` (string, required): TikTok Advertiser ID
-- `taskId` (string, required): Report task ID from submit
+- `taskId` (string, required): Report task ID
 
 #### 11. `tiktok_download_report`
 
-Download and parse report CSV from URL.
-
-**Parameters:**
-
-- `downloadUrl` (string, required): Report download URL
-- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above the reporting tools)
+**Not available — always refuses without fetching anything**, for the same reason as `tiktok_submit_report`. Use `tiktok_get_report` / `tiktok_get_report_breakdowns`.
 
 ### Bulk Operations
 
@@ -318,7 +305,7 @@ pnpm run typecheck
 
 - **`TikTokHttpClient`** - HTTP client for TikTok Marketing API v1.3
 - **`TikTokService`** - CRUD, bulk ops, targeting, audience estimates
-- **`TikTokReportingService`** - Synchronous reports (`report/integrated/get/`), async task submission and status checks
+- **`TikTokReportingService`** - Synchronous reports (`report/integrated/get/`) and async task status checks
 - **`TikTokBearerAuthStrategy`** - Bearer token + advertiser ID auth
 - **`TikTokAuthAdapter`** - Token + advertiser ID management for per-session API calls
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
@@ -327,7 +314,7 @@ pnpm run typecheck
 
 - `advertiser_id` is automatically injected into GET query params and POST request bodies
 - Uses page-based pagination (`page`/`page_size`) not cursor-based
-- `tiktok_get_report` is synchronous; the async task path is submit -> status check (TikTok's documented check response has no download URL)
+- `tiktok_get_report` is synchronous and is the only reporting path that returns rows. `tiktok_submit_report` and `tiktok_download_report` refuse: TikTok's official SDK defines no report-task download endpoint and no download URL on `report/task/check/` (#232, fact `tiktok.report_task_has_no_download_contract` in `platform-facts.json`)
 - Delete operations accept max 20 entity IDs per call
 - `DISABLE` status is used instead of `PAUSED` (TikTok-specific terminology)
 

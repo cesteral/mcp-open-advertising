@@ -21,12 +21,8 @@ function formatReportingReferenceMarkdown(): string {
 
 ## Reporting Endpoints
 
-- **Synchronous** (\`tiktok_get_report\`, \`tiktok_get_report_breakdowns\`): GET \`/open_api/v1.3/report/integrated/get/\` — rows come back directly, paged (\`page\`, \`page_size\` up to 1000).
-- **Async task** (\`tiktok_submit_report\` + \`tiktok_check_report_status\`): POST \`/open_api/v1.3/report/task/create/\` → \`task_id\`, then GET \`/open_api/v1.3/report/task/check/\`. TikTok's documented check response carries only \`status\` and \`message\` — no download URL.
-
-Both take \`report_type\`, \`service_type\` (default AUCTION) and \`data_level\` (e.g. AUCTION_CAMPAIGN).
-
-Task statuses this server recognizes: PENDING, RUNNING, DONE, FAILED. Any other value is reported as failed (terminal) with the raw status, never as pending.
+- **Synchronous — use this** (\`tiktok_get_report\`, \`tiktok_get_report_breakdowns\`): GET \`/open_api/v1.3/report/integrated/get/\` — rows come back directly, paged (\`page\`, \`page_size\` up to 1000). Takes \`report_type\`, \`service_type\` (default AUCTION) and \`data_level\` (e.g. AUCTION_CAMPAIGN).
+- **Async task — not available.** TikTok's official Business API SDK defines \`report/task/create/\`, \`report/task/check/\` and \`report/task/cancel/\`, but no report-task download endpoint, and the check response documents only \`status\` and \`message\` — no download URL. A finished task's rows could never be fetched, so \`tiktok_submit_report\` and \`tiktok_download_report\` refuse without calling TikTok. \`tiktok_check_report_status\` still reads the status of an existing task (PENDING, RUNNING, DONE, FAILED; any other value is reported as failed, never as pending), but it never returns rows or a download URL.
 
 ## Common Dimensions
 

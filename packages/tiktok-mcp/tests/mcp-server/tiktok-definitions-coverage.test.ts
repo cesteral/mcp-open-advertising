@@ -76,12 +76,6 @@ const tiktokReportingService = {
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
     status: "DONE",
-    downloadUrl: "https://example.com/report.csv",
-  })),
-  downloadReport: vi.fn(async () => ({
-    headers: ["date", "impressions"],
-    rows: [["2026-03-01", "100"]],
-    totalRows: 1,
   })),
 };
 
@@ -101,7 +95,14 @@ import {
   promptRegistry,
 } from "../../src/mcp-server/prompts/index.js";
 
-const REFUSING_TOOLS = new Set(["tiktok_duplicate_entity", "tiktok_get_ad_preview"]);
+// TikTok v1.3 has no copy or ad-preview endpoint, and no documented way to
+// download an async report task (#232); these tools refuse with InvalidRequest.
+const REFUSING_TOOLS = new Set([
+  "tiktok_duplicate_entity",
+  "tiktok_get_ad_preview",
+  "tiktok_submit_report",
+  "tiktok_download_report",
+]);
 
 describe("TikTok MCP definitions coverage", () => {
   beforeEach(() => {
@@ -132,8 +133,6 @@ describe("TikTok MCP definitions coverage", () => {
 
       const parsedInput = tool.inputSchema.parse(example);
 
-      // TikTok v1.3 has no copy or ad-preview endpoint; these tools refuse
-      // with InvalidRequest instead of calling a path that does not exist.
       if (REFUSING_TOOLS.has(tool.name)) {
         await expect(
           tool.logic(parsedInput as never, requestContext, sdkContext)
@@ -165,6 +164,7 @@ describe("TikTok MCP definitions coverage", () => {
     expect(tiktokReportingService.getReportBreakdowns).toHaveBeenCalled();
     expect(tiktokService.duplicateEntity).not.toHaveBeenCalled();
     expect(tiktokService.getAdPreviews).not.toHaveBeenCalled();
+    expect(tiktokReportingService.submitReport).not.toHaveBeenCalled();
   });
 
   it("generates prompt messages", () => {

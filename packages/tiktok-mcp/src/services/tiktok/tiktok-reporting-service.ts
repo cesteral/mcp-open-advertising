@@ -5,16 +5,10 @@ import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import {
-  fetchWithTimeout,
-  McpError,
-  JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
   DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
-  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-  DEFAULT_REPORT_MAX_SIZE_BYTES,
   DEFAULT_REPORT_MAX_ROWS,
-  parseCSV,
   pollUntilComplete,
   ReportFailedError,
 } from "@cesteral/shared";
@@ -28,13 +22,50 @@ export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
  *
  * The official SDK spec (report_task_check.yml) maps only `status` and
  * `message` from this response — it documents no `task_id` echo and no
- * download URL. `download_url` is read best-effort in case TikTok returns one.
+ * download URL, so nothing else is read from it.
  */
 interface ReportTaskCheckData {
   status?: string;
   message?: string;
-  download_url?: string;
 }
+
+/**
+ * Why the async report chain (`tiktok_submit_report` → `tiktok_check_report_status`
+ * → `tiktok_download_report`) cannot deliver rows (#232).
+ *
+ * Evidence: TikTok's official Business API SDK (tiktok/tiktok-business-api-sdk
+ * @ f809c39, Feb 2026) defines exactly three report-task operations —
+ * yml_files/report_task_create.yml, report_task_check.yml and
+ * report_task_cancel.yml, generated as ReportingApi.report_task_{create,check,cancel}
+ * in the Python, JS and Java clients. There is no report-task download
+ * operation, and the check response's `data` is an object with no declared
+ * properties whose response rule maps only `status` and `message`. The same
+ * SDK does name a download endpoint for its other async exports
+ * (/comment/task/download/, /blockedword/task/download/), so the absence for
+ * reports is not a documentation style. A third-party wrapper calls
+ * `report/task/download/?task_id=` — corroboration only, not a vendor
+ * contract. Recorded as `tiktok.report_task_has_no_download_contract` in
+ * platform-facts.json.
+ */
+export const TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON =
+  "TikTok's official Business API SDK defines report/task/create/, report/task/check/ and " +
+  "report/task/cancel/ but no report-task download endpoint, and its task-check response " +
+  "documents no download URL, so a finished async report task's rows cannot be fetched.";
+
+const USE_SYNC_REPORT_HINT =
+  "Use tiktok_get_report (or tiktok_get_report_breakdowns for demographic or placement " +
+  "breakdowns), which runs the same report synchronously via report/integrated/get/ and " +
+  "returns the rows.";
+
+/** Thrown by `tiktok_submit_report` (execute and dry_run) before anything reaches TikTok. */
+export const TIKTOK_SUBMIT_REPORT_UNSUPPORTED_MESSAGE =
+  `Async report tasks are not available: ${TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON} ` +
+  `No report task was created. ${USE_SYNC_REPORT_HINT}`;
+
+/** Thrown by `tiktok_download_report` before any URL is fetched. */
+export const TIKTOK_DOWNLOAD_REPORT_UNSUPPORTED_MESSAGE =
+  `Report downloads are not available: ${TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON} ` +
+  `Nothing was downloaded. ${USE_SYNC_REPORT_HINT}`;
 
 /** `report/task/create/` data_level values (official SDK enum ReportDataLevel). */
 export const TIKTOK_REPORT_DATA_LEVELS = [
@@ -122,11 +153,15 @@ interface IntegratedReportData {
  *
  * Two paths, both from TikTok's official SDK spec:
  * - Synchronous: `GET report/integrated/get/` returns rows directly
- *   (`list` + `page_info`). Used by getReport / getReportBreakdowns.
+ *   (`list` + `page_info`). Used by getReport / getReportBreakdowns — the only
+ *   path that delivers rows.
  * - Async task: `POST report/task/create/` → `GET report/task/check/`. The
- *   spec documents only `status`/`message` on the check response — no download
- *   URL and no download endpoint — so the task path is exposed as submit +
- *   status check, and results are fetched only if TikTok supplies a URL.
+ *   spec documents only `status`/`message` on the check response and no
+ *   download endpoint, so a finished task's rows cannot be fetched (#232).
+ *   `tiktok_submit_report` and `tiktok_download_report` therefore refuse (see
+ *   TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON); submitReport and
+ *   checkReportStatus stay spec-correct for the day a download contract is
+ *   documented.
  */
 export class TikTokReportingService {
   constructor(
@@ -216,7 +251,6 @@ export class TikTokReportingService {
     taskId: string;
     status: string | undefined;
     message?: string;
-    downloadUrl?: string;
   }> {
     await this.rateLimiter.consume(`tiktok:reporting`);
 
@@ -230,80 +264,6 @@ export class TikTokReportingService {
       taskId,
       status: result.status,
       ...(result.message ? { message: result.message } : {}),
-      ...(result.download_url ? { downloadUrl: result.download_url } : {}),
-    };
-  }
-
-  /**
-   * Download a report CSV from a URL.
-   *
-   * When `includeRawCsv` is true, the original (BOM-stripped, LF-only) CSV
-   * body is returned alongside the parsed rows so callers can persist it
-   * via `ReportCsvStore`.
-   */
-  async downloadReport(
-    downloadUrl: string,
-    maxRows = DEFAULT_REPORT_MAX_ROWS,
-    context?: RequestContext,
-    options: { includeRawCsv?: boolean } = {}
-  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-      context
-    );
-
-    if (!response.ok) {
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `Failed to download TikTok report: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const contentLength = response.headers?.get("content-length");
-    if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `TikTok report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
-      );
-    }
-
-    const csvText = await response.text();
-    const normalizedCsvText = csvText
-      .replace(/^\uFEFF/, "")
-      .replace(/\r\n/g, "\n")
-      .trim();
-    // Guard against BOM-only or whitespace-only bodies before delegating to
-    // the shared parser — parseCSV treats a whitespace line as a header row
-    // of a single empty column, which would mislead downstream bounded-view
-    // consumers for a truly-empty report.
-    if (normalizedCsvText === "") {
-      return {
-        rows: [],
-        headers: [],
-        totalRows: 0,
-        ...(options.includeRawCsv ? { rawCsv: "" } : {}),
-      };
-    }
-    const { headers, rows } = parseCSV(normalizedCsvText);
-
-    if (headers.length === 0 && rows.length === 0) {
-      return {
-        rows: [],
-        headers: [],
-        totalRows: 0,
-        ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
-      };
-    }
-
-    const limitedRecords = rows.slice(0, maxRows);
-    const rowArrays = limitedRecords.map((record) => headers.map((h) => record[h] ?? ""));
-
-    return {
-      rows: rowArrays,
-      headers,
-      totalRows: rows.length,
-      ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
     };
   }
 
@@ -313,7 +273,8 @@ export class TikTokReportingService {
    *
    * This replaced a submit → poll → download chain that could not complete
    * against the spec: it waited for a `download_url` that report/task/check/
-   * does not document, and TikTok's SDK defines no task download endpoint.
+   * does not document, and TikTok's SDK defines no task download endpoint
+   * (TIKTOK_ASYNC_REPORT_UNSUPPORTED_REASON).
    * The integrated endpoint's response is spec'd (`list` ← stats_data,
    * `page_info`). Each row is `{ dimensions: {...}, metrics: {...} }`; both are
    * flattened into one record (a flat row is used as-is).

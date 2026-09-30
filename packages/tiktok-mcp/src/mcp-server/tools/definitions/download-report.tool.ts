@@ -2,42 +2,36 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
-import { reportCsvStore } from "../../../services/session-services.js";
 import {
-  assertSafeDownloadUrl,
   ComputedMetricsFlagSchema,
-  createServiceDownloadedReportView,
-  extractReportIdFromUrl,
   formatReportViewResponse,
+  JsonRpcErrorCode,
+  McpError,
   ReportViewInputSchema,
   ReportViewOutputSchema,
   StoredReportBodyOutputSchema,
-  spillBodyToGcs,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { TIKTOK_DOWNLOAD_REPORT_UNSUPPORTED_MESSAGE } from "../../../services/tiktok/tiktok-reporting-service.js";
 
 const TOOL_NAME = "tiktok_download_report";
 const TOOL_TITLE = "Download TikTok Report";
-const TOOL_DESCRIPTION = `Download and parse a TikTok report from a download URL.
+const TOOL_DESCRIPTION = `Download a finished TikTok async report — NOT AVAILABLE on TikTok.
 
-After a report task is DONE (via \`tiktok_check_report_status\`), use the \`downloadUrl\` to fetch and parse the CSV data.
+TikTok's official Business API SDK defines no report-task download endpoint and no download URL on
+the task-status response, so there is no documented URL to fetch. Every call returns an error and
+nothing is downloaded.
 
-**Workflow:**
-1. \`tiktok_submit_report\` → get \`taskId\`
-2. \`tiktok_check_report_status\` → get \`downloadUrl\` when DONE
-3. \`tiktok_download_report\` with that URL → get a bounded summary or paged row slice
-
-**Options:**
-- \`mode: "summary"\` (default) returns headers, counts, and a small preview
-- \`mode: "rows"\` returns one bounded page of rows
-- \`columns\` projects returned rows to selected columns
-- \`offset\` and \`maxRows\` page through rows; \`maxRows\` is capped at 200`;
+Use \`tiktok_get_report\` (or \`tiktok_get_report_breakdowns\` for breakdowns), which runs the
+report synchronously and returns the rows.`;
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z.string().url().describe("Report download URL from tiktok_check_report_status"),
+    downloadUrl: z
+      .string()
+      .url()
+      .describe("Report download URL. Never fetched: this tool always refuses (see description)."),
     storeRawCsv: z
       .boolean()
       .optional()
@@ -64,38 +58,15 @@ export const DownloadReportOutputSchema = z
 type DownloadInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
 
-const TIKTOK_COMPUTED_METRIC_ALIASES = {
-  cost: ["spend", "cost"],
-  impressions: ["impressions"],
-  clicks: ["clicks"],
-  conversions: ["conversions"],
-  conversionValue: ["conversion_value", "total_purchase_value"],
-};
-
 export async function downloadReportLogic(
-  input: DownloadInput,
+  _input: DownloadInput,
   _context: RequestContext,
-  sdkContext?: SdkContext
+  _sdkContext?: SdkContext
 ): Promise<DownloadOutput> {
-  const { tiktokReportingService } = resolveSessionServices(sdkContext);
-
-  // The URL arrives from the MCP client — refuse non-https, IP-literal and
-  // internal hosts before fetching it server-side.
-  assertSafeDownloadUrl(input.downloadUrl, { toolName: TOOL_NAME });
-
-  return createServiceDownloadedReportView({
-    input,
-    sessionId: sdkContext?.sessionId,
-    reportCsvStore,
-    spillBodyToGcs,
-    spillServer: "tiktok",
-    reportId: extractReportIdFromUrl(input.downloadUrl),
-    computedMetricAliases: TIKTOK_COMPUTED_METRIC_ALIASES,
-    download: ({ fetchLimit, includeRawCsv }) =>
-      tiktokReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
-        includeRawCsv,
-      }),
-  });
+  // #232: TikTok's official SDK documents no report-task download endpoint and
+  // no download URL on report/task/check/, so no URL this tool could receive
+  // comes from a documented contract. Refuse before fetching anything.
+  throw new McpError(JsonRpcErrorCode.InvalidRequest, TIKTOK_DOWNLOAD_REPORT_UNSUPPORTED_MESSAGE);
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {

@@ -2,44 +2,38 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import {
-  resolveDatePreset,
   DATE_PRESET_VALUES,
-  assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
+  McpError,
+  JsonRpcErrorCode,
+  NO_UNTRUSTED_CONTENT,
 } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
   SdkContext,
-  EffectResult,
-  EffectDryRunResult,
-  DispatchedCapability,
-  DryRunValidationError,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
 import {
   TIKTOK_REPORT_DATA_LEVELS,
   TIKTOK_REPORT_SERVICE_TYPES,
+  TIKTOK_SUBMIT_REPORT_UNSUPPORTED_MESSAGE,
 } from "../../../services/tiktok/tiktok-reporting-service.js";
 
 const TOOL_NAME = "tiktok_submit_report";
 const TOOL_TITLE = "Submit TikTok Report";
-const TOOL_DESCRIPTION = `Submit a TikTok Ads report task without waiting for completion.
+const TOOL_DESCRIPTION = `Submit a TikTok Ads async report task — NOT AVAILABLE on TikTok.
 
-Returns a \`taskId\` immediately. Use \`tiktok_check_report_status\` to poll for completion, then \`tiktok_download_report\` to fetch results.
+TikTok's official Business API SDK defines report task create and status-check operations but no
+way to fetch a finished task's rows (no report-task download endpoint, no download URL on the status
+response), so a submitted task could never be downloaded. Every call (including \`dry_run\`)
+returns an error and no report task is created.
 
-**Non-blocking workflow:**
-1. \`tiktok_submit_report\` → get \`taskId\`
-2. \`tiktok_check_report_status\` (repeat every 10s) → wait for state \`complete\`
-3. If the status check returns a \`downloadUrl\`, fetch it with \`tiktok_download_report\`
-
-TikTok's documented task-check response carries only \`status\` and \`message\` (no download URL),
-so prefer \`tiktok_get_report\`, which returns rows synchronously.`;
+Use \`tiktok_get_report\` (or \`tiktok_get_report_breakdowns\` for breakdowns), which runs the
+same report synchronously and returns the rows.`;
 
 export const SubmitReportInputSchema = z
   .object({
@@ -94,7 +88,7 @@ export const SubmitReportInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the report request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be report submission) without calling the TikTok API. No report is submitted."
+        "Accepted for contract compatibility only: a dry run refuses exactly as execute does (TikTok documents no way to fetch an async report task's rows), so nothing is validated or submitted."
       ),
   })
   .refine(
@@ -127,99 +121,16 @@ type SubmitReportInput = z.infer<typeof SubmitReportInputSchema>;
 type SubmitReportOutput = z.infer<typeof SubmitReportOutputSchema>;
 
 export async function submitReportLogic(
-  input: SubmitReportInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
+  _input: SubmitReportInput,
+  _context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<SubmitReportOutput> {
-  // Effect-class write: no canonical entity snapshot. The capability is
-  // `submit_report` with a null entity kind on every response.
-  const dispatchedCapability: DispatchedCapability = {
-    operation: "submit_report",
-    canonicalEntityKind: null,
-  };
-
-  // Symbolic dry-run: validate the request and project the would-be effect
-  // (a report submission). No API call.
-  if (input.dry_run === true) {
-    const dryRun = buildSubmitReportEffectDryRun(input);
-    return {
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
-  }
-
-  const { tiktokReportingService, boundAdvertiserId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
-
-  let resolvedStartDate = input.startDate;
-  let resolvedEndDate = input.endDate;
-  if (input.datePreset) {
-    const resolved = resolveDatePreset(input.datePreset);
-    resolvedStartDate = resolved.startDate;
-    resolvedEndDate = resolved.endDate;
-  }
-
-  const result = await tiktokReportingService.submitReport(
-    {
-      report_type: input.reportType,
-      service_type: input.serviceType,
-      ...(input.dataLevel ? { data_level: input.dataLevel } : {}),
-      dimensions: input.dimensions,
-      metrics: input.metrics,
-      start_date: resolvedStartDate!,
-      end_date: resolvedEndDate!,
-      ...(input.orderField ? { order_field: input.orderField } : {}),
-      ...(input.orderType ? { order_type: input.orderType } : {}),
-    },
-    context
-  );
-
-  const effect: EffectResult = {
-    effectKind: "report_requested",
-    summary: { report_type: input.reportType, report_handle: result.task_id },
-  };
-
-  return {
-    taskId: result.task_id,
-    timestamp: new Date().toISOString(),
-    effect,
-    dispatchedCapability,
-  };
-}
-
-/**
- * Symbolic effect dry-run for `submit_report`. Validates the request (date-range
- * ordering — a cross-field check Zod's regex can't express) and projects the
- * would-be effect (a report submission). TikTok has no native report
- * validate/preview, so both axes are symbolic. Pure (no I/O).
- */
-function buildSubmitReportEffectDryRun(input: SubmitReportInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
-  if (input.startDate && input.endDate && input.startDate > input.endDate) {
-    validationErrors.push({
-      code: "INVALID_DATE_RANGE",
-      message: `startDate (${input.startDate}) must be on or before endDate (${input.endDate})`,
-      field: "startDate",
-    });
-  }
-
-  const expectedEffect: EffectResult = {
-    effectKind: "report_requested",
-    summary: { report_type: input.reportType },
-  };
-
-  return assertGovernedEffectDryRun(
-    {
-      wouldSucceed: validationErrors.length === 0,
-      validationErrors,
-      validationSource: "symbolic",
-      expectedEffectSource: "symbolic",
-      expectedEffect,
-    },
-    TOOL_NAME,
-    { requiresValidation: true, requiresSimulation: true }
-  );
+  // #232: TikTok's official SDK defines no report-task download operation and
+  // no download URL on report/task/check/, so a task created here could never
+  // be fetched. Refuse before anything reaches TikTok — on dry_run too, since
+  // a dry run predicting success for a call that can only fail would mislead
+  // governance (as tiktok_duplicate_entity does).
+  throw new McpError(JsonRpcErrorCode.InvalidRequest, TIKTOK_SUBMIT_REPORT_UNSUPPORTED_MESSAGE);
 }
 
 export function submitReportResponseFormatter(result: SubmitReportOutput): McpTextContent[] {

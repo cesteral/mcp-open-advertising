@@ -11,9 +11,8 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 import {
   submitReportLogic,
   submitReportResponseFormatter,
-  SubmitReportOutputSchema,
+  submitReportTool,
 } from "../../src/mcp-server/tools/definitions/submit-report.tool.js";
-import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -26,82 +25,56 @@ const baseInput = {
   datePreset: "LAST_7_DAYS",
 };
 
-describe("tiktok_submit_report governance contract (effect class)", () => {
+describe("tiktok_submit_report governance contract (effect class, refusing — #232)", () => {
   let svc: { submitReport: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = {
-      submitReport: vi.fn().mockResolvedValue({ task_id: "task-1" }),
-    };
+    svc = { submitReport: vi.fn().mockResolvedValue({ task_id: "task-1" }) };
     mockResolveSessionServices.mockReturnValue({
       tiktokReportingService: svc,
       boundAdvertiserId: "1234567890",
     });
   });
 
-  it("dry_run returns a symbolic effect preview, no API call", async () => {
-    const result = await submitReportLogic({ ...baseInput, dry_run: true } as any, ctx, sdk);
+  // The contract (annotations, contractId) is unchanged, so governance keeps
+  // recognising the tool; only its behaviour is to refuse.
+  it("keeps its effect-class contract identity", () => {
+    expect(submitReportTool.annotations.cesteral).toMatchObject({
+      kind: "write",
+      writeClass: "effect",
+      operation: ["submit_report"],
+      contractId: "tiktok.submit_report.v1",
+    });
+  });
+
+  it("dry_run refuses rather than predicting a success nothing can use", async () => {
+    await expect(
+      submitReportLogic({ ...baseInput, dry_run: true } as any, ctx, sdk)
+    ).rejects.toMatchObject({ code: -32600 });
     expect(svc.submitReport).not.toHaveBeenCalled();
-    expect(result.taskId).toBeUndefined();
-    expect(result.dryRun?.expectedEffect).toEqual({
-      effectKind: "report_requested",
-      summary: { report_type: "BASIC" },
-    });
-    expect(result.dryRun?.validationSource).toBe("symbolic");
-    expect(result.dispatchedCapability).toEqual({
-      operation: "submit_report",
-      canonicalEntityKind: null,
-    });
-    expect(() => SubmitReportOutputSchema.parse(result)).not.toThrow();
-    expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
   });
 
-  it("dry_run flags an inverted date range", async () => {
-    const result = await submitReportLogic(
-      {
-        ...baseInput,
-        datePreset: undefined,
-        startDate: "2026-03-10",
-        endDate: "2026-03-01",
-        dry_run: true,
-      } as any,
-      ctx,
-      sdk
-    );
-    expect(result.dryRun?.wouldSucceed).toBe(false);
-    expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_DATE_RANGE");
-  });
-
-  it("execute returns the effect identity + null-kind capability", async () => {
-    const result = await submitReportLogic({ ...baseInput } as any, ctx, sdk);
-    expect(svc.submitReport).toHaveBeenCalledOnce();
-    expect(result.taskId).toBe("task-1");
-    expect(result.effect).toEqual({
-      effectKind: "report_requested",
-      summary: { report_type: "BASIC", report_handle: "task-1" },
+  it("execute refuses and submits nothing", async () => {
+    await expect(submitReportLogic({ ...baseInput } as any, ctx, sdk)).rejects.toMatchObject({
+      code: -32600,
     });
-    expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
-    expect(() => SubmitReportOutputSchema.parse(result)).not.toThrow();
-    expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+    expect(svc.submitReport).not.toHaveBeenCalled();
   });
 
-  it("formatter renders a dry-run message without a false success", () => {
+  it("formatter still renders a dry-run shape without a false success", () => {
     const content = submitReportResponseFormatter({
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "submit_report", canonicalEntityKind: null },
       dryRun: {
-        wouldSucceed: true,
+        wouldSucceed: false,
         validationErrors: [],
         validationSource: "symbolic",
         expectedEffectSource: "symbolic",
-        expectedEffect: {
-          effectKind: "report_requested",
-          summary: { report_type: "BASIC" },
-        },
+        expectedEffect: { effectKind: "report_requested", summary: { report_type: "BASIC" } },
       },
     } as any);
-    expect(content[0].text).toContain("Dry run: submitting a BASIC report would succeed");
+    expect(content[0].text).toContain("would FAIL");
     expect(content[0].text).not.toContain("Report submitted:");
   });
 });

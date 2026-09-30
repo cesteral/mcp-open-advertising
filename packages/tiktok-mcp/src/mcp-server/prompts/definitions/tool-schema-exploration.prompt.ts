@@ -56,9 +56,11 @@ Fetch these resources for detailed schema information:
 - \`tiktok_update_entity\` — Update entity fields
 - \`tiktok_delete_entity\` — Delete entities
 
-### Reporting (Async)
-- \`tiktok_get_report\` — Submit async report and download results
+### Reporting
+- \`tiktok_get_report\` — Run a report synchronously and return the rows
 - \`tiktok_get_report_breakdowns\` — Report with breakdown dimensions
+- \`tiktok_submit_report\` / \`tiktok_download_report\` — Not available (TikTok documents no way to download an async report task)
+- \`tiktok_check_report_status\` — Status of an existing async report task (no rows)
 
 ### Bulk Operations
 - \`tiktok_bulk_update_status\` — Batch enable/disable/delete entities
@@ -88,7 +90,7 @@ Fetch these resources for detailed schema information:
 | Update entities safely | \`tiktok_entity_update_workflow\` |
 | Duplicate campaigns/ad groups/ads | \`tiktok_entity_duplication_workflow\` |
 | Bulk create/update/status/bids | \`tiktok_bulk_operations_workflow\` |
-| Async reporting & breakdowns | \`tiktok_reporting_workflow\` |
+| Reporting & breakdowns | \`tiktok_reporting_workflow\` |
 | Troubleshoot entity issues | \`tiktok_troubleshoot_entity\` |
 
 ## Recommended Exploration Order

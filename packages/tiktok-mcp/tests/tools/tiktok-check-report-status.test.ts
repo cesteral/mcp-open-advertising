@@ -42,11 +42,12 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("checkReportStatusLogic", () => {
-  it("returns canonical 'complete' state with downloadUrl", async () => {
+  // #232: report_task_check.yml documents only status/message, so the tool
+  // never returns a downloadUrl (tiktok_download_report refuses anyway).
+  it("returns canonical 'complete' state and no downloadUrl", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-1",
       status: "DONE",
-      downloadUrl: "https://example.com/report.csv",
     });
 
     const result = await checkReportStatusLogic(
@@ -59,7 +60,7 @@ describe("checkReportStatusLogic", () => {
     expect(result.state).toBe("complete");
     expect(result.rawStatus).toBe("DONE");
     expect(result.isComplete).toBe(true);
-    expect(result.downloadUrl).toBe("https://example.com/report.csv");
+    expect(result.downloadUrl).toBeUndefined();
   });
 
   it("returns canonical 'running' state with isComplete false", async () => {
@@ -131,7 +132,7 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when complete with URL", () => {
+  it("never points at tiktok_download_report, even if a downloadUrl is on the result", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-1",
       state: "complete",
@@ -141,8 +142,10 @@ describe("checkReportStatusResponseFormatter", () => {
       timestamp: new Date().toISOString(),
     });
 
-    expect(content[0].text).toContain("Report complete");
-    expect(content[0].text).toContain("tiktok_download_report");
+    expect(content[0].text).toContain("Report task complete");
+    expect(content[0].text).toContain("tiktok_get_report");
+    expect(content[0].text).not.toContain("tiktok_download_report");
+    expect(content[0].text).not.toContain("example.com");
   });
 
   it("shows retry guidance when in progress", () => {
@@ -180,7 +183,7 @@ describe("checkReportStatusResponseFormatter", () => {
       timestamp: new Date().toISOString(),
     });
 
-    expect(content[0].text).toContain("Report complete");
+    expect(content[0].text).toContain("Report task complete");
     expect(content[0].text).toContain("tiktok_get_report");
   });
 });
