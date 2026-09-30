@@ -58,8 +58,8 @@ Only \`SELECT\` and \`FROM\` are required. All other clauses are optional.
 | \`metrics.conversions\` | Number of conversions |
 | \`metrics.conversions_value\` | Total conversion value |
 | \`metrics.cost_per_conversion\` | Cost per conversion (micros) |
-| \`metrics.video_views\` | Video views |
-| \`metrics.video_view_rate\` | Video view rate |
+| \`metrics.video_trueview_views\` | TrueView video views |
+| \`metrics.video_trueview_view_rate\` | TrueView views / impressions |
 
 ## Common Segments
 

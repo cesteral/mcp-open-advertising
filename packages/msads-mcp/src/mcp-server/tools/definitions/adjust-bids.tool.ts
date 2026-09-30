@@ -358,4 +358,9 @@ export const adjustBidsTool = {
   ],
   logic: adjustBidsLogic,
   responseFormatter: adjustBidsResponseFormatter,
+  // result is the raw Microsoft response (BatchErrors/PartialErrors text) and is printed in block 0. dryRun is symbolic over caller input (no read), so it is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

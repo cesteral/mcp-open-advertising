@@ -254,4 +254,9 @@ export const manageAdExtensionsTool = {
   ],
   logic: manageAdExtensionsLogic,
   responseFormatter: manageAdExtensionsResponseFormatter,
+  // result is the raw association response (records and error text), printed in block 0. dryRun is symbolic and prints only the operation name.
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

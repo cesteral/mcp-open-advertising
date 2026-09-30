@@ -29,7 +29,7 @@ export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): 
 
 ## Context
 - Customer ID: \`${customerId}\`
-- Platform: Google Ads API v23
+- Platform: Google Ads API v25
 - Campaign Type: Search (most common)
 
 This workflow guides you through creating a full campaign hierarchy. Each step depends on the previous one.

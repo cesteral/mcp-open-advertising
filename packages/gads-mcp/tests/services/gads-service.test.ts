@@ -76,7 +76,7 @@ describe("GAdsService", () => {
       expect(options.method).toBe("POST");
     });
 
-    it("never sends pageSize (v23 rejects it with PAGE_SIZE_NOT_SUPPORTED)", async () => {
+    it("never sends pageSize (v23–v25 reject it with PAGE_SIZE_NOT_SUPPORTED)", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
       await service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 50, "next-page");

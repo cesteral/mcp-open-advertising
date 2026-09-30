@@ -343,4 +343,9 @@ export const updateEntityTool = {
   ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
+  // dryRun declared: runMsAdsUpdateDryRun reads the entity, so expectedPostState carries its Name. result is the raw update response (BatchErrors text), printed in block 0.
+  untrustedContent: {
+    structuredPaths: ["$.result", "$.dryRun", "$.before", "$.after"],
+    contentBlocks: [0],
+  },
 };

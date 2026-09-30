@@ -419,7 +419,8 @@ describe("PinterestRefreshTokenAdapter", () => {
       expect(Buffer.from(b64, "base64").toString()).toBe("my_app_id:my_secret");
       expect(init.body).toContain("grant_type=refresh_token");
       expect(init.body).toContain("refresh_token=initial_rt");
-      expect(init.body).toContain("scope=");
+      // No scope: sending one can only narrow the grant (RFC 6749 §6).
+      expect(init.body).not.toContain("scope=");
     });
 
     it("reads access_token from top-level response (not data.access_token)", async () => {

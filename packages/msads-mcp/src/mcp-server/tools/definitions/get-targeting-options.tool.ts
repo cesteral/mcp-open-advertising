@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { MSADS_AGE_RANGES, MSADS_GENDERS } from "../utils/targeting-values.js";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_targeting_options";
@@ -116,4 +117,6 @@ export const getTargetingOptionsTool = {
   ],
   logic: getTargetingOptionsLogic,
   responseFormatter: getTargetingOptionsResponseFormatter,
+  // Static server-authored criterion enum catalog; no platform call.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

@@ -7,7 +7,7 @@ import {
 // 2026-09-30 10:00 UTC — the latest calendar date anywhere (UTC+14) is 2026-10-01.
 const NOW = new Date("2026-09-30T10:00:00Z");
 
-// Field names and enums: googleads v23 Discovery (revision 20260929),
+// Field names and enums: googleads v25 Discovery (revision 20260929),
 // `Resources__Campaign` and the `Common__*` bidding schemes.
 function campaign(extra: Record<string, unknown> = {}) {
   return {

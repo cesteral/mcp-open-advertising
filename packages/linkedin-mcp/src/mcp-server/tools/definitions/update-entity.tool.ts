@@ -253,4 +253,8 @@ export const updateEntityTool = {
   ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.dryRun", "$.before", "$.after"],
+    contentBlocks: [],
+  },
 };

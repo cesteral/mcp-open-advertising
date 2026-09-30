@@ -205,4 +205,8 @@ export const getAnalyticsTool = {
   ],
   logic: getAnalyticsLogic,
   responseFormatter: getAnalyticsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };

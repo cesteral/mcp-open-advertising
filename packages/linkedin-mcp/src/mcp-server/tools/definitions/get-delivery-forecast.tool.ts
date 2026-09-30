@@ -113,4 +113,8 @@ export const getDeliveryForecastTool = {
   ],
   logic: getDeliveryForecastLogic,
   responseFormatter: getDeliveryForecastResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.forecast"],
+    contentBlocks: [0],
+  },
 };

@@ -183,7 +183,7 @@ GADS_CLIENT_ID=your-oauth-client-id
 GADS_CLIENT_SECRET=your-oauth-client-secret
 GADS_REFRESH_TOKEN=your-oauth-refresh-token
 GADS_LOGIN_CUSTOMER_ID=                         # Optional: MCC login customer ID (no dashes)
-GADS_API_BASE_URL=https://googleads.googleapis.com/v23
+GADS_API_BASE_URL=https://googleads.googleapis.com/v25
 # GADS_RATE_LIMIT_PER_MINUTE=10                    # Optional; default 10. No published quota backs a higher value (platform-facts.json)
 
 # ---------- meta-mcp (Meta Ads Server) ----------
@@ -192,7 +192,7 @@ META_MCP_HOST=0.0.0.0
 
 # Meta API Configuration
 META_ACCESS_TOKEN=your-meta-access-token
-META_API_BASE_URL=https://graph.facebook.com/v25.0
+META_API_BASE_URL=https://graph.facebook.com/v26.0
 # META_RATE_LIMIT_PER_MINUTE=20                    # Optional; default 20. No published quota backs a higher value (platform-facts.json)
 ```
 

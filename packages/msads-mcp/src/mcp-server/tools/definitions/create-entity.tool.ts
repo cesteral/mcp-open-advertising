@@ -252,4 +252,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // result is the raw Add response (IDs plus BatchErrors text), printed in block 0. dryRun not declared: runMsAdsCreateDryRun is purely symbolic over caller data (no read).
+  untrustedContent: {
+    structuredPaths: ["$.result", "$.after"],
+    contentBlocks: [0],
+  },
 };

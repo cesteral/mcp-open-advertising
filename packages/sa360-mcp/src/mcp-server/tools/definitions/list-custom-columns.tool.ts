@@ -81,4 +81,8 @@ export const listCustomColumnsTool = {
   ],
   logic: listCustomColumnsLogic,
   responseFormatter: listCustomColumnsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.customColumns"],
+    contentBlocks: [0],
+  },
 };

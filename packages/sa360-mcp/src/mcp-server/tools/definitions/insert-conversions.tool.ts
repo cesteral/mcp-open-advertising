@@ -366,4 +366,8 @@ export const insertConversionsTool = {
   ],
   logic: insertConversionsLogic,
   responseFormatter: insertConversionsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [0],
+  },
 };

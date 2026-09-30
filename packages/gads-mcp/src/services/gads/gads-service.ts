@@ -68,7 +68,7 @@ export function decodeGaqlCursor(cursor: string | undefined): GaqlCursor {
 
 /**
  * Google Ads Service — GAQL queries, account listing, and generic CRUD
- * via the Google Ads REST API v23.
+ * via the Google Ads REST API v25.
  *
  * Read operations use GAQL via POST /customers/{customerId}/googleAds:search
  * Write operations use POST /customers/{customerId}/{resources}:mutate
@@ -106,7 +106,7 @@ export class GAdsService {
   /**
    * Execute a GAQL query against the Google Ads API via `googleAds:search`.
    *
-   * **Never sends `pageSize`.** The v23 Discovery document for
+   * **Never sends `pageSize`.** The Discovery document (v23 through v25) for
    * `SearchGoogleAdsRequest.pageSize` reads: "Google Ads API returns a
    * `PAGE_SIZE_NOT_SUPPORTED` error if this field is set in the request body."
    * The API returns fixed pages of up to 10,000 rows, so `maxRows` is applied

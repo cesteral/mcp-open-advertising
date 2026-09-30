@@ -4,8 +4,8 @@
 /**
  * Builds the `campaigns:mutate` create body for `gads_duplicate_entity`.
  *
- * Field names, types and enums below come from the googleads v23 Discovery
- * document (revision 20260929), `GoogleAdsGoogleadsV23Resources__Campaign` and
+ * Field names, types and enums below come from the googleads v25 Discovery
+ * document (revision 20260929), `GoogleAdsGoogleadsV25Resources__Campaign` and
  * the `Common__*` bidding-scheme schemas it references. Execute and the
  * `validateOnly` dry run both send the body built here.
  */

@@ -40,8 +40,8 @@ const config: any = {
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: entry.auth.modes[0],
   mcpAllowedOrigins: "*",
-  metaApiBaseUrl: "https://graph.facebook.com/v25.0",
-  metaApiVersion: "v25.0",
+  metaApiBaseUrl: "https://graph.facebook.com/v26.0",
+  metaApiVersion: "v26.0",
 };
 
 describe("/.well-known/mcp/server-card.json (meta-mcp)", () => {

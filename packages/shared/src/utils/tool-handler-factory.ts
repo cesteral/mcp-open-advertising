@@ -17,6 +17,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
+import { remoteParentFromMeta } from "./trace-context.js";
 import { ErrorHandler, McpError } from "./mcp-errors.js";
 import { recordToolExecution } from "./metrics.js";
 import {
@@ -411,6 +412,12 @@ interface ToolRegistrationConfig {
   _meta?: Record<string, unknown>;
 }
 
+/** The part of the SDK's per-request `extra` the tool wrapper reads. */
+interface ToolCallExtra {
+  /** The request's `params._meta` (trace context lives here, #247). */
+  _meta?: unknown;
+}
+
 /**
  * Structural type for McpServer — avoids direct dependency on @modelcontextprotocol/sdk.
  * Uses `any` for the elicitInput param to accommodate SDK's specific union type.
@@ -428,7 +435,7 @@ interface McpServerLike {
   registerTool(
     name: string,
     config: ToolRegistrationConfig,
-    handler: (args: any) => Promise<any>
+    handler: (args: any, extra?: ToolCallExtra) => Promise<any>
   ): void;
 }
 
@@ -730,7 +737,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
     logger.debug(schemaSizeLog, "Tool schema sizes");
 
-    server.registerTool(tool.name, toolConfig, async (args: unknown) => {
+    server.registerTool(tool.name, toolConfig, async (args: unknown, extra?: ToolCallExtra) => {
       logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
       // Send MCP logging notification for tool invocation
@@ -746,7 +753,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
       const startTime = Date.now();
 
-      return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
+      // A client-supplied `traceparent` in the request's `_meta` parents the
+      // tool span, so the agent host's trace continues into ours (#247).
+      const spanOptions = { parent: remoteParentFromMeta(extra?._meta) };
+      const inToolSpan = <T>(fn: () => Promise<T>): Promise<T> =>
+        withToolSpan(tool.name, (args as Record<string, unknown>) || {}, fn, spanOptions);
+
+      return inToolSpan(async () => {
         let requestId: string | undefined;
         let resolvedAuthContext: SessionAuthContext | undefined;
         let auditedIdentifiers: Record<string, string | string[]> = {};

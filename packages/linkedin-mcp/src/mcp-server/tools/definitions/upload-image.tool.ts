@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
+  NO_UNTRUSTED_CONTENT,
   McpError,
   JsonRpcErrorCode,
   assertGovernedEffectDryRun,
@@ -277,4 +278,5 @@ export const uploadImageTool = {
   ],
   logic: uploadImageLogic,
   responseFormatter: uploadImageResponseFormatter,
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

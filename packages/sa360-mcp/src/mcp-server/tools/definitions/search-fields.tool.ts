@@ -118,4 +118,8 @@ export const searchFieldsTool = {
   ],
   logic: searchFieldsLogic,
   responseFormatter: searchFieldsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.fields"],
+    contentBlocks: [0],
+  },
 };

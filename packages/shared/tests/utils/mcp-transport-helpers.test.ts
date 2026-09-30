@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   isValidSessionId,
   generateSessionId,
@@ -7,6 +7,8 @@ import {
   buildAllowedOrigins,
   extractHeadersMap,
   oauthProtectedResourceBody,
+  parseAuthorizationServers,
+  wwwAuthenticateChallenge,
   validateSessionReuse,
   SessionManager,
   type SessionServiceStoreLike,
@@ -116,6 +118,78 @@ describe("oauthProtectedResourceBody", () => {
   it("should return 404 for non-jwt modes", () => {
     const result = oauthProtectedResourceBody("google-headers", "https://example.com");
     expect(result.status).toBe(404);
+  });
+
+  describe("authorization_servers (#246)", () => {
+    const saved = process.env.MCP_AUTHORIZATION_SERVERS;
+    afterEach(() => {
+      if (saved === undefined) delete process.env.MCP_AUTHORIZATION_SERVERS;
+      else process.env.MCP_AUTHORIZATION_SERVERS = saved;
+    });
+
+    it("omits the field rather than inventing one when unconfigured", () => {
+      delete process.env.MCP_AUTHORIZATION_SERVERS;
+      const { body } = oauthProtectedResourceBody("jwt", "https://example.com");
+      expect(body).not.toHaveProperty("authorization_servers");
+    });
+
+    it("publishes configured issuers", () => {
+      process.env.MCP_AUTHORIZATION_SERVERS =
+        "https://auth.example.com, https://idp.example.org/tenant1";
+      const { body } = oauthProtectedResourceBody("jwt", "https://example.com");
+      expect(body.authorization_servers).toEqual([
+        "https://auth.example.com",
+        "https://idp.example.org/tenant1",
+      ]);
+    });
+  });
+});
+
+describe("parseAuthorizationServers", () => {
+  it("keeps https issuers and localhost http, drops everything else", () => {
+    expect(
+      parseAuthorizationServers(
+        "https://a.example, http://evil.example, not a url, http://localhost:9000, , javascript:alert(1)"
+      )
+    ).toEqual(["https://a.example", "http://localhost:9000"]);
+  });
+
+  it("returns [] for unset", () => {
+    expect(parseAuthorizationServers(undefined)).toEqual([]);
+  });
+});
+
+describe("wwwAuthenticateChallenge", () => {
+  const saved = process.env.MCP_RESOURCE_URI;
+  afterEach(() => {
+    if (saved === undefined) delete process.env.MCP_RESOURCE_URI;
+    else process.env.MCP_RESOURCE_URI = saved;
+  });
+
+  it("derives resource_metadata from an absolute MCP_RESOURCE_URI", () => {
+    process.env.MCP_RESOURCE_URI = "https://mcp.example.com/dv360";
+    expect(wwwAuthenticateChallenge("jwt", "http://10.0.0.1:8080/mcp")).toBe(
+      'Bearer realm="mcp", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"'
+    );
+  });
+
+  it("falls back to the request origin when MCP_RESOURCE_URI is not a URL", () => {
+    process.env.MCP_RESOURCE_URI = "cesteral-services";
+    expect(wwwAuthenticateChallenge("jwt", "https://dv360.example.com/mcp")).toBe(
+      'Bearer realm="mcp", resource_metadata="https://dv360.example.com/.well-known/oauth-protected-resource"'
+    );
+  });
+
+  it("uses a plain Bearer challenge for platform bearer modes", () => {
+    expect(wwwAuthenticateChallenge("tiktok-bearer", "https://x.example/mcp")).toBe(
+      'Bearer realm="mcp"'
+    );
+  });
+
+  it("has no challenge for custom-header modes", () => {
+    expect(wwwAuthenticateChallenge("google-headers", "https://x.example/mcp")).toBeUndefined();
+    expect(wwwAuthenticateChallenge("ttd-token", "https://x.example/mcp")).toBeUndefined();
+    expect(wwwAuthenticateChallenge("none", "https://x.example/mcp")).toBeUndefined();
   });
 });
 

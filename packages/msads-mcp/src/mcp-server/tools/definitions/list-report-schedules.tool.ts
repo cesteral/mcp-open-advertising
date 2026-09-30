@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_list_report_schedules";
@@ -73,4 +74,6 @@ export const listReportSchedulesTool = {
   ],
   logic: listReportSchedulesLogic,
   responseFormatter: listReportSchedulesResponseFormatter,
+  // No platform call: note is a server-authored constant.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

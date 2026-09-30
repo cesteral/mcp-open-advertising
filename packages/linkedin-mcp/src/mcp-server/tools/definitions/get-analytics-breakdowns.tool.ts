@@ -200,4 +200,8 @@ export const getAnalyticsBreakdownsTool = {
   ],
   logic: getAnalyticsBreakdownsLogic,
   responseFormatter: getAnalyticsBreakdownsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

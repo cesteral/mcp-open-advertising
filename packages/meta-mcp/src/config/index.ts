@@ -23,12 +23,12 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["meta-bearer", "jwt", "none"]).default("meta-bearer"),
 
   // Meta API Configuration
-  metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v25.0"),
+  metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v26.0"),
   // Selects the Graph API version when META_API_BASE_URL is not set; the
   // default version is the one in `metaApiBaseUrl` above.
   metaApiVersion: z
     .string()
-    .regex(/^v\d+\.\d+$/, 'META_API_VERSION must look like "v25.0"')
+    .regex(/^v\d+\.\d+$/, 'META_API_VERSION must look like "v26.0"')
     .optional(),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

@@ -31,7 +31,7 @@ Standard metrics that can be used with \`gads_get_insights\`:
 | metrics.all_conversions_value | All conversions value |
 | metrics.search_impression_share | Search impression share |
 | metrics.search_rank_lost_impression_share | Impression share lost to ad rank |
-| metrics.quality_score | Keyword quality score (keywords only) |
+| metrics.historical_quality_score | Historical keyword quality score (keywords only) |
 
 ## Supported Entity Types
 
@@ -78,6 +78,6 @@ impressions, clicks, cost_micros, conversions, ctr, average_cpc
 
 - For ad-hoc queries with custom field selection, use \`gads_gaql_search\` directly
 - cost_micros is in micros — divide by 1,000,000 for the actual currency value
-- keyword quality_score is only available for keyword entity type
+- historical_quality_score is only available for the keyword entity type
 `,
 };

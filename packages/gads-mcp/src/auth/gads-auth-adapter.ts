@@ -4,7 +4,7 @@
 /**
  * Google Ads Auth Adapter
  *
- * Handles authentication with the Google Ads API v23.
+ * Handles authentication with the Google Ads API v25.
  * Uses OAuth2 refresh token flow to obtain access tokens.
  * Token endpoint: https://oauth2.googleapis.com/token
  *

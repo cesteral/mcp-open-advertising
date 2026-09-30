@@ -2,7 +2,7 @@
   "name": "@cesteral/gads-mcp",
   "mcpName": "io.github.cesteral/gads-mcp",
   "version": "1.3.0",
-  "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v23",
+  "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v25",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "build": "tsc --build",
     "clean": "rm -rf dist *.tsbuildinfo",
     "dev:http": "tsx watch src/index.ts",
+    "extract:discovery": "tsx scripts/extract-discovery.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
