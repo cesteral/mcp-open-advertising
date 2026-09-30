@@ -26,6 +26,11 @@ export interface EntityConfig {
   apiPath: string | ((ids: Record<string, string>) => string);
   parentIds: string[]; // IDs required for validation (for API path construction)
   queryParamIds: string[]; // IDs that should be passed as query parameters (not in path)
+  /**
+   * `queryParamIds` also scope create / patch / delete, and are not fields of
+   * the resource body. See {@link EntityApiMetadata.writeScopeInQuery}.
+   */
+  writeScopeInQuery?: boolean;
   filterParamIds: string[]; // IDs that should be converted to filter expressions (e.g., campaignId for insertionOrders)
   supportsCreate: boolean;
   supportsUpdate: boolean;
@@ -67,6 +72,18 @@ interface EntityApiMetadata {
    * `ENTITY_STATUS_ARCHIVED`, to be able to delete it").
    */
   requiresArchiveBeforeDelete?: boolean;
+  /**
+   * The owner scope (`queryParamIds`) is a QUERY parameter on this resource's
+   * create / patch / delete too, not only on list / get — and not a field of
+   * its body. v4 Discovery: `inventorySources.create` / `.patch` and
+   * `inventorySourceGroups.create` / `.patch` / `.delete` all take
+   * `partnerId` / `advertiserId` as query parameters, and neither
+   * `schemas.InventorySource` nor `schemas.InventorySourceGroup` has a
+   * `partnerId` or `advertiserId` property. (Contrast `advertisers` and
+   * `customBiddingAlgorithms`, whose owner ids ARE body fields and whose
+   * create / patch take no scope query.)
+   */
+  writeScopeInQuery?: boolean;
 }
 
 /**
@@ -139,6 +156,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/inventorySources",
     parentResourceIds: [],
     queryParamIds: ["partnerId", "advertiserId"],
+    writeScopeInQuery: true,
     supportsFilter: true,
     supportsDelete: false, // v4 has no inventorySources.delete
   },
@@ -146,6 +164,7 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/inventorySourceGroups",
     parentResourceIds: [],
     queryParamIds: ["partnerId", "advertiserId"],
+    writeScopeInQuery: true,
     supportsFilter: true,
   },
   locationList: {
@@ -329,6 +348,7 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
     apiPath,
     parentIds: apiMetadata.parentResourceIds,
     queryParamIds: apiMetadata.queryParamIds || [],
+    writeScopeInQuery: apiMetadata.writeScopeInQuery ?? false,
     filterParamIds: apiMetadata.filterParamIds || [],
     supportsCreate: !apiMetadata.isReadOnly,
     supportsUpdate: !apiMetadata.isReadOnly,

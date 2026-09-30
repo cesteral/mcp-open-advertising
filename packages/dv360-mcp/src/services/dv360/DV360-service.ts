@@ -207,6 +207,33 @@ function entityScopeQueryParams(
 }
 
 /**
+ * For a resource whose owner scope travels in the query on writes too
+ * (`EntityConfig.writeScopeInQuery` — inventorySources, inventorySourceGroups),
+ * the scope query string for create / patch / delete. Empty otherwise.
+ */
+function writeScopeQueryParams(
+  config: { queryParamIds: readonly string[]; writeScopeInQuery?: boolean },
+  ids: Record<string, string>
+): string {
+  return config.writeScopeInQuery ? entityScopeQueryParams(ids, config.queryParamIds) : "";
+}
+
+/**
+ * Drop the owner-scope ids from a write body when they belong in the query:
+ * they are not fields of `InventorySource` / `InventorySourceGroup`, and
+ * Google's JSON transcoding rejects unknown field names.
+ */
+function withoutWriteScopeFields(
+  config: { queryParamIds: readonly string[]; writeScopeInQuery?: boolean },
+  body: Record<string, unknown>
+): Record<string, unknown> {
+  if (!config.writeScopeInQuery) return body;
+  const out = { ...body };
+  for (const key of config.queryParamIds) delete out[key];
+  return out;
+}
+
+/**
  * Service for interacting with DV360 API
  * Provides generic entity operations (list, get, create, update, delete)
  */
@@ -390,11 +417,16 @@ export class DV360Service {
         setSpanAttribute("dv360.advertiserId", ids.advertiserId);
       }
 
-      const response = await this.httpClient.fetch(basePath, context, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-      });
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const response = await this.httpClient.fetch(
+        `${basePath}${scopeQs ? `?${scopeQs}` : ""}`,
+        context,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+        }
+      );
 
       return schema.parse(response);
     });
@@ -453,9 +485,14 @@ export class DV360Service {
       }
 
       setSpanAttribute("dv360.entityId", entityId);
-      // Note: queryParamIds (e.g. partnerId/advertiserId for customBiddingAlgorithm)
-      // are list/get-only — DV360's patch endpoint rejects them with 400.
-      const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}`;
+      // Note: for most types queryParamIds (e.g. partnerId/advertiserId for
+      // customBiddingAlgorithm) are list/get-only — `customBiddingAlgorithms.patch`
+      // takes only `updateMask`. inventorySources / inventorySourceGroups take the
+      // owner scope on patch too (`writeScopeInQuery`).
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}${
+        scopeQs ? `&${scopeQs}` : ""
+      }`;
 
       // Rate limit by advertiser
       if (ids.advertiserId) {
@@ -466,7 +503,7 @@ export class DV360Service {
       const response = await this.httpClient.fetch(path, context, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
+        body: JSON.stringify(withoutWriteScopeFields(config, validated)),
       });
 
       return schema.parse(response);
@@ -528,10 +565,12 @@ export class DV360Service {
         );
       }
 
-      // Note: queryParamIds are list/get-only — DV360's delete (where it exists)
-      // doesn't take scope query params, and customBiddingAlgorithm has no
-      // delete endpoint at all (archive via patch with entityStatus=ARCHIVED).
-      const path = `${basePath}/${entityId}`;
+      // Note: `inventorySourceGroups.delete` takes the owner scope as query
+      // params (`writeScopeInQuery`); the advertiser-scoped deletes take none,
+      // and customBiddingAlgorithm has no delete endpoint at all (archive via
+      // patch with entityStatus=ARCHIVED).
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
       setSpanAttribute("dv360.entityId", entityId);
 
       // Rate limit by advertiser
