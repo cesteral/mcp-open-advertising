@@ -275,4 +275,9 @@ export const duplicateEntityTool = {
   ],
   logic: duplicateEntityLogic,
   responseFormatter: duplicateEntityResponseFormatter,
+  // The dry run reads the source entity and validationErrors carry Google's raw validateOnly error body, printed in the dry-run text.
+  untrustedContent: {
+    structuredPaths: ["$.result", "$.dryRun", "$.after"],
+    contentBlocks: [0],
+  },
 };

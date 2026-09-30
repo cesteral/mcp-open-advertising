@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { calculatePacingStatus } from "@cesteral/shared";
+import { calculatePacingStatus, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 
@@ -204,4 +204,6 @@ export const getPacingStatusTool: ToolDefinition<
   ],
   logic: getPacingStatusLogic,
   responseFormatter: getPacingStatusResponseFormatter,
+  // Client-side arithmetic over caller input; no API call.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

@@ -304,4 +304,9 @@ export const getInsightsTool = {
   ],
   logic: getInsightsLogic,
   responseFormatter: getInsightsResponseFormatter,
+  // Rows carry campaign/ad group/ad names and keyword text selected by the query.
+  untrustedContent: {
+    structuredPaths: ["$.headers", "$.selectedColumns", "$.rows", "$.previewRows", "$.warnings"],
+    contentBlocks: [0],
+  },
 };
