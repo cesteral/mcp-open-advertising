@@ -17,6 +17,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
+import { remoteParentFromMeta } from "./trace-context.js";
 import { ErrorHandler, McpError } from "./mcp-errors.js";
 import { recordToolExecution } from "./metrics.js";
 import {
@@ -730,520 +731,533 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
     logger.debug(schemaSizeLog, "Tool schema sizes");
 
-    server.registerTool(tool.name, toolConfig, async (args: unknown) => {
-      logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
+    server.registerTool(
+      tool.name,
+      toolConfig,
+      async (args: unknown, extra?: { _meta?: unknown }) => {
+        logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
-      // Send MCP logging notification for tool invocation
-      server
-        .sendLoggingMessage({
-          level: "info",
-          logger: tool.name,
-          data: `Invoking tool: ${tool.name}`,
-        })
-        .catch(() => {
-          /* ignore if no client connected */
-        });
+        // Send MCP logging notification for tool invocation
+        server
+          .sendLoggingMessage({
+            level: "info",
+            logger: tool.name,
+            data: `Invoking tool: ${tool.name}`,
+          })
+          .catch(() => {
+            /* ignore if no client connected */
+          });
 
-      const startTime = Date.now();
+        const startTime = Date.now();
 
-      return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
-        let requestId: string | undefined;
-        let resolvedAuthContext: SessionAuthContext | undefined;
-        let auditedIdentifiers: Record<string, string | string[]> = {};
+        // A client-supplied `traceparent` in the request's `_meta` parents the
+        // tool span, so the agent host's trace continues into ours (#247).
+        const toolSpanOptions = { parent: remoteParentFromMeta(extra?._meta) };
 
-        // ALS ownership boundary:
-        //   - Transport layer MAY install a request-scoped context
-        //     (HTTP transport does; stdio transport does not).
-        //   - Tool handler OWNS the per-invocation context used by the
-        //     upstream recorder. We always install one here so:
-        //       1. stdio tool calls have a store (otherwise
-        //          `recordUpstreamRequest()` no-ops and the failure trail
-        //          is always empty).
-        //       2. Successive tool invocations within the same HTTP
-        //          request don't share recorder state across calls.
-        //   Do not "simplify" this to rely solely on transport ALS —
-        //   stdio has no transport ALS at all.
-        const parent = getRequestContext();
-        const toolAlsContext: RequestContext = {
-          requestId:
-            parent?.requestId ?? `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          timestamp: new Date().toISOString(),
-          sessionId: sessionId ?? parent?.sessionId,
-          operation: `tool:${tool.name}`,
-          ...(parent ?? {}),
-          // Always start with an empty recorder array so this tool call
-          // sees only its own upstream attempts.
-          upstreamRequests: [],
-        };
+        return withToolSpan(
+          tool.name,
+          (args as Record<string, unknown>) || {},
+          async () => {
+            let requestId: string | undefined;
+            let resolvedAuthContext: SessionAuthContext | undefined;
+            let auditedIdentifiers: Record<string, string | string[]> = {};
 
-        return runWithRequestContext(toolAlsContext, async () => {
-          try {
-            const context = createRequestContext({
-              operation: `HandleToolRequest:${tool.name}`,
-              additionalContext: {
-                toolName: tool.name,
-                input: args,
-              },
-            });
-            requestId = context.requestId;
+            // ALS ownership boundary:
+            //   - Transport layer MAY install a request-scoped context
+            //     (HTTP transport does; stdio transport does not).
+            //   - Tool handler OWNS the per-invocation context used by the
+            //     upstream recorder. We always install one here so:
+            //       1. stdio tool calls have a store (otherwise
+            //          `recordUpstreamRequest()` no-ops and the failure trail
+            //          is always empty).
+            //       2. Successive tool invocations within the same HTTP
+            //          request don't share recorder state across calls.
+            //   Do not "simplify" this to rely solely on transport ALS —
+            //   stdio has no transport ALS at all.
+            const parent = getRequestContext();
+            const toolAlsContext: RequestContext = {
+              requestId:
+                parent?.requestId ?? `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+              timestamp: new Date().toISOString(),
+              sessionId: sessionId ?? parent?.sessionId,
+              operation: `tool:${tool.name}`,
+              ...(parent ?? {}),
+              // Always start with an empty recorder array so this tool call
+              // sees only its own upstream attempts.
+              upstreamRequests: [],
+            };
 
-            const validatedInput = tool.inputSchema.parse(args);
-            setSpanAttribute("tool.input.validated", true);
+            return runWithRequestContext(toolAlsContext, async () => {
+              try {
+                const context = createRequestContext({
+                  operation: `HandleToolRequest:${tool.name}`,
+                  additionalContext: {
+                    toolName: tool.name,
+                    input: args,
+                  },
+                });
+                requestId = context.requestId;
 
-            // ── Authorization check ──────────────────────────────────────
-            if (authContextResolver) {
-              resolvedAuthContext = authContextResolver();
-              if (resolvedAuthContext && resolvedAuthContext.allowedAdvertisers !== undefined) {
-                const input = validatedInput as Record<string, unknown>;
-                const allowedAdvertisers =
-                  resolvedAuthContext.allowedAdvertisers.map(normalizeScopedId);
-                const scopedIdentifiers = collectScopedIdentifiers(input);
+                const validatedInput = tool.inputSchema.parse(args);
+                setSpanAttribute("tool.input.validated", true);
 
-                for (const identifier of scopedIdentifiers) {
-                  const path = identifier.path;
-                  const value = identifier.value;
+                // ── Authorization check ──────────────────────────────────────
+                if (authContextResolver) {
+                  resolvedAuthContext = authContextResolver();
+                  if (resolvedAuthContext && resolvedAuthContext.allowedAdvertisers !== undefined) {
+                    const input = validatedInput as Record<string, unknown>;
+                    const allowedAdvertisers =
+                      resolvedAuthContext.allowedAdvertisers.map(normalizeScopedId);
+                    const scopedIdentifiers = collectScopedIdentifiers(input);
 
-                  if (auditedIdentifiers[path]) {
-                    const existing = auditedIdentifiers[path];
-                    auditedIdentifiers[path] = Array.isArray(existing)
-                      ? [...existing, value]
-                      : [existing, value];
-                  } else {
-                    auditedIdentifiers[path] = value;
-                  }
+                    for (const identifier of scopedIdentifiers) {
+                      const path = identifier.path;
+                      const value = identifier.value;
 
-                  if (!allowedAdvertisers.includes(normalizeScopedId(value))) {
-                    auditLogger.warn(
-                      {
-                        event: "tool_access_denied",
-                        sessionId,
-                        clientId: resolvedAuthContext.authInfo.clientId,
-                        authType: resolvedAuthContext.authInfo.authType,
-                        tool: tool.name,
-                        scopedField: path,
-                        scopedValue: value,
-                        authorized: false,
-                        reason: "advertiser not in allowed scope",
-                      },
-                      "Authorization denied"
-                    );
+                      if (auditedIdentifiers[path]) {
+                        const existing = auditedIdentifiers[path];
+                        auditedIdentifiers[path] = Array.isArray(existing)
+                          ? [...existing, value]
+                          : [existing, value];
+                      } else {
+                        auditedIdentifiers[path] = value;
+                      }
 
-                    recordToolExecution(tool.name, "error", Date.now() - startTime);
+                      if (!allowedAdvertisers.includes(normalizeScopedId(value))) {
+                        auditLogger.warn(
+                          {
+                            event: "tool_access_denied",
+                            sessionId,
+                            clientId: resolvedAuthContext.authInfo.clientId,
+                            authType: resolvedAuthContext.authInfo.authType,
+                            tool: tool.name,
+                            scopedField: path,
+                            scopedValue: value,
+                            authorized: false,
+                            reason: "advertiser not in allowed scope",
+                          },
+                          "Authorization denied"
+                        );
 
-                    return {
-                      content: [
-                        {
-                          type: "text" as const,
-                          text: `Access denied: ${path} "${value}" is not in your authorized scope.`,
-                        },
-                      ],
-                      isError: true,
-                    };
+                        recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+                        return {
+                          content: [
+                            {
+                              type: "text" as const,
+                              text: `Access denied: ${path} "${value}" is not in your authorized scope.`,
+                            },
+                          ],
+                          isError: true,
+                        };
+                      }
+                    }
                   }
                 }
-              }
-            }
 
-            // ── Governance decision-token verification (governed writes) ──
-            // Runs AFTER advertiser-scope authz (above) so an unauthorized call
-            // never reaches jti consumption, and BEFORE tool.logic so an
-            // enforced rejection prevents the mutation. Gated to cesteral write
-            // annotations; global default mode is `off` (no behavior change).
-            let idempotencyKey: string | undefined;
-            const cesteralAnnotation = (
-              tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
-            )?.cesteral;
-            if (cesteralAnnotation?.kind === "write") {
-              const configuredMode = resolveTokenMode({
-                contractId: cesteralAnnotation.contractId,
-                env: governanceEnv,
-              });
-              // Effect-class writes are now token-governed identically to
-              // entity-class writes. The governance control plane mints a live
-              // decision token for admitted effect writes (Phase 2), so they
-              // flow through the exact same verify path below — there is no
-              // effect-specific fork. The only effect-specific note is that
-              // effect writes have no read-partner/snapshot, which is
-              // irrelevant to token verification (verify is writeClass-agnostic).
-              //
-              // Behaviour by configured mode (the operator's explicit intent):
-              //  - `off`     → no-op (read-only behaviour preserved; global default).
-              //  - `warn`    → verify + log the verdict; never block.
-              //  - `enforce` → block on a bad verdict or an unresolved
-              //                definition hash; on ok, expose jti as
-              //                idempotencyKey.
-              const mode = configuredMode;
-              if (mode !== "off") {
-                const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
-                // Under enforce, an unresolved definition hash means the binding
-                // cannot be fully verified — fail closed rather than admit a
-                // partially-bound token.
-                if (mode === "enforce" && expectedDefinitionHash === undefined) {
-                  logger.warn(
-                    {
-                      component: "governance-audit",
-                      event: "decision_token_verification",
-                      status: "rejected",
-                      reasonCode: "DEFINITION_HASH_UNRESOLVED",
+                // ── Governance decision-token verification (governed writes) ──
+                // Runs AFTER advertiser-scope authz (above) so an unauthorized call
+                // never reaches jti consumption, and BEFORE tool.logic so an
+                // enforced rejection prevents the mutation. Gated to cesteral write
+                // annotations; global default mode is `off` (no behavior change).
+                let idempotencyKey: string | undefined;
+                const cesteralAnnotation = (
+                  tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
+                )?.cesteral;
+                if (cesteralAnnotation?.kind === "write") {
+                  const configuredMode = resolveTokenMode({
+                    contractId: cesteralAnnotation.contractId,
+                    env: governanceEnv,
+                  });
+                  // Effect-class writes are now token-governed identically to
+                  // entity-class writes. The governance control plane mints a live
+                  // decision token for admitted effect writes (Phase 2), so they
+                  // flow through the exact same verify path below — there is no
+                  // effect-specific fork. The only effect-specific note is that
+                  // effect writes have no read-partner/snapshot, which is
+                  // irrelevant to token verification (verify is writeClass-agnostic).
+                  //
+                  // Behaviour by configured mode (the operator's explicit intent):
+                  //  - `off`     → no-op (read-only behaviour preserved; global default).
+                  //  - `warn`    → verify + log the verdict; never block.
+                  //  - `enforce` → block on a bad verdict or an unresolved
+                  //                definition hash; on ok, expose jti as
+                  //                idempotencyKey.
+                  const mode = configuredMode;
+                  if (mode !== "off") {
+                    const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
+                    // Under enforce, an unresolved definition hash means the binding
+                    // cannot be fully verified — fail closed rather than admit a
+                    // partially-bound token.
+                    if (mode === "enforce" && expectedDefinitionHash === undefined) {
+                      logger.warn(
+                        {
+                          component: "governance-audit",
+                          event: "decision_token_verification",
+                          status: "rejected",
+                          reasonCode: "DEFINITION_HASH_UNRESOLVED",
+                          mode,
+                          contractId: cesteralAnnotation.contractId,
+                          toolName: tool.name,
+                        },
+                        "decision token: definition hash unresolved under enforce (no manifest resolver)"
+                      );
+                      recordToolExecution(tool.name, "error", Date.now() - startTime);
+                      throw new McpError(
+                        JsonRpcErrorCode.Unauthorized,
+                        `Governance: cannot verify decision token for ${tool.name} ` +
+                          `(definition hash unavailable)`
+                      );
+                    }
+
+                    // Warn (or enforce with a resolver): verify every binding. When
+                    // the definition hash is unresolved (warn only), it is passed as
+                    // undefined so the OTHER bindings — signature, claims, expiry,
+                    // issuer/audience, actionHash, replay — all still run, and the
+                    // verdict reports definitionHashVerified:false.
+                    // actionHash is computed over the RAW wire arguments, which is
+                    // what `canonicalizeExecutableArgs` is contracted to receive and
+                    // what the minter hashes when it dispatches the call.
+                    //
+                    // `args` here are POST-validation: the MCP SDK parses
+                    // `params.arguments` against the tool's `inputSchema` before
+                    // invoking this handler, so every `.default()` in the schema — at
+                    // any depth — is already materialized. Hashing that object made
+                    // the two sides disagree for any governed write carrying a
+                    // non-excluded default, and the call was rejected as
+                    // `action_hash_mismatch` under `enforce` (sweep 2026-07-25,
+                    // 10-F2). `installRawToolArgsCapture` preserves the unparsed
+                    // shape so the verifier hashes the same bytes the minter did.
+                    //
+                    // The fallback to `args` is the pre-fix behaviour, used only when
+                    // capture could not be installed (logged once at registration).
+                    // It cannot admit a forged call — materializing a default can only
+                    // ADD a key the client did not send, never change one it did — so
+                    // the fallback risks a false rejection, not a bypass.
+                    const rawToolArgs = getRawToolArgs();
+                    const executableArgs = canonicalizeExecutableArgs({
+                      rawArgs: rawToolArgs !== undefined ? rawToolArgs : args,
+                      // `executableArgsExclude` is required by the authoring type but
+                      // OPTIONAL in the (deliberately loose) release Zod schema, so a
+                      // tool minted before the field existed can reach here undefined.
+                      // `canonicalizeExecutableArgs` calls `exclude.includes(...)` and
+                      // would throw on undefined — defaulting to `[]` keeps a verify
+                      // (even under warn) from crashing the write instead of verifying.
+                      exclude: cesteralAnnotation.executableArgsExclude ?? [],
+                    });
+                    const verdict = await verifyDecisionToken({
+                      token: getRequestContext()?.decisionToken,
+                      secrets: {
+                        current: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET ?? "",
+                        previous: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS,
+                      },
+                      expected: {
+                        contractId: cesteralAnnotation.contractId,
+                        definitionHash: expectedDefinitionHash,
+                        actionHash: hashActionInput(executableArgs),
+                      },
+                      jtiStore,
+                      jtiTtlMs,
+                    });
+                    logDecisionTokenVerdict(logger, {
+                      verdict,
                       mode,
                       contractId: cesteralAnnotation.contractId,
                       toolName: tool.name,
-                    },
-                    "decision token: definition hash unresolved under enforce (no manifest resolver)"
-                  );
-                  recordToolExecution(tool.name, "error", Date.now() - startTime);
-                  throw new McpError(
-                    JsonRpcErrorCode.Unauthorized,
-                    `Governance: cannot verify decision token for ${tool.name} ` +
-                      `(definition hash unavailable)`
-                  );
-                }
-
-                // Warn (or enforce with a resolver): verify every binding. When
-                // the definition hash is unresolved (warn only), it is passed as
-                // undefined so the OTHER bindings — signature, claims, expiry,
-                // issuer/audience, actionHash, replay — all still run, and the
-                // verdict reports definitionHashVerified:false.
-                // actionHash is computed over the RAW wire arguments, which is
-                // what `canonicalizeExecutableArgs` is contracted to receive and
-                // what the minter hashes when it dispatches the call.
-                //
-                // `args` here are POST-validation: the MCP SDK parses
-                // `params.arguments` against the tool's `inputSchema` before
-                // invoking this handler, so every `.default()` in the schema — at
-                // any depth — is already materialized. Hashing that object made
-                // the two sides disagree for any governed write carrying a
-                // non-excluded default, and the call was rejected as
-                // `action_hash_mismatch` under `enforce` (sweep 2026-07-25,
-                // 10-F2). `installRawToolArgsCapture` preserves the unparsed
-                // shape so the verifier hashes the same bytes the minter did.
-                //
-                // The fallback to `args` is the pre-fix behaviour, used only when
-                // capture could not be installed (logged once at registration).
-                // It cannot admit a forged call — materializing a default can only
-                // ADD a key the client did not send, never change one it did — so
-                // the fallback risks a false rejection, not a bypass.
-                const rawToolArgs = getRawToolArgs();
-                const executableArgs = canonicalizeExecutableArgs({
-                  rawArgs: rawToolArgs !== undefined ? rawToolArgs : args,
-                  // `executableArgsExclude` is required by the authoring type but
-                  // OPTIONAL in the (deliberately loose) release Zod schema, so a
-                  // tool minted before the field existed can reach here undefined.
-                  // `canonicalizeExecutableArgs` calls `exclude.includes(...)` and
-                  // would throw on undefined — defaulting to `[]` keeps a verify
-                  // (even under warn) from crashing the write instead of verifying.
-                  exclude: cesteralAnnotation.executableArgsExclude ?? [],
-                });
-                const verdict = await verifyDecisionToken({
-                  token: getRequestContext()?.decisionToken,
-                  secrets: {
-                    current: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET ?? "",
-                    previous: governanceEnv.GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS,
-                  },
-                  expected: {
-                    contractId: cesteralAnnotation.contractId,
-                    definitionHash: expectedDefinitionHash,
-                    actionHash: hashActionInput(executableArgs),
-                  },
-                  jtiStore,
-                  jtiTtlMs,
-                });
-                logDecisionTokenVerdict(logger, {
-                  verdict,
-                  mode,
-                  contractId: cesteralAnnotation.contractId,
-                  toolName: tool.name,
-                });
-                if (mode === "enforce" && !verdict.ok) {
-                  recordToolExecution(tool.name, "error", Date.now() - startTime);
-                  throw new McpError(
-                    JsonRpcErrorCode.Unauthorized,
-                    `Governance decision token rejected: ${verdict.reasonCode}`
-                  );
-                }
-                if (verdict.ok && verdict.claims?.jti) {
-                  idempotencyKey = verdict.claims.jti;
-                }
-              }
-            }
-
-            // Only expose elicitInput when the connected client advertises the
-            // elicitation capability. Gating here means the `!sdkContext.elicitInput`
-            // fallback in shared elicitation-helpers triggers cleanly for stdio /
-            // unsupported clients, instead of the SDK rejecting downstream.
-            const clientSupportsElicitation = Boolean(
-              server.server.getClientCapabilities?.()?.elicitation
-            );
-
-            const sdkContext: ToolSdkContext = {
-              requestId: context.requestId,
-              sessionId,
-              elicitInput: clientSupportsElicitation
-                ? async (params) => {
-                    return server.server.elicitInput(params);
+                    });
+                    if (mode === "enforce" && !verdict.ok) {
+                      recordToolExecution(tool.name, "error", Date.now() - startTime);
+                      throw new McpError(
+                        JsonRpcErrorCode.Unauthorized,
+                        `Governance decision token rejected: ${verdict.reasonCode}`
+                      );
+                    }
+                    if (verdict.ok && verdict.claims?.jti) {
+                      idempotencyKey = verdict.claims.jti;
+                    }
                   }
-                : undefined,
-              sendLoggingMessage: async (params) => {
-                return server.sendLoggingMessage(params);
-              },
-              idempotencyKey,
-            };
-            const interactionContext: ToolInteractionContext = {
-              toolName: tool.name,
-              operation: `tool:${tool.name}`,
-              workflowId: workflowIdByToolName[tool.name],
-              platform,
-              packageName,
-              requestId: context.requestId,
-            };
-            if (platform) setSpanAttribute("mcp.platform", platform);
-            if (packageName) setSpanAttribute("mcp.server.package", packageName);
-            if (interactionContext.workflowId) {
-              setSpanAttribute("mcp.workflow.id", interactionContext.workflowId);
-            }
+                }
 
-            const result = await tool.logic(validatedInput, context, sdkContext);
-
-            // #204: validate output HERE, not only in the SDK. The SDK's own
-            // output-validation error quotes zod's message, which can quote the
-            // rejected value, and that value came from the platform. Built by
-            // the SDK, that error bypassed this factory's catch and went out
-            // without the untrusted marker. Thrown here, it is caught below,
-            // logged as a failure, and marked. Same schema, message and code
-            // as the SDK's check, so a result that passes here passes there.
-            if (outputValidator) {
-              const parsed = await outputValidator.safeParseAsync(result);
-              if (!parsed.success) {
-                throw new McpError(
-                  JsonRpcErrorCode.InvalidParams,
-                  `Output validation error: Invalid structured content for tool ${tool.name}: ${parsed.error.message}`
+                // Only expose elicitInput when the connected client advertises the
+                // elicitation capability. Gating here means the `!sdkContext.elicitInput`
+                // fallback in shared elicitation-helpers triggers cleanly for stdio /
+                // unsupported clients, instead of the SDK rejecting downstream.
+                const clientSupportsElicitation = Boolean(
+                  server.server.getClientCapabilities?.()?.elicitation
                 );
-              }
-            }
-            setSpanAttribute("mcp.tool.execution.success", true);
 
-            const durationMs = Date.now() - startTime;
-            setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
-
-            // ── Interaction logging (fire-and-forget) ────────────────────
-            if (interactionLogger) {
-              const logEntry: InteractionLogEntry = {
-                type: "tool_call",
-                ts: new Date().toISOString(),
-                sessionId: sessionId ?? "unknown",
-                tool: tool.name,
-                params: sanitizeParams(args) as Record<string, unknown>,
-                success: true,
-                durationMs,
-                workflowId: interactionContext.workflowId,
-                platform,
-                packageName,
-                requestId: context.requestId,
-              };
-              interactionLogger.append(logEntry);
-            }
-
-            const rawContent = tool.responseFormatter
-              ? tool.responseFormatter(result, validatedInput)
-              : [
-                  {
-                    type: "text" as const,
-                    text:
-                      defaultTextFormat === "pretty"
-                        ? JSON.stringify(result, null, 2)
-                        : JSON.stringify(result),
-                  },
-                ];
-
-            // Truncate oversized text content blocks to prevent context window overflow
-            const content = truncateTextContent(rawContent, responseCharacterLimit);
-
-            if (content.some((block, i) => block !== rawContent[i])) {
-              logger.warn(
-                {
-                  toolName: tool.name,
+                const sdkContext: ToolSdkContext = {
                   requestId: context.requestId,
-                  limit: responseCharacterLimit,
-                },
-                "Tool response text truncated"
-              );
-            }
-
-            if (tool.outputSchema && tool.responseFormatter) {
-              const hasVerbosePayloadText = content.some(
-                (item) =>
-                  item?.type === "text" &&
-                  typeof item.text === "string" &&
-                  (item.text.includes("Full Data:") || item.text.length > 6_000)
-              );
-              if (hasVerbosePayloadText) {
-                logger.warn(
-                  { toolName: tool.name },
-                  "Structured tool response text appears verbose; prefer concise summaries with structuredContent"
-                );
-              }
-            }
-
-            logger.info(
-              { toolName: tool.name, requestId: context.requestId },
-              "Tool executed successfully"
-            );
-
-            // Send MCP logging notification for successful completion
-            server
-              .sendLoggingMessage({
-                level: "info",
-                logger: tool.name,
-                data: `Tool ${tool.name} completed successfully`,
-              })
-              .catch(() => {
-                /* ignore if no client connected */
-              });
-
-            if (resolvedAuthContext) {
-              auditLogger.info(
-                {
-                  event: "tool_access",
                   sessionId,
-                  clientId: resolvedAuthContext.authInfo.clientId,
-                  authType: resolvedAuthContext.authInfo.authType,
-                  tool: tool.name,
-                  authorized: true,
-                  durationMs,
-                  success: true,
-                  ...auditedIdentifiers,
-                },
-                "Tool access"
-              );
-            }
+                  elicitInput: clientSupportsElicitation
+                    ? async (params) => {
+                        return server.server.elicitInput(params);
+                      }
+                    : undefined,
+                  sendLoggingMessage: async (params) => {
+                    return server.sendLoggingMessage(params);
+                  },
+                  idempotencyKey,
+                };
+                const interactionContext: ToolInteractionContext = {
+                  toolName: tool.name,
+                  operation: `tool:${tool.name}`,
+                  workflowId: workflowIdByToolName[tool.name],
+                  platform,
+                  packageName,
+                  requestId: context.requestId,
+                };
+                if (platform) setSpanAttribute("mcp.platform", platform);
+                if (packageName) setSpanAttribute("mcp.server.package", packageName);
+                if (interactionContext.workflowId) {
+                  setSpanAttribute("mcp.workflow.id", interactionContext.workflowId);
+                }
 
-            recordToolExecution(tool.name, "success", Date.now() - startTime);
+                const result = await tool.logic(validatedInput, context, sdkContext);
 
-            // MCP Spec 2025-11-25: return structuredContent alongside content
-            // when outputSchema is defined. This enables typed result parsing.
-            if (tool.outputSchema) {
-              return {
-                content,
-                structuredContent: result,
-                ...successMeta(),
-              };
-            }
+                // #204: validate output HERE, not only in the SDK. The SDK's own
+                // output-validation error quotes zod's message, which can quote the
+                // rejected value, and that value came from the platform. Built by
+                // the SDK, that error bypassed this factory's catch and went out
+                // without the untrusted marker. Thrown here, it is caught below,
+                // logged as a failure, and marked. Same schema, message and code
+                // as the SDK's check, so a result that passes here passes there.
+                if (outputValidator) {
+                  const parsed = await outputValidator.safeParseAsync(result);
+                  if (!parsed.success) {
+                    throw new McpError(
+                      JsonRpcErrorCode.InvalidParams,
+                      `Output validation error: Invalid structured content for tool ${tool.name}: ${parsed.error.message}`
+                    );
+                  }
+                }
+                setSpanAttribute("mcp.tool.execution.success", true);
 
-            return { content, ...successMeta() };
-          } catch (error) {
-            recordSpanError(error as Error);
-            setSpanAttribute("mcp.tool.execution.success", false);
-            if (error instanceof McpError) {
-              setSpanAttribute("mcp.tool.error_class", error.code);
-            }
+                const durationMs = Date.now() - startTime;
+                setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
 
-            recordToolExecution(tool.name, "error", Date.now() - startTime);
+                // ── Interaction logging (fire-and-forget) ────────────────────
+                if (interactionLogger) {
+                  const logEntry: InteractionLogEntry = {
+                    type: "tool_call",
+                    ts: new Date().toISOString(),
+                    sessionId: sessionId ?? "unknown",
+                    tool: tool.name,
+                    params: sanitizeParams(args) as Record<string, unknown>,
+                    success: true,
+                    durationMs,
+                    workflowId: interactionContext.workflowId,
+                    platform,
+                    packageName,
+                    requestId: context.requestId,
+                  };
+                  interactionLogger.append(logEntry);
+                }
 
-            if (resolvedAuthContext) {
-              auditLogger.info(
-                {
-                  event: "tool_access",
-                  sessionId,
-                  clientId: resolvedAuthContext.authInfo.clientId,
-                  authType: resolvedAuthContext.authInfo.authType,
-                  tool: tool.name,
-                  authorized: true,
-                  durationMs: Date.now() - startTime,
-                  success: false,
-                  ...auditedIdentifiers,
-                },
-                "Tool access (error)"
-              );
-            }
+                const rawContent = tool.responseFormatter
+                  ? tool.responseFormatter(result, validatedInput)
+                  : [
+                      {
+                        type: "text" as const,
+                        text:
+                          defaultTextFormat === "pretty"
+                            ? JSON.stringify(result, null, 2)
+                            : JSON.stringify(result),
+                      },
+                    ];
 
-            const mcpError = ErrorHandler.handleError(
-              error,
-              { operation: `tool:${tool.name}`, input: args },
-              logger
-            );
+                // Truncate oversized text content blocks to prevent context window overflow
+                const content = truncateTextContent(rawContent, responseCharacterLimit);
 
-            // A dead credential (expired/revoked refresh token, invalidated
-            // access token) makes every later call on this session fail the
-            // same way. Let the server drop the session so the next request
-            // re-authenticates at the transport and surfaces HTTP 401.
-            if (onAuthError && sessionId && mcpError.code === JsonRpcErrorCode.Unauthorized) {
-              try {
-                onAuthError(sessionId, mcpError);
-              } catch (hookError) {
-                logger.warn(
-                  { err: hookError, sessionId, tool: tool.name },
-                  "onAuthError hook failed (continuing with error response)"
+                if (content.some((block, i) => block !== rawContent[i])) {
+                  logger.warn(
+                    {
+                      toolName: tool.name,
+                      requestId: context.requestId,
+                      limit: responseCharacterLimit,
+                    },
+                    "Tool response text truncated"
+                  );
+                }
+
+                if (tool.outputSchema && tool.responseFormatter) {
+                  const hasVerbosePayloadText = content.some(
+                    (item) =>
+                      item?.type === "text" &&
+                      typeof item.text === "string" &&
+                      (item.text.includes("Full Data:") || item.text.length > 6_000)
+                  );
+                  if (hasVerbosePayloadText) {
+                    logger.warn(
+                      { toolName: tool.name },
+                      "Structured tool response text appears verbose; prefer concise summaries with structuredContent"
+                    );
+                  }
+                }
+
+                logger.info(
+                  { toolName: tool.name, requestId: context.requestId },
+                  "Tool executed successfully"
                 );
+
+                // Send MCP logging notification for successful completion
+                server
+                  .sendLoggingMessage({
+                    level: "info",
+                    logger: tool.name,
+                    data: `Tool ${tool.name} completed successfully`,
+                  })
+                  .catch(() => {
+                    /* ignore if no client connected */
+                  });
+
+                if (resolvedAuthContext) {
+                  auditLogger.info(
+                    {
+                      event: "tool_access",
+                      sessionId,
+                      clientId: resolvedAuthContext.authInfo.clientId,
+                      authType: resolvedAuthContext.authInfo.authType,
+                      tool: tool.name,
+                      authorized: true,
+                      durationMs,
+                      success: true,
+                      ...auditedIdentifiers,
+                    },
+                    "Tool access"
+                  );
+                }
+
+                recordToolExecution(tool.name, "success", Date.now() - startTime);
+
+                // MCP Spec 2025-11-25: return structuredContent alongside content
+                // when outputSchema is defined. This enables typed result parsing.
+                if (tool.outputSchema) {
+                  return {
+                    content,
+                    structuredContent: result,
+                    ...successMeta(),
+                  };
+                }
+
+                return { content, ...successMeta() };
+              } catch (error) {
+                recordSpanError(error as Error);
+                setSpanAttribute("mcp.tool.execution.success", false);
+                if (error instanceof McpError) {
+                  setSpanAttribute("mcp.tool.error_class", error.code);
+                }
+
+                recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+                if (resolvedAuthContext) {
+                  auditLogger.info(
+                    {
+                      event: "tool_access",
+                      sessionId,
+                      clientId: resolvedAuthContext.authInfo.clientId,
+                      authType: resolvedAuthContext.authInfo.authType,
+                      tool: tool.name,
+                      authorized: true,
+                      durationMs: Date.now() - startTime,
+                      success: false,
+                      ...auditedIdentifiers,
+                    },
+                    "Tool access (error)"
+                  );
+                }
+
+                const mcpError = ErrorHandler.handleError(
+                  error,
+                  { operation: `tool:${tool.name}`, input: args },
+                  logger
+                );
+
+                // A dead credential (expired/revoked refresh token, invalidated
+                // access token) makes every later call on this session fail the
+                // same way. Let the server drop the session so the next request
+                // re-authenticates at the transport and surfaces HTTP 401.
+                if (onAuthError && sessionId && mcpError.code === JsonRpcErrorCode.Unauthorized) {
+                  try {
+                    onAuthError(sessionId, mcpError);
+                  } catch (hookError) {
+                    logger.warn(
+                      { err: hookError, sessionId, tool: tool.name },
+                      "onAuthError hook failed (continuing with error response)"
+                    );
+                  }
+                }
+
+                // Log structured failure: params + error + captured upstream
+                // HTTP trail so analysts can diagnose why the platform rejected
+                // the call without replaying it.
+                if (interactionLogger) {
+                  const upstream = getRecordedUpstreamRequests();
+                  interactionLogger.logFailure({
+                    ts: new Date().toISOString(),
+                    sessionId: sessionId ?? "unknown",
+                    tool: tool.name,
+                    params: sanitizeParams(args) as Record<string, unknown>,
+                    durationMs: Date.now() - startTime,
+                    workflowId: workflowIdByToolName[tool.name],
+                    platform,
+                    packageName,
+                    requestId,
+                    errorCode: mcpError.code,
+                    errorMessage: mcpError.message,
+                    errorData: ErrorHandler.sanitizeErrorData(mcpError.data),
+                    upstream: upstream.length > 0 ? upstream : undefined,
+                  });
+                }
+
+                // Send MCP logging notification for tool failure
+                server
+                  .sendLoggingMessage({
+                    level: "error",
+                    logger: tool.name,
+                    // `mcpError.message`, not `(error as Error).message` (#741 H-2).
+                    // The raw error is whatever was thrown — for an upstream failure
+                    // its message embeds the platform's response body — and this
+                    // notification goes to the connected client. `mcpError` has been
+                    // through the McpError constructor's redaction; the original has
+                    // not. The error payload below already used `mcpError`; this was
+                    // the one sink still reading around it.
+                    data: `Tool ${tool.name} failed: ${mcpError.message}`,
+                  })
+                  .catch(() => {
+                    /* ignore if no client connected */
+                  });
+
+                const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
+
+                // Stack traces are written to server-side logs only (see ErrorHandler.handleError).
+                // Never send them to the client — they leak local filesystem paths and internals.
+                const errorPayload: Record<string, unknown> = {
+                  error: mcpError.message,
+                  code: mcpError.code,
+                  data: sanitizedData ?? null,
+                };
+
+                return {
+                  content: [
+                    {
+                      type: "text" as const,
+                      text: JSON.stringify(errorPayload),
+                    },
+                  ],
+                  isError: true,
+                  // #204: `error` and `data` can embed the platform's own response
+                  // text. Marked on every error result — see
+                  // TOOL_ERROR_UNTRUSTED_MARKER for why not only upstream ones.
+                  _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
+                };
               }
-            }
-
-            // Log structured failure: params + error + captured upstream
-            // HTTP trail so analysts can diagnose why the platform rejected
-            // the call without replaying it.
-            if (interactionLogger) {
-              const upstream = getRecordedUpstreamRequests();
-              interactionLogger.logFailure({
-                ts: new Date().toISOString(),
-                sessionId: sessionId ?? "unknown",
-                tool: tool.name,
-                params: sanitizeParams(args) as Record<string, unknown>,
-                durationMs: Date.now() - startTime,
-                workflowId: workflowIdByToolName[tool.name],
-                platform,
-                packageName,
-                requestId,
-                errorCode: mcpError.code,
-                errorMessage: mcpError.message,
-                errorData: ErrorHandler.sanitizeErrorData(mcpError.data),
-                upstream: upstream.length > 0 ? upstream : undefined,
-              });
-            }
-
-            // Send MCP logging notification for tool failure
-            server
-              .sendLoggingMessage({
-                level: "error",
-                logger: tool.name,
-                // `mcpError.message`, not `(error as Error).message` (#741 H-2).
-                // The raw error is whatever was thrown — for an upstream failure
-                // its message embeds the platform's response body — and this
-                // notification goes to the connected client. `mcpError` has been
-                // through the McpError constructor's redaction; the original has
-                // not. The error payload below already used `mcpError`; this was
-                // the one sink still reading around it.
-                data: `Tool ${tool.name} failed: ${mcpError.message}`,
-              })
-              .catch(() => {
-                /* ignore if no client connected */
-              });
-
-            const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
-
-            // Stack traces are written to server-side logs only (see ErrorHandler.handleError).
-            // Never send them to the client — they leak local filesystem paths and internals.
-            const errorPayload: Record<string, unknown> = {
-              error: mcpError.message,
-              code: mcpError.code,
-              data: sanitizedData ?? null,
-            };
-
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: JSON.stringify(errorPayload),
-                },
-              ],
-              isError: true,
-              // #204: `error` and `data` can embed the platform's own response
-              // text. Marked on every error result — see
-              // TOOL_ERROR_UNTRUSTED_MARKER for why not only upstream ones.
-              _meta: untrustedResultMeta(TOOL_ERROR_UNTRUSTED_MARKER),
-            };
-          }
-        }); // end runWithRequestContext(toolAlsContext)
-      });
-    });
+            }); // end runWithRequestContext(toolAlsContext)
+          },
+          toolSpanOptions
+        );
+      }
+    );
   }
 
   // Preserve the unparsed `tools/call` arguments for governance actionHash

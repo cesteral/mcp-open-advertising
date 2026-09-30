@@ -17,7 +17,16 @@ import { TraceExporter as GcpTraceExporter } from "@google-cloud/opentelemetry-c
 import { MetricExporter as GcpMetricExporter } from "@google-cloud/opentelemetry-cloud-monitoring-exporter";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
-import { trace, context, SpanStatusCode, type Span, type Tracer } from "@opentelemetry/api";
+import {
+  trace,
+  context,
+  isSpanContextValid,
+  SpanStatusCode,
+  type Link,
+  type Span,
+  type SpanContext,
+  type Tracer,
+} from "@opentelemetry/api";
 import type { IncomingMessage } from "http";
 import type { Logger } from "pino";
 
@@ -239,16 +248,39 @@ export function getTracer(name: string = "cesteral"): Tracer {
   return trace.getTracer(name);
 }
 
+export interface SpanOptions {
+  /**
+   * Remote parent to use instead of the active context's span. When set and
+   * the active context already has a span (e.g. the HTTP server span from
+   * auto-instrumentation), that span is kept as a link rather than dropped.
+   */
+  parent?: SpanContext;
+}
+
 /**
  * Create a span and execute a function within its context.
  */
 export async function withSpan<T>(
   spanName: string,
   fn: (span: Span) => Promise<T>,
-  attributes?: Record<string, string | number | boolean>
+  attributes?: Record<string, string | number | boolean>,
+  options: SpanOptions = {}
 ): Promise<T> {
   const tracer = getTracer();
-  const span = tracer.startSpan(spanName);
+  // No remote parent: exactly the pre-#247 call, parented on the active context.
+  let parentContext = context.active();
+  let span: Span;
+  if (options.parent) {
+    const links: Link[] = [];
+    const activeSpanContext = trace.getSpanContext(parentContext);
+    if (activeSpanContext && isSpanContextValid(activeSpanContext)) {
+      links.push({ context: activeSpanContext });
+    }
+    parentContext = trace.setSpanContext(parentContext, options.parent);
+    span = tracer.startSpan(spanName, { links }, parentContext);
+  } else {
+    span = tracer.startSpan(spanName);
+  }
 
   if (attributes) {
     for (const [key, value] of Object.entries(attributes)) {
@@ -257,7 +289,7 @@ export async function withSpan<T>(
   }
 
   try {
-    const result = await context.with(trace.setSpan(context.active(), span), () => fn(span));
+    const result = await context.with(trace.setSpan(parentContext, span), () => fn(span));
     span.setStatus({ code: SpanStatusCode.OK });
     return result;
   } catch (error: any) {
@@ -278,7 +310,8 @@ export async function withSpan<T>(
 export async function withToolSpan<T>(
   toolName: string,
   input: Record<string, any>,
-  fn: (span: Span) => Promise<T>
+  fn: (span: Span) => Promise<T>,
+  options: SpanOptions = {}
 ): Promise<T> {
   const attributes: Record<string, string | number | boolean> = {
     "mcp.tool.name": toolName,
@@ -288,7 +321,7 @@ export async function withToolSpan<T>(
   if (input.campaignId) attributes["mcp.tool.input.campaignId"] = input.campaignId;
   if (input.entityType) attributes["mcp.tool.input.entityType"] = input.entityType;
 
-  return withSpan(`tool.${toolName}`, fn, attributes);
+  return withSpan(`tool.${toolName}`, fn, attributes, options);
 }
 
 /**

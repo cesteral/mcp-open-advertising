@@ -44,4 +44,25 @@ describe("report-csv:// over the SDK", () => {
       "cesteral/untrusted": { v: 1, whole: true, reason: "report-csv" },
     });
   });
+
+  it("answers an unknown or expired id with -32602, not an internal error (#248)", async () => {
+    const server = new McpServer({ name: "csv-probe", version: "0.0.0" });
+    registerReportCsvResource({
+      server: server as never,
+      ResourceTemplate: ResourceTemplate as never,
+      store: new ReportCsvStore(),
+      platform: "TTD",
+      downloadToolName: "ttd_download_report",
+      logger: pino({ level: "silent" }),
+    });
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "csv-client", version: "0.0.0" });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    const read = client.readResource({ uri: "report-csv://does-not-exist" });
+    await expect(read).rejects.toMatchObject({ code: -32602 });
+    await expect(read).rejects.toThrow(/not found or expired/);
+    await client.close();
+  });
 });

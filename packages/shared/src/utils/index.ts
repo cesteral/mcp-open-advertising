@@ -10,6 +10,7 @@ export * from "./assert-account-scope.js";
 export * from "./governed-dry-run.js";
 export * from "./request-context.js";
 export * from "./telemetry.js";
+export * from "./trace-context.js";
 export * from "./metrics.js";
 export * from "./tool-handler-factory.js";
 export * from "./raw-tool-args.js";
