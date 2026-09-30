@@ -102,20 +102,72 @@ export function extractHeader(
 // RFC 9728 OAuth Protected Resource Metadata
 // ---------------------------------------------------------------------------
 
+const PROTECTED_RESOURCE_METADATA_PATH = "/.well-known/oauth-protected-resource";
+
+/**
+ * Authorization servers this resource trusts, from `MCP_AUTHORIZATION_SERVERS`
+ * (comma-separated issuer URLs). Entries that are not absolute https URLs are
+ * dropped (http is tolerated for localhost only) — a malformed issuer in the
+ * metadata document would send clients somewhere nobody intended.
+ */
+export function parseAuthorizationServers(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => {
+      try {
+        const url = new URL(entry);
+        if (url.protocol === "https:") return true;
+        return (
+          url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+        );
+      } catch {
+        return false;
+      }
+    });
+}
+
+/**
+ * RFC 9728 §3.3: the metadata URL is the resource's origin plus the well-known
+ * path. `MCP_RESOURCE_URI` wins when it is an absolute URL (it is what the
+ * token audience is checked against); otherwise the request's own origin.
+ */
+function protectedResourceMetadataUrl(requestUrl: string): string | undefined {
+  for (const candidate of [process.env.MCP_RESOURCE_URI, requestUrl]) {
+    if (!candidate) continue;
+    try {
+      return new URL(PROTECTED_RESOURCE_METADATA_PATH, new URL(candidate).origin).href;
+    } catch {
+      // not an absolute URL (e.g. the "cesteral-services" audience default)
+    }
+  }
+  return undefined;
+}
+
 export function oauthProtectedResourceBody(
   authMode: string,
   requestUrl: string
 ): { body: Record<string, unknown>; status: number } {
   if (authMode === "jwt") {
     const resourceUri =
-      process.env.MCP_RESOURCE_URI ||
-      requestUrl.replace("/.well-known/oauth-protected-resource", "");
+      process.env.MCP_RESOURCE_URI || requestUrl.replace(PROTECTED_RESOURCE_METADATA_PATH, "");
 
     const body: Record<string, unknown> = {
       resource: resourceUri,
       bearer_methods_supported: ["header"],
       scopes_supported: [],
     };
+
+    // MCP authorization (2025-06-18 onward) requires `authorization_servers`
+    // in this document: it is how a client finds where to obtain a token.
+    // Without MCP_AUTHORIZATION_SERVERS it is omitted rather than invented,
+    // and `warnIfProtectedResourceMetadataIncomplete` flags it at startup
+    // (#246).
+    const authorizationServers = parseAuthorizationServers(process.env.MCP_AUTHORIZATION_SERVERS);
+    if (authorizationServers.length > 0) {
+      body.authorization_servers = authorizationServers;
+    }
 
     if (process.env.MCP_RESOURCE_DOCS_URI) {
       body.resource_documentation = process.env.MCP_RESOURCE_DOCS_URI;
@@ -127,6 +179,44 @@ export function oauthProtectedResourceBody(
     body: { error: "OAuth not configured on this server" },
     status: 404,
   };
+}
+
+/**
+ * Log once at startup when jwt mode serves a Protected Resource Metadata
+ * document that names no authorization server — spec-compliant clients can
+ * then find no way to obtain a token (#246).
+ */
+export function warnIfProtectedResourceMetadataIncomplete(authMode: string, logger: Logger): void {
+  if (authMode !== "jwt") return;
+  if (parseAuthorizationServers(process.env.MCP_AUTHORIZATION_SERVERS).length > 0) return;
+  logger.warn(
+    { event: "oauth_prm_incomplete" },
+    "MCP_AUTH_MODE=jwt but MCP_AUTHORIZATION_SERVERS is unset or invalid: " +
+      "/.well-known/oauth-protected-resource names no authorization server, so " +
+      "MCP OAuth clients cannot discover where to obtain a token. Tokens must be issued out of band."
+  );
+}
+
+/**
+ * RFC 6750 §3 challenge for a 401 from `/mcp`, or `undefined` for modes whose
+ * credential is not an `Authorization: Bearer` token (the *-headers and
+ * ttd-token modes carry platform credentials in custom headers, so a Bearer
+ * challenge would misdirect the client).
+ *
+ * In jwt mode the challenge carries `resource_metadata` (RFC 9728 §5.1), which
+ * MCP clients use in preference to probing the well-known URL.
+ */
+export function wwwAuthenticateChallenge(authMode: string, requestUrl: string): string | undefined {
+  if (authMode === "jwt") {
+    const metadataUrl = protectedResourceMetadataUrl(requestUrl);
+    return metadataUrl
+      ? `Bearer realm="mcp", resource_metadata="${metadataUrl}"`
+      : `Bearer realm="mcp"`;
+  }
+  if (authMode.endsWith("-bearer")) {
+    return `Bearer realm="mcp"`;
+  }
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------

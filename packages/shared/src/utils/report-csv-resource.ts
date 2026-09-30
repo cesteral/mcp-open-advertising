@@ -5,6 +5,21 @@ import type { Logger } from "pino";
 import { buildReportCsvUri, REPORT_CSV_RESOURCE_SCHEME } from "./report-csv-store.js";
 import type { ReportCsvStore } from "./report-csv-store.js";
 import { REPORT_CSV_UNTRUSTED_MARKER, untrustedResourceMeta } from "./untrusted-content.js";
+import { JsonRpcErrorCode, McpError } from "./mcp-errors.js";
+
+/**
+ * Unknown, expired and other-session reads all answer the same -32602
+ * (InvalidParams): the code the SDK itself uses for an unregistered resource,
+ * and the one MCP 2026-07-28 assigns to "resource not found" (#248). A plain
+ * Error surfaced as -32603, which tells a client the server broke rather than
+ * that the URI is no good.
+ */
+function reportCsvNotFound(href: string): McpError {
+  return new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `Report CSV resource not found or expired: ${href}`
+  );
+}
 
 /**
  * Minimal shape we need from `@modelcontextprotocol/sdk`'s `McpServer`
@@ -130,7 +145,7 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
       // land on an instance that didn't produce the URI.
       const entry = await store.getRemoteByUri(uri.href);
       if (!entry) {
-        throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
+        throw reportCsvNotFound(uri.href);
       }
       // Tenant isolation. The resource id is a random UUID (a bearer capability),
       // but in a multi-tenant hosted deployment a leaked id must not let another
@@ -145,7 +160,7 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
           { uri: uri.href, event: "report_csv_cross_session_denied" },
           "Report CSV resource read denied — session mismatch"
         );
-        throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
+        throw reportCsvNotFound(uri.href);
       }
       return {
         contents: [
