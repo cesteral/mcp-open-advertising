@@ -37,7 +37,6 @@ Execute arbitrary GAQL queries against the Google Ads API.
 
 - `customerId` (string): Google Ads customer ID (no dashes)
 - `query` (string): GAQL query string
-- `pageSize` (number, optional): _Deprecated._ Use `maxRows` instead.
 - `pageToken` (string, optional): Cursor for the next upstream page (different from `offset` which slices the in-memory buffer)
 - `mode`, `columns`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `maxRows` caps page size (default 10/50; hard cap 200). `offset` is not supported here — paginate via `pageToken`.
 
@@ -182,7 +181,7 @@ Dry-run validate an entity payload via the Google Ads API with `validateOnly: tr
 
 **Phase: Production-Ready**
 
-All tools are fully implemented using Google Ads REST API v25. Entity CRUD, GAQL queries, and bulk operations are operational via OAuth2 refresh token authentication.
+All tools are implemented against the Google Ads REST API v25, with request shapes checked against Google's Discovery document in hermetic tests. No tool has been exercised against a live account (every tool is at `declared` verification). `googleAds:search` never sends `pageSize` (v25 rejects it with `PAGE_SIZE_NOT_SUPPORTED`); results are bounded client-side and paged with `pageToken`.
 
 ## Development
 

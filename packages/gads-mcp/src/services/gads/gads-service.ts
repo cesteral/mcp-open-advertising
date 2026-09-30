@@ -459,10 +459,18 @@ export class GAdsService {
       });
       return { valid: true };
     } catch (error: unknown) {
-      const err = error as Record<string, unknown> | null;
-      const errorMessage = (err as { message?: string })?.message ?? String(error);
-      const errorBody = (err as { data?: { errorBody?: string } })?.data?.errorBody ?? errorMessage;
-      return { valid: false, errors: [errorBody] };
+      // Only a 400 is Google Ads judging the payload. A 401/403/429/5xx says
+      // nothing about validity, so it is rethrown instead of being reported as
+      // "payload invalid" (the governed dry runs already treat a thrown
+      // validate as a failure to validate, not a verdict).
+      const httpStatus = (error as { data?: { httpStatus?: number } } | null)?.data?.httpStatus;
+      if (httpStatus !== 400) {
+        throw error;
+      }
+      // The error message carries parseGAdsErrors' summary ("[code] message; …")
+      // rather than the raw, truncated JSON body.
+      const errorMessage = (error as { message?: string })?.message ?? String(error);
+      return { valid: false, errors: [errorMessage] };
     }
   }
 
@@ -565,6 +573,17 @@ export class GAdsService {
     }> = [];
 
     for (const adjustment of adjustments) {
+      // The id is interpolated into GAQL and into the resource name, and an
+      // ad group id is an int64 (Resources__AdGroup.id), so anything but
+      // digits is refused before it can reach either.
+      if (!/^\d+$/.test(adjustment.adGroupId)) {
+        results.push({
+          adGroupId: adjustment.adGroupId,
+          success: false,
+          error: `adGroupId must be a numeric ad group ID, got ${JSON.stringify(adjustment.adGroupId)}`,
+        });
+        continue;
+      }
       try {
         // 1. Read — fetch current ad group to capture previous bids
         const readQuery = `SELECT ad_group.id, ad_group.name, ad_group.cpc_bid_micros, ad_group.cpm_bid_micros FROM ad_group WHERE ad_group.id = ${adjustment.adGroupId}`;
