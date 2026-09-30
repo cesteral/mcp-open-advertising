@@ -63,4 +63,17 @@ describe("amazon_dsp_list_advertisers pagination", () => {
     expect(result.pagination.nextCursor).toBeNull();
     expect(result.pagination.hasMore).toBe(false);
   });
+
+  it("keeps paginating after a full page when Amazon omits totalResults (fleet review #13)", async () => {
+    mockListAdvertisers.mockResolvedValue({
+      entities: [{ advertiserId: "1" }, { advertiserId: "2" }],
+      pageInfo: { startIndex: 0, count: 2, totalResults: undefined },
+    });
+
+    const result = await listAdvertisersLogic({ startIndex: 0, pageSize: 2 }, ctx, sdk);
+
+    expect(result.pagination.nextCursor).toBe("2");
+    expect(result.pagination.hasMore).toBe(true);
+    expect(result.pagination.totalCount).toBeUndefined();
+  });
 });

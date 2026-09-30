@@ -33,6 +33,12 @@ describe("AmazonDspService", () => {
       expect(result.pageInfo.totalResults).toBe(1);
     });
 
+    it("reports an absent totalResults as unknown, not 0 (fleet review #13)", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ orders: [{ orderId: "o1" }] });
+      const result = await service.listEntities("order", { advertiserId: "adv_123" });
+      expect(result.pageInfo.totalResults).toBeUndefined();
+    });
+
     it("passes startIndex for offset pagination", async () => {
       mockHttpClient.get.mockResolvedValueOnce({ orders: [], totalResults: 50 });
       await service.listEntities("order", { advertiserId: "adv_123" }, 25);

@@ -67,6 +67,21 @@ describe("downloadReportLogic", () => {
     expect(mockDownloadReport).not.toHaveBeenCalled();
   });
 
+  // Fleet review amazon-dsp #7: a public non-S3 host passed the generic
+  // checks, so the server would fetch any caller-chosen URL. Report locations
+  // are presigned S3 (amzn/ads-advanced-tools-docs Postman: every example
+  // `location` is *.s3.amazonaws.com).
+  it.each([
+    "https://example.com/report.csv",
+    "https://attacker.example/amazonaws.com/report.csv",
+    "https://amazonaws.com.attacker.example/report.csv",
+  ])("refuses non-S3 host %s before fetching", async (downloadUrl) => {
+    await expect(
+      downloadReportLogic({ downloadUrl, mode: "rows" } as any, baseContext, baseSdkContext)
+    ).rejects.toThrow("not an allowed report host");
+    expect(mockDownloadReport).not.toHaveBeenCalled();
+  });
+
   it("returns parsed CSV data", async () => {
     mockDownloadReport.mockResolvedValueOnce({
       headers: ["date", "impressions", "clicks"],
@@ -78,7 +93,7 @@ describe("downloadReportLogic", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", mode: "rows" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv", mode: "rows" },
       baseContext,
       baseSdkContext
     );
@@ -99,7 +114,7 @@ describe("downloadReportLogic", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1 },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv", maxRows: 1 },
       baseContext,
       baseSdkContext
     );
@@ -116,13 +131,13 @@ describe("downloadReportLogic", () => {
     });
 
     await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv" },
       baseContext,
       baseSdkContext
     );
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
+      "https://corvo-reports.s3.amazonaws.com/report.csv",
       10,
       undefined,
       { includeRawCsv: false }
@@ -140,7 +155,7 @@ describe("downloadReportLogic", () => {
 
     const result = await downloadReportLogic(
       {
-        downloadUrl: "https://example.com/report.json",
+        downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.json",
         storeRawCsv: true,
       },
       baseContext,
@@ -148,7 +163,7 @@ describe("downloadReportLogic", () => {
     );
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.json",
+      "https://corvo-reports.s3.amazonaws.com/report.json",
       10,
       undefined,
       { includeRawCsv: true }
@@ -173,13 +188,13 @@ describe("GCS spill integration", () => {
     });
 
     await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv" },
       baseContext,
       baseSdkContext
     );
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
+      "https://corvo-reports.s3.amazonaws.com/report.csv",
       10,
       undefined,
       { includeRawCsv: false }
@@ -197,13 +212,13 @@ describe("GCS spill integration", () => {
     });
 
     await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv" },
       baseContext,
       baseSdkContext
     );
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
+      "https://corvo-reports.s3.amazonaws.com/report.csv",
       10,
       undefined,
       { includeRawCsv: true }
@@ -231,7 +246,7 @@ describe("GCS spill integration", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://analytics.example.com/reports/task-abc/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/reports/task-abc/report.csv" },
       baseContext,
       baseSdkContext
     );
@@ -279,7 +294,7 @@ describe("GCS spill integration", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://analytics.example.com/reports/task-json/report.json" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/reports/task-json/report.json" },
       baseContext,
       baseSdkContext
     );
@@ -312,7 +327,7 @@ describe("GCS spill integration", () => {
     mockSpillBodyToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv" },
       baseContext,
       baseSdkContext
     );
@@ -333,7 +348,7 @@ describe("GCS spill integration", () => {
     mockSpillBodyToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://corvo-reports.s3.amazonaws.com/report.csv" },
       baseContext,
       baseSdkContext
     );

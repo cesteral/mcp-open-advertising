@@ -8,12 +8,14 @@
  * Supports two credential flows:
  * 1. Static Bearer token (Authorization header) — for pre-generated tokens
  * 2. Refresh token flow (X-AmazonDsp-App-Id/Secret/Refresh-Token headers) —
- *    auto-refreshes access tokens (recommended for production, 24h token expiry)
+ *    auto-refreshes LwA access tokens, which expire after 60 minutes
+ *    (recommended for production)
  *
  * Falls back to static token if refresh credentials are not provided.
  *
- * AmazonDsp-specific: also extracts X-AmazonDsp-Advertiser-Id from headers, which is
- * required for all API calls and included in the credential fingerprint.
+ * AmazonDsp-specific: also extracts the profile ID from the
+ * Amazon-Advertising-API-Scope header, which is required for all API calls and
+ * included in the credential fingerprint.
  */
 
 import type { Logger } from "pino";

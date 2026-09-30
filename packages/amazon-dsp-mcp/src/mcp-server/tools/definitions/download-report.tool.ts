@@ -19,6 +19,9 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_download_report";
+
+/** Hosts a report `location` may point at (presigned S3). */
+export const AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES = ["amazonaws.com"] as const;
 const TOOL_TITLE = "Download AmazonDsp Report";
 const TOOL_DESCRIPTION = `Download and parse a AmazonDsp report from a download URL.
 
@@ -82,8 +85,14 @@ export async function downloadReportLogic(
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
   // The URL arrives from the MCP client — refuse non-https, IP-literal and
-  // internal hosts before fetching it server-side.
-  assertSafeDownloadUrl(input.downloadUrl, { toolName: TOOL_NAME });
+  // internal hosts before fetching it server-side, and anything that is not an
+  // S3 host: DSP report status returns a presigned S3 `location`, and every
+  // report download in Amazon's own Postman collections
+  // (amzn/ads-advanced-tools-docs) is on `*.s3.amazonaws.com`.
+  assertSafeDownloadUrl(input.downloadUrl, {
+    toolName: TOOL_NAME,
+    allowedHostSuffixes: AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES,
+  });
 
   return createServiceDownloadedReportView({
     input,
@@ -125,13 +134,13 @@ export const downloadReportTool = {
     {
       label: "Download report summary preview",
       input: {
-        downloadUrl: "https://analytics.amazonDsp.com/reports/task-abc123/report.csv",
+        downloadUrl: "https://corvo-reports.s3.amazonaws.com/reports/task-abc123/report.csv",
       },
     },
     {
       label: "Download selected columns as a paged row slice",
       input: {
-        downloadUrl: "https://analytics.amazonDsp.com/reports/task-xyz789/report.csv",
+        downloadUrl: "https://corvo-reports.s3.amazonaws.com/reports/task-xyz789/report.csv",
         mode: "rows",
         columns: ["lineItem", "impressions", "totalCost"],
         maxRows: 50,

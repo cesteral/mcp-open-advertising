@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { nextAmazonDspStartIndex } from "../../../services/amazon-dsp/types.js";
 import {
   PaginationOutputSchema,
   buildPaginationOutput,
@@ -64,14 +65,13 @@ export async function listAdvertisersLogic(
 
   const advertisers = result.entities as unknown as Record<string, unknown>[];
   const totalResults = result.pageInfo.totalResults;
-  const nextStart = startIndex + advertisers.length;
-  const hasMore = nextStart < totalResults;
+  const nextStart = nextAmazonDspStartIndex(result.pageInfo, advertisers.length);
 
   return {
     advertisers,
     count: advertisers.length,
     pagination: buildPaginationOutput({
-      nextCursor: hasMore ? String(nextStart) : null,
+      nextCursor: nextStart !== null ? String(nextStart) : null,
       pageSize: advertisers.length,
       totalCount: totalResults,
       nextPageInputKey: "startIndex",

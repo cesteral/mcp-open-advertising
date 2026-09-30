@@ -236,7 +236,7 @@ export class AmazonDspService {
     const entities = ((result?.[
       config.responseKey
     ] as AmazonDspEntityMap[typeof canonicalType][]) ?? []) as AmazonDspEntityMap[T][];
-    const totalResults = result?.totalResults ?? 0;
+    const totalResults = typeof result?.totalResults === "number" ? result.totalResults : undefined;
 
     return {
       entities,
@@ -355,7 +355,7 @@ export class AmazonDspService {
     )) as AmazonDspRawListResponse;
 
     const entities = (result?.response as AmazonDspAdvertiser[]) ?? [];
-    const totalResults = result?.totalResults ?? 0;
+    const totalResults = typeof result?.totalResults === "number" ? result.totalResults : undefined;
 
     return {
       entities,

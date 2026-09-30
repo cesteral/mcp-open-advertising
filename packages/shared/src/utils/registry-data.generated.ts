@@ -477,7 +477,7 @@ export const REGISTRY_DATA: RegistryData = {
     {
       "package": "amazon-dsp-mcp",
       "title": "Amazon DSP MCP Server",
-      "description": "Amazon DSP management — CRUD, async reports, targeting, and audience management",
+      "description": "Amazon DSP management — CRUD, async reports, video upload, and Ads API v1 commitments and forecasts",
       "runtime_description": "Amazon DSP: orders, line items, creatives, reporting.",
       "platform": "Amazon DSP",
       "platform_display_name": "Amazon DSP",
