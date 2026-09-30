@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
+import { SNAPCHAT_MICROS_PER_CURRENCY_UNIT } from "../utils/computed-metrics.js";
 import {
   assertSafeDownloadUrl,
   ComputedMetricsFlagSchema,
@@ -90,6 +91,10 @@ export async function downloadReportLogic(
     spillServer: "snapchat",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: SNAPCHAT_COMPUTED_METRIC_ALIASES,
+    // `spend` and `conversion_purchases_value` are micro-currency, as
+    // snapchat_get_report / get_report_breakdowns already treat the same
+    // async CSV; computing on raw micros made CPA/CPM/CPC 1,000,000x too large.
+    computedMetricMoneyDivisor: SNAPCHAT_MICROS_PER_CURRENCY_UNIT,
     download: ({ fetchLimit, includeRawCsv }) =>
       snapchatReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
         includeRawCsv,

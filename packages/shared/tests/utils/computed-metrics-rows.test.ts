@@ -62,3 +62,26 @@ describe("appendComputedMetricsToRows", () => {
     expect(out[0]!.cpa).toBe("25");
   });
 });
+
+describe("appendComputedMetricsToRows moneyDivisor", () => {
+  it("converts cost and conversion value before computing, leaving the row as sent", () => {
+    const out = appendComputedMetricsToRows(
+      [
+        {
+          cost: "25000000",
+          impressions: "10000",
+          clicks: "500",
+          conversions: "5",
+          conversionValue: "100000000",
+        },
+      ],
+      {},
+      { moneyDivisor: 1_000_000 }
+    );
+    expect(Number(out[0]!.cpm)).toBeCloseTo(2.5);
+    expect(Number(out[0]!.cpc)).toBeCloseTo(0.05);
+    expect(Number(out[0]!.cpa)).toBeCloseTo(5);
+    expect(Number(out[0]!.roas)).toBeCloseTo(4);
+    expect(out[0]!.cost).toBe("25000000");
+  });
+});

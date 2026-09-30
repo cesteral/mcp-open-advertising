@@ -337,3 +337,42 @@ describe("downloadReportResponseFormatter", () => {
     expect(content[0].text).toContain("Showing 1000 of 5000 rows");
   });
 });
+
+// Fleet review 2026-09, snapchat #5: download_report computed CPA/CPM/CPC on
+// raw micro-currency `spend`, while get_report / get_report_breakdowns convert
+// the same async CSV to currency first.
+describe("downloadReportLogic computed metrics (spend is micro-currency)", () => {
+  it("converts spend and conversion value from micros before computing", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: [
+        "spend",
+        "impressions",
+        "swipes",
+        "conversion_purchases",
+        "conversion_purchases_value",
+      ],
+      rows: [["25000000", "10000", "500", "5", "100000000"]],
+      totalRows: 1,
+    });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://analytics.snapchat.com/reports/t1/report.csv",
+        mode: "rows",
+        includeComputedMetrics: true,
+      } as any,
+      baseContext,
+      baseSdkContext
+    );
+
+    const row = result.rows![0] as Record<string, string>;
+    // 25.00 spend / 10,000 impressions → CPM 2.5; / 500 swipes → CPC 0.05;
+    // / 5 purchases → CPA 5; 100.00 value / 25.00 spend → ROAS 4.
+    expect(Number(row.cpm)).toBeCloseTo(2.5);
+    expect(Number(row.cpc)).toBeCloseTo(0.05);
+    expect(Number(row.cpa)).toBeCloseTo(5);
+    expect(Number(row.roas)).toBeCloseTo(4);
+    // The platform's own values are untouched.
+    expect(row.spend).toBe("25000000");
+  });
+});

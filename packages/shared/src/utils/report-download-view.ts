@@ -74,6 +74,8 @@ export async function createServiceDownloadedReportView(params: {
   spillServer: string;
   reportId: string;
   computedMetricAliases: ColumnAliases;
+  /** Divide money columns by this before computing metrics (1_000_000 for micros). */
+  computedMetricMoneyDivisor?: number;
   defaultMimeType?: string;
   download: (options: {
     fetchLimit: number;
@@ -90,7 +92,9 @@ export async function createServiceDownloadedReportView(params: {
 
   const recordRows = arrayRowsToRecords(result.headers, result.rows) as Record<string, string>[];
   const augmented = params.input.includeComputedMetrics
-    ? appendComputedMetricsToRows(recordRows, params.computedMetricAliases)
+    ? appendComputedMetricsToRows(recordRows, params.computedMetricAliases, {
+        moneyDivisor: params.computedMetricMoneyDivisor,
+      })
     : recordRows;
   const computedWarning = params.input.includeComputedMetrics
     ? augmented[0]?._computedMetricsWarnings
