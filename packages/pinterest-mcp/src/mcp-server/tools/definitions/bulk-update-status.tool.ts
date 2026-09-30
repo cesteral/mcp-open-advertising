@@ -129,6 +129,12 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
+  // Scope-check BEFORE the capacity check and the confirmation prompt, so a
+  // user is never asked to confirm a call that then fails on an account
+  // mismatch (fleet review 2026-09, pinterest #24).
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
+
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first write.
   assertPinterestBulkCapacity(
@@ -156,9 +162,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await pinterestService.bulkUpdateStatus(
     input.entityType as PinterestEntityType,

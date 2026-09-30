@@ -32,9 +32,9 @@ export const ListAdvertisersInputSchema = z
       .number()
       .int()
       .min(1)
-      .max(100)
+      .max(250)
       .optional()
-      .describe("Number of advertisers per page (Pinterest default 25, max 100)."),
+      .describe("Number of advertisers per page (Pinterest default 25, max 250)."),
   })
   .describe("Parameters for listing Pinterest advertisers");
 

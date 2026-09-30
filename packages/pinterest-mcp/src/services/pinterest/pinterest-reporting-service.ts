@@ -110,6 +110,52 @@ export interface PinterestReportConfig {
 }
 
 /**
+ * Maximum report time range, in days, per granularity — `analytics/create_report`
+ * (Pinterest OpenAPI v5.28.0): "If granularity is not HOUR, you can pull data
+ * from up to 914 days before the current date in UTC time, with a maximum time
+ * range of 186 days. If granularity is HOUR, … up to 8 days before the current
+ * date …, with a maximum time range of 3 days."
+ */
+export const PINTEREST_REPORT_MAX_RANGE_DAYS = { HOUR: 3, OTHER: 186 } as const;
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Refuse a report range Pinterest documents as too long, before a report task
+ * is created. The range is measured as end − start in whole days, the lenient
+ * reading of "maximum time range", so nothing Pinterest would accept is
+ * refused. The look-back windows (914 / 8 days before today) depend on the
+ * clock and are left to Pinterest. Unparseable dates are also left to it.
+ */
+export function assertReportDateRange(
+  startDate: string,
+  endDate: string,
+  granularity: NonNullable<PinterestReportConfig["granularity"]>
+): void {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+  if (end < start) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Pinterest report end_date ${endDate} is before start_date ${startDate}`
+    );
+  }
+  const max =
+    granularity === "HOUR"
+      ? PINTEREST_REPORT_MAX_RANGE_DAYS.HOUR
+      : PINTEREST_REPORT_MAX_RANGE_DAYS.OTHER;
+  const days = Math.round((end - start) / DAY_MS);
+  if (days > max) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Pinterest reports cover at most ${max} days at ${granularity} granularity; ${startDate}..${endDate} spans ${days}. Split the range into several reports.`,
+      { startDate, endDate, granularity, maxRangeDays: max }
+    );
+  }
+}
+
+/**
  * Build the v5 `AdsAnalyticsCreateAsyncRequest` body.
  *
  * - `level`, not `type` — `type` is not a field of the request.
@@ -118,6 +164,7 @@ export interface PinterestReportConfig {
  * - `targeting_types` requires a level ending in `_TARGETING`.
  */
 export function buildReportRequestBody(config: PinterestReportConfig): Record<string, unknown> {
+  assertReportDateRange(config.start_date, config.end_date, config.granularity ?? "DAY");
   const reportType = config.type ?? "CAMPAIGN";
   const targetingTypes = config.targeting_types?.length ? config.targeting_types : undefined;
   let level: string;

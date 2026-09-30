@@ -116,7 +116,9 @@ export class PinterestService {
 
     return {
       entities: (data?.items ?? []) as PinterestEntityMap[T][],
-      pageInfo: { bookmark: data?.bookmark ?? null },
+      // `bookmark` is a nullable string; Pinterest also answers the last page
+      // with "", which is not a cursor (listAdAccounts already treats it so).
+      pageInfo: { bookmark: data?.bookmark ? data.bookmark : null },
     };
   }
 
