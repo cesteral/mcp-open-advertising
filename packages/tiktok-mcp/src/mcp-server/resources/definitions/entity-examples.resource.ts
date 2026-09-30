@@ -140,38 +140,6 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
 }
 \`\`\`
 `,
-
-  creative: `# TikTok Creative Examples
-
-## Create a Video Creative
-\`\`\`json
-{
-  "entityType": "creative",
-  "advertiserId": "1234567890",
-  "data": {
-    "display_name": "Summer Sale Video Creative",
-    "video_id": "v0200fg10000cekdqpbc77ue1tvq1ns0",
-    "ad_text": "Shop the Summer Sale — 50% off!",
-    "call_to_action": "SHOP_NOW",
-    "landing_page_url": "https://example.com/sale"
-  }
-}
-\`\`\`
-
-## Create an Image Creative
-\`\`\`json
-{
-  "entityType": "creative",
-  "advertiserId": "1234567890",
-  "data": {
-    "display_name": "Product Banner Creative",
-    "image_ids": ["imt0000100000011abc123"],
-    "ad_text": "New arrivals every week",
-    "call_to_action": "LEARN_MORE"
-  }
-}
-\`\`\`
-`,
 };
 
 function buildAllExamplesMarkdown(): string {

@@ -58,7 +58,12 @@ describe("getReportLogic", () => {
 
   it("returns report result with correct structure", async () => {
     const result = await getReportLogic(
-      { reportName: "My Report", dateRange: "Last7Days" },
+      {
+        reportName: "My Report",
+        dateRange: "Last7Days",
+        reportTemplateId: 1,
+        advertiserIds: ["adv-1"],
+      } as any,
       createMockContext(),
       createMockSdkContext()
     );
@@ -230,5 +235,17 @@ describe("getReportResponseFormatter", () => {
     expect(content[0].text).toContain("Execution details:");
     expect(content[0].text).toContain('"ReportExecutionState": "Complete"');
     expect(content[0].text).toContain('"TotalRows": 1500');
+  });
+});
+
+describe("ttd_get_report advertiser scope", () => {
+  it("the input schema requires at least one advertiser ID (polling is advertiser-scoped)", async () => {
+    const { GetReportInputSchema } = await import(
+      "../../src/mcp-server/tools/definitions/get-report.tool.js"
+    );
+    const base = { reportName: "R", dateRange: "Yesterday", reportTemplateId: 1 };
+    expect(GetReportInputSchema.safeParse(base).success).toBe(false);
+    expect(GetReportInputSchema.safeParse({ ...base, advertiserIds: [] }).success).toBe(false);
+    expect(GetReportInputSchema.safeParse({ ...base, advertiserIds: ["a"] }).success).toBe(true);
   });
 });

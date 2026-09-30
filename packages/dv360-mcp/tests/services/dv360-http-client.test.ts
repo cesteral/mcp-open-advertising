@@ -229,21 +229,21 @@ describe("DV360HttpClient", () => {
       expect(logger.warn).toHaveBeenCalled();
     });
 
-    it("caps Retry-After to MAX_BACKOFF_MS (10s)", async () => {
-      // 429 with Retry-After: 60 seconds (way beyond MAX_BACKOFF_MS)
+    // Re-sending after a capped 10s (the old behaviour) comes before Google
+    // said to and only extends the throttle; a longer wait is surfaced instead.
+    it("does not re-send before a Retry-After longer than MAX_BACKOFF_MS", async () => {
       mockFetchWithTimeout
         .mockResolvedValueOnce(
           fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" })
         )
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
-      const fetchPromise = client.fetch("/limited");
+      const error = await client.fetch("/limited").catch((e: unknown) => e);
 
-      // Should be capped at 10s (MAX_BACKOFF_MS), not 60s
-      await vi.advanceTimersByTimeAsync(10_000);
-
-      const result = await fetchPromise;
-      expect(result).toEqual({ ok: true });
+      expect(error).toBeInstanceOf(McpError);
+      expect((error as McpError).code).toBe(JsonRpcErrorCode.RateLimited);
+      expect((error as McpError).data?.retryAfterMs).toBe(60_000);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
   });
 

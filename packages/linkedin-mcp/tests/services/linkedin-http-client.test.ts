@@ -10,6 +10,7 @@ import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import { LinkedInHttpClient } from "../../src/services/linkedin/linkedin-http-client.js";
+import { LinkedInReportingService } from "../../src/services/linkedin/linkedin-reporting-service.js";
 import type { LinkedInAuthAdapter } from "../../src/auth/linkedin-auth-adapter.js";
 import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
@@ -100,17 +101,56 @@ describe("LinkedInHttpClient", () => {
       expect(headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
 
-    it("builds URL correctly with query params", async () => {
+    it("builds a Rest.li 2.0 query string (List(...), encoded URN, literal structure)", async () => {
       mockOkResponse();
 
-      await client.get("/v2/adCampaigns", {
+      await client.get("/v2/adCreatives", {
         q: "search",
-        "accounts[0]": "urn:li:sponsoredAccount:123",
+        accounts: ["urn:li:sponsoredAccount:123"],
       });
 
+      // URLSearchParams used to yield `accounts=List%28urn%253Ali...%29`:
+      // structural characters encoded and the URN's `%` encoded twice.
       const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
-      expect(calledUrl).toContain("/v2/adCampaigns");
-      expect(calledUrl).toContain("q=search");
+      expect(calledUrl).toBe(
+        "https://api.linkedin.com/v2/adCreatives?q=search&accounts=List(urn%3Ali%3AsponsoredAccount%3A123)"
+      );
+    });
+
+    it("sends adAnalytics in Rest.li 2.0 syntax end to end", async () => {
+      mockOkResponse({ elements: [] });
+      const reporting = new LinkedInReportingService(
+        { consume: vi.fn().mockResolvedValue(undefined) } as any,
+        client
+      );
+
+      await reporting.getAnalytics(
+        "urn:li:sponsoredAccount:123",
+        { start: "2026-03-01", end: "2026-03-04" },
+        ["impressions", "clicks"],
+        "CAMPAIGN",
+        "DAILY"
+      );
+
+      // Not `accounts[0]=` / `dateRange.start.year=` — those are Rest.li 1.0,
+      // and every request declares X-Restli-Protocol-Version: 2.0.0.
+      const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
+      expect(calledUrl).toBe(
+        "https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot=CAMPAIGN&timeGranularity=DAILY" +
+          "&accounts=List(urn%3Ali%3AsponsoredAccount%3A123)" +
+          "&dateRange=(start:(year:2026,month:3,day:1),end:(year:2026,month:3,day:4))" +
+          "&fields=impressions,clicks"
+      );
+    });
+
+    it("sends no query string when there are no params", async () => {
+      mockOkResponse({});
+
+      await client.get("/rest/adAccounts/123");
+
+      expect(mockFetchWithTimeout.mock.calls[0][0]).toBe(
+        "https://api.linkedin.com/rest/adAccounts/123"
+      );
     });
 
     it("returns parsed JSON response", async () => {

@@ -21,6 +21,9 @@ import {
   listReportColumnsTool,
 } from "../../src/mcp-server/tools/definitions/list-report-columns.tool.js";
 
+import catalogJson from "../../src/config/report-columns-catalog.json" with { type: "json" };
+import { isV0Field, isV0RowResource } from "../helpers/v0-field-catalog.js";
+
 const baseContext = { requestId: "req-1" } as any;
 const baseSdkContext = { sessionId: "s-1" } as any;
 
@@ -112,7 +115,7 @@ describe("listReportColumnsLogic — live path", () => {
           sortable: false,
         },
       ],
-      totalSize: 1,
+      totalResultsCount: 1,
     });
     mockResolveSession.mockReturnValue({
       sa360Service: { searchFields: mockSearchFields },
@@ -149,7 +152,7 @@ describe("listReportColumnsLogic — live path", () => {
   });
 
   it("falls back to catalog when the live call returns zero fields", async () => {
-    const mockSearchFields = vi.fn().mockResolvedValue({ fields: [], totalSize: 0 });
+    const mockSearchFields = vi.fn().mockResolvedValue({ fields: [], totalResultsCount: 0 });
     mockResolveSession.mockReturnValue({
       sa360Service: { searchFields: mockSearchFields },
     } as any);
@@ -196,5 +199,21 @@ describe("tool metadata", () => {
   it("is a read-only discovery tool", () => {
     expect(listReportColumnsTool.name).toBe("sa360_list_report_columns");
     expect(listReportColumnsTool.annotations.readOnlyHint).toBe(true);
+  });
+});
+
+describe("static fallback catalog conforms to Reporting API v0", () => {
+  it("lists only resources that exist on v0 SearchAds360Row", () => {
+    expect(catalogJson.resources.filter((r) => !isV0RowResource(r))).toEqual([]);
+  });
+
+  it("lists only fields that exist on v0 SearchAds360Row", () => {
+    const all = Object.values(catalogJson.fieldGroups as Record<string, string[]>).flat();
+    expect(all.length).toBeGreaterThan(20);
+    expect(all.filter((f) => !isV0Field(f))).toEqual([]);
+  });
+
+  it("does not advertise the non-v0 `account` resource in the tool description", () => {
+    expect(listReportColumnsTool.description).not.toContain("`account`");
   });
 });

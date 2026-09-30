@@ -3,6 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertLinkedInBulkCapacity,
+  bulkCapacityDryRunError,
+  withBulkCapacityError,
+  ONE_WRITE_PER_ITEM,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import {
   elicitBulkStatusChangeConfirmation,
@@ -97,7 +103,10 @@ export async function bulkUpdateStatusLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = withBulkCapacityError(
+      buildBulkEffectDryRun(input),
+      bulkCapacityDryRunError(TOOL_NAME, input.entityUrns.length, ONE_WRITE_PER_ITEM, "entityUrns")
+    );
     return {
       confirmed: true,
       results: [],
@@ -108,6 +117,10 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit in time — before the prompt
+  // and before the first write. One 3-token linkedin:default PATCH per item.
+  assertLinkedInBulkCapacity(TOOL_NAME, input.entityUrns.length, ONE_WRITE_PER_ITEM);
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
     count: input.entityUrns.length,

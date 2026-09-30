@@ -21,8 +21,9 @@ function campaignSchemaMarkdown(): string {
 | \`advertisingChannelType\` | enum | **Yes** | \`SEARCH\`, \`DISPLAY\`, \`SHOPPING\`, \`VIDEO\`, \`MULTI_CHANNEL\`, \`PERFORMANCE_MAX\`, \`DEMAND_GEN\` |
 | \`status\` | enum | No | \`ENABLED\`, \`PAUSED\`, \`REMOVED\` (default: \`ENABLED\`) |
 | \`campaignBudget\` | string | **Yes** | Resource name of the campaign budget (e.g., \`customers/{id}/campaignBudgets/{budgetId}\`) |
-| \`startDate\` | string | No | Start date in YYYY-MM-DD format |
-| \`endDate\` | string | No | End date in YYYY-MM-DD format |
+| \`containsEuPoliticalAdvertising\` | enum | **Yes** | EU political-advertising self-declaration: \`CONTAINS_EU_POLITICAL_ADVERTISING\` or \`DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING\` (see Notes) |
+| \`startDateTime\` | string | No | Start, \`"yyyy-MM-dd HH:mm:ss"\` in the customer's time zone. Use \`00:00:00\` for daily granularity |
+| \`endDateTime\` | string | No | End, \`"yyyy-MM-dd HH:mm:ss"\` in the customer's time zone. Use \`23:59:59\` for daily granularity. Omit to run indefinitely; clear it to make an existing campaign run indefinitely |
 | \`biddingStrategyType\` | enum | No | \`MANUAL_CPC\`, \`MAXIMIZE_CONVERSIONS\`, \`MAXIMIZE_CONVERSION_VALUE\`, \`TARGET_CPA\`, \`TARGET_ROAS\`, etc. |
 | \`manualCpc\` | object | Cond. | Manual CPC settings (when biddingStrategyType = MANUAL_CPC) |
 | \`maximizeConversions\` | object | Cond. | Maximize conversions settings |
@@ -47,6 +48,8 @@ function campaignSchemaMarkdown(): string {
 - \`advertisingChannelType\` cannot be changed after creation.
 - Use \`PERFORMANCE_MAX\` for AI-optimized campaigns across all Google surfaces.
 - Bidding strategy fields are mutually exclusive — set only one.
+- The date-only \`startDate\` / \`endDate\` fields (GAQL \`campaign.start_date\` / \`campaign.end_date\`) were removed in API v23 — use \`startDateTime\` / \`endDateTime\` (GAQL \`campaign.start_date_time\` / \`campaign.end_date_time\`).
+- Declare \`containsEuPoliticalAdvertising\` on every campaign. Google Ads "generally" rejects mutates on a customer that has non-exempt campaigns without the declaration (\`EU_POLITICAL_ADVERTISING_DECLARATION_REQUIRED\`); the read-only \`missingEuPoliticalAdvertisingDeclaration\` (GAQL \`campaign.missing_eu_political_advertising_declaration\`) flags campaigns that still need it.
 `;
 }
 

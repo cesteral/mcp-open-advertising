@@ -15,10 +15,12 @@
  * `packages/msads-mcp/tests/testkit/conformance.test.ts` enforces this.
  *
  * Microsoft Ads budget amounts are in the account-currency major units; the
- * canonical snapshot stores minor units, so amounts are ×100. The shared
- * `budget` entity carries a flat `Amount` + `BudgetType`; a `campaign` carries
- * inline `DailyBudget` / `MonthlyBudget`. `adGroup` / `ad` carry no budget, so
- * only `pause` / `resume` fixtures exist for those kinds.
+ * canonical snapshot stores minor units. The fixtures are authored against a
+ * USD account (×100; `applyMsAdsPatch` defaults to USD). The shared `budget`
+ * entity carries a flat daily `Amount`; a `campaign` carries one inline
+ * `DailyBudget` that is a lifetime amount when `BudgetType` is
+ * `LifetimeBudgetStandard` (v13 has no `MonthlyBudget`). `adGroup` / `ad` carry
+ * no budget, so only `pause` / `resume` fixtures exist for those kinds.
  */
 
 import type { MsAdsWriteFixture } from "../types.js";
@@ -203,8 +205,8 @@ export const resumeCampaign: MsAdsWriteFixture = {
     Name: "Sample Campaign 3",
     Status: "Paused",
     AccountId: accountId,
-    BudgetType: "MonthlyBudgetSpendUntilDepleted",
-    MonthlyBudget: 1500,
+    BudgetType: "LifetimeBudgetStandard",
+    DailyBudget: 1500,
   },
   expectedPostState: {
     schemaVersion: 1,
@@ -220,7 +222,7 @@ export const resumeCampaign: MsAdsWriteFixture = {
     },
     schedule: { startAt: null, endAt: null },
   },
-  description: "resume: campaign transition Paused → Active (monthly budget preserved)",
+  description: "resume: campaign transition Paused → Active (lifetime budget preserved)",
 };
 
 /** resume: ad group Paused → Active (schedule preserved). */

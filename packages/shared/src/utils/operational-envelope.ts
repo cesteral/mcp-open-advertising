@@ -48,6 +48,12 @@ import { describeRetryPolicy, type ObservedRetryPolicy } from "./retryable-fetch
 export interface OperationalRateLimit {
   /** Sliding-window cap, read from the live limiter. */
   requestsPerMinute: number;
+  /**
+   * How long a call over the cap is QUEUED waiting for capacity before it is
+   * rejected with `RateLimited`, read from the same limit. `0` means rejected
+   * immediately. The wait includes time behind earlier queued calls.
+   */
+  maxQueueWaitMs: number;
   /** Always `per-process` in this fleet — see `note`. */
   scope: "per-process";
   note: string;
@@ -159,9 +165,15 @@ export const FLEET_IDEMPOTENCY: OperationalIdempotency = {
 };
 
 const RATE_LIMIT_NOTE =
-  "Per-process sliding window. Under multi-instance autoscaling the effective fleet limit is " +
-  "this value times the instance count; server defaults assume ~10 instances. Treat it as a " +
-  "per-instance floor, not a fleet-wide guarantee.";
+  "Per-process sliding window, applied per rate-limit key (an account/advertiser id on most " +
+  "servers, a shared bucket on some), so it bounds requests per key, not per server. A call " +
+  "over the cap is not rejected at once: it is queued FIFO per key until the window has room, " +
+  "for at most `maxQueueWaitMs`, and only a call whose admission is further away than that " +
+  "fails with RateLimited (-32003, with `retryAfterMs`) without being sent. Expect slow calls " +
+  "near the cap, and allow for the queue wait in client-side tool-call timeouts. Under " +
+  "multi-instance autoscaling the effective fleet limit is this value times the instance " +
+  "count; server defaults assume ~10 instances. Treat it as a per-instance floor, not a " +
+  "fleet-wide guarantee.";
 
 const RETRY_NOTE =
   "Observed by probing this server's own retry predicate and method guard, not declared. " +
@@ -194,30 +206,35 @@ export interface OperationalEnvelopeInput {
 }
 
 /**
- * Read the per-minute cap out of a live limiter.
+ * Read the per-minute cap, and the queue wait that goes with it, out of a live
+ * limiter.
  *
  * Servers configure exactly one wildcard pattern (`createPlatformRateLimiter`),
  * so the common case is a single entry. If a server ever configures several,
  * publishing the MOST RESTRICTIVE is the honest choice — it is the one a client
- * pacing itself will actually hit first.
+ * pacing itself will actually hit first — and its queue wait is the one that
+ * applies there.
  */
-function readRequestsPerMinute(rateLimiter: RateLimiter): number | null {
-  const perMinute = rateLimiter
-    .describeLimits()
-    .filter((entry) => entry.windowMs > 0)
-    .map((entry) => (entry.limit * 60_000) / entry.windowMs);
-  if (perMinute.length === 0) return null;
-  return Math.min(...perMinute);
+function readRateLimit(
+  rateLimiter: RateLimiter
+): { requestsPerMinute: number; maxQueueWaitMs: number } | null {
+  let tightest: { requestsPerMinute: number; maxQueueWaitMs: number } | null = null;
+  for (const entry of rateLimiter.describeLimits()) {
+    if (entry.windowMs <= 0) continue;
+    const requestsPerMinute = (entry.limit * 60_000) / entry.windowMs;
+    if (tightest === null || requestsPerMinute < tightest.requestsPerMinute) {
+      tightest = { requestsPerMinute, maxQueueWaitMs: entry.maxWaitMs };
+    }
+  }
+  return tightest;
 }
 
 export function buildOperationalEnvelope(input: OperationalEnvelopeInput): OperationalEnvelope {
-  const requestsPerMinute = input.rateLimiter ? readRequestsPerMinute(input.rateLimiter) : null;
+  const rateLimit = input.rateLimiter ? readRateLimit(input.rateLimiter) : null;
 
   return {
     rateLimit:
-      requestsPerMinute === null
-        ? null
-        : { requestsPerMinute, scope: "per-process", note: RATE_LIMIT_NOTE },
+      rateLimit === null ? null : { ...rateLimit, scope: "per-process", note: RATE_LIMIT_NOTE },
     retry:
       input.usesSharedRetryLayer === false
         ? null

@@ -43,7 +43,11 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
         // POST to query paths — list operation
         if (url.startsWith(API_BASE) && method === "POST" && url.includes("/query/")) {
           return new Response(
-            JSON.stringify({ Result: [{ CampaignId: "cmp-001" }], TotalCount: 1, ResultCount: 1 }),
+            JSON.stringify({
+              Result: [{ CampaignId: "cmp-001" }],
+              ResultCount: 1,
+              TotalFilteredCount: 1,
+            }),
             { status: 200, headers: { "Content-Type": "application/json" } }
           );
         }

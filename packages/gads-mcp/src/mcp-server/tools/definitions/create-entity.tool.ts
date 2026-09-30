@@ -212,8 +212,9 @@ export const createEntityTool = {
           advertisingChannelType: "SEARCH",
           status: "PAUSED",
           campaignBudget: "customers/1234567890/campaignBudgets/9876543",
-          startDate: "2025-01-15",
-          endDate: "2025-03-31",
+          containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+          startDateTime: "2025-01-15 00:00:00",
+          endDateTime: "2025-03-31 23:59:59",
           networkSettings: {
             targetGoogleSearch: true,
             targetSearchNetwork: false,

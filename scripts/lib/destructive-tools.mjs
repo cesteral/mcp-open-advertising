@@ -49,3 +49,63 @@ export function isDestructiveCandidate(tool) {
   const ops = tool.annotations?.cesteral?.operation;
   return Array.isArray(ops) && ops.some((op) => TERMINAL_OPERATIONS.has(op));
 }
+
+// STATUS-DEPENDENT TERMINALITY
+//
+// `update_entity` / `bulk_update_status` are not destructive by name or by
+// operation, yet on most platforms one status value is a one-way door —
+// Google Ads REMOVED, TikTok DELETE, TTD Archived, placement
+// PERMANENTLY_ARCHIVED. Nine servers accepted such a value without declaring
+// the tool terminal, because the rule above cannot see a value inside an enum.
+//
+// Kept separate from `isDestructiveCandidate` on purpose: the routing eval
+// scores "called a destructive tool" with that function, and a status update is
+// not the same act as a delete for that purpose.
+
+/** Status values that are irreversible on the platform that exposes them. */
+export const IRREVERSIBLE_STATUS_VALUES = new Set([
+  "REMOVED",
+  "DELETED",
+  "DELETE",
+  "ARCHIVED",
+  "ENTITY_STATUS_ARCHIVED",
+  "CANCELED",
+  "CANCELLED",
+  "PERMANENTLY_ARCHIVED",
+  "PLACEMENT_STATUS_PERMANENTLY_ARCHIVED",
+]);
+
+const STATUS_KEY = /status|state|availability/i;
+
+/**
+ * Irreversible values a writing tool's input schema offers on a status-like
+ * field (walks nested objects, arrays and unions). Empty for read-only tools —
+ * a list filter on ARCHIVED destroys nothing.
+ */
+export function irreversibleStatusOptions(tool) {
+  if (tool.annotations?.readOnlyHint === true) return [];
+  const found = new Set();
+  const walk = (node, key) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      node.forEach((child) => walk(child, key));
+      return;
+    }
+    if (key && STATUS_KEY.test(key) && Array.isArray(node.enum)) {
+      for (const value of node.enum) {
+        if (typeof value === "string" && IRREVERSIBLE_STATUS_VALUES.has(value.toUpperCase())) {
+          found.add(value);
+        }
+      }
+    }
+    for (const [childKey, child] of Object.entries(node)) {
+      if (childKey === "properties" && child && typeof child === "object") {
+        for (const [prop, schema] of Object.entries(child)) walk(schema, prop);
+      } else if (childKey !== "enum") {
+        walk(child, key);
+      }
+    }
+  };
+  walk(tool.inputSchema, undefined);
+  return [...found].sort();
+}

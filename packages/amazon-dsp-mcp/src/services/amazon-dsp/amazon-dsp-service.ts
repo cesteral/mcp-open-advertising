@@ -13,7 +13,9 @@ import {
 import {
   getEntityConfig,
   getCanonicalEntityType,
+  getEntityContract,
   interpolatePath,
+  encodePathSegment,
   type AmazonDspEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type {
@@ -263,6 +265,13 @@ export class AmazonDspService {
     context?: RequestContext
   ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
+    const unsupported = getEntityContract(entityType).createUnsupportedReason;
+    if (unsupported) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Creating a ${entityType} is not supported: ${unsupported}`
+      );
+    }
     await this.rateLimiter.consume("amazon_dsp:write", 3);
     // Amazon DSP create expects a single object body. The vendor Content-Type
     // (e.g. application/vnd.dsporders.v2.2+json) is required — without it the
@@ -362,7 +371,11 @@ export class AmazonDspService {
 
   async getAdPreviews(creativeId: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume("amazon_dsp:read");
-    return this.httpClient.get(`/dsp/creatives/${creativeId}/preview`, undefined, context);
+    return this.httpClient.get(
+      `/dsp/creatives/${encodePathSegment(creativeId, "creativeId")}/preview`,
+      undefined,
+      context
+    );
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────

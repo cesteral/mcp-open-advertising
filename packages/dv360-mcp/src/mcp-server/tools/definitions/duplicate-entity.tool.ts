@@ -22,55 +22,74 @@ const TOOL_NAME = "dv360_duplicate_entity";
 const TOOL_TITLE = "Duplicate DV360 Entity";
 
 /**
- * Entity types that support duplication via copy-on-read.
- * Only insertionOrder and lineItem are commonly duplicated in DV360 workflows.
+ * Entity types that can be duplicated. Line items use DV360's native
+ * `lineItems:duplicate`; insertion orders (no native method in v4) are copied
+ * GET → POST create.
  */
 const DUPLICATABLE_ENTITY_TYPES = ["insertionOrder", "lineItem"] as const;
 type DuplicatableEntityType = (typeof DUPLICATABLE_ENTITY_TYPES)[number];
 
-const TOOL_DESCRIPTION = `Duplicate a DV360 insertion order or line item by creating a copy.
+const TOOL_DESCRIPTION = `Duplicate a DV360 insertion order or line item.
 
 **Supported entity types:** ${DUPLICATABLE_ENTITY_TYPES.join(", ")}
 
-The tool fetches the source entity, strips read-only fields, and creates a new entity
-with the same configuration. The copy is created in DRAFT status by default.
+- **lineItem**: uses DV360's native \`lineItems:duplicate\` method — a server-side copy of the
+  line item. The copy is never left running: if DV360 returns it ACTIVE it is set to PAUSED.
+  Check its assigned targeting with dv360_list_assigned_targeting before activating it.
+- **insertionOrder**: DV360 has no native duplicate for insertion orders, so the tool reads the
+  source, strips server-assigned fields and creates a new insertion order with the same
+  configuration in **ENTITY_STATUS_DRAFT** (the only status DV360 accepts on create). Line items
+  under the source IO are not copied.
 
 **Options:**
 - \`displayName\`: Custom name for the copy (defaults to "Copy of {original name}")
 
-Returns the new entity from the DV360 API. Use dv360_get_entity to verify.`;
+Returns the new entity. Use dv360_get_entity to verify.`;
 
-const commonDuplicateFields = {
-  advertiserId: z.string().describe("DV360 Advertiser ID that owns the entity"),
-  displayName: z
-    .string()
-    .optional()
-    .describe("Optional display name for the copy (defaults to 'Copy of {original}')"),
-  dry_run: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe(
-      "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in a non-running state — DRAFT for line items, PAUSED for insertion orders — projected from the source) without calling the DV360 API. No copy is created."
-    ),
-};
-
-// Discriminated by entityType so the source ID is carried in the platform's own
-// field name (`insertionOrderId` / `lineItemId`). This matches `dv360_get_entity`'s
-// required arg shape, so the governed `readPartner` mapping is satisfiable.
+// Flat object (not a discriminated union) so MCP clients see every parameter:
+// a top-level union is emitted to the wire as an empty object schema. The
+// source ID stays in the platform's own field name (`insertionOrderId` /
+// `lineItemId`), matching `dv360_get_entity`'s arg shape so the governed
+// `readPartner` mapping is satisfiable; `superRefine` requires the one that
+// matches `entityType`.
 export const DuplicateEntityInputSchema = z
-  .discriminatedUnion("entityType", [
-    z.object({
-      entityType: z.literal("insertionOrder"),
-      insertionOrderId: z.string().min(1).describe("ID of the insertion order to duplicate"),
-      ...commonDuplicateFields,
-    }),
-    z.object({
-      entityType: z.literal("lineItem"),
-      lineItemId: z.string().min(1).describe("ID of the line item to duplicate"),
-      ...commonDuplicateFields,
-    }),
-  ])
+  .object({
+    entityType: z
+      .enum(DUPLICATABLE_ENTITY_TYPES)
+      .describe("Type of entity to duplicate: insertionOrder or lineItem"),
+    advertiserId: z.string().describe("DV360 Advertiser ID that owns the entity"),
+    insertionOrderId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("ID of the insertion order to duplicate (required when entityType=insertionOrder)"),
+    lineItemId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("ID of the line item to duplicate (required when entityType=lineItem)"),
+    displayName: z
+      .string()
+      .optional()
+      .describe("Optional display name for the copy (defaults to 'Copy of {original}')"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in ENTITY_STATUS_DRAFT, projected from the source) without calling the DV360 API. No copy is created."
+      ),
+  })
+  .superRefine((input, ctx) => {
+    const idField = `${input.entityType}Id` as "insertionOrderId" | "lineItemId";
+    if (!input[idField]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [idField],
+        message: `${idField} is required when entityType is ${input.entityType}`,
+      });
+    }
+  })
   .describe("Parameters for duplicating a DV360 entity");
 
 export const DuplicateEntityOutputSchema = z
@@ -103,8 +122,9 @@ export async function duplicateEntityLogic(
 
   const entityType = input.entityType as DuplicatableEntityType;
   const entityIdField = `${entityType}Id`;
-  const entityId =
-    input.entityType === "insertionOrder" ? input.insertionOrderId : input.lineItemId;
+  const entityId = (
+    input.entityType === "insertionOrder" ? input.insertionOrderId : input.lineItemId
+  ) as string;
 
   const ids: Record<string, string> = {
     advertiserId: input.advertiserId,
@@ -236,7 +256,7 @@ export const duplicateEntityTool = {
       schemaVersion: 1,
       contractId: "dv360.duplicate_entity.v1",
       // `dry_run` = symbolic: read the source and project it as the non-running
-      // copy (DRAFT for line items, PAUSED for insertion orders; empty new ID).
+      // DRAFT copy (empty new ID).
       // `after` re-reads the created copy by its new ID. No `before`.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,

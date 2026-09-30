@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import { runMsAdsDuplicateDryRun, resolveMsAdsDuplicateCapability } from "../utils/dry-run.js";
-import { snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
+import { resolveMsAdsCurrency, snapshotFromMsAdsEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -26,8 +26,10 @@ const TOOL_DESCRIPTION = `Duplicate a Microsoft Advertising entity (copy it).
 **Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
 
 Creates a copy of the entity (clone via read + create — MS Ads has no native copy operation).
-The copy preserves the source's settings unless overridden via \`options\`.
-Use \`options\` (e.g. \`{ "Name": "Copy of …" }\`) to rename or re-state the copy.`;
+The copy preserves the source's settings unless overridden via \`options\`, except
+\`Status\`: the copy is always created \`Paused\` (a \`Status\` in \`options\` is ignored), so it
+cannot spend until you activate it with msads_update_entity.
+Use \`options\` (e.g. \`{ "Name": "Copy of …" }\`) to rename the copy.`;
 
 /** Pull the first created ID out of an Add response (`*Ids: [...]`). */
 function extractCreatedId(result: unknown): string {
@@ -52,7 +54,7 @@ export const DuplicateEntityInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied) without calling the Microsoft Ads API. No copy is created."
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied and `Status` forced to `Paused`) without calling the Microsoft Ads API. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a Microsoft Ads entity");
@@ -121,7 +123,8 @@ export async function duplicateEntityLogic(
   const after: NormalizedEntitySnapshot | undefined = snapshotFromMsAdsEntity(
     input.entityType,
     createdId,
-    item
+    item,
+    await resolveMsAdsCurrency(msadsService, context)
   );
 
   return {

@@ -3,6 +3,7 @@
 
 export * from "./fetch-with-timeout.js";
 export * from "./download-file.js";
+export * from "./download-url-guard.js";
 export * from "./multipart-form.js";
 export * from "./logger.js";
 export * from "./mcp-errors.js";
@@ -14,6 +15,7 @@ export * from "./metrics.js";
 export * from "./tool-handler-factory.js";
 export * from "./raw-tool-args.js";
 export * from "./rate-limiter.js";
+export * from "./bulk-capacity.js";
 export * from "./session-store.js";
 export * from "./session-resolver.js";
 export * from "./prompt-handler-factory.js";

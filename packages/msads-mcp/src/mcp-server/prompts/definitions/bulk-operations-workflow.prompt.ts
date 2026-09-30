@@ -16,17 +16,21 @@ export function getMsAdsBulkOperationsWorkflowMessage(): string {
 \`\`\`json
 msads_bulk_create_entities({
   "entityType": "keyword",
+  "adGroupId": "123",
   "items": [
-    { "AdGroupId": 123, "Text": "keyword 1", "MatchType": "Phrase", "Bid": { "Amount": 1.50 } },
-    { "AdGroupId": 123, "Text": "keyword 2", "MatchType": "Exact", "Bid": { "Amount": 2.00 } }
+    { "Text": "keyword 1", "MatchType": "Phrase", "Bid": { "Amount": 1.50 } },
+    { "Text": "keyword 2", "MatchType": "Exact", "Bid": { "Amount": 2.00 } }
   ]
 })
 \`\`\`
+Every item in one call belongs to one parent, passed as \`accountId\` (campaign, adExtension),
+\`campaignId\` (adGroup) or \`adGroupId\` (ad, keyword) and sent as the request-body parent element.
 
 ## Bulk Update Status (Pause/Activate)
 \`\`\`json
 msads_bulk_update_status({
   "entityType": "campaign",
+  "accountId": "789012",
   "entityIds": ["111", "222", "333"],
   "status": "Paused"
 })
@@ -36,13 +40,15 @@ msads_bulk_update_status({
 \`\`\`json
 msads_adjust_bids({
   "entityType": "keyword",
+  "scope": { "adGroupId": "123" },
   "adjustments": [
     { "entityId": "111", "bidField": "Bid", "newBid": 1.75 },
     { "entityId": "222", "bidField": "Bid", "newBid": 2.25 }
   ]
 })
 \`\`\`
-The adjust-bids tool uses a safe read-modify-write pattern.
+The adjust-bids tool reads the entities first, then sends a minimal Update with each bid as a
+Bid object (\`{ "Amount": newBid }\`), so no other field is touched.
 
 ## Batch Limits
 | Entity | Batch Limit |

@@ -13,104 +13,150 @@ import {
 const ENTITY_SCHEMA_CONTENT: Record<PinterestEntityType, string> = {
   campaign: `# Pinterest Campaign Schema (v5)
 
+Source: Pinterest Marketing API OpenAPI v5, \`CampaignCreateRequest\`. Selected fields only.
+
 \`\`\`json
 {
   "type": "object",
   "required": ["name", "objective_type"],
   "properties": {
-    "name": { "type": "string", "description": "Campaign name" },
+    "name": { "type": "string" },
     "objective_type": {
       "type": "string",
-      "enum": ["AWARENESS", "CONSIDERATION", "VIDEO_VIEW", "CATALOG_SALES", "CONVERSIONS", "APP_INSTALL", "SHOPPING"],
-      "description": "Campaign objective"
+      "enum": ["AWARENESS", "CONSIDERATION", "WEB_CONVERSION", "CATALOG_SALES", "VIDEO_COMPLETION", "SALES", "APP_INSTALL", "CTV_CONSIDERATION"],
+      "description": "Can only be changed while the campaign is a draft"
     },
-    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"], "default": "ACTIVE" },
-    "daily_spend_cap": { "type": "integer", "description": "Daily budget cap in micro-currency (1 USD = 1000000)" },
-    "lifetime_spend_cap": { "type": "integer", "description": "Total lifetime budget in micro-currency" }
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED", "DRAFT", "DELETED_DRAFT"] },
+    "daily_spend_cap": { "type": "integer", "description": "Micro-currency. Required with lifetime_spend_cap for CBO campaigns." },
+    "lifetime_spend_cap": { "type": "integer", "description": "Micro-currency" },
+    "is_campaign_budget_optimization": { "type": "boolean", "description": "Immutable unless the campaign is a draft" },
+    "start_time": { "type": "integer", "description": "Unix seconds" },
+    "end_time": { "type": "integer", "description": "Unix seconds" },
+    "tracking_urls": { "type": "object" }
   }
 }
 \`\`\`
 
 ## Notes
-- Budgets use **micro-currency**: $50/day → \`daily_spend_cap: 50000000\`
-- Status values: ACTIVE, PAUSED, ARCHIVED (not ENABLE/DISABLE)
-- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`, \`ad_account_id\`
+- Money is **micro-currency**: 50.00/day is \`daily_spend_cap: 50000000\`.
+- \`ad_account_id\` comes from the tool's \`adAccountId\`. The batch write items do not need it.
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`, \`summary_status\`
 `,
 
   adGroup: `# Pinterest Ad Group Schema (v5)
 
+Source: Pinterest Marketing API OpenAPI v5, \`AdGroupCreateRequest\`. Selected fields only.
+
 \`\`\`json
 {
   "type": "object",
-  "required": ["name", "campaign_id", "budget_in_micro_currency"],
+  "required": ["name", "campaign_id", "billable_event"],
   "properties": {
     "name": { "type": "string" },
     "campaign_id": { "type": "string" },
-    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"] },
-    "budget_in_micro_currency": { "type": "integer", "description": "Budget in micro-currency (1 USD = 1000000)" },
+    "billable_event": {
+      "type": "string",
+      "enum": ["CLICKTHROUGH", "IMPRESSION", "VIDEO_V_50_MRC"],
+      "description": "Only a draft ad group can change it"
+    },
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED", "DRAFT", "DELETED_DRAFT"] },
+    "budget_in_micro_currency": { "type": "integer", "description": "Micro-currency. Required for non-CBO campaigns." },
+    "budget_type": { "type": "string", "enum": ["DAILY", "LIFETIME", "CBO_ADGROUP"] },
+    "bid_in_micro_currency": { "type": "integer", "description": "Micro-currency. Required for some objective and billable_event combinations." },
+    "bid_strategy_type": { "type": "string", "enum": ["AUTOMATIC_BID", "MAX_BID", "TARGET_AVG"] },
     "pacing_delivery_type": { "type": "string", "enum": ["STANDARD", "ACCELERATED"] },
-    "bid_strategy_type": { "type": "string", "enum": ["AUTOMATIC_BID", "MAX_BID", "TARGET_AVG_BID"] },
-    "targeting_spec": { "type": "object", "description": "Audience targeting configuration" },
-    "start_time": { "type": "string", "format": "date-time", "description": "ISO 8601 start datetime (e.g. 2026-04-01T00:00:00)" },
-    "end_time": { "type": "string", "format": "date-time", "description": "ISO 8601 end datetime" }
+    "optimization_goal_metadata": { "type": "object", "description": "Required for some objective types" },
+    "placement_group": { "type": "string", "enum": ["ALL", "SEARCH", "BROWSE", "OTHER"] },
+    "auto_targeting_enabled": { "type": "boolean", "default": true },
+    "targeting_spec": { "type": "object", "description": "UPPERCASE keys, see below" },
+    "start_time": { "type": "integer", "description": "Unix seconds" },
+    "end_time": { "type": "integer", "description": "Unix seconds" }
   }
 }
 \`\`\`
 
-## targeting_spec fields
-| Field | Type | Description |
-|-------|------|-------------|
-| age_bucket | array | Age ranges: "18-24", "25-34", "35-44", "45-49", "50-54", "55-64", "65+" |
-| gender | array | "female", "male", "unknown" |
-| geo | array | Array of objects with \`country\` (ISO 2-letter code) |
-| interest | array | Interest keywords (e.g., "food", "fashion", "travel") |
+## targeting_spec keys (\`TargetingSpec\`)
+| Key | Values |
+|-----|--------|
+| \`LOCATION\` / \`LOCATION_EXCLUDE\` | Metro codes or ISO-3166 alpha-2 country codes, e.g. \`["US"]\` |
+| \`GEO\` / \`GEO_EXCLUDE\` | Region or postal codes |
+| \`AGE_BUCKET\` | \`18-24\`, \`25-34\`, \`35-44\`, \`45-49\`, \`50-54\`, \`55-64\`, \`65+\` (legacy; \`MINIMUM_AGE\` + \`MAXIMUM_AGE\` are preferred) |
+| \`MINIMUM_AGE\` / \`MAXIMUM_AGE\` | Strings \`"18"\` … \`"65"\`, or \`"65+"\` for maximum only. Use them together. |
+| \`GENDER\` | \`unknown\`, \`male\`, \`female\` |
+| \`INTEREST\` | Interest IDs (from \`pinterest_search_targeting\`) |
+| \`LOCALE\` | ISO 639-1 language codes |
+| \`APPTYPE\` | \`android_mobile\`, \`android_tablet\`, \`ipad\`, \`iphone\`, \`web\`, \`web_mobile\` |
+| \`AUDIENCE_INCLUDE\` / \`AUDIENCE_EXCLUDE\` | Audience IDs |
+| \`TARGETING_STRATEGY\` | \`CHOOSE_YOUR_OWN\`, \`FIND_NEW_CUSTOMERS\`, \`RECONNECT_WITH_USERS\` |
 
 ## Notes
-- Budget is per-ad-group in micro-currency
-- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`
+- An update can replace \`targeting_spec\` or apply \`targeting_spec_operations\`.
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`, \`summary_status\`
 `,
 
   ad: `# Pinterest Ad Schema (v5)
 
+Source: Pinterest Marketing API OpenAPI v5, \`AdCreateRequest\`. Selected fields only.
+
 \`\`\`json
 {
   "type": "object",
-  "required": ["name", "ad_group_id", "creative_type"],
+  "required": ["ad_group_id", "creative_type", "pin_id"],
   "properties": {
-    "name": { "type": "string" },
     "ad_group_id": { "type": "string" },
-    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"] },
-    "creative_type": { "type": "string", "enum": ["REGULAR", "VIDEO", "SHOPPING", "CAROUSEL"] },
-    "pin_id": { "type": "string", "description": "ID of the Pinterest Pin to promote" }
+    "creative_type": {
+      "type": "string",
+      "enum": ["REGULAR", "VIDEO", "SHOPPING", "CAROUSEL", "MAX_VIDEO", "SHOP_THE_PIN", "COLLECTION", "IDEA", "SHOWCASE", "QUIZ", "COLLAGE", "MAX_WIDTH_REGULAR_COLLECTION", "MAX_WIDTH_VIDEO_COLLECTION", "APP"],
+      "description": "SHOP_THE_PIN is deprecated, use COLLECTION"
+    },
+    "pin_id": { "type": "string", "description": "Only a draft ad can change it" },
+    "name": { "type": "string", "maxLength": 255 },
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED", "DRAFT", "DELETED_DRAFT"] },
+    "destination_url": { "type": "string" },
+    "customizable_cta_type": { "type": "string", "description": "e.g. LEARN_MORE, SHOP_NOW, SIGN_UP. Only for ads with direct links enabled." },
+    "click_tracking_url": { "type": "string" },
+    "view_tracking_url": { "type": "string" },
+    "tracking_urls": { "type": "object" }
   }
 }
 \`\`\`
 
 ## Notes
-- \`pin_id\` is required — create/upload the Pinterest Pin before creating the Ad
-- Creative types: REGULAR (static image), VIDEO, SHOPPING (product pin), CAROUSEL
-- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`
+- Create the Pin first. The ad only references it by \`pin_id\`.
+- Use \`REGULAR\` for a standard image Pin and \`VIDEO\` for a standard video Pin.
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`, \`summary_status\`, \`review_status\`, \`rejected_reasons\`, \`rejection_labels\`
 `,
 
   creative: `# Pinterest Creative (Pin) Schema (v5)
 
+Source: Pinterest Marketing API OpenAPI v5, \`PinCreate\`. Selected fields only.
+
 \`\`\`json
 {
   "type": "object",
-  "required": ["title", "description"],
   "properties": {
-    "title": { "type": "string" },
-    "description": { "type": "string" },
-    "link": { "type": "string", "description": "Destination URL" },
-    "media": { "type": "object", "description": "Media asset configuration" }
+    "board_id": { "type": "string" },
+    "media_source": {
+      "oneOf": [
+        { "required": ["source_type", "url"], "properties": { "source_type": { "enum": ["image_url"] }, "url": { "type": "string" } } },
+        { "required": ["source_type", "media_id"], "properties": { "source_type": { "enum": ["video_id"] }, "media_id": { "type": "string" }, "cover_image_url": { "type": "string" }, "cover_image_key_frame_time": { "type": "integer" } } }
+      ],
+      "description": "Other variants: image_base64, multiple_image_base64, multiple_image_urls, pin_url"
+    },
+    "title": { "type": "string", "maxLength": 100 },
+    "description": { "type": "string", "maxLength": 800 },
+    "link": { "type": "string", "maxLength": 2048 },
+    "alt_text": { "type": "string", "maxLength": 500 },
+    "board_section_id": { "type": "string" }
   }
 }
 \`\`\`
 
 ## Notes
-- A creative represents a Pinterest Pin that can be promoted as an ad
-- \`media\` object contains image or video asset references
-- Read-only fields: \`id\`, \`created_time\`, \`ad_account_id\`
+- A Pin is the creative that an ad promotes. It belongs to a board on the user account.
+- For a video Pin, upload the video with \`pinterest_upload_video\` and use the returned \`mediaId\` as \`media_id\`.
+- A Pin is hard-deleted (\`DELETE /v5/pins/{pin_id}\`). It is not archived.
+- Read-only fields: \`id\`, \`created_at\`, \`media\` (the processed media on a read)
 `,
 };
 

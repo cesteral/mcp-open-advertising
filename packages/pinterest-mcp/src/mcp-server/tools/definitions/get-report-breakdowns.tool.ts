@@ -17,16 +17,15 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { PINTEREST_REPORT_TARGETING_TYPES } from "../../../services/pinterest/pinterest-reporting-service.js";
 
 const TOOL_NAME = "pinterest_get_report_breakdowns";
 const TOOL_TITLE = "Get Pinterest Ads Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads report with additional columns for breakdowns.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads report broken down by targeting dimensions.
 
-Like \`pinterest_get_report\` but adds extra columns for more granular data.
+Like \`pinterest_get_report\`, but Pinterest v5 breakdowns are not extra columns: each breakdown is a \`targeting_types\` value, and the report runs at the \`*_TARGETING\` variant of the report type (CAMPAIGN_TARGETING, AD_GROUP_TARGETING, PIN_PROMOTION_TARGETING for AD, ADVERTISER_TARGETING for ACCOUNT). KEYWORD reports cannot be broken down.
 
-**Common extra columns:** COUNTRY_CODE, DEVICE_TYPE, GENDER, AGE_BUCKET
-
-Results include metrics broken down by the additional columns.`;
+**Breakdowns (up to 5):** ${PINTEREST_REPORT_TARGETING_TYPES.join(", ")}`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
@@ -43,9 +42,12 @@ export const GetReportBreakdownsInputSchema = z
         "Base columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"
       ),
     breakdowns: z
-      .array(z.string())
+      .array(z.enum(PINTEREST_REPORT_TARGETING_TYPES))
       .min(1)
-      .describe("Additional breakdown columns to add (e.g. ['COUNTRY_CODE', 'DEVICE_TYPE'])"),
+      .max(5)
+      .describe(
+        "Targeting breakdowns, sent as Pinterest targeting_types (e.g. ['COUNTRY', 'AGE_BUCKET'])"
+      ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -86,7 +88,8 @@ export const GetReportBreakdownsOutputSchema = z
   .object({
     taskId: z.string().describe("Report token/task ID"),
     ...ReportViewOutputSchema.shape,
-    appliedColumns: z.array(z.string()).describe("All columns used (base + breakdowns)"),
+    appliedColumns: z.array(z.string()).describe("Metric columns requested"),
+    appliedBreakdowns: z.array(z.string()).describe("Targeting breakdowns requested"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
@@ -139,9 +142,13 @@ export async function getReportBreakdownsLogic(
       headers,
       rows: arrayRowsToRecords(headers, rows),
       totalRows: result.totalRows,
-      input: { ...input, columns: [...input.columns, ...input.breakdowns] },
+      // No column projection: the targeting breakdown dimensions arrive as
+      // extra CSV columns whose header names are Pinterest's, not the request's,
+      // so projecting to the requested metric columns would drop them.
+      input: { ...input, columns: undefined },
     }),
-    appliedColumns: [...input.columns, ...input.breakdowns],
+    appliedColumns: input.columns,
+    appliedBreakdowns: input.breakdowns,
     timestamp: new Date().toISOString(),
   };
 }
@@ -188,7 +195,7 @@ export function getReportBreakdownsResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Report task: ${result.taskId}\nApplied columns: ${result.appliedColumns.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
+      text: `Report task: ${result.taskId}\nApplied columns: ${result.appliedColumns.join(", ")}\nBreakdowns: ${result.appliedBreakdowns.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
     },
   ];
 }
@@ -212,18 +219,18 @@ export const getReportBreakdownsTool = {
         adAccountId: "1234567890",
         type: "CAMPAIGN",
         columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
-        breakdowns: ["COUNTRY_CODE"],
+        breakdowns: ["COUNTRY"],
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
       },
     },
     {
-      label: "Ad group report broken down by device type",
+      label: "Ad group report broken down by age and gender",
       input: {
         adAccountId: "1234567890",
         type: "AD_GROUP",
         columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
-        breakdowns: ["DEVICE_TYPE"],
+        breakdowns: ["AGE_BUCKET", "GENDER"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         granularity: "TOTAL",

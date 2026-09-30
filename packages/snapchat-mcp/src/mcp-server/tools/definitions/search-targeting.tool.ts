@@ -19,7 +19,10 @@ const TOOL_DESCRIPTION = `Search documented Snapchat targeting options by keywor
 - interests_vac
 - interests_shp
 
-This tool fetches a documented targeting endpoint and filters the results client-side.`;
+This tool fetches a documented targeting endpoint and filters the results client-side.
+With a \`query\`, it follows the endpoint's pagination (up to 5 pages) until \`limit\` matches are
+found. \`searchedAllPages: false\` means the scan stopped before the last page, so an empty or
+short result is not proof that no option matches.`;
 
 export const SearchTargetingInputSchema = z
   .object({
@@ -57,6 +60,12 @@ export const SearchTargetingOutputSchema = z
   .object({
     results: z.array(z.record(z.any())).describe("Targeting options matching the query"),
     count: z.number().describe("Number of results returned"),
+    pagesScanned: z.number().describe("Number of targeting pages fetched and filtered"),
+    searchedAllPages: z
+      .boolean()
+      .describe(
+        "True when the scan reached the endpoint's last page. False means more pages exist that were not searched."
+      ),
     targetingType: z.string(),
     timestamp: z.string().datetime(),
   })
@@ -72,17 +81,19 @@ export async function searchTargetingLogic(
 ): Promise<SearchTargetingOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
-  const results = (await snapchatService.searchTargeting(
+  const results = await snapchatService.searchTargeting(
     input.targetingType,
     input.countryCode,
     input.query,
     input.limit,
     context
-  )) as { results: Record<string, unknown>[] };
+  );
 
   return {
     results: results.results,
     count: results.results.length,
+    pagesScanned: results.pagesScanned,
+    searchedAllPages: results.searchedAllPages,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
   };
@@ -92,7 +103,12 @@ export function searchTargetingResponseFormatter(result: SearchTargetingOutput):
   return [
     {
       type: "text" as const,
-      text: `Found ${result.count} ${result.targetingType} targeting options\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text:
+        `Found ${result.count} ${result.targetingType} targeting options` +
+        (result.searchedAllPages
+          ? ""
+          : ` (searched ${result.pagesScanned} page(s); more pages exist that were not searched)`) +
+        `\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

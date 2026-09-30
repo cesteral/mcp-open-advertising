@@ -116,6 +116,32 @@ describe("MetaTargetingService", () => {
       expect(params.type).toBe("adgeolocation");
       expect(params.q).toBe("New York");
     });
+
+    it("passes the /search `class` parameter for adTargetingCategory", async () => {
+      httpClient.get.mockResolvedValueOnce({ data: [] });
+
+      await service.searchTargeting(
+        "adTargetingCategory",
+        "parents",
+        undefined,
+        undefined,
+        undefined,
+        "life_events"
+      );
+
+      const [, params] = httpClient.get.mock.calls[0];
+      expect(params.type).toBe("adtargetingcategory");
+      expect(params.class).toBe("life_events");
+    });
+
+    it("omits `class` when not provided", async () => {
+      httpClient.get.mockResolvedValueOnce({ data: [] });
+
+      await service.searchTargeting("adinterest", "yoga");
+
+      const [, params] = httpClient.get.mock.calls[0];
+      expect(params).not.toHaveProperty("class");
+    });
   });
 
   // ==========================================================================

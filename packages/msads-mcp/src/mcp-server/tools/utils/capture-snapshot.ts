@@ -15,10 +15,23 @@
  * `adExtension`, `audience`, and `label` have no canonical entity kind and
  * fall through.
  *
- * Microsoft Ads' shared `budget` entity carries an `Amount` in the account's
- * currency major units; the canonical snapshot stores minor units, so amounts
- * are ×100. `campaign` carries an inline `DailyBudget` / `MonthlyBudget`;
- * `adGroup` and `ad` carry no budget field.
+ * Budget semantics (v13 Campaign Management docs):
+ * - `budget` (shared Budget): `Amount` is "the amount to spend daily across all
+ *   campaigns that share the budget", and `DailyBudgetStandard` is the only
+ *   BudgetType that can be set (`budget.md`) → always `daily`.
+ * - `campaign`: a single `DailyBudget` amount whose meaning depends on
+ *   `BudgetType` (`campaign.md`: "This field is currently used to set the
+ *   lifetime budget amount when the budget type is set to
+ *   LifetimeBudgetStandard") → `lifetime` for `LifetimeBudgetStandard`, else
+ *   `daily`. v13 has no `MonthlyBudget` field and no
+ *   `MonthlyBudgetSpendUntilDepleted` BudgetLimitType (`budgetlimittype.md`:
+ *   DailyBudgetAccelerated, DailyBudgetStandard, LifetimeBudgetStandard).
+ * - `adGroup` / `ad` carry no budget field.
+ *
+ * Amounts are in the account currency's major units. The currency is the
+ * account's `CurrencyCode` (Customer Management GetAccount), resolved through
+ * the service; the canonical snapshot stores minor units using that
+ * currency's ISO 4217 exponent.
  */
 
 import type {
@@ -38,6 +51,32 @@ export interface MsAdsServiceLike {
     params?: Record<string, unknown>,
     context?: RequestContext
   ) => Promise<{ entities: unknown[] }>;
+  /** ISO 4217 currency of the session's ad account (`MsAdsService.getAccountCurrency`). */
+  getAccountCurrency?: (context?: RequestContext) => Promise<string>;
+}
+
+/**
+ * ISO 4217 "no currency involved" code. Used when the account currency cannot
+ * be determined, so a snapshot never claims a currency it does not know (the
+ * package previously hard-coded "USD" for every account).
+ */
+export const MSADS_UNKNOWN_CURRENCY = "XXX";
+
+/**
+ * Resolve the account currency for snapshots. Degrades to
+ * MSADS_UNKNOWN_CURRENCY when the service cannot provide it rather than
+ * dropping the snapshot (status and schedule are still worth recording).
+ */
+export async function resolveMsAdsCurrency(
+  service: MsAdsServiceLike,
+  context?: RequestContext
+): Promise<string> {
+  if (!service.getAccountCurrency) return MSADS_UNKNOWN_CURRENCY;
+  try {
+    return await service.getAccountCurrency(context);
+  } catch {
+    return MSADS_UNKNOWN_CURRENCY;
+  }
 }
 
 /**
@@ -73,12 +112,28 @@ function normalizeStatus(raw: unknown): { canonical: CanonicalStatus; platformRa
   return { canonical: STATUS_MAP[platformRaw] ?? "unknown", platformRaw };
 }
 
-/** Currency major units → minor units. `123.45` USD → `12345` cents. */
-function toMinor(amount: unknown): number | undefined {
+/**
+ * ISO 4217 minor-unit exponent for `currency` (USD 2, JPY 0, KWD 3), read from
+ * the runtime's ICU currency data. Falls back to 2 for codes ICU does not know
+ * (including MSADS_UNKNOWN_CURRENCY).
+ */
+function currencyExponent(currency: string): number {
+  if (currency === MSADS_UNKNOWN_CURRENCY) return 2;
+  try {
+    const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
+      .maximumFractionDigits;
+    return typeof digits === "number" ? digits : 2;
+  } catch {
+    return 2;
+  }
+}
+
+/** Currency major units → minor units. `123.45` USD → `12345` cents; `500` JPY → `500`. */
+function toMinor(amount: unknown, currency: string): number | undefined {
   if (amount == null) return undefined;
   const n = typeof amount === "string" ? Number(amount) : Number(amount);
   if (!Number.isFinite(n)) return undefined;
-  return Math.round(n * 100);
+  return Math.round(n * 10 ** currencyExponent(currency));
 }
 
 /**
@@ -103,43 +158,40 @@ function dateToIso(raw: unknown): string | null {
  *
  * Used by both the dry-run symbolic apply (patch = requested mutation) and the
  * real-write `after` capture (patch = `{}`, current = post-write entity).
+ * `currency` is the account's ISO 4217 code (see `resolveMsAdsCurrency`).
  */
 export function buildMsAdsSnapshot(
   entityType: string,
   entityId: string,
   current: Record<string, unknown>,
-  patch: Record<string, unknown>
+  patch: Record<string, unknown>,
+  currency: string
 ): NormalizedEntitySnapshot | null {
   const entityKind = ENTITY_KIND_MAP[entityType];
   if (!entityKind) return null;
 
   const merged = { ...current, ...patch } as Record<string, any>;
 
-  // Budget shape differs by entity:
-  // - `budget` (campaign_budget): a flat `Amount` with a sibling `BudgetType`
-  //   (DailyBudget* → daily, MonthlyBudget* → lifetime).
-  // - `campaign`: inline `DailyBudget` / `MonthlyBudget` numbers with a
-  //   `BudgetType` discriminator.
+  // Budget shape differs by entity (see the module docstring):
+  // - `budget` (campaign_budget): `Amount` is always a daily amount.
+  // - `campaign`: `DailyBudget` is lifetime for LifetimeBudgetStandard, else daily.
   // - `adGroup` / `ad`: no budget field → null.
   let daily: MoneyAmount | null = null;
   let lifetime: MoneyAmount | null = null;
-  const currency = "USD";
 
   if (entityKind === "campaign_budget") {
-    const amountMinor = toMinor(merged.Amount);
+    const amountMinor = toMinor(merged.Amount, currency);
+    if (amountMinor != null) daily = { amountMinor, currency };
+  } else if (entityKind === "campaign") {
+    const amountMinor = toMinor(merged.DailyBudget, currency);
     if (amountMinor != null) {
       const money: MoneyAmount = { amountMinor, currency };
-      if (merged.BudgetType === "MonthlyBudgetSpendUntilDepleted") {
+      if (merged.BudgetType === "LifetimeBudgetStandard") {
         lifetime = money;
       } else {
         daily = money;
       }
     }
-  } else if (entityKind === "campaign") {
-    const dailyMinor = toMinor(merged.DailyBudget);
-    const monthlyMinor = toMinor(merged.MonthlyBudget);
-    if (dailyMinor != null) daily = { amountMinor: dailyMinor, currency };
-    if (monthlyMinor != null) lifetime = { amountMinor: monthlyMinor, currency };
   }
 
   return {
@@ -176,7 +228,8 @@ export async function captureMsAdsSnapshot(
     const { entities } = await service.getEntity(entityType, [entityId], params, context);
     const current = entities?.[0] as Record<string, unknown> | undefined;
     if (!current || typeof current !== "object") return undefined;
-    const snapshot = buildMsAdsSnapshot(entityType, entityId, current, {});
+    const currency = await resolveMsAdsCurrency(service, context);
+    const snapshot = buildMsAdsSnapshot(entityType, entityId, current, {}, currency);
     return snapshot ?? undefined;
   } catch {
     return undefined;
@@ -194,7 +247,8 @@ export async function captureMsAdsSnapshot(
 export function snapshotFromMsAdsEntity(
   entityType: string,
   entityId: string,
-  entity: Record<string, unknown>
+  entity: Record<string, unknown>,
+  currency: string
 ): NormalizedEntitySnapshot | undefined {
   if (!ENTITY_KIND_MAP[entityType]) return undefined;
   if (
@@ -202,11 +256,10 @@ export function snapshotFromMsAdsEntity(
     (entity.Status == null &&
       entity.Name == null &&
       entity.Amount == null &&
-      entity.DailyBudget == null &&
-      entity.MonthlyBudget == null)
+      entity.DailyBudget == null)
   ) {
     return undefined;
   }
-  const snapshot = buildMsAdsSnapshot(entityType, entityId, entity, {});
+  const snapshot = buildMsAdsSnapshot(entityType, entityId, entity, {}, currency);
   return snapshot ?? undefined;
 }

@@ -134,6 +134,34 @@ export const REGISTRY_DATA: RegistryData = {
               "delete_schedule"
             ],
             "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          },
+          {
+            "tool": "ttd_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting Availability=Archived is terminal through this server — the tool's own contract says archived entities cannot be un-archived and no tool restores them. Terminal only for that value."
+          },
+          {
+            "tool": "ttd_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts Archived, which the tool documents as permanent (cannot be un-archived). Terminal only when the batch sets Archived."
+          },
+          {
+            "tool": "ttd_graphql_mutation_bulk",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Runs up to 1000 arbitrary GraphQL mutations as one non-cancellable job, including delete/archive mutations. No tool on this server reverses them, so treat every run as potentially terminal."
+          },
+          {
+            "tool": "ttd_manage_bid_list",
+            "operations": [
+              "manage"
+            ],
+            "note": "The delete action removes a bid list. No tool on this server restores it. Terminal only for action=delete."
           }
         ]
       },
@@ -162,6 +190,20 @@ export const REGISTRY_DATA: RegistryData = {
               "delete"
             ],
             "note": "Google Ads REMOVED status is terminal — a removed entity cannot be re-enabled. No tool on this server restores it."
+          },
+          {
+            "tool": "gads_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting status=REMOVED is irreversible — Google Ads cannot re-enable a removed entity (the same fact gads_remove_entity is declared for). Terminal only for that status value; other updates are not."
+          },
+          {
+            "tool": "gads_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts REMOVED, which Google Ads cannot reverse. Terminal only when the batch sets REMOVED; ENABLED/PAUSED batches are reversible."
           }
         ]
       },
@@ -190,6 +232,20 @@ export const REGISTRY_DATA: RegistryData = {
               "delete"
             ],
             "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "meta_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting status=ARCHIVED or DELETED cannot be reversed — the bulk tool documents ARCHIVED as permanent, and DELETED is Meta's deletion. Terminal only for those values."
+          },
+          {
+            "tool": "meta_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts ARCHIVED, which the tool documents as permanent and not reversible. Terminal only when the batch sets ARCHIVED."
           }
         ]
       },
@@ -218,6 +274,20 @@ export const REGISTRY_DATA: RegistryData = {
               "delete"
             ],
             "note": "Entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "linkedin_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting status=ARCHIVED or CANCELED is terminal through this server — the bulk tool documents that ARCHIVED entities cannot be reactivated, and CANCELED is LinkedIn's end state. Terminal only for those values."
+          },
+          {
+            "tool": "linkedin_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts ARCHIVED (documented by the tool as not reactivatable) and CANCELED. Terminal only when the batch sets one of those; ACTIVE/PAUSED/DRAFT are reversible."
           }
         ]
       },
@@ -246,6 +316,20 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Bulk entity removal. No tool on this server restores it."
+          },
+          {
+            "tool": "tiktok_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting operation_status=DELETE is irreversible on TikTok — the same effect as tiktok_delete_entity. Terminal only for that status value."
+          },
+          {
+            "tool": "tiktok_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts DELETE, which the tool documents as irreversible. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
         ]
       },
@@ -281,6 +365,20 @@ export const REGISTRY_DATA: RegistryData = {
               "delete_schedule"
             ],
             "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+          },
+          {
+            "tool": "cm360_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting a placement to PLACEMENT_STATUS_PERMANENTLY_ARCHIVED is irreversible by definition. Terminal only for that value; ordinary archive (archived=true) is reversible via ACTIVE."
+          },
+          {
+            "tool": "cm360_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts PERMANENTLY_ARCHIVED for placements, which cannot be undone. Terminal only for that value; ARCHIVED/ACTIVE/INACTIVE are reversible."
           }
         ]
       },
@@ -356,7 +454,21 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "bulk_job"
             ],
-            "note": "Bulk entity removal. No tool on this server restores it."
+            "note": "Deletes Pins (creative) and ARCHIVES campaigns, ad groups and ads — Pinterest v5 has no DELETE for those. No tool on this server restores either."
+          },
+          {
+            "tool": "pinterest_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting status=ARCHIVED is Pinterest's soft delete; no tool on this server unarchives, so treat it as terminal. Terminal only for that value."
+          },
+          {
+            "tool": "pinterest_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
           }
         ]
       },
@@ -385,6 +497,20 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Bulk removal of orders / line items. No tool on this server restores it."
+          },
+          {
+            "tool": "amazon_dsp_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting state=ARCHIVED is Amazon DSP's only removal path (no hard delete) and no tool on this server restores an archived order or line item. Terminal only for that value."
+          },
+          {
+            "tool": "amazon_dsp_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
           }
         ]
       },
@@ -419,7 +545,21 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "delete_schedule"
             ],
-            "note": "Deletes the schedule and its future runs. No tool on this server restores it."
+            "note": "Deletes nothing: Microsoft Advertising Reporting v13 has no report schedules, so this tool refuses every call without contacting the API. Declared only because its name marks it destructive."
+          },
+          {
+            "tool": "msads_update_entity",
+            "operations": [
+              "update_status"
+            ],
+            "note": "Setting Status=Deleted removes the entity; Microsoft Advertising has no undelete and no tool on this server restores it. Terminal only for that status value."
+          },
+          {
+            "tool": "msads_bulk_update_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts Deleted (free-form status), which cannot be reversed. Terminal only when the batch sets Deleted; Active/Paused are reversible."
           }
         ]
       },

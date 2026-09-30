@@ -182,7 +182,7 @@ export async function validateEntityLogic(
   }
 
   if (input.mode === "update" && !input.data.id) {
-    err("id", "missing", "id field is required for update mode (CM360 uses PUT semantics)");
+    err("id", "missing", "id field is required for update mode (identifies the entity to patch)");
   }
 
   if (input.mode === "create" && input.data.id) {

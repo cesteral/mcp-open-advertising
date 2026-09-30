@@ -54,6 +54,19 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("downloadReportLogic", () => {
+  // The URL comes from the MCP client and is fetched server-side.
+  it.each([
+    "https://169.254.169.254/computeMetadata/v1/",
+    "https://metadata.google.internal/computeMetadata/v1/",
+    "https://localhost/report.csv",
+    "http://example.com/report.csv",
+  ])("refuses %s before fetching", async (downloadUrl) => {
+    await expect(
+      downloadReportLogic({ downloadUrl, mode: "rows" } as any, baseContext, baseSdkContext)
+    ).rejects.toThrow("download URL");
+    expect(mockDownloadReport).not.toHaveBeenCalled();
+  });
+
   it("returns parsed CSV data", async () => {
     mockDownloadReport.mockResolvedValueOnce({
       headers: ["date", "impressions", "clicks"],

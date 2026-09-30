@@ -24,7 +24,7 @@ import {
   uploadVideoResponseFormatter,
   UploadVideoOutputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-video.tool.js";
-import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
+import { EffectResultSchema, EffectDryRunResultSchema, pollUntilComplete } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -47,7 +47,12 @@ describe("pinterest_upload_video governance contract (effect class)", () => {
         upload_parameters: {},
       }),
       uploadToS3: vi.fn().mockResolvedValue(undefined),
-      get: vi.fn().mockResolvedValue({ media_processing_record: { status: "succeeded" } }),
+      // v5 `Media`: { media_id, media_type, status } — status is top-level.
+      get: vi.fn().mockResolvedValue({
+        media_id: "media-1",
+        media_type: "video",
+        status: "succeeded",
+      }),
     };
     mockResolveSessionServices.mockReturnValue({
       pinterestService: { client },
@@ -89,6 +94,39 @@ describe("pinterest_upload_video governance contract (effect class)", () => {
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
     expect(() => UploadVideoOutputSchema.parse(result)).not.toThrow();
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
+  });
+
+  it("polls GET /v5/media/{id} and reads the top-level v5 `status`", async () => {
+    await uploadVideoLogic({ ...baseInput } as any, ctx, sdk);
+    const opts = vi.mocked(pollUntilComplete).mock.calls[0][0] as {
+      fetchStatus: () => Promise<string>;
+      isComplete: (s: string) => boolean;
+      isFailed: (s: string) => boolean;
+    };
+
+    // Before: the poll read `media_processing_record.status`, which v5 never
+    // returns, so it always saw "processing" and waited out the full timeout.
+    await expect(opts.fetchStatus()).resolves.toBe("succeeded");
+    expect(client.get).toHaveBeenCalledWith("/v5/media/media-1", undefined, ctx);
+
+    client.get.mockResolvedValueOnce({
+      media_id: "media-1",
+      media_type: "video",
+      status: "failed",
+    });
+    await expect(opts.fetchStatus()).resolves.toBe("failed");
+
+    client.get.mockResolvedValueOnce({
+      media_id: "media-1",
+      media_type: "video",
+      status: "registered",
+    });
+    await expect(opts.fetchStatus()).resolves.toBe("registered");
+
+    expect(opts.isComplete("succeeded")).toBe(true);
+    expect(opts.isFailed("failed")).toBe(true);
+    expect(opts.isComplete("processing")).toBe(false);
+    expect(opts.isFailed("registered")).toBe(false);
   });
 
   it("formatter renders a dry-run message without a false success", () => {

@@ -507,10 +507,10 @@ export const createLineItem: Dv360WriteFixture = {
 /**
  * duplicate fixtures. The copy does not exist yet; its new ID is a placeholder
  * (`*-REDACTED-NEW`) folded into `ids` — mirroring how the tool's `after`
- * snapshot identifies the created copy. DV360 forces the copy to a non-running
- * state (DRAFT for line items, PAUSED for insertion orders) and renames it
- * `Copy of {source}`, so `data` overlays `entityStatus` + `displayName` (the
- * rest of the config is preserved from the SOURCE `preState`).
+ * snapshot identifies the created copy. The copy lands in ENTITY_STATUS_DRAFT —
+ * the only status DV360 accepts when creating an insertion order or line item —
+ * and is renamed `Copy of {source}`, so `data` overlays `entityStatus` +
+ * `displayName` (the rest of the config is preserved from the SOURCE `preState`).
  */
 export const duplicateInsertionOrder: Dv360WriteFixture = {
   contractToolSlug: "duplicate_entity",
@@ -519,8 +519,8 @@ export const duplicateInsertionOrder: Dv360WriteFixture = {
   args: {
     entityType: "insertionOrder",
     ids: { advertiserId, insertionOrderId: "io-REDACTED-NEW" },
-    // The copy is forced to PAUSED and renamed `Copy of {source}`.
-    data: { entityStatus: "ENTITY_STATUS_PAUSED", displayName: "Copy of Source Insertion Order" },
+    // CreateInsertionOrder only accepts DRAFT; the copy is renamed `Copy of {source}`.
+    data: { entityStatus: "ENTITY_STATUS_DRAFT", displayName: "Copy of Source Insertion Order" },
     updateMask: "entityStatus,displayName",
   },
   preState: {
@@ -541,7 +541,7 @@ export const duplicateInsertionOrder: Dv360WriteFixture = {
     platformEntityId: "io-REDACTED-NEW",
     displayName: "Copy of Source Insertion Order",
     accountId: advertiserId,
-    status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
+    status: { canonical: "unknown", platformRaw: "ENTITY_STATUS_DRAFT" },
     budget: {
       daily: null,
       lifetime: { amountMinor: 5000, currency: "USD" },
@@ -557,7 +557,7 @@ export const duplicateInsertionOrder: Dv360WriteFixture = {
     schedule: { startAt: null, endAt: null },
   },
   description:
-    "duplicate: insertion-order copy lands PAUSED, budget preserved (projected from source)",
+    "duplicate: insertion-order copy lands DRAFT, budget preserved (projected from source)",
 };
 
 export const duplicateLineItem: Dv360WriteFixture = {
@@ -567,8 +567,8 @@ export const duplicateLineItem: Dv360WriteFixture = {
   args: {
     entityType: "lineItem",
     ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
-    // DV360 forces line-item copies to DRAFT (must start as DRAFT) and renames
-    // the copy `Copy of {source}`.
+    // Line items can only be created as DRAFT; the copy is renamed
+    // `Copy of {source}`.
     data: { entityStatus: "ENTITY_STATUS_DRAFT", displayName: "Copy of Source Line Item" },
     updateMask: "entityStatus,displayName",
   },

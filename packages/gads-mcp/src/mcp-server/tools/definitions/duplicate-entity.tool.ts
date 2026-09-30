@@ -201,7 +201,7 @@ export const duplicateEntityTool = {
       writeClass: "entity",
       executableArgsExclude: ["dry_run"],
       platform: "google_ads",
-      contractPlatformSlug: "gads",
+      contractPlatformSlug: "google_ads",
       contractToolSlug: "duplicate_entity",
       operation: ["duplicate"],
       // Only `campaign` supports duplication on Google Ads (its curated SELECT
@@ -213,7 +213,7 @@ export const duplicateEntityTool = {
         argMap: { entityType: "entityType", customerId: "customerId", entityId: "entityId" },
       },
       schemaVersion: 1,
-      contractId: "gads.duplicate_entity.v1",
+      contractId: "google_ads.duplicate_entity.v1",
       // `dry_run` = native validateOnly + symbolic post-state projection. `after`
       // is re-read by the new ID on execute (duplicate has no `before`).
       supportsDryRun: true,

@@ -29,6 +29,11 @@ const ConfigSchema = BaseConfigSchema.extend({
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via SA360_RATE_LIMIT_PER_MINUTE for different scaling profiles.
   sa360RateLimitPerMinute: z.number().default(10),
+  // The legacy v2 (DoubleClick Search) API — conversions and async reports —
+  // has its own per-project quota buckets, separate from Reporting API v0, and
+  // no published values. Keeping it on its own limit means raising the v0 limit
+  // never raises v2 by accident. Override via SA360_V2_RATE_LIMIT_PER_MINUTE.
+  sa360V2RateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: SA360 credentials from env vars
   sa360ClientId: z.string().optional(),
@@ -55,6 +60,9 @@ export function parseConfig(): AppConfig {
     sa360V2ApiBaseUrl: process.env.SA360_V2_API_BASE_URL,
     sa360RateLimitPerMinute: process.env.SA360_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.SA360_RATE_LIMIT_PER_MINUTE)
+      : undefined,
+    sa360V2RateLimitPerMinute: process.env.SA360_V2_RATE_LIMIT_PER_MINUTE
+      ? Number(process.env.SA360_V2_RATE_LIMIT_PER_MINUTE)
       : undefined,
 
     // Stdio fallback credentials

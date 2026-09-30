@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
+import {
+  MsAdsHttpClient,
+  msadsThrottleDelayMs,
+} from "../../src/services/msads/msads-http-client.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { MsAdsAuthAdapter } from "../../src/auth/msads-auth-adapter.js";
 
 vi.mock("@cesteral/shared", async () => {
@@ -104,5 +108,40 @@ describe("MsAdsHttpClient", () => {
     } as unknown as Response);
 
     await expect(client.post("/Campaigns", {})).rejects.toThrow("Microsoft Ads API");
+  });
+
+  // MicrosoftDocs/Advertising services-protocol.md: error 117 CallRateExceeded
+  // means "resubmit ... after waiting 60 seconds". It arrives in the JSON body,
+  // not as a 429, and used to surface as a generic InvalidRequest.
+  it("surfaces error 117 CallRateExceeded as RateLimited with a 60s retryAfterMs, without re-sending", async () => {
+    const body = JSON.stringify({
+      ApplicationFault: {
+        Type: "ApiFaultDetail",
+        OperationErrors: [{ Code: 117, ErrorCode: "CallRateExceeded", Message: "too many calls" }],
+      },
+    });
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      text: async () => body,
+      headers: new Headers(),
+    } as unknown as Response);
+
+    const error = await client.post("/Campaigns/QueryByAccountId", {}).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(McpError);
+    expect((error as McpError).code).toBe(JsonRpcErrorCode.RateLimited);
+    expect((error as McpError).data?.retryAfterMs).toBe(60_000);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps the documented throttle codes to their waits", () => {
+    expect(msadsThrottleDelayMs(400, JSON.stringify({ Errors: [{ Code: 117 }] }))).toBe(60_000);
+    expect(
+      msadsThrottleDelayMs(400, JSON.stringify({ Errors: [{ ErrorCode: "CallRateExceeded" }] }))
+    ).toBe(60_000);
+    expect(msadsThrottleDelayMs(400, JSON.stringify({ Errors: [{ Code: 4204 }] }))).toBe(900_000);
+    expect(msadsThrottleDelayMs(400, JSON.stringify({ Errors: [{ Code: 1234 }] }))).toBeUndefined();
+    expect(msadsThrottleDelayMs(400, "not json")).toBeUndefined();
   });
 });

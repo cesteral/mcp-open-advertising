@@ -8,6 +8,8 @@ import { withDV360ApiSpan } from "../../utils/platform.js";
 import { setSpanAttribute } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { DV360HttpClient } from "../dv360/dv360-http-client.js";
+import type { BulkCapacityCheck } from "@cesteral/shared";
+import { dv360BulkCapacityChecks } from "../dv360/bulk-capacity-checks.js";
 import {
   type TargetingType,
   type TargetingParentType,
@@ -41,6 +43,20 @@ export class TargetingService {
     private rateLimiter: RateLimiter,
     private httpClient: DV360HttpClient
   ) {}
+
+  /**
+   * Bulk-capacity projection inputs for a batch this service would run — see
+   * {@link dv360BulkCapacityChecks}. `advertiserIds` has one entry per item;
+   * `costPerItem` lists the token cost of each `consume` one item makes, in
+   * order. Pass the result to `assertBulkCapacity` / `projectBulkCapacity`.
+   */
+  bulkCapacityChecks(
+    toolName: string,
+    advertiserIds: ReadonlyArray<string | undefined>,
+    costPerItem: readonly number[]
+  ): BulkCapacityCheck[] {
+    return dv360BulkCapacityChecks(this.rateLimiter, toolName, advertiserIds, costPerItem);
+  }
 
   /**
    * List assigned targeting options for a parent entity

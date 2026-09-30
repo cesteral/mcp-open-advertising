@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import type { MsAdsBatchWriteSpec } from "../../../services/msads/msads-service.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -65,9 +66,36 @@ export const ManageAdExtensionsOutputSchema = z
 type ManageAdExtensionsInput = z.infer<typeof ManageAdExtensionsInputSchema>;
 type ManageAdExtensionsOutput = z.infer<typeof ManageAdExtensionsOutputSchema>;
 
-const OPERATION_PATHS: Record<string, { path: string; method: "POST" | "PUT" | "DELETE" }> = {
-  setAssociations: { path: "/AdExtensionsAssociations", method: "POST" },
-  deleteAssociations: { path: "/AdExtensionsAssociations", method: "DELETE" },
+/**
+ * REST routes per the v13 docs' "Request Url" sections:
+ * - SetAdExtensionsAssociations → POST /AdExtensionsAssociations/Set
+ * - DeleteAdExtensionsAssociations → DELETE /AdExtensionsAssociations
+ * - GetAdExtensionsAssociations → POST /AdExtensionsAssociations/Query
+ * Set and Delete report rejected associations in `PartialErrors` (BatchError
+ * index into `AdExtensionIdToEntityIdAssociations`) on an HTTP 200.
+ */
+const OPERATION_PATHS: Record<
+  string,
+  { path: string; method: "POST" | "PUT" | "DELETE"; batch?: MsAdsBatchWriteSpec }
+> = {
+  setAssociations: {
+    path: "/AdExtensionsAssociations/Set",
+    method: "POST",
+    batch: {
+      operation: "setAssociations",
+      entityLabel: "ad extension associations",
+      itemsField: "AdExtensionIdToEntityIdAssociations",
+    },
+  },
+  deleteAssociations: {
+    path: "/AdExtensionsAssociations",
+    method: "DELETE",
+    batch: {
+      operation: "deleteAssociations",
+      entityLabel: "ad extension associations",
+      itemsField: "AdExtensionIdToEntityIdAssociations",
+    },
+  },
   getAssociations: { path: "/AdExtensionsAssociations/Query", method: "POST" },
 };
 
@@ -114,17 +142,43 @@ export async function manageAdExtensionsLogic(
     );
   }
 
-  const result = (await msadsService.executeOperation(
-    op.path,
-    input.data,
-    context,
-    op.method
-  )) as Record<string, unknown>;
+  // Writes go through the PartialErrors mapping: a batch whose every item was
+  // rejected throws; a partial success is reported in the effect summary.
+  let result: Record<string, unknown>;
+  let counts: Record<string, number | boolean> = {};
+  if (op.batch) {
+    const batch = await msadsService.executeOperation(
+      op.path,
+      input.data,
+      context,
+      op.method,
+      op.batch
+    );
+    result = {
+      ...(batch.response && typeof batch.response === "object"
+        ? (batch.response as Record<string, unknown>)
+        : {}),
+      itemFailures: batch.failures,
+    };
+    counts = {
+      requested: batch.requested,
+      succeeded: batch.succeeded,
+      failed: batch.failed,
+      partial_success: batch.failed > 0,
+    };
+  } else {
+    result = (await msadsService.executeOperation(
+      op.path,
+      input.data,
+      context,
+      op.method
+    )) as Record<string, unknown>;
+  }
 
   // Effect summary carries audit identity only — never the raw association data.
   const effect: EffectResult = {
     effectKind: "ad_extensions_managed",
-    summary: { operation: input.operation },
+    summary: { operation: input.operation, ...counts },
   };
 
   return {

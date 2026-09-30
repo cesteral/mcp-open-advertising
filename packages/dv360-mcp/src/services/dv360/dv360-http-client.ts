@@ -70,8 +70,17 @@ export class DV360HttpClient {
    * - Prepends `baseUrl` to `path`.
    * - Retries on 429 and 5xx with exponential backoff (respects Retry-After).
    * - Parses JSON or returns `{}` for 204 No Content.
+   *
+   * `overrides.timeoutMs` raises the per-attempt timeout for methods Discovery
+   * flags as "regularly experiences high latency" (e.g. `lineItems.duplicate`),
+   * where the default would abort a request that is still committing.
    */
-  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
+  async fetch(
+    path: string,
+    context?: RequestContext,
+    options?: RequestInit,
+    overrides?: { timeoutMs?: number }
+  ): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 
@@ -80,7 +89,11 @@ export class DV360HttpClient {
     return withDV360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return executeWithRetry(DV360_RETRY_CONFIG, {
+      const retryConfig: RetryConfig =
+        overrides?.timeoutMs !== undefined
+          ? { ...DV360_RETRY_CONFIG, timeoutMs: overrides.timeoutMs }
+          : DV360_RETRY_CONFIG;
+      return executeWithRetry(retryConfig, {
         url,
         fetchOptions: options,
         context,

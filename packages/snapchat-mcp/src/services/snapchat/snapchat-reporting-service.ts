@@ -299,6 +299,12 @@ export class SnapchatReportingService {
   /**
    * Get report with dimensional breakdowns.
    * Adds breakdown fields to the report config.
+   *
+   * UNVERIFIED: the breakdown names are appended to `fields`. Secondary sources
+   * (third-party Snapchat connectors) send demographic/geo splits through a
+   * separate `report_dimension` query parameter instead; that is not changed
+   * here because no primary Snapchat source for the parameter or its values was
+   * reachable. The tool description says so.
    */
   async getReportBreakdowns(
     reportConfig: SnapchatReportConfig,

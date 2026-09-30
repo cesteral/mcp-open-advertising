@@ -99,7 +99,7 @@ Uses cursor-based pagination (\`after\` parameter).
 - Budget values are in **cents** (1000 = $10 USD)
 - Zero-decimal currencies (JPY, KRW, VND) use base unit
 - Budget changes limited to ~4/hour per ad set
-- Campaign Budget Optimization (CBO): set \`campaign_budget_optimization\` on campaign
+- Campaign-level budget (CBO): set \`daily_budget\` or \`lifetime_budget\` on the campaign (there is no \`campaign_budget_optimization\` field). Campaigns budgeted at the ad set level carry \`is_adset_budget_sharing_enabled\` (boolean)
 
 ## Campaign Objectives (ODAX)
 

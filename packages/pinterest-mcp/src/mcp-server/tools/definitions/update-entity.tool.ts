@@ -30,16 +30,19 @@ const TOOL_DESCRIPTION = `Update a Pinterest Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Pinterest uses PATCH for updates with entity ID in the body. Only provided fields are modified.
+Campaigns, ad groups and ads are updated with Pinterest's batch PATCH as a one-item batch whose \`id\` is \`entityId\`; a creative (Pin) with \`PATCH /v5/pins/{pin_id}\`. Only the fields in \`data\` change.
 
 **Gotchas:**
-- Use \`pinterest_bulk_update_status\` for status-only changes (more efficient)
-- ad_account_id is automatically injected`;
+- \`status\` is an ordinary field here (ACTIVE, PAUSED, ARCHIVED, DRAFT, DELETED_DRAFT). \`pinterest_bulk_update_status\` sets it on many ids at once. No tool on this server un-archives an ARCHIVED entity.
+- Money is integer micro-currency (50.00 = \`50000000\`) and times are integer Unix seconds, as on create.
+- Only a draft can change a campaign's \`objective_type\`, an ad group's \`billable_event\` or an ad's \`pin_id\`.
+- An ad group's targeting can be replaced with \`targeting_spec\` or edited with \`targeting_spec_operations\`.
+- The ad account comes from \`adAccountId\`; do not put \`ad_account_id\` or \`id\` in \`data\`.`;
 
 export const UpdateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     entityId: z.string().min(1).describe("The entity ID to update"),
     data: z.record(z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z

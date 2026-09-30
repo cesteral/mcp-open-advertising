@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GAdsService } from "../../src/services/gads/gads-service.js";
+import { JsonRpcErrorCode } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -75,15 +76,95 @@ describe("GAdsService", () => {
       expect(options.method).toBe("POST");
     });
 
-    it("includes pageSize and pageToken when provided", async () => {
+    it("never sends pageSize (v23 rejects it with PAGE_SIZE_NOT_SUPPORTED)", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
       await service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 50, "next-page");
 
       const [, , options] = httpClient.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
-      expect(body.pageSize).toBe(50);
+      expect(body).not.toHaveProperty("pageSize");
+      expect(Object.keys(body).sort()).toEqual(["pageToken", "query"]);
       expect(body.pageToken).toBe("next-page");
+    });
+
+    it("never sends pageSize from getEntity / adjustBids / listEntities", async () => {
+      httpClient.fetch.mockResolvedValue({ results: [{ adGroup: { id: "1" } }] });
+
+      await service.getEntity("campaign", "123", "456");
+      await service.listEntities("campaign", "123", undefined, 25);
+      await service.adjustBids("123", [{ adGroupId: "1", cpcBidMicros: "1000000" }]);
+
+      const searchBodies = httpClient.fetch.mock.calls
+        .filter(([path]: [string]) => path.endsWith("googleAds:search"))
+        .map(([, , options]: [string, unknown, { body: string }]) => JSON.parse(options.body));
+      expect(searchBodies.length).toBe(3);
+      for (const body of searchBodies) expect(body).not.toHaveProperty("pageSize");
+    });
+
+    it("bounds rows client-side and resumes mid-page with the returned cursor", async () => {
+      const page1 = Array.from({ length: 5 }, (_, i) => ({ campaign: { id: String(i + 1) } }));
+      httpClient.fetch.mockImplementation(async (_path: string, _ctx: unknown, options: any) =>
+        JSON.parse(options.body).pageToken === "upstream-2"
+          ? { results: [{ campaign: { id: "6" } }] }
+          : { results: page1, nextPageToken: "upstream-2" }
+      );
+
+      const first = await service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 2);
+      expect(first.results.map((r: any) => r.campaign.id)).toEqual(["1", "2"]);
+      expect(first.nextPageToken).toBeDefined();
+
+      const second = await service.gaqlSearch(
+        "123",
+        "SELECT campaign.id FROM campaign",
+        2,
+        first.nextPageToken
+      );
+      expect(second.results.map((r: any) => r.campaign.id)).toEqual(["3", "4"]);
+      // Mid-page resume re-reads the SAME upstream page (first page: no token).
+      expect(JSON.parse(httpClient.fetch.mock.calls[1][2].body)).not.toHaveProperty("pageToken");
+
+      const third = await service.gaqlSearch(
+        "123",
+        "SELECT campaign.id FROM campaign",
+        2,
+        second.nextPageToken
+      );
+      // Row 5 finishes the first upstream page; the bound is then filled from
+      // the next upstream page, which is the last one — so no cursor.
+      expect(third.results.map((r: any) => r.campaign.id)).toEqual(["5", "6"]);
+      expect(third.nextPageToken).toBeUndefined();
+      expect(httpClient.fetch).toHaveBeenCalledTimes(4);
+      expect(JSON.parse(httpClient.fetch.mock.calls[3][2].body).pageToken).toBe("upstream-2");
+    });
+
+    it("follows upstream nextPageToken until maxRows is satisfied", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ results: [{ id: 1 }, { id: 2 }], nextPageToken: "p2" })
+        .mockResolvedValueOnce({ results: [{ id: 3 }, { id: 4 }], nextPageToken: "p3" });
+
+      const result = await service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 4);
+
+      expect(result.results).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]);
+      expect(result.nextPageToken).toBe("p3");
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+      expect(JSON.parse(httpClient.fetch.mock.calls[1][2].body).pageToken).toBe("p2");
+    });
+
+    it("returns no cursor when the last upstream page is exhausted", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [{ id: 1 }] });
+
+      const result = await service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 10);
+
+      expect(result.results).toEqual([{ id: 1 }]);
+      expect(result.nextPageToken).toBeUndefined();
+    });
+
+    it("rejects a malformed service cursor with InvalidParams", async () => {
+      await expect(
+        service.gaqlSearch("123", "SELECT campaign.id FROM campaign", 10, "gadsq1.not-json")
+      ).rejects.toMatchObject({ code: JsonRpcErrorCode.InvalidParams });
+      expect(httpClient.fetch).not.toHaveBeenCalled();
     });
 
     it("returns results and pagination info", async () => {

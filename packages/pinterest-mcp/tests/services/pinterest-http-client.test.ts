@@ -268,54 +268,28 @@ describe("PinterestHttpClient", () => {
     });
   });
 
-  describe("postMultipart retry behavior", () => {
-    it("retries on HTTP 500 during multipart upload", async () => {
-      mockHttpErrorResponse(500, "Internal Server Error");
-      mockPinterestSuccessResponse({ id: "media-123" });
-
-      const result = await client.postMultipart(
-        "/v5/media",
-        { media_type: "image" },
-        "file",
-        Buffer.from("fake-image-data"),
-        "test.png",
-        "image/png"
-      );
-
-      expect(result).toEqual({ id: "media-123" });
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+  describe("media registration POST retry behavior (the real /v5/media path)", () => {
+    // `POST /v5/media` goes through the plain `post()` with the shared default
+    // policy — there is no per-call 5xx opt-in (the old `postMultipart` that
+    // carried `retryNonIdempotent` had no callers and was removed).
+    it("has no postMultipart method", () => {
+      expect((client as unknown as Record<string, unknown>).postMultipart).toBeUndefined();
     });
 
-    it("retries on HTTP 429 during multipart upload", async () => {
+    it("retries POST /v5/media on HTTP 429 (rejected before processing)", async () => {
       mockHttpErrorResponse(429, "Too Many Requests");
-      mockPinterestSuccessResponse({ id: "media-456" });
+      mockPinterestSuccessResponse({ media_id: "123", upload_url: "https://s3/x" });
 
-      const result = await client.postMultipart(
-        "/v5/media",
-        { media_type: "image" },
-        "file",
-        Buffer.from("fake-image-data"),
-        "test.png",
-        "image/png"
-      );
+      const result = await client.post("/v5/media", { media_type: "video" });
 
-      expect(result).toEqual({ id: "media-456" });
+      expect(result).toEqual({ media_id: "123", upload_url: "https://s3/x" });
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
-    it("does NOT retry on HTTP 400 during multipart upload", async () => {
-      mockHttpErrorResponse(400, "Bad Request", "Invalid media format");
+    it("does NOT retry POST /v5/media on HTTP 500 (ambiguous — may have committed)", async () => {
+      mockHttpErrorResponse(500, "Internal Server Error");
 
-      await expect(
-        client.postMultipart(
-          "/v5/media",
-          { media_type: "image" },
-          "file",
-          Buffer.from("fake-image-data"),
-          "test.png",
-          "image/png"
-        )
-      ).rejects.toThrow();
+      await expect(client.post("/v5/media", { media_type: "video" })).rejects.toThrow();
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });

@@ -116,81 +116,24 @@ describe("TikTokBearerAuthStrategy", () => {
   });
 
   describe("verify() with refresh token credentials", () => {
-    it("prefers refresh token flow when X-TikTok-App-Id/Secret/Refresh-Token headers are present", async () => {
-      // First call: token exchange (getAccessToken)
-      mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "refreshed-token", expires_in: 86400 },
-        }),
-      } as unknown as Response);
-      // Second call: user info validation
-      mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Refresh User" },
-        }),
-      } as unknown as Response);
-
+    it("rejects X-TikTok-App-Id/Secret/Refresh-Token headers with a clear Unauthorized error", async () => {
+      // TikTok documents no refresh endpoint: oauth2/access_token/ only takes
+      // { app_id, secret, auth_code }. The strategy must fail at session
+      // establishment with an actionable message and make no upstream call.
       const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
-      const result = await strategy.verify({
-        authorization: "Bearer ignored-static-token",
-        "x-tiktok-advertiser-id": "1234567890",
-        "x-tiktok-app-id": "app-123",
-        "x-tiktok-app-secret": "secret-456",
-        "x-tiktok-refresh-token": "refresh-789",
+      await expect(
+        strategy.verify({
+          authorization: "Bearer ignored-static-token",
+          "x-tiktok-advertiser-id": "1234567890",
+          "x-tiktok-app-id": "app-123",
+          "x-tiktok-app-secret": "secret-456",
+          "x-tiktok-refresh-token": "refresh-789",
+        })
+      ).rejects.toMatchObject({
+        code: -32006,
+        message: expect.stringContaining("refresh-token authentication is not supported"),
       });
-
-      expect(result.authInfo).toMatchObject({
-        clientId: "Refresh User",
-        authType: "tiktok-bearer",
-      });
-      expect(result.platformAuthAdapter).toBeDefined();
-      expect(result.credentialFingerprint).toBeDefined();
-      expect(result.credentialFingerprint).toHaveLength(32);
-
-      // Should have made 2 fetch calls (token exchange + user info)
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
-    });
-
-    it("uses stable fingerprint based on appId (not rotating token)", async () => {
-      // Token exchange
-      mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "token-a", expires_in: 86400 },
-        }),
-      } as unknown as Response);
-      // User info
-      mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ code: 0, message: "OK", data: { display_name: "User" } }),
-      } as unknown as Response);
-
-      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
-      const result = await strategy.verify({
-        authorization: "Bearer any-token",
-        "x-tiktok-advertiser-id": "adv-1",
-        "x-tiktok-app-id": "app-stable",
-        "x-tiktok-app-secret": "secret",
-        "x-tiktok-refresh-token": "refresh",
-      });
-
-      // Fingerprint should be based on appId + advertiserId, not the rotating access token
-      const fpFromStrategy = await strategy.getCredentialFingerprint({
-        authorization: "Bearer different-token",
-        "x-tiktok-advertiser-id": "adv-1",
-        "x-tiktok-app-id": "app-stable",
-        "x-tiktok-app-secret": "secret",
-        "x-tiktok-refresh-token": "refresh",
-      });
-      expect(result.credentialFingerprint).toBe(fpFromStrategy);
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
     });
 
     it("falls back to static token when refresh credentials are incomplete", async () => {

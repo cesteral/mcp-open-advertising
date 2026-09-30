@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  assertPinterestBulkCapacity,
+  pinterestBulkBuckets,
+  pinterestBulkCapacityDryRunErrors,
+} from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import {
   BulkOperationResultSchema,
@@ -31,17 +36,16 @@ const TOOL_DESCRIPTION = `Batch update multiple Pinterest Ads entities of the sa
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Each item must include an \`entityId\` and a \`data\` object with fields to update.
-Updates are applied concurrently (max concurrency 5). ad_account_id is automatically injected.
+Each item must include an \`entityId\` and a \`data\` object with the fields to update, as \`pinterest_update_entity\` takes them: money is integer micro-currency (50.00 = \`50000000\`) and times are integer Unix seconds. The ad account comes from \`adAccountId\`.
 
-Max 50 items per call.`;
+Updates are sent one request each, at most 5 at a time. Max 50 items per call.`;
 
 const EFFECT_KIND = "entities_updated";
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
-    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     items: z
       .array(
         z.object({
@@ -106,7 +110,15 @@ export async function bulkUpdateEntitiesLogic(
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(
+      input,
+      pinterestBulkCapacityDryRunErrors(
+        TOOL_NAME,
+        input.items.length,
+        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        "items"
+      )
+    );
     return {
       confirmed: true,
       totalRequested: 0,
@@ -118,6 +130,14 @@ export async function bulkUpdateEntitiesLogic(
       dispatchedCapability,
     };
   }
+
+  // Refuse a batch the rate limiter cannot admit within its queue budget
+  // BEFORE the confirmation prompt and the first write.
+  assertPinterestBulkCapacity(
+    TOOL_NAME,
+    input.items.length,
+    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+  );
 
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
@@ -183,8 +203,11 @@ export async function bulkUpdateEntitiesLogic(
  * projects the would-be effect (an N-item update of one entity kind). Pinterest
  * has no native bulk validate, so both axes are symbolic. Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkUpdateEntitiesInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item.entityId || item.entityId.trim().length === 0) {
       validationErrors.push({
@@ -304,8 +327,8 @@ export const bulkUpdateEntitiesTool = {
         entityType: "campaign",
         adAccountId: "1234567890",
         items: [
-          { entityId: "1800111111111", data: { budget: 150 } },
-          { entityId: "1800222222222", data: { budget: 250 } },
+          { entityId: "1800111111111", data: { daily_spend_cap: 150000000 } },
+          { entityId: "1800222222222", data: { daily_spend_cap: 250000000 } },
         ],
       },
     },

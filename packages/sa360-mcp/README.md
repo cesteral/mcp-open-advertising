@@ -251,10 +251,13 @@ List custom columns defined for an SA360 customer account.
 
 Discover available fields, resources, and metrics in the SA360 API schema.
 
-| Parameter  | Type   | Required | Description               |
-| ---------- | ------ | -------- | ------------------------- |
-| `query`    | string | Yes      | Field discovery query     |
-| `pageSize` | number | No       | Max results (default 100) |
+| Parameter   | Type   | Required | Description                          |
+| ----------- | ------ | -------- | ------------------------------------ |
+| `query`     | string | Yes      | Field discovery query                |
+| `pageSize`  | number | No       | Max results per page (default 100)   |
+| `pageToken` | string | No       | `nextPageToken` from a previous call |
+
+Returns `fields`, `totalResultsCount` (matches ignoring `LIMIT`) and, when more pages exist, `nextPageToken`.
 
 ```json
 {
@@ -264,15 +267,7 @@ Discover available fields, resources, and metrics in the SA360 API schema.
 
 #### `sa360_get_change_history`
 
-Get change history for SA360 entities using the `change_event` resource.
-
-| Parameter      | Type   | Required | Description                                        |
-| -------------- | ------ | -------- | -------------------------------------------------- |
-| `customerId`   | string | Yes      | SA360 customer ID                                  |
-| `startDate`    | string | Yes      | Start date (YYYY-MM-DD)                            |
-| `endDate`      | string | Yes      | End date (YYYY-MM-DD)                              |
-| `resourceType` | enum   | No       | Filter: CAMPAIGN, AD_GROUP, AD, KEYWORD, CRITERION |
-| `limit`        | number | No       | Max results (default 100)                          |
+**Unavailable on Reporting API v0.** Change history lives in the `change_event` resource, which v0 does not expose (its `SearchAds360Row` has no `change_event`/`change_status`). The tool stays registered but always returns an `InvalidRequest` error without calling the API. To find recently modified entities, query `<resource>.last_modified_time` (on `campaign`, `ad_group`, `ad_group_ad`, `ad_group_criterion`, `campaign_criterion`) with `sa360_gaql_search` — it tells you when an entity last changed, not what changed.
 
 ### Async Reporting Tools (v2 API)
 
@@ -323,24 +318,27 @@ Insert offline conversions via the legacy v2 API.
 | `advertiserId` | string | Yes      | SA360 advertiser ID       |
 | `conversions`  | array  | Yes      | Conversion rows (max 200) |
 
-Each conversion row:
+Each conversion row (every key is a field of the v2 `Conversion` resource; there is no `gclid` or `floodlightActivityId` field in v2):
 
-| Field                  | Type   | Required | Description                           |
-| ---------------------- | ------ | -------- | ------------------------------------- |
-| `clickId`              | string | No       | SA360 click ID                        |
-| `gclid`                | string | No       | Google click ID                       |
-| `conversionTimestamp`  | string | Yes      | Epoch milliseconds                    |
-| `revenueMicros`        | string | No       | Revenue (1,000,000 = 1 currency unit) |
-| `currencyCode`         | string | No       | ISO 4217 currency code                |
-| `segmentationType`     | string | Yes      | Segment type (default: FLOODLIGHT)    |
-| `floodlightActivityId` | string | No       | Floodlight activity ID                |
-| `type`                 | string | No       | ACTION or TRANSACTION                 |
+| Field                 | Type   | Required | Description                                                                                                        |
+| --------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `clickId`             | string | Yes\*    | DS click ID for the conversion                                                                                     |
+| `conversionId`        | string | Yes      | Advertiser-chosen ID; unique within the request, and (`conversionId`, `conversionTimestamp`) unique per advertiser |
+| `conversionTimestamp` | string | Yes      | Epoch milliseconds                                                                                                 |
+| `revenueMicros`       | string | No       | Revenue (1,000,000 = 1 currency unit)                                                                              |
+| `currencyCode`        | string | No       | ISO 4217 currency code                                                                                             |
+| `segmentationType`    | string | Yes      | Segment type (default: FLOODLIGHT)                                                                                 |
+| `segmentationId`      | string | Yes\*\*  | Numeric segmentation identifier, e.g. Floodlight activity ID                                                       |
+| `segmentationName`    | string | Yes\*\*  | Friendly segmentation identifier, e.g. Floodlight activity name                                                    |
+| `type`                | string | No       | ACTION or TRANSACTION                                                                                              |
+
+\* Required by the client-side validator. \*\* One of `segmentationId` / `segmentationName` is required.
 
 #### `sa360_update_conversions`
 
 Update existing conversions via the legacy v2 API.
 
-Same parameters as `sa360_insert_conversions`, but each conversion row **must** include `conversionId` (returned from the original insert). Set `state: "REMOVED"` to delete a conversion.
+Same parameters as `sa360_insert_conversions`. Each row identifies the conversion by the `conversionId` you assigned at insert time (SA360 does not generate it) plus the original `conversionTimestamp`. Set `state: "REMOVED"` to delete a conversion.
 
 ### Validation
 
@@ -363,7 +361,7 @@ Validate a conversion payload before uploading (no API call).
 
 ## Rate Limiting
 
-- Default: 100 requests/minute per customer ID
+- Default: 10 requests/minute per customer ID (Reporting API v0); the legacy v2 API has its own limit (`SA360_V2_RATE_LIMIT_PER_MINUTE`, default 10)
 - Separate rate limit pools for reporting API v0 and v2 API
 - Automatic exponential backoff on 429/5xx responses (max 3 retries)
 - Configurable via `SA360_RATE_LIMIT_PER_MINUTE` environment variable
@@ -422,7 +420,7 @@ User: "Upload these CRM conversions to SA360 for bid optimization"
 
 AI Agent:
 1. sa360_list_entities (conversionAction) → find the right floodlight activity
-2. sa360_insert_conversions → upload conversion data with gclids
+2. sa360_insert_conversions → upload conversion data (clickId + your own conversionId per row)
 3. Confirm upload with count and any errors
 ```
 
@@ -448,7 +446,7 @@ AI Agent:
 | `MCP_AUTH_SECRET_KEY`         | —                                                 | JWT secret (jwt mode only)                |
 | `SA360_API_BASE_URL`          | `https://searchads360.googleapis.com/v0`          | Reporting API base URL                    |
 | `SA360_V2_API_BASE_URL`       | `https://www.googleapis.com/doubleclicksearch/v2` | Legacy v2 API base URL                    |
-| `SA360_RATE_LIMIT_PER_MINUTE` | `100`                                             | Rate limit per customer ID                |
+| `SA360_RATE_LIMIT_PER_MINUTE` | `10`                                              | Rate limit per customer ID                |
 | `SA360_CLIENT_ID`             | —                                                 | OAuth2 client ID (stdio mode)             |
 | `SA360_CLIENT_SECRET`         | —                                                 | OAuth2 client secret (stdio mode)         |
 | `SA360_REFRESH_TOKEN`         | —                                                 | OAuth2 refresh token (stdio mode)         |

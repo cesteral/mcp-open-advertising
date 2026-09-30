@@ -313,7 +313,7 @@ export interface MetaDuplicateDryRunArgs {
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
   /** Status the copy lands in. Default (undefined) → PAUSED. */
-  statusOption?: "ACTIVE" | "PAUSED" | "INHERITED";
+  statusOption?: "ACTIVE" | "PAUSED" | "INHERITED_FROM_SOURCE";
   /** Naming applied to the copy, mirroring `/copies` `rename_options`. */
   renameOptions?: { prefix?: string; suffix?: string };
 }
@@ -323,7 +323,7 @@ export interface MetaDuplicateDryRunArgs {
  * there is no `before` for it. The expected post-state is the SOURCE entity's
  * canonical snapshot re-projected as the copy: read the source, overlay the
  * copy's landing status (Meta copies land PAUSED unless `statusOption` says
- * otherwise; INHERITED keeps the source status), and emit it with an empty
+ * otherwise; INHERITED_FROM_SOURCE keeps the source status), and emit it with an empty
  * `platformEntityId` (the new ID is assigned on execute). Out-of-scope kinds
  * are token-gated but not snapshot-governed.
  */
@@ -343,12 +343,12 @@ export async function runMetaDuplicateDryRun(
       | Record<string, unknown>
       | undefined;
     if (source && typeof source === "object") {
-      // The copy lands PAUSED by default; ACTIVE if requested; INHERITED keeps
+      // The copy lands PAUSED by default; ACTIVE if requested; INHERITED_FROM_SOURCE keeps
       // the source status (no overlay).
       const statusOverlay =
         args.statusOption === "ACTIVE"
           ? { status: "ACTIVE" }
-          : args.statusOption === "INHERITED"
+          : args.statusOption === "INHERITED_FROM_SOURCE"
             ? {}
             : { status: "PAUSED" };
       // `/copies` `rename_options` wraps the source name with prefix/suffix; the

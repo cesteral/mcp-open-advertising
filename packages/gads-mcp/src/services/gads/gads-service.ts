@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { GAdsHttpClient } from "./gads-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import type { BulkCapacityCheck, RateLimiter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
@@ -19,6 +19,53 @@ import type { GoogleAdsQueryRow } from "./types.js";
 export type { GoogleAdsQueryRow };
 
 /**
+ * Prefix marking a cursor this service minted (as opposed to a raw upstream
+ * `next_page_token`, which is passed through unchanged).
+ */
+const GAQL_CURSOR_PREFIX = "gadsq1.";
+
+interface GaqlCursor {
+  /** Upstream page token of the page to (re-)read; undefined = first page. */
+  pageToken?: string;
+  /** Rows of that page already returned to the caller. */
+  skip: number;
+}
+
+/** @internal Exported for tests. */
+export function encodeGaqlCursor(cursor: GaqlCursor): string {
+  if (cursor.skip === 0 && cursor.pageToken) return cursor.pageToken;
+  const payload = JSON.stringify({ t: cursor.pageToken ?? null, s: cursor.skip });
+  return GAQL_CURSOR_PREFIX + Buffer.from(payload, "utf8").toString("base64url");
+}
+
+/** @internal Exported for tests. */
+export function decodeGaqlCursor(cursor: string | undefined): GaqlCursor {
+  if (!cursor) return { skip: 0 };
+  if (!cursor.startsWith(GAQL_CURSOR_PREFIX)) return { pageToken: cursor, skip: 0 };
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(cursor.slice(GAQL_CURSOR_PREFIX.length), "base64url").toString("utf8")
+    ) as { t?: unknown; s?: unknown };
+    const skip = parsed.s;
+    const token = parsed.t;
+    if (
+      typeof skip === "number" &&
+      Number.isInteger(skip) &&
+      skip >= 0 &&
+      (token === null || typeof token === "string")
+    ) {
+      return { pageToken: token ?? undefined, skip };
+    }
+  } catch {
+    // fall through
+  }
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    "Invalid pageToken: pass back the nextPageToken value from a previous response unchanged."
+  );
+}
+
+/**
  * Google Ads Service — GAQL queries, account listing, and generic CRUD
  * via the Google Ads REST API v23.
  *
@@ -32,31 +79,101 @@ export class GAdsService {
     private readonly httpClient: GAdsHttpClient
   ) {}
 
+  /**
+   * The bulk-capacity projection input for a batch this service would run
+   * against one customer. Every call here consumes one token from
+   * `gads:${customerId}`; `costPerItem` lists the token cost of each `consume`
+   * one item makes, in order. Pass the result to `assertBulkCapacity` (execute)
+   * or `projectBulkCapacity` (dry run).
+   */
+  bulkCapacityCheck(
+    toolName: string,
+    customerId: string,
+    itemCount: number,
+    costPerItem: readonly number[]
+  ): BulkCapacityCheck {
+    return {
+      rateLimiter: this.rateLimiter,
+      toolName,
+      itemCount,
+      buckets: [{ key: `gads:${customerId}`, costPerItem }],
+    };
+  }
+
   // ─── GAQL Search ──────────────────────────────────────────────────
 
   /**
-   * Execute a raw GAQL query against the Google Ads API.
-   * Uses the `search` endpoint (paginated) rather than `searchStream`.
+   * Execute a GAQL query against the Google Ads API via `googleAds:search`.
+   *
+   * **Never sends `pageSize`.** The v23 Discovery document for
+   * `SearchGoogleAdsRequest.pageSize` reads: "Google Ads API returns a
+   * `PAGE_SIZE_NOT_SUPPORTED` error if this field is set in the request body."
+   * The API returns fixed pages of up to 10,000 rows, so `maxRows` is applied
+   * client-side here, following `nextPageToken` until it is satisfied.
+   *
+   * The returned `nextPageToken` is a cursor for THIS method, not always a raw
+   * upstream token. When `maxRows` falls on a page boundary it is the upstream
+   * `next_page_token` itself; when it falls mid-page it encodes the page's
+   * token plus how many of that page's rows were already returned, so the rows
+   * between `maxRows` and the end of a 10,000-row page stay reachable. Either
+   * form is accepted back as `pageToken`, as is any raw upstream token.
+   *
+   * @param maxRows Upper bound on rows returned. Omit to return exactly one
+   *   upstream page (up to 10,000 rows).
    */
   async gaqlSearch(
     customerId: string,
     query: string,
-    pageSize?: number,
+    maxRows?: number,
     pageToken?: string,
+    context?: RequestContext
+  ): Promise<{ results: GoogleAdsQueryRow[]; nextPageToken?: string; totalResultsCount?: number }> {
+    let { pageToken: upstreamToken, skip } = decodeGaqlCursor(pageToken);
+    const limit = maxRows && maxRows > 0 ? maxRows : undefined;
+    const results: GoogleAdsQueryRow[] = [];
+    let nextPageToken: string | undefined;
+    let totalResultsCount: number | undefined;
+
+    for (;;) {
+      const page = await this.searchPage(customerId, query, upstreamToken, context);
+      totalResultsCount ??= page.totalResultsCount;
+
+      const available = page.results.slice(skip);
+      const taken = limit === undefined ? available : available.slice(0, limit - results.length);
+      results.push(...taken);
+
+      if (taken.length < available.length) {
+        // Bound reached mid-page: resume from the next unreturned row of it.
+        nextPageToken = encodeGaqlCursor({
+          pageToken: upstreamToken,
+          skip: skip + taken.length,
+        });
+        break;
+      }
+      if (!page.nextPageToken) break;
+      if (limit === undefined || results.length >= limit || page.results.length === 0) {
+        nextPageToken = page.nextPageToken;
+        break;
+      }
+      upstreamToken = page.nextPageToken;
+      skip = 0;
+    }
+
+    return { results, nextPageToken, totalResultsCount };
+  }
+
+  /** One raw `googleAds:search` call. The body carries only `query` and `pageToken`. */
+  private async searchPage(
+    customerId: string,
+    query: string,
+    pageToken: string | undefined,
     context?: RequestContext
   ): Promise<{ results: GoogleAdsQueryRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ customerId, query: query.substring(0, 200) }, "Executing GAQL search");
 
-    const body: Record<string, unknown> = {
-      query,
-    };
-
-    if (pageSize) {
-      body.pageSize = pageSize;
-    }
-
+    const body: Record<string, unknown> = { query };
     if (pageToken) {
       body.pageToken = pageToken;
     }
@@ -72,8 +189,9 @@ export class GAdsService {
 
     return {
       results: ((result.results as unknown[]) || []) as GoogleAdsQueryRow[],
-      nextPageToken: result.nextPageToken as string | undefined,
-      totalResultsCount: result.totalResultsCount as number | undefined,
+      nextPageToken: (result.nextPageToken as string | undefined) || undefined,
+      totalResultsCount:
+        result.totalResultsCount === undefined ? undefined : Number(result.totalResultsCount),
     };
   }
 

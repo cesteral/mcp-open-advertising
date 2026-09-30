@@ -64,7 +64,9 @@ URNs must be URL-encoded when used in API paths:
 Body is JSON. Response contains the new entity URN.
 
 ### Read: GET /v2/{entityPath}/{encodedUrn} *(still legacy — #210)*
-URN must be URL-encoded in path.
+URN must be URL-encoded in path. Exception: an ad account is read, updated and
+deleted at \`/rest/adAccounts/{numericId}\` (e.g. \`/rest/adAccounts/123\`), keyed
+by the numeric id, not the URN.
 
 ### Update: POST /v2/{entityPath}/{encodedUrn} *(still legacy — #210)* with X-Restli-Method: PARTIAL_UPDATE
 Body: \`{ "patch": { "$set": { ...fields } } }\`
@@ -76,7 +78,7 @@ Offset-based pagination via \`start\` and \`count\` parameters.
 Response contains \`elements\` array and \`paging\` object.
 
 Entities not yet migrated still scope by query parameter:
-- \`accounts[0]\` — creatives (\`/v2/adCreatives\`)
+- \`accounts=List(urn%3Ali%3AsponsoredAccount%3A123)\` — creatives (\`/v2/adCreatives\`; Rest.li 2.0 list syntax)
 - \`account\` — conversion rules (\`/v2/conversions\`)
 
 Campaigns and campaign groups no longer use a scoping parameter: the account is part of their path.

@@ -83,15 +83,15 @@ describe("TikTokHttpClient", () => {
       expect(calledUrl).toContain("page=1");
     });
 
-    it("sets Authorization: Bearer header", async () => {
+    it("sends the token in TikTok's Access-Token header, not Authorization: Bearer", async () => {
       mockTikTokSuccessResponse({ list: [] });
 
       await client.get("/open_api/v1.3/campaign/get/");
 
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
-      expect((options.headers as Record<string, string>)["Authorization"]).toBe(
-        "Bearer test-access-token"
-      );
+      const headers = options.headers as Record<string, string>;
+      expect(headers["Access-Token"]).toBe("test-access-token");
+      expect(headers["Authorization"]).toBeUndefined();
     });
 
     it("returns data field from response on success", async () => {
@@ -103,7 +103,7 @@ describe("TikTokHttpClient", () => {
     });
 
     it("throws McpError on TikTok error code", async () => {
-      mockTikTokErrorResponse(40001, "Access token is expired");
+      mockTikTokErrorResponse(40102, "Access token is expired");
 
       await expect(client.get("/open_api/v1.3/campaign/get/")).rejects.toThrow(
         "Access token is expired"
@@ -143,6 +143,26 @@ describe("TikTokHttpClient", () => {
 
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
       expect(options.method).toBe("POST");
+    });
+  });
+
+  describe("multipart uploads", () => {
+    it("sends the token in the Access-Token header", async () => {
+      mockTikTokSuccessResponse({ image_id: "img-1" });
+
+      await client.postMultipart(
+        "/open_api/v1.3/file/image/ad/upload/",
+        {},
+        "image_file",
+        Buffer.from("x"),
+        "a.png",
+        "image/png"
+      );
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      const headers = options.headers as Record<string, string>;
+      expect(headers["Access-Token"]).toBe("test-access-token");
+      expect(headers["Authorization"]).toBeUndefined();
     });
   });
 
@@ -190,15 +210,42 @@ describe("TikTokHttpClient", () => {
   });
 
   describe("error mapping", () => {
-    it("maps auth error codes to Unauthorized", async () => {
-      mockTikTokErrorResponse(40001, "Access token expired");
+    // Codes per the vendor table in the official SDK's tiktok_code.py.
+    it.each([
+      [40102, -32006], // ACCESS_TOKEN_EXPIRE -> Unauthorized
+      [40104, -32006], // EMPTY_ACCESS_TOKEN -> Unauthorized
+      [40105, -32006], // INVALID_ACCESS_TOKEN -> Unauthorized
+      [40001, -32005], // PERMISSION_ERROR -> Forbidden
+      [40002, -32602], // PARAM_ERROR -> InvalidParams (was Unauthorized)
+      [40000, -32602], // INVALID_PARAMS -> InvalidParams
+    ])("maps TikTok code %i to JSON-RPC %i", async (tiktokCode, expected) => {
+      mockTikTokErrorResponse(tiktokCode, "err");
 
       try {
         await client.get("/open_api/v1.3/campaign/get/");
         expect.fail("Should have thrown");
       } catch (error: any) {
-        expect(error.code).toBe(-32006); // Unauthorized
+        expect(error.code).toBe(expected);
       }
+    });
+
+    it("does not treat 40002 PARAM_ERROR as an auth failure", async () => {
+      mockTikTokErrorResponse(40002, "Invalid parameter");
+
+      try {
+        await client.get("/open_api/v1.3/campaign/get/");
+        expect.fail("Should have thrown");
+      } catch (error: any) {
+        expect(error.code).not.toBe(-32006);
+        expect(error.data?.nextAction ?? "").not.toMatch(/Renew the TikTok access token/);
+      }
+    });
+
+    it("does not retry 40101 INVALID_PARTNER as a rate limit", async () => {
+      mockTikTokErrorResponse(40101, "Invalid partner");
+
+      await expect(client.get("/open_api/v1.3/campaign/get/")).rejects.toThrow("Invalid partner");
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
     it("maps rate limit codes to RateLimited", async () => {

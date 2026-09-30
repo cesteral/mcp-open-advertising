@@ -17,24 +17,39 @@ export interface PinterestEntityConfig {
   /** Path template for list/get. {adAccountId} is substituted at runtime. */
   listPath: string;
   /**
-   * Path template for fetching a single entity by ID.
-   * If provided, used for direct GET by entity ID (e.g., "/v5/pins/{entityId}").
-   * If undefined, getEntity falls back to listing and filtering by ID.
+   * Path template for fetching a single entity by ID (direct GET), e.g.
+   * "/v5/ad_accounts/{adAccountId}/campaigns/{entityId}" or "/v5/pins/{entityId}".
+   * Every entity type has one — Pinterest v5's list endpoints take no `id`
+   * filter, so listing-and-taking-the-first-item returns the wrong entity.
    */
-  getPath?: string;
+  getPath: string;
+  /**
+   * True when create/update go through Pinterest's batch write endpoints
+   * (POST/PATCH `/v5/ad_accounts/{id}/{campaigns,ad_groups,ads}`), which take
+   * an array body and answer HTTP 200 with `{ items: [{ data, exceptions }] }`
+   * even when an item was rejected.
+   */
+  batchWrite: boolean;
   /** Path template for create (POST). */
   createPath: string;
   /** Path template for PATCH update (bulk). {adAccountId} substituted. */
   updatePath: string;
   /** Path for status update — same as updatePath (status is a field). */
   statusUpdatePath: string;
-  /** Path for DELETE. May use {adAccountId} for query-param style or {entityId} for single. */
-  deletePath: string;
+  /**
+   * How `pinterest_delete_entity` removes this entity type.
+   *
+   * - `"archive"` — Pinterest v5 exposes no DELETE on
+   *   `/ad_accounts/{id}/{campaigns,ad_groups,ads}` (GET/POST/PATCH only), so
+   *   removal is a batch PATCH setting `status: "ARCHIVED"` (`EntityStatus`).
+   * - `"delete"` — a real `DELETE` on {@link deletePath} (Pins: `DELETE /v5/pins/{pin_id}`).
+   */
+  removal: "archive" | "delete";
+  /** Path for DELETE, with {entityId}. Present only when `removal` is `"delete"`. */
+  deletePath?: string;
   duplicatePath?: string;
   /** Primary ID field name in API response (e.g., "id") */
   idField: string;
-  /** Query param name for batch delete (e.g., "campaign_ids") */
-  deleteIdsParam: string;
   displayName: string;
   defaultFields: string[];
   supportsDuplicate?: boolean;
@@ -43,12 +58,13 @@ export interface PinterestEntityConfig {
 const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   campaign: {
     listPath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    getPath: "/v5/ad_accounts/{adAccountId}/campaigns/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/campaigns",
     updatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
-    deletePath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    removal: "archive",
     idField: "id",
-    deleteIdsParam: "campaign_ids",
     displayName: "Campaign",
     defaultFields: [
       "id",
@@ -64,12 +80,13 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   },
   adGroup: {
     listPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    getPath: "/v5/ad_accounts/{adAccountId}/ad_groups/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
     updatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
-    deletePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    removal: "archive",
     idField: "id",
-    deleteIdsParam: "ad_group_ids",
     displayName: "Ad Group",
     defaultFields: [
       "id",
@@ -85,12 +102,13 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   },
   ad: {
     listPath: "/v5/ad_accounts/{adAccountId}/ads",
+    getPath: "/v5/ad_accounts/{adAccountId}/ads/{entityId}",
+    batchWrite: true,
     createPath: "/v5/ad_accounts/{adAccountId}/ads",
     updatePath: "/v5/ad_accounts/{adAccountId}/ads",
     statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ads",
-    deletePath: "/v5/ad_accounts/{adAccountId}/ads",
+    removal: "archive",
     idField: "id",
-    deleteIdsParam: "ad_ids",
     displayName: "Ad",
     defaultFields: [
       "id",
@@ -106,12 +124,13 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   creative: {
     listPath: "/v5/pins",
     getPath: "/v5/pins/{entityId}",
+    batchWrite: false,
     createPath: "/v5/pins",
     updatePath: "/v5/pins/{entityId}",
     statusUpdatePath: "/v5/pins/{entityId}",
+    removal: "delete",
     deletePath: "/v5/pins/{entityId}",
     idField: "id",
-    deleteIdsParam: "pin_id",
     displayName: "Pin (Creative)",
     defaultFields: ["id", "title", "description", "media", "link", "created_at"],
     supportsDuplicate: false,

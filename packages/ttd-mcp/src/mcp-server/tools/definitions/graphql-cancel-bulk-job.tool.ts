@@ -21,6 +21,7 @@ import type {
   DispatchedCapability,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
+import { MUTATION_ERROR_SELECTION, describePayloadErrors } from "../utils/graphql-bulk-job.js";
 
 const TOOL_NAME = "ttd_graphql_cancel_bulk_job";
 const TOOL_TITLE = "TTD GraphQL Cancel Bulk Job";
@@ -35,9 +36,7 @@ const CANCEL_BULK_JOB_MUTATION = `mutation CancelBulkJob($input: CancelBulkJobIn
       id
       status
     }
-    errors {
-      __typename
-    }
+    ${MUTATION_ERROR_SELECTION}
   }
 }`;
 
@@ -121,10 +120,11 @@ export async function graphqlCancelBulkJobLogic(
 
   const payloadErrors = payload.errors;
   if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
-    const messages = payloadErrors
-      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
-      .join("; ");
-    throw new McpError(JsonRpcErrorCode.InvalidRequest, `Cannot cancel bulk job: ${messages}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `Cannot cancel bulk job: ${describePayloadErrors(payloadErrors)}`,
+      { errors: payloadErrors }
+    );
   }
 
   const job = payload.data;
@@ -132,7 +132,7 @@ export async function graphqlCancelBulkJobLogic(
     throw new McpError(JsonRpcErrorCode.InvalidRequest, "cancelBulkJob returned no data");
   }
 
-  const jobId = (job.id as string) ?? input.jobId;
+  const jobId = job.id !== undefined && job.id !== null ? String(job.id) : input.jobId;
   const status = job.status as string;
   const effect: EffectResult = {
     effectKind: "bulk_job_cancelled",

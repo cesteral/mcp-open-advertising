@@ -118,6 +118,36 @@ describe("SA360Service", () => {
       expect(result.results).toEqual([]);
     });
 
+    it("parses v0 totalResultsCount, which is an int64 serialised as a string", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [], totalResultsCount: "1234" });
+
+      const result = await service.sa360Search("123", "SELECT campaign.id FROM campaign");
+
+      expect(result.totalResultsCount).toBe(1234);
+    });
+
+    it("sends returnTotalResultsCount only when asked (v0 default is false)", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [] });
+      httpClient.fetch.mockResolvedValueOnce({ results: [] });
+
+      await service.sa360Search("123", "SELECT campaign.id FROM campaign");
+      await service.sa360Search(
+        "123",
+        "SELECT campaign.id FROM campaign",
+        10,
+        undefined,
+        undefined,
+        {
+          returnTotalResultsCount: true,
+        }
+      );
+
+      expect(
+        JSON.parse(httpClient.fetch.mock.calls[0][2].body).returnTotalResultsCount
+      ).toBeUndefined();
+      expect(JSON.parse(httpClient.fetch.mock.calls[1][2].body).returnTotalResultsCount).toBe(true);
+    });
+
     it("consumes rate limiter with customer ID", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
@@ -232,6 +262,16 @@ describe("SA360Service", () => {
       expect(result.totalResultsCount).toBe(2);
     });
 
+    it("requests returnTotalResultsCount so pagination.totalCount can be populated", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [], totalResultsCount: "7" });
+
+      const result = await service.listEntities("campaign", "123");
+
+      const body = JSON.parse(httpClient.fetch.mock.calls[0][2].body);
+      expect(body.returnTotalResultsCount).toBe(true);
+      expect(result.totalResultsCount).toBe(7);
+    });
+
     it("passes filters to the query builder", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
@@ -308,16 +348,34 @@ describe("SA360Service", () => {
       expect(body.pageSize).toBe(25);
     });
 
-    it("returns fields and totalSize", async () => {
+    it("reads v0 totalResultsCount (int64 serialised as a string) and nextPageToken", async () => {
+      // v0 SearchSearchAds360FieldsResponse = {results, nextPageToken, totalResultsCount};
+      // there is no `totalSize` field.
       httpClient.fetch.mockResolvedValueOnce({
         results: [{ name: "campaign.id", dataType: "INT64" }],
-        totalSize: 1,
+        totalResultsCount: "250",
+        nextPageToken: "tok-2",
       });
 
       const result = await service.searchFields("SELECT name FROM searchAds360Fields");
 
       expect(result.fields).toHaveLength(1);
-      expect(result.totalSize).toBe(1);
+      expect(result.totalResultsCount).toBe(250);
+      expect(result.nextPageToken).toBe("tok-2");
+    });
+
+    it("sends pageToken, and never returnTotalResultsCount (not a field of the fields request)", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [] });
+
+      await service.searchFields("SELECT name FROM searchAds360Fields", 100, "tok-2");
+
+      const [, , options] = httpClient.fetch.mock.calls[0];
+      const body = JSON.parse(options.body);
+      expect(body).toEqual({
+        query: "SELECT name FROM searchAds360Fields",
+        pageSize: 100,
+        pageToken: "tok-2",
+      });
     });
 
     it("consumes rate limiter with global key", async () => {

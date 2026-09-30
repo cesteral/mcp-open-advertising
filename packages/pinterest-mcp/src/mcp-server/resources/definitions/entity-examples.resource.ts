@@ -13,7 +13,9 @@ import {
 const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
   campaign: `# Pinterest Campaign Examples
 
-## Create an Awareness Campaign (daily budget $50/day)
+These payloads go to \`pinterest_create_entity\` / \`pinterest_update_entity\`. Money is integer micro-currency and times are Unix seconds.
+
+## Create an awareness campaign (50.00/day cap)
 \`\`\`json
 {
   "entityType": "campaign",
@@ -21,131 +23,142 @@ const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
   "data": {
     "name": "Spring Sale Awareness",
     "objective_type": "AWARENESS",
-    "status": "ACTIVE",
+    "status": "PAUSED",
     "daily_spend_cap": 50000000
   }
 }
 \`\`\`
 
-## Create a Conversions Campaign (lifetime budget)
+## Create a conversion campaign (1,000.00 lifetime cap, scheduled)
 \`\`\`json
 {
   "entityType": "campaign",
   "adAccountId": "549755885175",
   "data": {
     "name": "Q2 2026 Conversions",
-    "objective_type": "CONVERSIONS",
-    "status": "ACTIVE",
-    "lifetime_spend_cap": 1000000000
+    "objective_type": "WEB_CONVERSION",
+    "status": "PAUSED",
+    "lifetime_spend_cap": 1000000000,
+    "start_time": 1775001600,
+    "end_time": 1782863999
   }
 }
 \`\`\`
 
-## Pause a Campaign
+\`1775001600\` is 2026-04-01 00:00:00 UTC and \`1782863999\` is 2026-06-30 23:59:59 UTC.
+
+## Pause a campaign
 \`\`\`json
 {
   "entityType": "campaign",
   "adAccountId": "549755885175",
-  "entityId": "549755885175",
-  "data": {
-    "status": "PAUSED"
-  }
+  "entityId": "626736533506",
+  "data": { "status": "PAUSED" }
 }
 \`\`\`
-
-> **Budget note:** Pinterest uses micro-currency. $50/day = \`daily_spend_cap: 50000000\`
 `,
 
   adGroup: `# Pinterest Ad Group Examples
 
-## Create an Ad Group with Audience Targeting
+## Create an ad group with audience targeting
 \`\`\`json
 {
   "entityType": "adGroup",
   "adAccountId": "549755885175",
   "data": {
-    "name": "Women 25-34 US",
-    "campaign_id": "549755885175",
-    "status": "ACTIVE",
+    "name": "Women 35-49 US",
+    "campaign_id": "626736533506",
+    "billable_event": "IMPRESSION",
+    "status": "PAUSED",
     "budget_in_micro_currency": 10000000,
+    "budget_type": "DAILY",
     "pacing_delivery_type": "STANDARD",
     "bid_strategy_type": "AUTOMATIC_BID",
-    "start_time": "2026-04-01T00:00:00",
+    "start_time": 1775001600,
     "targeting_spec": {
-      "age_bucket": ["35-44", "45-49"],
-      "gender": ["female"],
-      "geo": [{ "country": "US" }],
-      "interest": ["fashion", "beauty", "lifestyle"]
+      "LOCATION": ["US"],
+      "AGE_BUCKET": ["35-44", "45-49"],
+      "GENDER": ["female"],
+      "INTEREST": ["{interest_id_from_pinterest_search_targeting}"]
     }
   }
 }
 \`\`\`
 
-## Create an Always-On Ad Group (no end time)
+## Create an always-on ad group with a manual bid
 \`\`\`json
 {
   "entityType": "adGroup",
   "adAccountId": "549755885175",
   "data": {
     "name": "Retargeting - Site Visitors",
-    "campaign_id": "549755885175",
-    "status": "ACTIVE",
+    "campaign_id": "626736533506",
+    "billable_event": "CLICKTHROUGH",
+    "status": "PAUSED",
     "budget_in_micro_currency": 5000000,
-    "pacing_delivery_type": "STANDARD",
+    "budget_type": "DAILY",
     "bid_strategy_type": "MAX_BID",
-    "start_time": "2026-04-01T00:00:00"
+    "bid_in_micro_currency": 1500000,
+    "start_time": 1775001600,
+    "targeting_spec": { "AUDIENCE_INCLUDE": ["{audience_id}"] }
   }
 }
 \`\`\`
+
+With no \`end_time\`, the ad group runs until it is paused or archived. Set \`status\` to \`ACTIVE\` once the ads are ready.
 `,
 
   ad: `# Pinterest Ad Examples
 
-## Create a Regular (static image) Ad
+An ad promotes an existing Pin. Create the Pin first (see the creative examples).
+
+## Create a standard image ad
 \`\`\`json
 {
   "entityType": "ad",
   "adAccountId": "549755885175",
   "data": {
-    "name": "Spring Pin Ad",
     "ad_group_id": "2680060704746",
     "creative_type": "REGULAR",
     "pin_id": "1234567890",
-    "status": "ACTIVE"
+    "name": "Spring Pin Ad",
+    "destination_url": "https://example.com/spring-sale",
+    "status": "PAUSED"
   }
 }
 \`\`\`
 
-## Create a Video Ad
+## Create a video ad
 \`\`\`json
 {
   "entityType": "ad",
   "adAccountId": "549755885175",
   "data": {
-    "name": "Product Video Ad",
     "ad_group_id": "2680060704746",
     "creative_type": "VIDEO",
     "pin_id": "9876543210",
-    "status": "ACTIVE"
+    "name": "Product Video Ad",
+    "status": "PAUSED"
   }
 }
 \`\`\`
-
-> **Note:** Ads reference Pinterest Pins by pin_id. Create/upload the Pin before creating the Ad.
 `,
 
   creative: `# Pinterest Creative (Pin) Examples
 
-## Create an Image Creative
+A Pin is created on a board (\`board_id\`) and is then promoted by an ad through its \`id\`.
+
+## Create an image Pin
 \`\`\`json
 {
   "entityType": "creative",
   "adAccountId": "549755885175",
   "data": {
+    "board_id": "{board_id}",
     "title": "Spring Sale - 50% Off",
     "description": "Shop our Spring Sale collection — up to 50% off select items",
     "link": "https://example.com/spring-sale",
-    "media": {
+    "media_source": {
       "source_type": "image_url",
       "url": "https://example.com/spring-banner.jpg"
     }
@@ -153,18 +166,21 @@ const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
 }
 \`\`\`
 
-## Create a Video Creative
+## Create a video Pin
+Upload the video first with \`pinterest_upload_video\`, then pass its \`mediaId\`:
 \`\`\`json
 {
   "entityType": "creative",
   "adAccountId": "549755885175",
   "data": {
+    "board_id": "{board_id}",
     "title": "New Collection Highlight",
     "description": "Discover our newest arrivals for the season",
     "link": "https://example.com/new-arrivals",
-    "media": {
-      "source_type": "video_url",
-      "url": "https://example.com/product-video.mp4"
+    "media_source": {
+      "source_type": "video_id",
+      "media_id": "{mediaId_from_pinterest_upload_video}",
+      "cover_image_url": "https://example.com/cover.jpg"
     }
   }
 }

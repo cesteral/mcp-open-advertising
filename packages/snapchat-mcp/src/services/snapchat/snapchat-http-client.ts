@@ -22,9 +22,18 @@ interface SnapchatEnvelope {
   status?: string;
   request_id?: string;
   display_message?: string;
-  error_code?: number;
+  debug_message?: string;
+  error_code?: number | string;
   [key: string]: unknown;
 }
+
+/**
+ * Envelope `request_status` values that mean the whole request failed. The
+ * package historically checked only "FAILED"; Snapchat's documented error
+ * envelope uses "ERROR" (with a string `error_code` such as "E3003"). Both are
+ * treated as failures — accepting an extra failure token cannot mask a success.
+ */
+const FAILED_REQUEST_STATUSES = new Set(["FAILED", "ERROR"]);
 
 function buildSnapchatEnvelopeNextAction(message: string | undefined): string | undefined {
   if (!message) return undefined;
@@ -59,7 +68,7 @@ function buildSnapchatHttpNextAction(
 
 /**
  * Validate the Snapchat response envelope.
- * Returns the full envelope on success, throws McpError on FAILED status.
+ * Returns the full envelope on success, throws McpError on a FAILED/ERROR status.
  */
 function validateSnapchatEnvelope(body: unknown): unknown {
   const json = body as SnapchatEnvelope;
@@ -70,17 +79,21 @@ function validateSnapchatEnvelope(body: unknown): unknown {
         ? json.status.toUpperCase()
         : undefined;
 
-  if (requestStatus !== "FAILED") {
+  if (requestStatus === undefined || !FAILED_REQUEST_STATUSES.has(requestStatus)) {
     return json;
   }
 
-  const nextAction = buildSnapchatEnvelopeNextAction(json.display_message);
+  const message = json.display_message ?? json.debug_message;
+  const nextAction = buildSnapchatEnvelopeNextAction(message);
 
   throw new McpError(
     JsonRpcErrorCode.InvalidRequest,
-    json.display_message ?? `Snapchat API error: request_status=FAILED`,
+    message ?? `Snapchat API error: request_status=${requestStatus}`,
     {
       errorCode: json.error_code,
+      ...(json.debug_message && json.debug_message !== message
+        ? { debugMessage: json.debug_message }
+        : {}),
       ...(nextAction ? { nextAction } : {}),
     }
   );
@@ -94,7 +107,7 @@ function validateSnapchatEnvelope(body: unknown): unknown {
  *
  * Key Snapchat patterns:
  * - ad_account_id is in URL paths (not injected into query params or body)
- * - Response: { request_status: "SUCCESS"|"FAILED", <entityKey>s: [...] }
+ * - Response: { request_status: "SUCCESS"|"ERROR"|"FAILED", <entityKey>s: [...] }
  * - Updates use PUT, deletes use DELETE on entity-specific paths
  */
 export class SnapchatHttpClient {

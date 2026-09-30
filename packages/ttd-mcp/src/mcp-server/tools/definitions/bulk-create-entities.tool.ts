@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 import {
@@ -106,9 +107,14 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // One POST per item, one token each on `ttd:${partnerId}`
+  // (TtdService.bulkCreateEntities → createEntity).
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.items.length, [1]);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
-    const dryRun = buildBulkEffectDryRun(input);
+    const dryRun = buildBulkEffectDryRun(input, bulkCapacityDryRunErrors([capacityCheck]));
     return {
       entityType: input.entityType,
       totalRequested: 0,
@@ -132,7 +138,9 @@ export async function bulkCreateEntitiesLogic(
     );
   }
 
-  const { ttdService } = resolveSessionServices(sdkContext);
+  // Refuse a batch the rate limiter cannot admit in time — before any upstream call.
+  assertBulkCapacityAll([capacityCheck]);
+
   const items = input.items.map((item) =>
     mergeParentIdsIntoData(item, input as Record<string, unknown>)
   );
@@ -180,8 +188,11 @@ export async function bulkCreateEntitiesLogic(
  * entity kind). TTD has no native bulk validate, so both axes are symbolic.
  * Pure (no I/O).
  */
-function buildBulkEffectDryRun(input: BulkCreateInput): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
+function buildBulkEffectDryRun(
+  input: BulkCreateInput,
+  capacityErrors: DryRunValidationError[] = []
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [...capacityErrors];
   input.items.forEach((item, i) => {
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({

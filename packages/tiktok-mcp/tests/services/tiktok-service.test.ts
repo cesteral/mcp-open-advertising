@@ -122,14 +122,73 @@ describe("TikTokService", () => {
   });
 
   describe("deleteEntity()", () => {
-    it("calls correct POST delete path with IDs array", async () => {
+    // The official v1.3 SDK has no campaign/adgroup/ad /delete/ endpoint;
+    // deletion is status/update with operation_status DELETE.
+    it.each([
+      ["campaign", "/open_api/v1.3/campaign/status/update/", "campaign_ids"],
+      ["adGroup", "/open_api/v1.3/adgroup/status/update/", "adgroup_ids"],
+      ["ad", "/open_api/v1.3/ad/status/update/", "ad_ids"],
+    ] as const)("deletes %s via status/update with DELETE", async (entityType, path, idsField) => {
       mockPost.mockResolvedValueOnce({});
 
-      await service.deleteEntity("campaign", ["1800000001", "1800000002"]);
+      await service.deleteEntity(entityType, ["1800000001", "1800000002"]);
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith(
+        path,
+        { [idsField]: ["1800000001", "1800000002"], operation_status: "DELETE" },
+        undefined
+      );
+      expect(String(mockPost.mock.calls[0][0])).not.toContain("/delete/");
+    });
+  });
+
+  describe("unsupported endpoints", () => {
+    it("duplicateEntity refuses without calling any /copy/ path", async () => {
+      await expect(service.duplicateEntity("campaign", "1")).rejects.toMatchObject({
+        code: -32600,
+      });
+      expect(mockPost).not.toHaveBeenCalled();
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+
+    it("getAdPreviews refuses without calling ad/preview/", async () => {
+      await expect(service.getAdPreviews("1")).rejects.toMatchObject({ code: -32600 });
+      expect(mockGet).not.toHaveBeenCalled();
+      expect(mockPost).not.toHaveBeenCalled();
+    });
+
+    it("rejects the removed creative entity type with guidance instead of calling creative/adcreative/*", async () => {
+      await expect(service.listEntities("creative" as any)).rejects.toThrow(
+        /no standalone creative entity/
+      );
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("listAdvertisers()", () => {
+    it("sends the required advertiser_ids to advertiser/info/", async () => {
+      mockGet.mockResolvedValueOnce({ list: [{ advertiser_id: "123", name: "Acme" }] });
+
+      await service.listAdvertisers(["123"]);
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/open_api/v1.3/advertiser/info/",
+        { advertiser_ids: JSON.stringify(["123"]) },
+        undefined
+      );
+    });
+  });
+
+  describe("getAudienceEstimate()", () => {
+    it("posts to ad/audience_size/estimate/ (the path TikTok's spec text names)", async () => {
+      mockPost.mockResolvedValueOnce({});
+
+      await service.getAudienceEstimate({ location_ids: ["6252001"] });
 
       expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/delete/",
-        { campaign_ids: ["1800000001", "1800000002"] },
+        "/open_api/v1.3/ad/audience_size/estimate/",
+        { location_ids: ["6252001"] },
         undefined
       );
     });
@@ -257,26 +316,22 @@ describe("TikTokService", () => {
 
   describe("targeting tools", () => {
     it("uses official tool targeting search endpoint", async () => {
-      mockPost.mockResolvedValueOnce({ list: [{ geo_id: "1", name: "Stockholm" }] });
+      mockPost.mockResolvedValueOnce({ targeting_tag_list: [{ name: "Stockholm" }] });
 
-      const result = await service.searchTargeting({
-        keyword: "stockholm",
-        scene: "GEO",
+      const body = {
+        keywords: ["stockholm"],
+        search_type: "FUZZY_SEARCH",
         placements: ["PLACEMENT_TIKTOK"],
         objective_type: "TRAFFIC",
-      });
+      };
+      const result = await service.searchTargeting(body);
 
       expect(mockPost).toHaveBeenCalledWith(
         "/open_api/v1.3/tool/targeting/search/",
-        {
-          keyword: "stockholm",
-          scene: "GEO",
-          placements: ["PLACEMENT_TIKTOK"],
-          objective_type: "TRAFFIC",
-        },
+        body,
         undefined
       );
-      expect(result).toEqual({ list: [{ geo_id: "1", name: "Stockholm" }] });
+      expect(result).toEqual({ targeting_tag_list: [{ name: "Stockholm" }] });
     });
 
     it("dispatches language options to the official language endpoint", async () => {

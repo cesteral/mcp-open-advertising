@@ -15,7 +15,7 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Pinterest r
 Makes a single API call to check task status. Does not poll or wait.
 
 **Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
-Pinterest raw statuses (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST) are mapped; EXPIRED and DOES_NOT_EXIST surface as \`failed\` since the artifact is no longer retrievable. The raw string is returned as \`rawStatus\`.
+Pinterest raw statuses (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST/CANCELLED) are mapped; EXPIRED, DOES_NOT_EXIST and CANCELLED surface as \`failed\` since the report will never be retrievable. The raw string is returned as \`rawStatus\`.
 - If state is \`complete\` with a \`downloadUrl\`, use \`pinterest_download_report\` to fetch results.
 - If not finished, call this tool again in ~10 seconds.`;
 
@@ -30,7 +30,9 @@ export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   taskId: z.string().describe("Report token/task ID"),
   rawStatus: z
     .string()
-    .describe("Raw Pinterest status (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST)"),
+    .describe(
+      "Raw Pinterest status (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST/CANCELLED)"
+    ),
   isComplete: z.boolean().describe("Whether the canonical state is 'complete'"),
   timestamp: z.string().datetime(),
 }).describe("Report status check result");
@@ -52,6 +54,11 @@ export async function checkReportStatusLogic(
     status: result.status,
     downloadUrl: result.downloadUrl,
   });
+  // The shared mapper predates Pinterest's CANCELLED status and would report it
+  // as "pending", so a caller would poll a cancelled report forever.
+  if (result.status === "CANCELLED") {
+    canonical.state = "failed";
+  }
 
   return {
     ...canonical,

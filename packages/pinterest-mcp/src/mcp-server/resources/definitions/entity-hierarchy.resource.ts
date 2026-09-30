@@ -14,126 +14,108 @@ function formatEntityHierarchyMarkdown(): string {
 ## Relationship Diagram
 
 \`\`\`
-Advertiser (ad_account_id: XXXXXXXXXX)
-  ├── Campaign (campaign_id)
-  │     └── Ad Group (adgroup_id)
-  │           └── Ad (ad_id)  ← references Creative
-  └── Creative (creative_id, reusable across ads)
+Ad account (ad_account_id)
+  └── Campaign (id; objective_type, spend caps)
+        └── Ad Group (id; campaign_id, budget, bid, targeting_spec)
+              └── Ad (id; ad_group_id, pin_id)  ← promotes a Pin
+
+Pin (id; board_id, media_source)  ← the creative. Owned by the user account, not the ad account.
 \`\`\`
 
 ## Entity Types (4 total)
 
-| Entity Type | List Endpoint | Create Endpoint | ID Field |
-|-------------|---------------|-----------------|----------|
-| **campaign** | \`GET /v5/ad_accounts/{ad_account_id}/campaigns\` | \`POST /v5/ad_accounts/{ad_account_id}/campaigns\` | id |
-| **adGroup** | \`GET /v5/ad_accounts/{ad_account_id}/ad_groups\` | \`POST /v5/ad_accounts/{ad_account_id}/ad_groups\` | id |
-| **ad** | \`GET /v5/ad_accounts/{ad_account_id}/ads\` | \`POST /v5/ad_accounts/{ad_account_id}/ads\` | id |
-| **creative** | \`GET /v5/pins/{pin_id}\` | \`POST /v5/pins\` | id |
+| Entity Type | List / Get | Create | Update | Removal |
+|-------------|-----------|--------|--------|---------|
+| **campaign** | \`GET /v5/ad_accounts/{ad_account_id}/campaigns[/{id}]\` | \`POST …/campaigns\` (batch) | \`PATCH …/campaigns\` (batch) | Archive (\`status: ARCHIVED\`) |
+| **adGroup** | \`GET /v5/ad_accounts/{ad_account_id}/ad_groups[/{id}]\` | \`POST …/ad_groups\` (batch) | \`PATCH …/ad_groups\` (batch) | Archive |
+| **ad** | \`GET /v5/ad_accounts/{ad_account_id}/ads[/{id}]\` | \`POST …/ads\` (batch) | \`PATCH …/ads\` (batch) | Archive |
+| **creative** (Pin) | \`GET /v5/pins[/{pin_id}]\` | \`POST /v5/pins\` | \`PATCH /v5/pins/{pin_id}\` | \`DELETE /v5/pins/{pin_id}\` (hard delete) |
 
 ## Key Relationships
 
-### Core Hierarchy: Advertiser → Campaign → Ad Group → Ad
-- A campaign has one or more ad groups.
-- An ad group has one or more ads.
-- An ad references creative assets (video_id or image_ids).
+### Core hierarchy: Ad account → Campaign → Ad Group → Ad
+- A campaign has one or more ad groups (\`campaign_id\` on the ad group).
+- An ad group has one or more ads (\`ad_group_id\` on the ad).
+- An ad promotes exactly one Pin (\`pin_id\`). The creative content (image or video, title, link) lives on the Pin, not the ad.
 
-### Reusable Entities
-- **Creatives** can be referenced by multiple ads within the same advertiser.
+### Pins
+- A Pin belongs to a board (\`board_id\`) and can be promoted by several ads.
+- Video Pins reference a video uploaded with \`pinterest_upload_video\` (\`media_source.source_type: "video_id"\`). Image Pins reference a hosted image (\`source_type: "image_url"\`).
 
 ## Creation Order
 
-Full campaign structure (top-down):
+1. **Ad account**: already exists. Find it with \`pinterest_list_ad_accounts\`.
+2. **Campaign**: requires \`name\` and \`objective_type\`.
+3. **Ad group(s)**: requires \`name\`, \`campaign_id\` and \`billable_event\`. \`budget_in_micro_currency\` is required unless the campaign uses campaign budget optimization.
+4. **Pin(s)**: requires \`board_id\` and \`media_source\`. Upload the video first for a video Pin.
+5. **Ad(s)**: requires \`ad_group_id\`, \`creative_type\` and \`pin_id\`.
 
-1. **Advertiser** — pre-exists; discover with \`pinterest_list_ad_accounts\`
-2. **Creative(s)** — optional; can upload via Creative Library or reference video/image IDs
-3. **Campaign** — requires \`campaign_name\`, \`objective_type\`, \`budget_mode\`, \`budget\`
-4. **Ad Group(s)** — requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget\`
-5. **Ad(s)** — requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative assets
+Create everything \`PAUSED\` and activate it after review.
 
 ## Pinterest API Patterns
 
-### Read: GET with ad_account_id in URL path
-\`\`\`
-GET /v5/ad_accounts/123/campaigns?page_size=25&bookmark=<cursor>
-Authorization: Bearer <token>
-\`\`\`
-
-### Create: POST with entity fields in JSON body
+### Batch writes take an array body
 \`\`\`
 POST /v5/ad_accounts/123/campaigns
-{ "name": "My Campaign", "objective_type": "TRAFFIC", "status": "ACTIVE", ... }
-\`\`\`
+[{ "name": "My Campaign", "objective_type": "AWARENESS", "status": "PAUSED" }]
 
-### Update: PATCH with changed fields in JSON body
-\`\`\`
 PATCH /v5/ad_accounts/123/campaigns
-{ "items": [{ "id": "456", "name": "Updated Name", "status": "PAUSED" }] }
+[{ "id": "456", "status": "PAUSED" }]
 \`\`\`
+- Up to 30 items per request. The tools send one item per request.
+- The response is \`{ "items": [{ "data": {...}, "exceptions": [...] }] }\`, and it is **HTTP 200 even when an item was rejected**. The tools turn a per-item exception into an error.
 
-### Delete: DELETE with IDs in query params
-\`\`\`
-DELETE /v5/ad_accounts/123/campaigns?campaign_ids=456&campaign_ids=789
-\`\`\`
+### No DELETE for campaigns, ad groups or ads
+\`pinterest_delete_entity\` archives them with a batch PATCH (\`status: "ARCHIVED"\`). Archiving is permanent. Pins are hard-deleted with \`DELETE /v5/pins/{pin_id}\`.
 
-### Response Shape
-List responses use cursor-based pagination:
-\`\`\`json
-{
-  "items": [...],
-  "bookmark": "<next_cursor>"
-}
-\`\`\`
-- \`bookmark\` is absent when there are no more pages
-- Single-entity responses return the entity object directly
+### Pagination
+List endpoints are cursor-based:
+- \`page_size\`: items per page (default 25, max 250)
+- \`bookmark\`: the cursor from the previous response. There are no more pages when it is absent or null.
 
-## Pagination
+## Units
 
-Pinterest uses cursor-based pagination (NOT page-number based):
-- \`page_size\` — items per page (default 25, max 250)
-- \`bookmark\` — cursor token for next page (pass from previous response)
-- Response: no \`bookmark\` = last page
+| Field kind | Unit | Example |
+|------------|------|---------|
+| Money (\`daily_spend_cap\`, \`lifetime_spend_cap\`, \`budget_in_micro_currency\`, \`bid_in_micro_currency\`) | Integer micro-currency | \`50000000\` = 50.00 |
+| Times (\`start_time\`, \`end_time\`) | Integer Unix seconds | \`1775001600\` = 2026-04-01 00:00 UTC |
+| \`targeting_spec\` keys | UPPERCASE | \`LOCATION\`, \`AGE_BUCKET\`, \`GENDER\` |
+
+\`pinterest_adjust_bids\` is the one tool that takes plain currency units (\`1.5\` = 1.50) and converts them for you.
+
+## Status
+
+- \`status\` (campaign, ad group and ad) is what you set: \`ACTIVE\`, \`PAUSED\`, \`ARCHIVED\`, \`DRAFT\` or \`DELETED_DRAFT\`.
+- \`summary_status\` is read-only and reports the delivery state.
+- Ads also carry \`review_status\` (\`PENDING\`, \`APPROVED\`, \`REJECTED\`, \`OTHER\`) and \`rejected_reasons\`.
 
 ## Available Tools Summary
 
 | Tool | Purpose | Batch? |
 |------|---------|--------|
-| \`pinterest_list_entities\` | List entities with filters | |
-| \`pinterest_get_entity\` | Get single entity | |
-| \`pinterest_create_entity\` | Create single entity | |
-| \`pinterest_update_entity\` | Update single entity | |
-| \`pinterest_delete_entity\` | Delete entities | ✓ |
-| \`pinterest_list_ad_accounts\` | List accessible advertisers | |
-| \`pinterest_get_report\` | Async report with polling | |
-| \`pinterest_get_report_breakdowns\` | Report with breakdown dimensions | |
-| \`pinterest_bulk_update_status\` | Batch status update | ✓ |
-| \`pinterest_bulk_create_entities\` | Batch entity creation | ✓ |
-| \`pinterest_bulk_update_entities\` | Batch entity updates | ✓ |
-| \`pinterest_adjust_bids\` | Batch bid adjustment | ✓ |
-| \`pinterest_search_targeting\` | Search targeting options | |
-| \`pinterest_get_targeting_options\` | Browse targeting categories | |
-| \`pinterest_duplicate_entity\` | Duplicate campaign/adGroup/ad | |
-| \`pinterest_get_audience_estimate\` | Audience size estimation | |
-| \`pinterest_get_ad_preview\` | Ad preview data | |
-| \`pinterest_validate_entity\` | Client-side payload validation | |
+| \`pinterest_list_ad_accounts\` | List accessible ad accounts | |
+| \`pinterest_list_entities\` | List entities | |
+| \`pinterest_get_entity\` | Get one entity | |
+| \`pinterest_create_entity\` | Create one entity | |
+| \`pinterest_update_entity\` | Update one entity, including \`status\` | |
+| \`pinterest_delete_entity\` | Archive campaigns, ad groups or ads, or delete Pins | ✓ |
+| \`pinterest_duplicate_entity\` | Copy a campaign | |
+| \`pinterest_bulk_create_entities\` | Create up to 50 entities | ✓ |
+| \`pinterest_bulk_update_entities\` | Update up to 50 entities | ✓ |
+| \`pinterest_bulk_update_status\` | Set ACTIVE, PAUSED or ARCHIVED on many entities | ✓ |
+| \`pinterest_adjust_bids\` | Read-modify-write ad group bids | ✓ |
+| \`pinterest_upload_video\` | Upload a video for a video Pin | |
+| \`pinterest_search_targeting\` / \`pinterest_get_targeting_options\` | Discover targeting values | |
+| \`pinterest_get_delivery_estimate\` | Audience size for a \`targeting_spec\` | |
+| \`pinterest_get_ad_preview\` | Preview page for an ad's Pin | |
+| \`pinterest_get_report\` / \`pinterest_get_report_breakdowns\` | Async reports with polling | |
+| \`pinterest_submit_report\` / \`pinterest_check_report_status\` / \`pinterest_download_report\` | Manual async report steps | |
+| \`pinterest_get_pacing_status\` | Budget pacing | |
+| \`pinterest_validate_entity\` | Client-side payload check | |
 
-## Budget Notes
+## Campaign Objectives (\`objective_type\`)
 
-- Budget values are in the advertiser's account currency (no cents conversion)
-- \`budget_mode\`: BUDGET_MODE_DAY (daily) or BUDGET_MODE_TOTAL (lifetime)
-- Minimum budget varies by objective and market
-
-## Campaign Objectives
-
-| Objective | Use Case |
-|-----------|----------|
-| TRAFFIC | Drive website/app traffic |
-| APP_INSTALLS | Drive app downloads |
-| CONVERSIONS | Optimize for conversion events |
-| AWARENESS | Brand awareness / reach |
-| VIDEO_VIEWS | Maximize video plays |
-| LEAD_GENERATION | In-app lead forms |
-| CATALOG_SALES | Dynamic product ads |
-| COMMUNITY_INTERACTION | Profile visits, follows |
+\`AWARENESS\`, \`CONSIDERATION\`, \`WEB_CONVERSION\`, \`CATALOG_SALES\`, \`VIDEO_COMPLETION\`, \`SALES\`, \`APP_INSTALL\`, \`CTV_CONSIDERATION\`. The objective can only be changed while the campaign is a draft.
 `;
 }
 

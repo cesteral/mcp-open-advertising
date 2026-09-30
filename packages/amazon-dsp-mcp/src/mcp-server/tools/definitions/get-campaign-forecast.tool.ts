@@ -54,6 +54,12 @@ const CampaignForecastDescriptionSchema = z
 export const GetCampaignForecastInputSchema = z
   .object({
     profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
+    accountId: z
+      .string()
+      .min(1)
+      .describe(
+        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Sent as the `Amazon-Ads-AccountId` header, which Amazon requires on this endpoint. Distinct from `profileId`."
+      ),
     campaignForecastDescriptions: z
       .array(CampaignForecastDescriptionSchema)
       .length(1)
@@ -82,6 +88,7 @@ export async function getCampaignForecastLogic(
   assertAccountScope(input.profileId, boundProfileId, "profileId");
   const response = await amazonDspV1Service.retrieveCampaignForecast(
     { campaignForecastDescriptions: input.campaignForecastDescriptions },
+    input.accountId,
     context
   );
   return { response, timestamp: new Date().toISOString() };
@@ -146,6 +153,7 @@ export const getCampaignForecastTool = {
       label: "Forecast a single campaign",
       input: {
         profileId: "1234567890",
+        accountId: "577020615253975655",
         campaignForecastDescriptions: [{ campaignId: "cmp-abc" }],
       },
     },
@@ -153,6 +161,7 @@ export const getCampaignForecastTool = {
       label: "Forecast restricted to one flight, with curve + insights",
       input: {
         profileId: "1234567890",
+        accountId: "577020615253975655",
         campaignForecastDescriptions: [
           {
             campaignId: "cmp-abc",

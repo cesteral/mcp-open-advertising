@@ -224,8 +224,16 @@ describe("tiktok_list_entities tool", () => {
       expect(result.success).toBe(false);
     });
 
+    it("rejects the creative entity type (no creative/adcreative/* endpoints in v1.3)", () => {
+      const result = ListEntitiesInputSchema.safeParse({
+        entityType: "creative",
+        advertiserId: "1234567890",
+      });
+      expect(result.success).toBe(false);
+    });
+
     it("accepts all supported entity types", () => {
-      const types = ["campaign", "adGroup", "ad", "creative"];
+      const types = ["campaign", "adGroup", "ad"];
       for (const entityType of types) {
         const result = ListEntitiesInputSchema.safeParse({
           entityType,

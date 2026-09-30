@@ -229,6 +229,14 @@
       "expectTop": "tiktok_delete_entity",
       "outranks": ["tiktok_adjust_bids"],
       "note": "Promoted from gaps. The query word 'ad' used to substring-match 'adjust', which gave tiktok_adjust_bids the full +5 name weight. Names are now split into words and a prefix match needs at least 3 characters, so 'ad' matches the word 'ad' and nothing inside 'adjust'."
+    },
+    {
+      "server": "msads-mcp",
+      "platform": "msads",
+      "query": "delete a campaign",
+      "expectTop": "msads_delete_entity",
+      "outranks": ["msads_delete_report_schedule"],
+      "note": "Promoted from gaps[] once msads_delete_report_schedule's description began with 'NOT SUPPORTED' (Microsoft Advertising Reporting has no schedules) and stopped picking up description hits. The margin is a TIE (9–9) resolved by registry order, so reordering allTools can flip it — the thinnest pinned case in the corpus."
     }
   ],
   "gaps": [
@@ -240,15 +248,6 @@
       "actualTop": "dv360_adjust_line_item_bids",
       "wantedNotInTopN": 1,
       "note": "The safety case #205 asks about. Narrowed but still open: 'remove' now reaches delete, so dv360_delete_entity went from outside the top 6 to #2 (12). dv360_adjust_line_item_bids still wins at 22, because 'line' and 'item' each match a word in its name for +5. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201. Beating an object noun that appears in a tool's name needs the query's operation to outweigh it, and rarity (IDF) weighting was tried and rejected: it broke 3 protected cases by amplifying repeated description words."
-    },
-    {
-      "server": "msads-mcp",
-      "platform": "msads",
-      "query": "delete a campaign",
-      "wanted": "msads_delete_entity",
-      "actualTop": "msads_delete_report_schedule",
-      "wantedNotInTopN": 1,
-      "note": "Deleting a report SCHEDULE outranks deleting the campaign, because the extra 'report'/'schedule' tokens pick up description hits. cm360 has the same two tools and gets it the right way round, so this is wording drift rather than an inevitability."
     },
     {
       "server": "amazon-dsp-mcp",

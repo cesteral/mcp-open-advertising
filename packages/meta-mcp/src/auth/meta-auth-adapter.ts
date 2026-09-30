@@ -23,8 +23,6 @@ import {
   OAuth2RefreshAdapterBase,
 } from "@cesteral/shared";
 
-const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v25.0";
-
 /**
  * Contract for Meta authentication adapters.
  */
@@ -65,7 +63,8 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
 
   constructor(
     private readonly accessToken: string,
-    private readonly baseUrl: string = DEFAULT_META_GRAPH_API_BASE_URL
+    /** Versioned Graph API base URL from config (`metaApiBaseUrl`). */
+    private readonly baseUrl: string
   ) {}
 
   get userId(): string {
@@ -124,7 +123,8 @@ export class MetaRefreshTokenAdapter
   constructor(
     initialToken: string,
     appCredentials: MetaAppCredentials,
-    private readonly baseUrl: string = DEFAULT_META_GRAPH_API_BASE_URL
+    /** Versioned Graph API base URL from config (`metaApiBaseUrl`). */
+    private readonly baseUrl: string
   ) {
     super({
       platformName: "Meta",

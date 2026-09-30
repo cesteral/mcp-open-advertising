@@ -51,8 +51,7 @@ Use \`meta_search_targeting\` with these types:
 | adinterest | Search interests | "running shoes" |
 | adinterestsuggestion | Get suggestions | (uses interest_list) |
 | adinterestvalid | Validate interests | (uses interest IDs) |
-| adbehavior | Search behaviors | "purchase" |
-| adTargetingCategory | Browse categories | "behaviors" |
+| adTargetingCategory | Browse categories (set \`targetingClass\`) | targetingClass: "demographics" |
 | adgeolocation | Search locations | "New York" |
 | adlocale | Search languages | "English" |
 
