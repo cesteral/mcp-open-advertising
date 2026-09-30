@@ -143,6 +143,11 @@
             "tool": "dv360_bulk_update_status",
             "operations": ["bulk_job"],
             "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
+          },
+          {
+            "tool": "dv360_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is an update_entity PATCH, so a batch can set entityStatus=ENTITY_STATUS_ARCHIVED, the same irreversible value dv360_update_entity is declared for. Terminal only for that status value."
           }
         ]
       }

@@ -9,6 +9,8 @@ import {
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   PaginationOutputSchema,
   buildPaginationOutput,
   formatPaginationHint,
@@ -51,7 +53,9 @@ export const ListEntitiesInputSchema = z
     filter: z
       .string()
       .optional()
-      .describe("Filter expression (e.g., 'entityStatus=ENTITY_STATUS_ACTIVE')"),
+      .describe(
+        'Filter expression, values quoted as in the DV360 docs (e.g., entityStatus="ENTITY_STATUS_ACTIVE")'
+      ),
     pageToken: z.string().optional().describe("Page token for pagination"),
     pageSize: z.number().min(1).max(100).optional().describe("Number of entities to return"),
   })
@@ -113,23 +117,33 @@ export async function listEntitiesLogic(
   // Get entity configuration to determine which IDs should become filters
   const config = getEntityConfigDynamic(input.entityType);
 
-  // Build filter expression combining user filter + dynamic hierarchy filters
-  const filterParts: string[] = [];
-
-  if (input.filter) {
-    filterParts.push(input.filter);
-  }
+  // Build filter expression combining user filter + dynamic hierarchy filters.
+  // v4 Discovery documents restriction values quoted (`insertionOrderId="1234"`)
+  // and allows `OR` between restrictions, so the hierarchy restrictions are
+  // quoted and the caller's expression is parenthesised before being ANDed —
+  // `a OR b AND campaignId=x` would otherwise bind the AND to `b` only.
+  const hierarchyParts: string[] = [];
 
   // Auto-convert filterParamIds to filter expressions
   for (const filterParamId of config.filterParamIds) {
     const value = (input as any)[filterParamId];
     if (value) {
-      filterParts.push(`${filterParamId}=${value}`);
+      if (/["\\]/.test(String(value))) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `${filterParamId} must be a plain ID; got ${JSON.stringify(value)}`
+        );
+      }
+      hierarchyParts.push(`${filterParamId}="${value}"`);
       // Remove from parentIds since it's a filter, not a path/query param
       delete parentIds[filterParamId];
     }
   }
 
+  const filterParts =
+    input.filter && hierarchyParts.length > 0
+      ? [`(${input.filter})`, ...hierarchyParts]
+      : [...(input.filter ? [input.filter] : []), ...hierarchyParts];
   const combinedFilter = filterParts.length > 0 ? filterParts.join(" AND ") : undefined;
 
   // List entities
@@ -188,7 +202,7 @@ export const listEntitiesTool = {
       input: {
         entityType: "lineItem",
         advertiserId: "1234567",
-        filter: "entityStatus=ENTITY_STATUS_ACTIVE",
+        filter: 'entityStatus="ENTITY_STATUS_ACTIVE"',
         pageSize: 50,
       },
     },

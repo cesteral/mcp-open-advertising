@@ -101,6 +101,41 @@ function deepMerge<T extends Record<string, unknown>>(
  */
 export const DV360_HIGH_LATENCY_TIMEOUT_MS = 120_000;
 
+/**
+ * The generic create / patch / delete calls that v4 Discovery (revision
+ * 20260928) flags "This method regularly experiences high latency. We
+ * recommend increasing your default timeout": `advertisers.create`,
+ * `advertisers.lineItems.patch` and `advertisers.campaigns.delete`. The 10s
+ * default could abort one of these while it is still committing, and the
+ * caller would then re-issue a write that already landed.
+ */
+const HIGH_LATENCY_WRITES: Readonly<Record<"create" | "patch" | "delete", ReadonlySet<string>>> = {
+  create: new Set(["advertiser"]),
+  patch: new Set(["lineItem"]),
+  delete: new Set(["campaign"]),
+};
+
+/** The trailing `overrides` argument for `DV360HttpClient.fetch`, or none. */
+function writeTimeoutArgs(
+  operation: keyof typeof HIGH_LATENCY_WRITES,
+  entityType: string
+): [] | [{ timeoutMs: number }] {
+  return HIGH_LATENCY_WRITES[operation].has(entityType)
+    ? [{ timeoutMs: DV360_HIGH_LATENCY_TIMEOUT_MS }]
+    : [];
+}
+
+/**
+ * Per-type asset size limits from v4 Discovery `advertisers.assets.upload`:
+ * "no more than 10 MB for images, 200 MB for ZIP files, and 1 GB for videos".
+ */
+const MB = 1024 * 1024;
+function assetUploadLimit(contentType: string): { bytes: number; label: string } {
+  if (contentType.startsWith("image/")) return { bytes: 10 * MB, label: "10 MB for images" };
+  if (contentType.startsWith("video/")) return { bytes: 1024 * MB, label: "1 GB for videos" };
+  return { bytes: 200 * MB, label: "200 MB for ZIP and other files" };
+}
+
 /** Display name for a duplicate: the explicit override, else `Copy of {source}`. */
 function copyDisplayName(override: string | undefined, sourceName: unknown): string | undefined {
   if (override) return override;
@@ -425,7 +460,8 @@ export class DV360Service {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(withoutWriteScopeFields(config, validated)),
-        }
+        },
+        ...writeTimeoutArgs("create", entityType)
       );
 
       return schema.parse(response);
@@ -500,11 +536,16 @@ export class DV360Service {
         setSpanAttribute("dv360.advertiserId", ids.advertiserId);
       }
 
-      const response = await this.httpClient.fetch(path, context, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(withoutWriteScopeFields(config, validated)),
-      });
+      const response = await this.httpClient.fetch(
+        path,
+        context,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+        },
+        ...writeTimeoutArgs("patch", entityType)
+      );
 
       return schema.parse(response);
     });
@@ -579,7 +620,12 @@ export class DV360Service {
         setSpanAttribute("dv360.advertiserId", ids.advertiserId);
       }
 
-      await this.httpClient.fetch(path, context, { method: "DELETE" });
+      await this.httpClient.fetch(
+        path,
+        context,
+        { method: "DELETE" },
+        ...writeTimeoutArgs("delete", entityType)
+      );
     });
   }
 
@@ -920,13 +966,14 @@ export class DV360Service {
       setSpanAttribute("dv360.contentType", contentType);
       setSpanAttribute("dv360.fileSize", fileBuffer.length);
 
-      // DV360 rejects uploads over 200 MB — fail fast before buffering the multipart body
-      const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
-      if (fileBuffer.length > MAX_UPLOAD_BYTES) {
+      // Fail fast before buffering the multipart body. The limit depends on
+      // the asset type (images 10 MB, ZIP 200 MB, videos 1 GB).
+      const limit = assetUploadLimit(contentType);
+      if (fileBuffer.length > limit.bytes) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `File size ${(fileBuffer.length / 1024 / 1024).toFixed(1)} MB exceeds the 200 MB upload limit`,
-          { advertiserId, filename, fileSize: fileBuffer.length }
+          `File size ${(fileBuffer.length / MB).toFixed(1)} MB exceeds DV360's asset upload limit (${limit.label})`,
+          { advertiserId, filename, contentType, fileSize: fileBuffer.length }
         );
       }
 

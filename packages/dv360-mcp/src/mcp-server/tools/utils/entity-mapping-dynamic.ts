@@ -95,7 +95,8 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     apiPathTemplate: "/partners",
     parentResourceIds: [],
     isReadOnly: true, // Partners managed by Google
-    supportsFilter: false,
+    // v4 Discovery `partners.list` takes `filter` (field: entityStatus).
+    supportsFilter: true,
   },
   advertiser: {
     apiPathTemplate: "/advertisers",

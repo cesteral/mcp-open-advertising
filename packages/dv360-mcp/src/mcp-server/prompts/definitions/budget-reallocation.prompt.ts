@@ -77,7 +77,7 @@ Parameters:
 {
   "advertiserId": "${advertiserId}",
   "entityType": "insertionOrder",
-  "filter": "campaignId = ${campaignId}"
+  "filter": "campaignId=\\"${campaignId}\\""
 }
 \`\`\`
 
@@ -89,7 +89,7 @@ Parameters:
 {
   "advertiserId": "${advertiserId}",
   "entityType": "lineItem",
-  "filter": "insertionOrderId = {insertionOrderId}"
+  "filter": "insertionOrderId=\\"{insertionOrderId}\\""
 }
 \`\`\`
 

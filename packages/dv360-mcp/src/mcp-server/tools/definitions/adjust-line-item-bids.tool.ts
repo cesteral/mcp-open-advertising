@@ -273,16 +273,22 @@ export async function adjustLineItemBidsLogic(
       // Get current line item to extract previous bid
       const currentLineItem = (await dv360Service.getEntity("lineItem", entityIds, context)) as any;
 
-      // Extract current bid (handle different bid strategy types)
-      // DV360 API returns int64 fields as strings — convert to number
-      let previousBidMicros = 0;
-      if (currentLineItem.bidStrategy?.fixedBid?.bidAmountMicros) {
-        previousBidMicros = Number(currentLineItem.bidStrategy.fixedBid.bidAmountMicros);
-      } else if (currentLineItem.bidStrategy?.maximizeSpendAutoBid?.maxAverageCpmBidAmountMicros) {
-        previousBidMicros = Number(
-          currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros
+      // This tool only changes fixed bids (see its description). A line item
+      // on another strategy (maximizeSpendAutoBid, performanceGoalAutoBid, …)
+      // would get a `fixedBid` merged next to it, so the PATCH would either
+      // be rejected or switch the line item's bidding strategy. Fail the item
+      // instead, before anything is written.
+      const fixedBid = currentLineItem.bidStrategy?.fixedBid;
+      if (!fixedBid) {
+        const strategy = Object.keys(currentLineItem.bidStrategy ?? {}).join(", ") || "none";
+        throw new Error(
+          `Line item ${resolvedLineItemId} does not use a fixed bid (bidStrategy: ${strategy}); ` +
+            "dv360_adjust_line_item_bids only changes bidStrategy.fixedBid.bidAmountMicros. " +
+            "Use dv360_update_entity to change an automated bid strategy."
         );
       }
+      // DV360 API returns int64 fields as strings — convert to number
+      const previousBidMicros = Number(fixedBid.bidAmountMicros ?? 0);
 
       // Update bid — DV360 API expects int64 as string for bidAmountMicros
       // Pass currentLineItem to avoid redundant GET inside updateEntity
