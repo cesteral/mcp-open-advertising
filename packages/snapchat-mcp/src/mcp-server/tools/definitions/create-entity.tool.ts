@@ -31,8 +31,8 @@ const TOOL_DESCRIPTION = `Create a new Snapchat Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign**: requires \`name\`, \`status\`, and either \`daily_budget_micro\` or \`lifetime_spend_cap_micro\`
-- **adGroup**: requires \`campaignId\` + \`name\`, \`status\`, \`type\`, \`placement\`, \`targeting\`, \`optimization_goal\`, and a supported budget field
+- **campaign**: requires \`name\`, \`status\`, \`start_time\`, \`objective_v2_properties\` (e.g. \`{ "objective_v2_type": "TRAFFIC" }\`; types: AWARENESS_AND_ENGAGEMENT, APP_PROMOTION, TRAFFIC, SALES; add \`promotion_type\` such as APP_INSTALL for APP_PROMOTION), and either \`daily_budget_micro\` or \`lifetime_spend_cap_micro\`. The legacy \`objective\` attribute is auto-translated by Snap; do not send it.
+- **adGroup**: requires \`campaignId\` + \`name\`, \`status\`, \`type\` (SNAP_ADS, LENS or FILTER), \`placement_v2\` (e.g. \`{ "config": "AUTOMATIC", "platforms": ["SNAPCHAT"] }\`; \`snapchat_positions\` only with \`config: "CUSTOM"\`), \`billing_event\`, \`bid_strategy\`, \`targeting\`, \`optimization_goal\`, and a supported budget field. The legacy \`placement\` attribute is rejected by Snap.
 - **ad**: requires \`adSquadId\` + \`name\`, \`creative_id\`, \`type\`, \`status\`
 - **creative**: requires fields matching the chosen creative type, such as \`name\`, \`type\`, \`brand_name\`, \`headline\`, \`call_to_action\`, and media or destination properties
 
@@ -217,9 +217,10 @@ export const createEntityTool = {
         adAccountId: "1234567890",
         data: {
           name: "Summer Sale 2026",
-          objective: "WEB_CONVERSION",
+          objective_v2_properties: { objective_v2_type: "TRAFFIC" },
           daily_budget_micro: 10000000,
           status: "ACTIVE",
+          start_time: "2026-01-01T00:00:00Z",
         },
       },
     },
@@ -231,8 +232,10 @@ export const createEntityTool = {
         campaignId: "1800123456789",
         data: {
           name: "US 25-44 Interest Targeting",
-          placement: "SNAP_ADS",
+          placement_v2: { config: "AUTOMATIC", platforms: ["SNAPCHAT"] },
           type: "SNAP_ADS",
+          billing_event: "IMPRESSION",
+          bid_strategy: "LOWEST_COST_WITH_MAX_BID",
           daily_budget_micro: 5000000,
           optimization_goal: "IMPRESSIONS",
           bid_micro: 1000000,

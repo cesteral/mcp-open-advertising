@@ -14,20 +14,24 @@ const ENTITY_SCHEMA_CONTENT: Record<SnapchatEntityType, string> = {
   campaign: JSON.stringify(
     {
       type: "object",
-      required: ["name", "objective", "ad_account_id"],
+      required: ["name", "objective_v2_properties", "ad_account_id", "status", "start_time"],
       properties: {
         name: { type: "string", description: "Campaign name" },
-        objective: {
-          type: "string",
-          enum: [
-            "AWARENESS",
-            "APP_INSTALLS",
-            "DRIVE_REPLAY",
-            "LEAD_GENERATION",
-            "WEBSITE_CONVERSIONS",
-            "PRODUCT_CATALOG_SALES",
-            "VIDEO_VIEWS",
-          ],
+        objective_v2_properties: {
+          type: "object",
+          description:
+            "Campaign objective. Replaces the legacy `objective` attribute (Snap auto-translates legacy values but new integrations should not send it).",
+          required: ["objective_v2_type"],
+          properties: {
+            objective_v2_type: {
+              type: "string",
+              enum: ["AWARENESS_AND_ENGAGEMENT", "APP_PROMOTION", "TRAFFIC", "SALES"],
+            },
+            promotion_type: {
+              type: "string",
+              description: "Refines the objective, e.g. APP_INSTALL for APP_PROMOTION",
+            },
+          },
         },
         status: { type: "string", enum: ["ACTIVE", "PAUSED"] },
         ad_account_id: { type: "string", description: "Ad account ID" },
@@ -58,23 +62,69 @@ const ENTITY_SCHEMA_CONTENT: Record<SnapchatEntityType, string> = {
   adGroup: JSON.stringify(
     {
       type: "object",
-      required: ["name", "campaign_id"],
+      required: [
+        "name",
+        "campaign_id",
+        "type",
+        "placement_v2",
+        "billing_event",
+        "bid_strategy",
+        "optimization_goal",
+        "targeting",
+      ],
+      description:
+        "Also requires one of daily_budget_micro or lifetime_budget_micro (minimum 5,000,000 micro).",
       properties: {
         name: { type: "string" },
         campaign_id: { type: "string" },
         status: { type: "string", enum: ["ACTIVE", "PAUSED"] },
+        type: { type: "string", enum: ["SNAP_ADS", "LENS", "FILTER"] },
+        billing_event: { type: "string", enum: ["IMPRESSION"] },
+        bid_strategy: {
+          type: "string",
+          enum: ["AUTO_BID", "LOWEST_COST_WITH_MAX_BID", "TARGET_COST"],
+        },
         daily_budget_micro: { type: "integer" },
+        lifetime_budget_micro: { type: "integer" },
         bid_micro: {
           type: "integer",
-          description: "Bid amount in micro-currency",
+          description:
+            "Bid amount in micro-currency; required for LOWEST_COST_WITH_MAX_BID and TARGET_COST",
         },
         optimization_goal: {
           type: "string",
-          enum: ["SWIPE", "PIXEL_PAGE_VIEW", "APP_INSTALL", "VIDEO_VIEWS", "STORY_OPENS"],
+          enum: ["IMPRESSIONS", "SWIPES", "APP_INSTALLS", "VIDEO_VIEWS", "PIXEL_PURCHASE"],
         },
-        placement: {
-          type: "string",
-          enum: ["SNAP_ADS", "AUDIENCE_NETWORK", "BOTH"],
+        targeting: { type: "object" },
+        placement_v2: {
+          type: "object",
+          description:
+            "Required. Replaces the legacy `placement` attribute, which Snap has rejected since June 2020.",
+          required: ["config", "platforms"],
+          properties: {
+            config: { type: "string", enum: ["AUTOMATIC", "CUSTOM"] },
+            platforms: { type: "array", items: { type: "string", enum: ["SNAPCHAT"] } },
+            snapchat_positions: {
+              type: "array",
+              description: "Only when config is CUSTOM",
+              items: {
+                type: "string",
+                enum: [
+                  "INTERSTITIAL_USER",
+                  "INTERSTITIAL_CONTENT",
+                  "INTERSTITIAL_SPOTLIGHT",
+                  "INSTREAM",
+                  "PUBLIC_STORIES_INSTREAM",
+                  "CHAT_FEED",
+                  "FEED",
+                  "CAMERA",
+                  "POST_CAPTURE_CAROUSEL",
+                ],
+              },
+            },
+            inclusion: { type: "object", description: "{ content_types: [...] }" },
+            exclusion: { type: "object", description: "{ content_types: [...] }" },
+          },
         },
       },
     },

@@ -23,11 +23,11 @@ Backed by Snapchat's documented \`audience_size_v2\` endpoint.
   "targeting": {
     "geos": [{ "country_code": "us" }]
   },
-  "placement": "CONTENT",
+  "placement_v2": { "config": "AUTOMATIC", "platforms": ["SNAPCHAT"] },
+  "billing_event": "IMPRESSION",
+  "bid_strategy": "LOWEST_COST_WITH_MAX_BID",
   "bid_micro": 6000000,
-  "auto_bid": false,
   "daily_budget_micro": 50000000,
-  "delivery_constraint": "DAILY_BUDGET",
   "optimization_goal": "APP_INSTALLS"
 }
 \`\`\``;
@@ -104,7 +104,7 @@ export const getAudienceEstimateTool = {
           status: "ACTIVE",
           type: "SNAP_ADS",
           targeting: { geos: [{ country_code: "us" }] },
-          placement: "CONTENT",
+          placement_v2: { config: "AUTOMATIC", platforms: ["SNAPCHAT"] },
           optimization_goal: "APP_INSTALLS",
           daily_budget_micro: 50000000,
         },
@@ -122,7 +122,7 @@ export const getAudienceEstimateTool = {
             geos: [{ country_code: "gb" }],
             interests: [{ category_id: ["SLC_1"], operation: "INCLUDE" }],
           },
-          placement: "CONTENT",
+          placement_v2: { config: "AUTOMATIC", platforms: ["SNAPCHAT"] },
           optimization_goal: "IMPRESSIONS",
           daily_budget_micro: 25000000,
         },

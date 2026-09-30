@@ -55,15 +55,35 @@ describe("the shipped ledger", () => {
     }
   });
 
-  it("records every fact as unverified, because none of them has been checked", () => {
+  // Facts someone actually re-checked, and when. Adding to this set is the
+  // reviewed act of claiming a fact is verified; it is never inferred from the
+  // ledger's own `status`, which is what a wrong claim would edit.
+  const VERIFIED = new Map([
+    ["snapchat.stats_report_dimension", "2026-09-30"],
+    ["snapchat.stats_day_bounds_account_timezone", "2026-09-30"],
+    ["snapchat.campaign_objective_v2", "2026-09-30"],
+  ]);
+
+  it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
     // Honest starting state, and deliberately not glossed. The vendor doc hosts
-    // are unreachable from this repo's egress policy, so nobody has read a
-    // supported-version table. A ledger that opened at `verified` would be the
-    // false confidence it exists to remove.
+    // were unreachable from the sandbox the fleet review ran in, so most
+    // supported-version tables were never read. A ledger that opened at
+    // `verified` would be the false confidence it exists to remove.
     for (const fact of ledger.facts) {
-      expect(fact.status, `${fact.id}`).toBe("unverified");
-      expect(fact.verifiedAt, `${fact.id}`).toBeNull();
+      if (VERIFIED.has(fact.id)) {
+        expect(fact.status, `${fact.id}`).toBe("verified");
+        expect(fact.verifiedAt, `${fact.id}`).toBe(VERIFIED.get(fact.id));
+      } else {
+        expect(fact.status, `${fact.id}`).toBe("unverified");
+        expect(fact.verifiedAt, `${fact.id}`).toBeNull();
+      }
       expect(fact.verifyBy, `${fact.id} needs a deadline`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+    for (const id of VERIFIED.keys()) {
+      expect(
+        ledger.facts.some((f) => f.id === id),
+        `${id} is listed as verified but is not in the ledger`
+      ).toBe(true);
     }
   });
 

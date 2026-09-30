@@ -35,19 +35,31 @@ Snapchat \`async_status\` is normalized by the tools to: PENDING → RUNNING (\`
 | \`granularity\` | \`TOTAL\`, \`DAY\` (default), \`HOUR\`, \`LIFETIME\` | \`granularity\` |
 | \`dimensionType\` | \`CAMPAIGN\`, \`AD_SQUAD\`, \`AD\` (omit for the account total) | \`breakdown\` = \`campaign\` / \`adsquad\` / \`ad\` |
 | \`startTime\` / \`endTime\` | ISO 8601 timestamps | \`start_time\` / \`end_time\` |
-| \`datePreset\` | e.g. \`LAST_7_DAYS\` (instead of start/end) | resolved to UTC-midnight \`start_time\` and \`…T23:59:59Z\` \`end_time\` |
-| \`breakdowns\` (\`snapchat_get_report_breakdowns\` only) | extra names | **appended to \`fields\`** |
+| \`datePreset\` | e.g. \`LAST_7_DAYS\` (instead of start/end) | resolved to the ad account's day boundaries: local midnight of the first day to local midnight after the last, with the account's UTC offset |
+| \`reportDimension\` (\`snapchat_get_report_breakdowns\` only) | see below | \`report_dimension\` |
 
-**Time boundaries (unverified):** Snapchat is reported to require \`DAY\`-granularity
-\`start_time\`/\`end_time\` on day boundaries in the **ad account's timezone**. \`datePreset\`
-produces UTC boundaries, which only line up for UTC accounts. For a non-UTC account, pass
-explicit \`startTime\`/\`endTime\` with the account's offset (e.g. \`2026-03-01T00:00:00-08:00\`);
-the account's \`timezone\` is returned by \`snapchat_list_ad_accounts\`.
+**Time boundaries:** for \`DAY\` granularity Snapchat requires \`start_time\` and \`end_time\` to be the
+daily boundary **in the ad account's timezone**, and both must fall on the start of an hour.
+\`datePreset\` does this for you: it reads the account's timezone once and resolves to local
+midnight (e.g. \`2026-03-01T00:00:00-08:00\`). \`endTime\` is exclusive, so a range that includes
+1 March ends at \`2026-03-02T00:00:00-08:00\`. Explicit \`startTime\`/\`endTime\` are sent as given; a
+\`DAY\`/\`HOUR\` timestamp with minutes or seconds off the hour is refused before any request.
 
-**Demographic / geo splits (unverified):** \`snapchat_get_report_breakdowns\` sends its
-\`breakdowns\` inside \`fields\`. Snapchat is reported to take demographic and geo splits through
-a separate \`report_dimension\` parameter, which these tools do not send yet — if Snapchat
-rejects a breakdown name as an unknown field, that is why.
+**Insight dimensions (\`report_dimension\`):** \`snapchat_get_report_breakdowns\` takes one of:
+
+| Category | \`reportDimension\` | Metrics |
+|----------|-------------------|---------|
+| Geo | \`country\`, \`country,os\` | delivery + conversion |
+| Geo | \`region\`, \`dma\` | delivery only |
+| Demographic | \`gender\`, \`age\`, \`age,gender\` | delivery + conversion |
+| Device | \`os\`, \`os,country\` | delivery + conversion |
+| Device | \`make\` | delivery only |
+| Interest | \`lifestyle_category\` | delivery only |
+
+Snapchat allows one dimension at a time, except age with gender. \`HOUR\` granularity cannot be
+combined with a dimension, and dimensions are not available for custom conversions or
+SKAdNetwork metrics. (Source: Snapchat Measurement docs, read 2026-09-30. They replaced the
+older \`dimension\`/\`pivots\` parameters, which Snapchat sunset in June 2020.)
 
 ## Metric Fields Used by These Tools
 
