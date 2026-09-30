@@ -447,7 +447,7 @@ export const REGISTRY_DATA: RegistryData = {
       "runtime_description": "Search Ads 360 reporting and offline conversion uploads.",
       "platform": "Google Search Ads 360",
       "platform_display_name": "Search Ads 360",
-      "documentation_url": "https://developers.google.com/search-ads/v0/reference",
+      "documentation_url": "https://developers.google.com/search-ads/reporting",
       "auth": {
         "modes": [
           "sa360-headers",

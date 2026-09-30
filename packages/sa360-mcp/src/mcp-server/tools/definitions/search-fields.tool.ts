@@ -96,7 +96,7 @@ export const searchFieldsTool = {
   outputSchema: SearchFieldsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

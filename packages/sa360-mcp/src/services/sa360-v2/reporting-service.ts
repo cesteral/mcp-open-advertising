@@ -123,7 +123,9 @@ export class SA360ReportingService {
 
     this.logger.debug({ reportId }, "Checking SA360 report status");
 
-    const result = await this.httpClient.fetch(`/reports/${reportId}`, context);
+    // reportId comes from the MCP client: encode it so "../" or "#" cannot move
+    // the request to another path on the host.
+    const result = await this.httpClient.fetch(`/reports/${encodeURIComponent(reportId)}`, context);
 
     const response = result as ReportStatus;
     return {

@@ -807,7 +807,7 @@
       "runtime_description": "Search Ads 360 reporting and offline conversion uploads.",
       "platform": "Google Search Ads 360",
       "platform_display_name": "Search Ads 360",
-      "documentation_url": "https://developers.google.com/search-ads/v0/reference",
+      "documentation_url": "https://developers.google.com/search-ads/reporting",
       "tools": [
         "sa360_gaql_search",
         "sa360_list_accounts",
