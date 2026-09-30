@@ -6,28 +6,34 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 /**
  * AmazonDsp Entity Duplication Workflow Prompt
  *
- * Guides AI agents through duplicating campaigns, ad groups, and ads
- * for A/B testing, scaling, and templating.
+ * Guides AI agents through duplicating orders, line items, creatives and
+ * creative associations on the Unified API (#234) — read the source, create a
+ * PAUSED copy, customize, activate.
  */
 export const amazonDspEntityDuplicationWorkflowPrompt: Prompt = {
   name: "amazon_dsp_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating AmazonDsp Ads campaigns, ad groups, and ads using amazon_dsp_duplicate_entity — covers A/B testing, scaling, and common patterns.",
+    "Step-by-step guide for duplicating Amazon DSP orders, line items and creatives using amazon_dsp_duplicate_entity — covers A/B testing, scaling, and common patterns.",
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to duplicate: order, lineItem, or creative",
+      description: "Entity type to duplicate: order, lineItem, creative, or creativeAssociation",
       required: true,
     },
     {
       name: "entityId",
-      description: "Numeric ID of the entity to duplicate",
+      description: "ID of the entity to duplicate",
       required: true,
     },
     {
       name: "profileId",
-      description: "AmazonDsp Advertiser ID",
+      description: "Amazon Ads profile ID bound to the session",
       required: true,
+    },
+    {
+      name: "accountId",
+      description: "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers)",
+      required: false,
     },
   ],
 };
@@ -38,30 +44,33 @@ export function getAmazonDspEntityDuplicationWorkflowMessage(
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const profileId = args?.profileId || "{profileId}";
+  const accountId = args?.accountId || "{accountId}";
 
-  return `# AmazonDsp Entity Duplication Workflow
+  return `# Amazon DSP Entity Duplication Workflow (Unified API)
 
 Entity Type: \`${entityType}\`
 Entity ID: \`${entityId}\`
-Advertiser ID: \`${profileId}\`
+Profile ID: \`${profileId}\`
+Advertiser (accountId): \`${accountId}\`
 
 ---
 
 ## Overview
 
-\`amazon_dsp_duplicate_entity\` creates a copy of a campaign, ad group, or ad with all settings preserved.
+The Unified API has no copy operation. \`amazon_dsp_duplicate_entity\` reads the source (\`POST /adsApi/v1/query/…\`) and creates a copy (\`POST /adsApi/v1/create/…\`) from the source's create-schema fields. Children are not copied, and targets cannot be duplicated (they cannot be read by ID).
 
 | What Gets Copied | Details |
 |------------------|---------|
-| **Order** | Structure, budget, flight dates |
-| **Line Item** | Targeting, bidding, schedule, budget |
-| **Creative** | Creative type, assets, click URL |
+| **Order** | Name, countries, flights (dates + budgets, new flight IDs), frequencies, optimizations, budgets, fees, tags |
+| **Line Item** | Name, parent \`campaignId\`, inventory type, bid, optimization, pacing, targeting settings, budgets, dates |
+| **Creative** | Ad type, creative, marketplaces, tags |
+| **Creative Association** | Ad group, ad, dates, weight |
+
+Read-only fields (IDs, timestamps, \`status\`, currency codes) are dropped.
 
 ---
 
 ## Step 1: Review the Source Entity
-
-Before duplicating, inspect the entity you're copying:
 
 \`\`\`json
 {
@@ -69,12 +78,11 @@ Before duplicating, inspect the entity you're copying:
   "params": {
     "entityType": "${entityType}",
     "profileId": "${profileId}",
+    "accountId": "${accountId}",
     "entityId": "${entityId}"
   }
 }
 \`\`\`
-
-Confirm this is the right entity and note its current state.
 
 ---
 
@@ -86,68 +94,46 @@ Confirm this is the right entity and note its current state.
   "params": {
     "entityType": "${entityType}",
     "profileId": "${profileId}",
+    "accountId": "${accountId}",
     "entityId": "${entityId}",
     "options": {
-      "newName": "Copy of ${entityType} ${entityId}"
+      "name": "Copy of ${entityType} ${entityId}"
     }
   }
 }
 \`\`\`
 
-The response includes the new entity ID.
+Pass \`dry_run: true\` first to see the copy's expected state. The response's \`newEntity\` carries the new ID (\`campaignId\` / \`adGroupId\` / \`adId\` / \`adAssociationId\`).
 
-⚠️ **GOTCHA**: Duplicated entities are created in **paused** state by default. Enable only after review.
+⚠️ **GOTCHA**: Copies are created **PAUSED**. Orders and line items can only be created PAUSED, so \`options.state\` other than PAUSED is refused.
 
 ---
 
 ## Step 3: Customize the Copy
-
-Use the returned entity ID to modify the copy:
-
-### Update Name and Budget
-
-\`\`\`json
-{
-  "tool": "amazon_dsp_update_entity",
-  "params": {
-    "entityType": "${entityType}",
-    "profileId": "${profileId}",
-    "entityId": "{newEntityId}",
-    "data": {
-      "name": "Order B - Broad Targeting Test",
-      "budget": 5000
-    }
-  }
-}
-\`\`\`
-
-### Update Targeting (Line Item)
 
 \`\`\`json
 {
   "tool": "amazon_dsp_update_entity",
   "params": {
     "entityType": "lineItem",
-    "advertiserId": "${profileId}",
-    "entityId": "{newLineItemId}",
+    "profileId": "${profileId}",
+    "accountId": "${accountId}",
+    "entityId": "{newAdGroupId}",
     "data": {
-      "name": "Line Item B - UK/CA Expansion",
-      "budget": 1000,
-      "targeting": {
-        "geoLocations": [{ "id": "GB" }, { "id": "CA" }]
-      }
+      "name": "Ad Group B - Higher Bid Test",
+      "bid": { "baseBid": 3.0 }
     }
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are numeric amounts, not micros. Confirm the advertiser account currency before assuming USD.
+Then recreate targets on the copy with \`amazon_dsp_create_entity\` (\`entityType: "target"\`, \`adGroupId\` = the copy) and link ads with \`creativeAssociation\`.
+
+⚠️ **GOTCHA**: Budget values are major currency units, not micros. The currency is the advertiser account's.
 
 ---
 
 ## Step 4: Activate When Ready
-
-After reviewing and customizing the copy:
 
 \`\`\`json
 {
@@ -155,8 +141,9 @@ After reviewing and customizing the copy:
   "params": {
     "entityType": "${entityType}",
     "profileId": "${profileId}",
+    "accountId": "${accountId}",
     "entityIds": ["{newEntityId}"],
-    "state": "delivering"
+    "operationStatus": "ENABLED"
   }
 }
 \`\`\`
@@ -166,50 +153,22 @@ After reviewing and customizing the copy:
 ## Common Patterns
 
 ### A/B Testing
-
-1. Duplicate the line item
-2. Change targeting or bidding on the copy
-3. Set both to \`delivering\` and compare via \`amazon_dsp_get_report\`
-
-### Scaling to New Geos
-
-1. Duplicate a proven line item
-2. Update \`targeting.geoLocations\` on the copy
-3. Adjust budget for the new market
-4. Set state to \`delivering\`
+1. Duplicate the line item into the same order
+2. Change bid or targeting settings on the copy, add its targets and creative associations
+3. Enable both and compare via \`amazon_dsp_get_report\`
 
 ### Creative Testing
-
-1. Duplicate a creative
-2. Update the click URL or name on the copy
-3. Associate both creatives with the same line item
-
-⚠️ **GOTCHA**: Creative assets (images/videos) cannot be changed on an existing creative. Create a new creative instead if you need different media.
+1. Duplicate a creative (ad) and change its \`creative\` settings or name
+2. Associate both ads with the same line item (\`creativeAssociation\`)
 
 ---
-
-## Verification
-
-After duplication, verify the copy:
-
-\`\`\`json
-{
-  "tool": "amazon_dsp_get_entity",
-  "params": {
-    "entityType": "${entityType}",
-    "profileId": "${profileId}",
-    "entityId": "{newEntityId}"
-  }
-}
-\`\`\`
 
 ## Success Criteria
 
 - [ ] Source entity reviewed before duplication
-- [ ] Copy created (check paused state)
-- [ ] Copy renamed to distinguish from original
-- [ ] Desired changes applied (targeting, budget, creative)
+- [ ] Copy created PAUSED and renamed
+- [ ] Targets / associations recreated on the copy where needed
 - [ ] Copy verified via \`amazon_dsp_get_entity\`
-- [ ] Set to \`delivering\` only after review via \`amazon_dsp_bulk_update_status\`
+- [ ] Enabled only after review via \`amazon_dsp_bulk_update_status\`
 `;
 }

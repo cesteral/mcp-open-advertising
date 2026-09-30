@@ -6,17 +6,17 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "amazon_dsp_campaign_setup_workflow",
   description:
-    "Step-by-step guide for creating a complete Amazon DSP campaign structure (Order > Line Item > Creative)",
+    "Step-by-step guide for creating a complete Amazon DSP campaign structure on the Unified API (Order > Line Item > Target / Creative Association > Creative)",
   arguments: [
     {
       name: "profileId",
-      description: "Amazon DSP Entity ID / Profile ID (from Amazon-Advertising-API-Scope header)",
+      description: "Amazon Ads profile ID bound to the session (Amazon-Advertising-API-Scope)",
       required: true,
     },
     {
-      name: "objective",
+      name: "accountId",
       description:
-        "Campaign goal (e.g., REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING)",
+        "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers) — sent as Amazon-Ads-AccountId",
       required: false,
     },
   ],
@@ -24,105 +24,141 @@ export const campaignSetupWorkflowPrompt: Prompt = {
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
-  const objective = args?.objective || "REACH";
+  const accountId = args?.accountId || "{accountId}";
 
-  return `# Amazon DSP Campaign Setup Workflow
+  return `# Amazon DSP Campaign Setup Workflow (Unified API)
+
+Entity management uses the Amazon Ads Unified API (\`POST /adsApi/v1/{create|update|query|delete}/…\`).
 
 ## Prerequisites
-- DSP Entity ID (Profile ID): \`${profileId}\`
-- Ensure \`Amazon-Advertising-API-Scope\` header is set to your DSP entity ID
-- Verify advertiser access: \`amazon_dsp_list_advertisers\`
+- Profile ID (session): \`${profileId}\`
+- DSP advertiser ID: \`${accountId}\` — find it with \`amazon_dsp_list_advertisers\` and pass it as \`accountId\` on every entity tool (it becomes the \`Amazon-Ads-AccountId\` header)
 
-⚠️ **GOTCHA: Amazon-Advertising-API-Scope header must contain your DSP entity ID (profile ID).**
-⚠️ **GOTCHA: Budget amounts are numeric values, not micro-currency. Keep them aligned with the advertiser account currency returned by Amazon.**
-⚠️ **GOTCHA: Amazon DSP has no DELETE endpoint. Use state: "ARCHIVED" to remove entities.**
+⚠️ **GOTCHA: Orders and line items can only be created PAUSED.** Enable them at the end.
+⚠️ **GOTCHA: Budget amounts are advertiser-currency major units** (e.g. 50000 = 50,000.00), not micros.
+⚠️ **GOTCHA: There is no advertiserId body field** — the advertiser is \`accountId\`.
+⚠️ **GOTCHA: ARCHIVED is not an update state.** Orders and line items are removed with \`amazon_dsp_delete_entity\` (a legacy archive call); targets and creative associations are deleted.
 
-## Step 1: Create Order (Campaign)
+## Step 1: Create the Order (Unified campaign)
 
-Orders are the top-level campaign entity in Amazon DSP.
+Dates and budget live on \`flights[]\`.
 
 \`\`\`json
 amazon_dsp_create_entity({
   "entityType": "order",
   "profileId": "${profileId}",
+  "accountId": "${accountId}",
   "data": {
     "name": "Q1 Brand Awareness Campaign",
-    "advertiserId": "ADVERTISER_ID",
-    "budget": 50000.00,
-    "startDateTime": "2026-01-01T00:00:00Z",
-    "endDateTime": "2026-03-31T23:59:59Z",
-    "state": "ENABLED"
-  }
-})
-\`\`\`
-
-**Campaign Goals / Objectives:** REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING
-
-## Step 2: Create Line Item (Ad Group)
-
-Line Items define targeting, bidding, and budget allocation within an Order.
-
-\`\`\`json
-amazon_dsp_create_entity({
-  "entityType": "lineItem",
-  "profileId": "${profileId}",
-  "data": {
-    "name": "Prospecting - Desktop Display",
-    "orderId": "ORDER_ID_FROM_STEP_1",
-    "budget": { "budgetType": "DAILY", "budget": 10000.00 },
-    "state": "ENABLED",
-    "bidding": {
-      "bidOptimization": "${objective === "REACH" ? "AUTO" : "MANUAL"}",
-      "bidAmount": 2.50
-    },
-    "targetingCriteria": {
-      "audience": {
-        "include": [{ "type": "BEHAVIORAL", "value": ["in-market-auto"] }]
+    "countries": ["US"],
+    "flights": [
+      {
+        "startDateTime": "2026-01-01T00:00:00Z",
+        "endDateTime": "2026-03-31T23:59:59Z",
+        "budget": {
+          "budgetType": "MONETARY",
+          "budgetValue": { "monetaryBudgetValue": { "monetaryBudget": { "value": 50000 } } }
+        }
       }
+    ],
+    "optimizations": {
+      "bidSettings": { "bidStrategy": "SPEND_BUDGET_IN_FULL" },
+      "goalSettings": { "kpi": "CLICK_THROUGH_RATE" }
     }
   }
 })
 \`\`\`
 
-## Step 3: Create Creative
+The response \`entity.campaignId\` is the order ID.
 
-Creatives define the ad format and click-through destination.
+## Step 2: Create a Line Item (Unified ad group)
+
+\`\`\`json
+amazon_dsp_create_entity({
+  "entityType": "lineItem",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
+  "data": {
+    "name": "Prospecting - Display",
+    "campaignId": "CAMPAIGN_ID_FROM_STEP_1",
+    "inventoryType": "DISPLAY",
+    "advertisedProductCategoryIds": ["12345"],
+    "bid": { "baseBid": 2.5 },
+    "creativeRotationType": "RANDOM",
+    "startDateTime": "2026-01-01T00:00:00Z",
+    "endDateTime": "2026-03-31T23:59:59Z",
+    "optimization": { "bidStrategy": "SPEND_BUDGET_IN_FULL" },
+    "pacing": { "deliveryProfile": "EVEN" },
+    "targetingSettings": { "timeZoneType": "VIEWER", "userLocationSignal": "ANYWHERE" }
+  }
+})
+\`\`\`
+
+The response \`entity.adGroupId\` is the line item ID.
+
+## Step 3: Add Targets
+
+\`\`\`json
+amazon_dsp_create_entity({
+  "entityType": "target",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
+  "data": {
+    "adGroupId": "AD_GROUP_ID_FROM_STEP_2",
+    "negative": false,
+    "state": "ENABLED",
+    "targetType": "AUDIENCE",
+    "targetDetails": { "audienceTarget": { "audienceId": { "defaultValue": "AUDIENCE_ID" }, "groupId": "1" } }
+  }
+})
+\`\`\`
+
+## Step 4: Create a Creative (Unified ad) and associate it
 
 \`\`\`json
 amazon_dsp_create_entity({
   "entityType": "creative",
   "profileId": "${profileId}",
+  "accountId": "${accountId}",
   "data": {
-    "name": "300x250 Banner - Brand",
-    "advertiserId": "ADVERTISER_ID",
-    "clickThroughUrl": "https://example.com/landing",
-    "creativeType": "STANDARD_DISPLAY",
-    "state": "ENABLED"
+    "name": "Responsive Ecommerce Ad",
+    "adType": "COMPONENT",
+    "state": "ENABLED",
+    "creative": { "componentCreative": { "responsiveEcommerceSettings": { "language": "EN", "inventoryTypes": ["DISPLAY"], "products": [{ "productId": "B0EXAMPLE", "productIdType": "ASIN" }] } } }
   }
 })
 \`\`\`
 
-**Creative Types:** STANDARD_DISPLAY, VIDEO, RICH_MEDIA
+\`\`\`json
+amazon_dsp_create_entity({
+  "entityType": "creativeAssociation",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
+  "data": { "adGroupId": "AD_GROUP_ID_FROM_STEP_2", "adId": "AD_ID_FROM_STEP_4", "state": "ENABLED" }
+})
+\`\`\`
 
-## Step 4: Verify & Activate
+**Ad types:** AUDIO, COMPONENT, DISPLAY, THIRD_PARTY, VIDEO — each with one matching \`creative\` key (\`audioCreative\`, \`componentCreative\`, …). See \`entity-schema://amazonDsp/creative\`.
 
-1. Review entities: \`amazon_dsp_get_entity\` for each created entity
-2. Activate if paused: \`amazon_dsp_bulk_update_status\` with operationStatus: "ENABLED"
+## Step 5: Verify & Activate
+
+1. Review: \`amazon_dsp_get_entity\` for the order and line item
+2. Activate: \`amazon_dsp_bulk_update_status\` with \`operationStatus: "ENABLED"\` — line items first, then the order
 
 ## Common Errors
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| 401 Unauthorized | Missing or invalid access token | Check Authorization: Bearer header |
-| 403 Forbidden | Missing API scope header | Set Amazon-Advertising-API-Scope to your DSP entity ID |
-| 400 Bad Request | Invalid date format | Use ISO 8601: YYYY-MM-DDTHH:mm:ssZ |
-| 400 Bad Request | Budget too low | Amazon DSP requires minimum budget thresholds |
+| 401 Unauthorized | Missing or invalid access token | Re-authorize via Login with Amazon |
+| 403 Forbidden | Wrong \`accountId\` or missing permission | Check the advertiser with \`amazon_dsp_list_advertisers\` |
+| 207 with \`error[]\` | Amazon rejected the item | The tool error lists Amazon's \`code\` and \`fieldLocation\` |
+| INVALID_STATE (client-side) | Order / line item created with a state other than PAUSED | Omit \`state\` on create |
 
 ## Success Criteria
 
-- [ ] Order created with correct budget and date range
-- [ ] Line Item linked to Order via orderId
-- [ ] Creative linked to correct advertiserId
-- [ ] All entities in ENABLED state
+- [ ] Order created with flights covering the date range
+- [ ] Line item linked to the order via \`campaignId\`
+- [ ] Targets and a creative association on the line item
+- [ ] Line items and order ENABLED
 `;
 }

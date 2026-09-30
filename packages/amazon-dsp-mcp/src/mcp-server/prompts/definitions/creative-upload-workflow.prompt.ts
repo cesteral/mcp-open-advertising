@@ -6,16 +6,16 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const amazonDspCreativeUploadWorkflowPrompt: Prompt = {
   name: "amazon_dsp_creative_upload_workflow",
   description:
-    "Step-by-step guide for uploading creative assets and creating AmazonDsp Ads creatives",
+    "Step-by-step guide for uploading a video asset and creating an Amazon DSP video ad (Unified API) linked to a line item",
   arguments: [
     {
       name: "profileId",
-      description: "AmazonDsp Advertiser ID",
+      description: "Amazon Ads profile ID bound to the session",
       required: true,
     },
     {
-      name: "creativeType",
-      description: "Type of creative: image or video",
+      name: "accountId",
+      description: "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers)",
       required: false,
     },
   ],
@@ -23,103 +23,90 @@ export const amazonDspCreativeUploadWorkflowPrompt: Prompt = {
 
 export function getAmazonDspCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
-  const creativeType = args?.creativeType || "video";
+  const accountId = args?.accountId || "{accountId}";
 
-  return `# AmazonDsp Ads Creative Upload Workflow
+  return `# Amazon DSP Creative Upload Workflow
 
 ## Prerequisites
-- Advertiser ID: \`${profileId}\`
-- A publicly accessible URL for your media file
+- Profile ID (session): \`${profileId}\`
+- DSP advertiser (accountId): \`${accountId}\`
+- A publicly accessible URL for your video file
 
 ## Overview
-AmazonDsp creative workflow: Upload media → Create Ad Group → Create Ad with creative
+Upload the video to the Creative Asset Library → create a Unified DSP ad (entityType \`creative\`) that references the asset → link the ad to a line item with a \`creativeAssociation\`.
 
 ---
 
-## Step 1: Upload ${creativeType === "image" ? "Image" : "Video"}
+## Step 1: Upload the Video
 
-${
-  creativeType === "image"
-    ? `
-\`\`\`json
-amazon_dsp_upload_image({
-  "profileId": "${profileId}",
-  "mediaUrl": "https://example.com/your-image.jpg"
-})
-\`\`\`
-
-**Returns:** \`imageId\`
-
-**Image requirements:**
-- Formats: JPEG, PNG
-- Max 100KB for feed ads
-- Recommended: 1200x628px, 1080x1080px, 720x1280px
-`
-    : `
 \`\`\`json
 amazon_dsp_upload_video({
-  "profileId": "${profileId}",
-  "mediaUrl": "https://example.com/your-video.mp4",
-  "videoName": "Campaign Video"
+  "name": "Campaign Video",
+  "mediaUrl": "https://example.com/your-video.mp4"
 })
 \`\`\`
 
-**Returns:** \`videoId\`
+**Returns:** \`assetId\` (and the raw registered asset, which carries its version).
 
-⚠️ **GOTCHA**: Video processing takes 20-120 seconds. The tool polls automatically (20s intervals, up to 10 min).
-When \`video_status == "bind_success"\`, the video is ready.
+---
 
-**Video requirements:**
-- Formats: MP4, MOV, AVI
-- Max 500MB
-- Min resolution: 540x960 (9:16), 960x540 (16:9), or 640x640 (1:1)
-- Duration: 5-60 seconds for In-Feed ads
-`
-}
+## Step 2: Create the Video Ad
 
-## Step 2: Create Creative
+Sent as \`POST /adsApi/v1/create/ads\` (\`DSPAdCreate\`). The video is referenced as \`{ assetId, assetVersion }\`.
 
 \`\`\`json
 amazon_dsp_create_entity({
   "entityType": "creative",
-  "advertiserId": "${profileId}",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
   "data": {
-    "name": "Your Creative Name",
-    "advertiserId": "${profileId}",
-    "creativeType": "${creativeType === "image" ? "IMAGE" : "VIDEO"}",
-    ${creativeType === "image" ? `"imageId": "{imageId_from_step_1}",` : `"videoId": "{videoId_from_step_1}",`}
-    "clickUrl": "https://yoursite.com",
-    "state": "paused"
+    "name": "Campaign Video Ad",
+    "adType": "VIDEO",
+    "state": "PAUSED",
+    "creative": {
+      "videoCreative": {
+        "onlineVideoSettings": {
+          "language": "en_US",
+          "videos": { "assetId": "{assetId_from_step_1}", "assetVersion": "{assetVersion_from_step_1}" }
+        }
+      }
+    }
   }
 })
 \`\`\`
 
-⚠️ **GOTCHA**: Amazon DSP creatives go through a review process. Initial state should be \`paused\` until ready to launch.
+For the full field set (call-to-actions, tracking URLs, streaming TV settings, display and component ads) fetch \`entity-schema://amazonDsp/creative\` and \`entity-examples://amazonDsp/creative\`.
 
-## Step 3: Preview Creative
+---
+
+## Step 3: Link the Ad to a Line Item
 
 \`\`\`json
-amazon_dsp_get_ad_preview({
-  "advertiserId": "${profileId}",
-  "adId": "{creative_id_from_step_2}",
-  "adFormat": "DISPLAY"
+amazon_dsp_create_entity({
+  "entityType": "creativeAssociation",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
+  "data": { "adGroupId": "{line_item_id}", "adId": "{adId_from_step_2}", "state": "ENABLED" }
 })
 \`\`\`
 
-## Common Errors
+---
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| "Video processing failed" | Unsupported codec | Re-encode to H.264 MP4 |
-| "Image size exceeded" | File too large | Compress to < 100KB |
-| "Ad review rejected" | Policy violation | Review AmazonDsp ad policies |
-| "bind_success timeout" | Slow processing | Check video_status manually |
+## Step 4: Preview (optional)
+
+\`\`\`json
+amazon_dsp_get_ad_preview({
+  "profileId": "${profileId}",
+  "adId": "{adId_from_step_2}"
+})
+\`\`\`
+
+The preview tool uses a legacy \`/dsp/creatives\` endpoint; whether it accepts a Unified \`adId\` is unverified.
 
 ## Success Criteria
-- [ ] Media uploaded (imageId or videoId obtained)
-- [ ] Creative created with paused state
-- [ ] Preview reviewed
-- [ ] State changed to delivering when ready to launch
-
+- [ ] Video uploaded (\`assetId\` obtained)
+- [ ] Ad created PAUSED
+- [ ] Ad associated with the line item
+- [ ] Ad set to ENABLED (\`amazon_dsp_bulk_update_status\`, entityType \`creative\`) when ready
 `;
 }
