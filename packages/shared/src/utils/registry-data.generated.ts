@@ -89,7 +89,7 @@ export const REGISTRY_DATA: RegistryData = {
           {
             "tool": "dv360_bulk_update_status",
             "operations": [
-              "bulk_update_status"
+              "bulk_job"
             ],
             "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
           }

@@ -180,7 +180,7 @@ When adding a new templated resource, register it via `registerTemplatedResource
 
 Servers with 20+ tools expose a `{prefix}_search_tools` dispatcher that ranks the server's own registry against a natural-language query. Use it to land on the right tool in one round-trip instead of paging through the full inventory.
 
-**Servers exposing the search tool (10):** ttd, meta, dv360, msads, tiktok, pinterest, snapchat, amazon-dsp, cm360, linkedin. The three smallest servers omit it — gads (15 tools), sa360 (16), and reporting-only dbm (6) are under the 20-tool threshold.
+**Servers exposing the search tool (10):** ttd, meta, dv360, msads, tiktok, pinterest, snapchat, amazon-dsp, cm360, linkedin. The three smallest servers omit it — gads (18 tools), sa360 (17), and reporting-only dbm (6) are under the 20-tool threshold.
 
 **Recommended discovery flow:**
 
@@ -195,10 +195,10 @@ The search tool excludes itself from results. Returned items carry `name`, `titl
 ```jsonc
 // 1. Search
 { "tool": "ttd_search_tools", "input": { "query": "create a campaign" } }
-// → results[0].name === "ttd_create_campaigns"
+// → results include "ttd_create_entity" (ttd_bulk_create_entities currently ranks first)
 
 // 2. Invoke
-{ "tool": "ttd_create_campaigns", "input": { "mode": "single", "campaign": { ... } } }
+{ "tool": "ttd_create_entity", "input": { "entityType": "campaign", "data": { ... } } }
 
 // 3. On validation error, response includes:
 //    { "nextAction": { "kind": "read-resource", "uri": "ttd-field-rules://campaign" } }

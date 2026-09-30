@@ -59,7 +59,6 @@ The shared abstraction already exists: `@cesteral/shared` exposes `async-task-to
 Today only `dbm_run_custom_query_async` consumes the helper. Adoption targets, in priority order:
 
 - every `*_submit_report` / `*_check_report_status` / `*_download_report` trio (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS, SA360) — these are the largest concentration of polling boilerplate in the repo
-- TTD Workflows API batch jobs (`ttd_create_campaigns` / `ttd_update_campaigns` / `ttd_create_ad_groups` / `ttd_update_ad_groups` in `mode: "batch"`) plus `ttd_get_job_status`
 - TTD GraphQL bulk jobs (`ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job`)
 - any blocking `*_get_report` tool that currently polls inside the server
 
@@ -127,7 +126,7 @@ Cloudflare's Code Mode pattern is relevant, but constrained. Do not replace high
 - APIs with too many endpoints to expose cleanly
 - power-user workflows where typed composition beats dozens of narrow tools
 
-TTD is the natural place to evaluate — it already has `ttd_rest_request`, GraphQL tools, and Workflows-specific tools. The repo's existing structured output coverage (every tool definition ships an `outputSchema`) gives the model the type information Cloudflare argues makes code-mode work.
+TTD is the natural place to evaluate — it already has a GraphQL passthrough (`ttd_graphql_query`) and the GraphQL bulk-job tools. The repo's existing structured output coverage (every tool definition ships an `outputSchema`) gives the model the type information Cloudflare argues makes code-mode work.
 
 ### 8. Get ready for Cross App Access (XAA) ⬜
 
