@@ -762,7 +762,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       return inToolSpan(async () => {
         let requestId: string | undefined;
         let resolvedAuthContext: SessionAuthContext | undefined;
-        let auditedIdentifiers: Record<string, string | string[]> = {};
+        const auditedIdentifiers: Record<string, string | string[]> = {};
 
         // ALS ownership boundary:
         //   - Transport layer MAY install a request-scoped context

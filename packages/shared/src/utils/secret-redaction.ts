@@ -56,7 +56,7 @@ const BODY_SECRET_PATTERNS: Array<[RegExp, string]> = [
   // Google refresh token of the form `1//0e…` is only partially matched by THIS
   // pattern. It is caught in practice by the named-field pattern above, which is
   // how such a token actually appears (`"refresh_token":"1//0e…"`).
-  [/(Bearer\s+)(?=[A-Za-z0-9._\-]*[0-9._\-])[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
+  [/(Bearer\s+)(?=[A-Za-z0-9._-]*[0-9._-])[A-Za-z0-9._-]+/gi, "$1[REDACTED]"],
 ];
 
 /** Strip secret-bearing fields from a request/response body or error string. */

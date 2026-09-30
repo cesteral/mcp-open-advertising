@@ -53,6 +53,11 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      # After build: the config is type-aware (parserOptions.project), so
+      # workspace imports must resolve to built declarations.
+      - name: Lint
+        run: pnpm run lint
+
       - name: Test repo scripts
         run: pnpm run test:scripts
 

@@ -26,6 +26,9 @@ importers:
       '@cesteral/contract-schema':
         specifier: workspace:*
         version: link:packages/contract-schema
+      '@eslint/js':
+        specifier: ^9.39.4
+        version: 9.39.4
       '@modelcontextprotocol/conformance':
         specifier: ^0.1.15
         version: 0.1.16

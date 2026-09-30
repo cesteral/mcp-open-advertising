@@ -252,7 +252,7 @@ For large-scale operations beyond REST API limits.
 {
   "tool": "ttd_graphql_query_bulk",
   "params": {
-    "query": "query GetAdGroup(\$adGroupId: ID!) { adGroup(id: \$adGroupId) { name status } }",
+    "query": "query GetAdGroup($adGroupId: ID!) { adGroup(id: $adGroupId) { name status } }",
     "variables": [
       { "adGroupId": "{id1}" },
       { "adGroupId": "{id2}" }

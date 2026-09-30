@@ -10,7 +10,7 @@ const TOOL_NAME = "pinterest_get_pacing_status";
 const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
   "Client-side pacing calculator — does NOT call the Pinterest API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
-  "To populate spend, first call \`pinterest_get_report\`; to populate budget and flight dates, first call \`pinterest_get_entity\` for the campaign.";
+  "To populate spend, first call `pinterest_get_report`; to populate budget and flight dates, first call `pinterest_get_entity` for the campaign.";
 
 /**
  * Input schema
