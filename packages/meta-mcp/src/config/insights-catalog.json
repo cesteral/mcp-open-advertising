@@ -1,5 +1,5 @@
 {
-  "description": "Static catalog of Meta Marketing API v24.0+ Insights fields, breakdowns, and action breakdowns. Seeded from https://developers.facebook.com/docs/marketing-api/insights/parameters. Keep in sync as the API evolves.",
+  "description": "Static catalog of Meta Marketing API Insights fields, breakdowns, and action breakdowns. Seeded from https://developers.facebook.com/docs/marketing-api/insights/parameters; checked against the v26.0 AdsInsights field list and the ad-account/campaign/ad-set/ad insights breakdown enums in Meta's facebook-business-sdk-codegen API specs (2026-09-17). Keep in sync as the API evolves.",
   "levels": ["account", "campaign", "adset", "ad"],
   "metrics": {
     "delivery": ["impressions", "reach", "frequency", "spend", "cpm", "cpp"],
@@ -7,7 +7,6 @@
       "clicks",
       "unique_clicks",
       "cpc",
-      "unique_cpc",
       "ctr",
       "unique_ctr",
       "inline_link_clicks",
@@ -82,7 +81,6 @@
     "action_video_type",
     "action_carousel_card_id",
     "action_carousel_card_name",
-    "action_converted_product_id",
     "action_reaction",
     "standard_event_content_type"
   ],
