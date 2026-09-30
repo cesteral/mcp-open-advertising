@@ -131,7 +131,7 @@ Submit an async report without waiting for completion (non-blocking).
 
 #### 10. `tiktok_check_report_status`
 
-Single status check for a submitted report.
+Single status check for a submitted report. TikTok's statuses are QUEUING, PROCESSING, SUCCESS, FAILED and CANCELED.
 
 **Parameters:**
 
@@ -140,11 +140,12 @@ Single status check for a submitted report.
 
 #### 11. `tiktok_download_report`
 
-Download and parse report CSV from URL.
+Download and parse the CSV of a finished async report task. TikTok issues a signed download URL for the task (`GET report/task/download/`, valid one hour), which is validated and fetched.
 
 **Parameters:**
 
-- `downloadUrl` (string, required): Report download URL
+- `advertiserId` (string, required): TikTok Advertiser ID
+- `taskId` (string, required): Report task ID from `tiktok_submit_report`
 - `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above the reporting tools)
 
 ### Bulk Operations

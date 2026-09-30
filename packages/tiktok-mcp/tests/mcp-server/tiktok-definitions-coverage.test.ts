@@ -75,8 +75,10 @@ const tiktokReportingService = {
   submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
-    status: "DONE",
-    downloadUrl: "https://example.com/report.csv",
+    status: "SUCCESS",
+  })),
+  getReportDownloadUrl: vi.fn(async () => ({
+    downloadUrl: "https://ads.tiktok.com/wsos_v2/statistics/object/wsos1?expire=1&sign=2",
   })),
   downloadReport: vi.fn(async () => ({
     headers: ["date", "impressions"],

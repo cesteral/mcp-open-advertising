@@ -76,11 +76,69 @@ describe("TikTokReportingService", () => {
     expect(body).not.toHaveProperty("page_size");
   });
 
-  it("pollReport returns DONE result", async () => {
-    mockHttpClient.get.mockResolvedValueOnce({ status: "DONE" });
+  it("submitReport asks for a downloadable CSV and stable column names", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ task_id: "task-1" });
 
+    await service.submitReport({
+      dimensions: ["campaign_id"],
+      metrics: ["spend"],
+      start_date: "2026-03-01",
+      end_date: "2026-03-04",
+    });
+
+    // CSV_DOWNLOAD makes report/task/download/ answer with a JSON envelope
+    // holding download_url (CSV_STRING answers with a raw CSV stream). Title
+    // translation off keeps headers as field names ("campaign_id", not
+    // "Campaign ID"), which TikTok recommends and which column projection
+    // depends on.
+    expect(mockHttpClient.post.mock.calls[0]![1]).toMatchObject({
+      output_format: "CSV_DOWNLOAD",
+      enable_report_title_translation: false,
+    });
+  });
+
+  it("submitReport leaves title translation alone for report types that do not support it", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ task_id: "task-1" });
+
+    await service.submitReport({
+      report_type: "PLAYABLE_MATERIAL",
+      dimensions: ["playable_id"],
+      metrics: ["impressions"],
+      start_date: "2026-03-01",
+      end_date: "2026-03-04",
+    });
+
+    const body = mockHttpClient.post.mock.calls[0]![1];
+    expect(body).toMatchObject({ output_format: "CSV_DOWNLOAD" });
+    expect(body).not.toHaveProperty("enable_report_title_translation");
+  });
+
+  it("pollReport waits through QUEUING and PROCESSING and returns at SUCCESS", async () => {
+    // Task statuses per TikTok's report/task/check docs: QUEUING, PROCESSING,
+    // SUCCESS, FAILED, CANCELED.
+    mockHttpClient.get
+      .mockResolvedValueOnce({ status: "QUEUING" })
+      .mockResolvedValueOnce({ status: "PROCESSING" })
+      .mockResolvedValueOnce({ status: "SUCCESS" });
+    const fast = new TikTokReportingService(
+      mockRateLimiter as any,
+      mockHttpClient as any,
+      mockLogger,
+      1,
+      10
+    );
+
+    const result = await fast.pollReport("task-123");
+
+    expect(result.status).toBe("SUCCESS");
+    expect(mockHttpClient.get).toHaveBeenCalledTimes(3);
+  });
+
+  it("pollReport returns a FAILED task with TikTok's message", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({ status: "FAILED", message: "bad dimensions" });
     const result = await service.pollReport("task-123");
-    expect(result.status).toBe("DONE");
+    expect(result.status).toBe("FAILED");
+    expect(result.message).toBe("bad dimensions");
   });
 
   it("pollReport stops at once on an unrecognized status instead of polling to timeout", async () => {
@@ -213,23 +271,58 @@ describe("TikTokReportingService", () => {
     );
   });
 
-  it("checkReportStatus surfaces a download_url and message when TikTok returns them", async () => {
-    mockHttpClient.get.mockResolvedValueOnce({
-      status: "DONE",
-      message: "ok",
-      download_url: "https://example.com/done-report.csv",
-    });
+  it("checkReportStatus surfaces TikTok's message and never invents a download URL", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({ status: "FAILED", message: "no data" });
 
     const result = await service.checkReportStatus("task-789");
 
-    expect(result.status).toBe("DONE");
-    expect(result.message).toBe("ok");
-    expect(result.downloadUrl).toBe("https://example.com/done-report.csv");
+    expect(result.status).toBe("FAILED");
+    expect(result.message).toBe("no data");
+    expect(result).not.toHaveProperty("downloadUrl");
+  });
+
+  describe("getReportDownloadUrl", () => {
+    it("GETs report/task/download/ with the task id and returns the signed URL", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({
+        output_format: "CSV_DOWNLOAD",
+        file_name: "report_07_26.csv",
+        download_url: "https://ads.tiktok.com/wsos_v2/statistics/object/abc?expire=1&sign=2",
+      });
+
+      const result = await service.getReportDownloadUrl("task-9");
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        "/open_api/v1.3/report/task/download/",
+        { task_id: "task-9" },
+        undefined
+      );
+      expect(result).toEqual({
+        downloadUrl: "https://ads.tiktok.com/wsos_v2/statistics/object/abc?expire=1&sign=2",
+        fileName: "report_07_26.csv",
+      });
+      expect(mockRateLimiter.consume).toHaveBeenCalledWith("tiktok:reporting");
+    });
+
+    it("refuses an XLSX output, which this server cannot parse", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({
+        output_format: "XLSX_DOWNLOAD",
+        file_name: "r.xlsx",
+        download_url: "https://ads.tiktok.com/wsos_v2/x.xlsx",
+      });
+      await expect(service.getReportDownloadUrl("task-9")).rejects.toThrow(/XLSX_DOWNLOAD/);
+    });
+
+    it("explains when TikTok returns no download_url (e.g. a task created as CSV_STRING)", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({});
+      await expect(service.getReportDownloadUrl("task-9")).rejects.toThrow(
+        /no download_url.*tiktok_submit_report/s
+      );
+    });
   });
 
   it("checkReportStatus consumes rate limiter once", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "PENDING",
+      status: "QUEUING",
       task_id: "task-rl",
     });
 
@@ -266,19 +359,41 @@ describe("TikTokReportingService", () => {
 });
 
 describe("mapTikTokReportTaskStatus", () => {
+  // TikTok's documented report/task/check statuses (v1.3):
+  // QUEUING, PROCESSING, SUCCESS, FAILED, CANCELED.
   it.each([
-    ["PENDING", "pending"],
-    ["RUNNING", "running"],
-    ["DONE", "complete"],
+    ["QUEUING", "pending"],
+    ["PROCESSING", "running"],
+    ["SUCCESS", "complete"],
     ["FAILED", "failed"],
+    ["CANCELED", "failed"],
   ])("maps %s to %s", (raw, state) => {
     expect(mapTikTokReportTaskStatus({ status: raw }).state).toBe(state);
   });
 
+  it("carries TikTok's failure reason", () => {
+    expect(
+      mapTikTokReportTaskStatus({ status: "FAILED", message: "bad dimensions" }).errors
+    ).toEqual(["bad dimensions"]);
+  });
+
+  it("says a canceled task was canceled", () => {
+    expect(mapTikTokReportTaskStatus({ status: "CANCELED" }).errors?.[0]).toMatch(/cancel/i);
+  });
+
+  it.each(["PENDING", "RUNNING", "DONE"])(
+    "does not treat %s as a TikTok status: it was never one, and mapping it would hide a real mismatch",
+    (raw) => {
+      const result = mapTikTokReportTaskStatus({ status: raw });
+      expect(result.state).toBe("failed");
+      expect(result.errors?.[0]).toContain(`"${raw}"`);
+    }
+  );
+
   it("treats an unrecognized status as terminal and names it", () => {
-    const result = mapTikTokReportTaskStatus({ status: "QUEUING" });
+    const result = mapTikTokReportTaskStatus({ status: "SOMETHING_NEW" });
     expect(result.state).toBe("failed");
-    expect(result.errors?.[0]).toContain('"QUEUING"');
+    expect(result.errors?.[0]).toContain('"SOMETHING_NEW"');
   });
 
   it("treats a missing status as terminal, not pending", () => {

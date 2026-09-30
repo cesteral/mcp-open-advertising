@@ -16,11 +16,12 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted TikTok repo
 Makes a single API call to check task status. Does not poll or wait.
 
 **Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
-TikTok raw statuses PENDING/RUNNING/DONE/FAILED are mapped; the raw string is returned as \`rawStatus\`.
-Any other raw status is reported as \`failed\` with an explanation in \`errors\` — never as pending.
-- TikTok's documented task-check response carries only \`status\` and \`message\`. If a \`downloadUrl\`
-  is present, use \`tiktok_download_report\`; otherwise use \`tiktok_get_report\`, which returns rows
-  synchronously.
+TikTok's documented task statuses are mapped: QUEUING → pending, PROCESSING → running, SUCCESS → complete,
+FAILED and CANCELED → failed (TikTok's failure reason, when it gives one, is in \`errors\`). The raw string
+is returned as \`rawStatus\`. Any other raw status is reported as \`failed\` with an explanation in \`errors\`,
+never as pending.
+- When \`complete\`, call \`tiktok_download_report\` with the same \`taskId\`. This tool returns no URL: TikTok's
+  check response carries only \`status\` and \`message\`.
 - If still pending/running, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -58,7 +59,6 @@ export async function checkReportStatusLogic(
 
   return {
     ...canonical,
-    ...(result.downloadUrl ? { downloadUrl: result.downloadUrl } : {}),
     taskId: result.taskId,
     rawStatus: result.status ?? "",
     ...(result.message ? { message: result.message } : {}),
@@ -70,20 +70,11 @@ export async function checkReportStatusLogic(
 export function checkReportStatusResponseFormatter(
   result: CheckReportStatusOutput
 ): McpTextContent[] {
-  if (result.isComplete && result.downloadUrl) {
-    return [
-      {
-        type: "text" as const,
-        text: `Report complete: ${result.taskId}\n\nDownload URL: ${result.downloadUrl}\n\nUse \`tiktok_download_report\` with this URL to fetch and parse the report data.\n\nTimestamp: ${result.timestamp}`,
-      },
-    ];
-  }
-
   if (result.isComplete) {
     return [
       {
         type: "text" as const,
-        text: `Report complete: ${result.taskId}\n\nTikTok returned no download URL for this task. Use \`tiktok_get_report\` with the same parameters to fetch the rows synchronously.\n\nTimestamp: ${result.timestamp}`,
+        text: `Report complete: ${result.taskId}\n\nUse \`tiktok_download_report\` with taskId "${result.taskId}" to fetch and parse the report data.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
