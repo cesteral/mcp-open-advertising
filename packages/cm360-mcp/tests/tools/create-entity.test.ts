@@ -34,6 +34,9 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
     "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
+  // Used by the create dry-run; the no-insert case is asserted on the wire in
+  // cm360-wire-requests.test.ts against the real mapping.
+  supportsCreate: () => true,
 }));
 
 import {

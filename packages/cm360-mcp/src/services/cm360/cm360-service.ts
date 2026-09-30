@@ -200,8 +200,16 @@ export class CM360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<CM360EntityMap[T]> {
-    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const config = getEntityConfig(entityType);
+    if (config.supportsCreate === false) {
+      // Refuse before spending a token or sending a POST no method would handle.
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Create is not supported for entity type: ${entityType} — dfareporting v5 has no ` +
+          `${config.apiCollection}.insert method. Update an existing one with cm360_update_entity.`
+      );
+    }
+    await this.rateLimiter.consume(`cm360:user:${this.quotaUser}`);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
     return this.httpClient.fetch(path, context, {
       method: "POST",

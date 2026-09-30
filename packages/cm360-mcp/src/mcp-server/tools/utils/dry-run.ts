@@ -28,6 +28,7 @@ import type {
   RequestContext,
 } from "@cesteral/shared";
 import { buildCm360Snapshot, ENTITY_KIND_MAP, type Cm360ServiceLike } from "./capture-snapshot.js";
+import { supportsCreate } from "./entity-mapping.js";
 
 export type { Cm360ServiceLike };
 
@@ -147,6 +148,14 @@ export async function runCm360CreateDryRun(
   _context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
+  // Parity with CM360Service.createEntity, which refuses a type with no v5 insert.
+  if (!supportsCreate(input.entityType)) {
+    validationErrors.push({
+      code: "CREATE_NOT_SUPPORTED",
+      message: `dfareporting v5 has no insert method for ${input.entityType}; it cannot be created.`,
+      field: "entityType",
+    });
+  }
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
