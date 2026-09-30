@@ -240,7 +240,12 @@ export async function updateEntityLogic(
         .join("\n");
 
       const enhancedMessage = `${error.message}\n\nTip: Try one of these common patterns for ${validatedInput.entityType}:\n${exampleSuggestions}`;
-      error.message = enhancedMessage;
+      try {
+        error.message = enhancedMessage;
+      } catch {
+        // Some errors (e.g. ZodError) expose `message` as a getter only; the
+        // assignment throws a TypeError that would hide the real error.
+      }
     }
 
     throw error;
