@@ -100,7 +100,7 @@ export async function createMcpServer(
         "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
         "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
         "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
-        "For single-record writes use ttd_create_entity / ttd_update_entity (REST). For >100-record batch writes use ttd_graphql_mutation_bulk (TTD's documented bulk path).",
+        "For single-record writes use ttd_create_entity / ttd_update_entity (REST), and for batches the ttd_bulk_* tools. ttd_graphql_mutation_bulk submits an unverified operation, so it runs against the TTD sandbox only unless the operator opts in.",
     }
   );
 

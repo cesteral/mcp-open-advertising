@@ -21,7 +21,15 @@ import type {
   DispatchedCapability,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
-import { MUTATION_ERROR_SELECTION, describePayloadErrors } from "../utils/graphql-bulk-job.js";
+import {
+  MAX_BULK_MUTATION_TOKENS,
+  MAX_MUTATION_BULK_INPUTS,
+  MUTATION_BULK_PRODUCTION_OPT_IN,
+  MUTATION_ERROR_SELECTION,
+  countGraphqlLexicalTokens,
+  describePayloadErrors,
+  mutationBulkProductionRefusal,
+} from "../utils/graphql-bulk-job.js";
 
 const TOOL_NAME = "ttd_graphql_mutation_bulk";
 const TOOL_TITLE = "TTD GraphQL Mutation Bulk";
@@ -29,21 +37,19 @@ const TOOL_DESCRIPTION = `Submit a bulk GraphQL mutation job to The Trade Desk (
 
 Applies one mutation across many input sets as an async bulk job and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`.
 
-### ⚠️ NON-CANCELABLE
-Mutation bulk jobs **cannot be cancelled** once submitted. Use \`ttd_graphql_query_bulk\` for read-only queries if you need cancellation support.
+### ⚠️ Unverified operation, sandbox only by default
+No TTD source this server can check shows \`createMutationBulk\`: not its name, its input type, or how an \`inputs\` entry binds to the mutation's variables. TTD's published bulk-write sample uses a different flow (\`bulkCreateCampaigns\` from an uploaded file). So this tool **runs against the TTD sandbox only** (\`TTD_USE_SANDBOX=true\`). Against production it refuses, and its dry run reports \`wouldSucceed: false\`, unless the operator sets \`${MUTATION_BULK_PRODUCTION_OPT_IN}=true\`.
 
-### ⚠️ Partial failure
-A job can end **PARTIAL_SUCCESS**: some inputs were applied and some failed. Applied writes are not rolled back, so re-submitting the full input set applies them again. Before retrying, read \`gqlErrors\` and the result file from \`ttd_graphql_bulk_job\`, then re-submit only the failed inputs.
+### ⚠️ Not cancellable, no rollback
+Treat a submitted job as not cancellable. A job can end **PARTIAL_SUCCESS**: some inputs were applied and some failed, and applied writes are not rolled back, so re-submitting the full input set applies them again. Before retrying, read \`gqlErrors\` and the result file from \`ttd_graphql_bulk_job\`, then re-submit only the failed inputs.
 
 ### Constraints
-- **Max 1000 inputs** per job
-- **Max 15,000 lexical tokens** for the mutation string (~60,000 characters)
-- **Non-cancelable** once submitted
-- **Concurrency:** max 10 active jobs / 20 queued jobs per partner
-- **Result:** a JSON GraphQL response file (not CSV). Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET. Do not use \`ttd_download_report\`, which only parses CSV. The URL expires after 1 hour.
+- **Max ${MAX_MUTATION_BULK_INPUTS} inputs** per job (this server's cap while the operation is unverified)
+- **Max ${MAX_BULK_MUTATION_TOKENS.toLocaleString("en-US")} GraphQL lexical tokens** in the mutation string, counted as the GraphQL spec defines them
+- **Result:** a JSON GraphQL response file (not CSV). Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET. Do not use \`ttd_download_report\`, which only parses CSV.
 
 ### Mutation names
-TTD names mutations entity first, then verb: \`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`, \`seedCreate\`. TTD's Platform API reference lists \`campaignUpdate\`, not \`updateCampaign\`. Take input types and payload fields from the TTD GraphQL schema explorer. They are not validated here.
+TTD names mutations entity first, then verb: \`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`, \`seedCreate\`. Take input types and payload fields from the TTD GraphQL schema explorer. They are not validated here.
 
 ### Example
 \`\`\`graphql
@@ -56,9 +62,7 @@ mutation UpdateBidList($input: BidListUpdateInput!) {
 \`\`\`
 With inputs: \`[{ "id": "bl1", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }, { "id": "bl2", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }]\`
 
-> **Unverified:** each \`inputs\` entry is sent as one JSON-encoded element of \`mutationVariables\`. It is not confirmed whether TTD binds an entry to \`$input\` (as this example assumes) or reads it as the full variables map (\`{ "input": { … } }\`, the way \`ttd_graphql_query_bulk\` treats its entries).`;
-
-const MAX_MUTATION_CHARS = 60_000; // ~15,000 lexical tokens (chars/4 as conservative proxy)
+Each \`inputs\` entry is sent as one JSON-encoded element of \`mutationVariables\`. Whether TTD binds an entry to \`$input\` (as this example assumes) or reads it as the full variables map (\`{ "input": { … } }\`) is part of what a sandbox run has to confirm.`;
 
 const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: CreateMutationBulkInput!) {
   createMutationBulk(input: $input) {
@@ -76,25 +80,23 @@ export const GraphqlMutationBulkInputSchema = z
     inputs: z
       .array(z.record(z.any()))
       .min(1)
-      .max(1000)
-      .describe("Array of input objects — one per entity (max 1000)"),
+      .max(MAX_MUTATION_BULK_INPUTS)
+      .describe(`Array of input objects, one per entity (max ${MAX_MUTATION_BULK_INPUTS})`),
     dry_run: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        "When true, validates the bulk mutation request and returns an EffectDryRunResult under `dryRun` (expected effect = a bulk mutation job over N inputs) without submitting the job. No job is created and no entities are mutated."
+        "When true, returns an EffectDryRunResult under `dryRun` without submitting the job: the expected effect is a bulk mutation job over N inputs, and `wouldSucceed` is false when the tool would refuse to run (production without the operator opt-in). No job is created and no entities are mutated."
       ),
   })
   .superRefine((data, ctx) => {
-    if (data.mutation.length > MAX_MUTATION_CHARS) {
+    const tokens = countGraphqlLexicalTokens(data.mutation);
+    if (tokens > MAX_BULK_MUTATION_TOKENS) {
       ctx.addIssue({
-        code: z.ZodIssueCode.too_big,
-        maximum: MAX_MUTATION_CHARS,
-        type: "string",
-        inclusive: true,
+        code: z.ZodIssueCode.custom,
         path: ["mutation"],
-        message: `Mutation string exceeds ${MAX_MUTATION_CHARS} characters (~15,000 lexical tokens). TTD enforces a 15,000 token limit on bulk mutation strings.`,
+        message: `Mutation string has ${tokens} GraphQL lexical tokens. TTD's limit for a bulk mutation string is ${MAX_BULK_MUTATION_TOKENS}.`,
       });
     }
   })
@@ -172,17 +174,25 @@ export async function graphqlMutationBulkLogic(
     canonicalEntityKind: null,
   };
 
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const refusal = mutationBulkProductionRefusal(ttdService.graphqlEndpoint);
+
   if (input.dry_run === true) {
     return {
-      dryRun: buildMutationBulkEffectDryRun(input),
+      dryRun: buildMutationBulkEffectDryRun(input, refusal),
       dispatchedCapability,
       timestamp: new Date().toISOString(),
     };
   }
 
-  const { ttdService } = resolveSessionServices(sdkContext);
+  if (refusal) {
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, refusal, {
+      optIn: MUTATION_BULK_PRODUCTION_OPT_IN,
+    });
+  }
 
-  // UNVERIFIED binding: no TTD source (Workflows SDK or platform samples) shows
+  // UNVERIFIED binding: no TTD source (the platform samples, or the Workflows SDKs
+  // for Python, Go and Java) shows
   // createMutationBulk, its input type, or how a `mutationVariables` entry binds
   // to the mutation's variables. Left as-is pending a sandbox run.
   const variables = {
@@ -223,12 +233,17 @@ export async function graphqlMutationBulkLogic(
 
 /**
  * Symbolic effect dry-run for `graphql_mutation_bulk`. TTD has no native
- * bulk-job preview; validation is symbolic (input-schema invariants — ≤1000
- * inputs, mutation ≤15k tokens — are already enforced, so a well-formed call
- * always passes). The projected effect is a bulk mutation job over the supplied
- * inputs. Pure (no I/O); never includes the raw mutation or input payloads.
+ * bulk-job preview. The input schema already enforces the input cap and the
+ * token limit, so the one thing left to validate is whether this server would
+ * run the job at all: it refuses production without the operator opt-in, and
+ * the dry run predicts that refusal rather than promising a success the real
+ * call would not deliver. The projected effect is a bulk mutation job over the
+ * supplied inputs. No I/O; never includes the raw mutation or input payloads.
  */
-function buildMutationBulkEffectDryRun(input: GraphqlMutationBulkInput): EffectDryRunResult {
+function buildMutationBulkEffectDryRun(
+  input: GraphqlMutationBulkInput,
+  refusal: string | undefined
+): EffectDryRunResult {
   const expectedEffect: EffectResult = {
     effectKind: "bulk_job_submitted",
     summary: { job_kind: "mutation", inputs: input.inputs.length },
@@ -236,8 +251,8 @@ function buildMutationBulkEffectDryRun(input: GraphqlMutationBulkInput): EffectD
 
   return assertGovernedEffectDryRun(
     {
-      wouldSucceed: true,
-      validationErrors: [],
+      wouldSucceed: refusal === undefined,
+      validationErrors: refusal ? [{ code: "production_not_enabled", message: refusal }] : [],
       validationSource: "symbolic",
       expectedEffectSource: "symbolic",
       expectedEffect,
@@ -253,10 +268,11 @@ export function graphqlMutationBulkResponseFormatter(
   if (result.dryRun) {
     const { wouldSucceed, validationSource, expectedEffectSource } = result.dryRun;
     const n = result.dryRun.expectedEffect?.summary.inputs ?? 0;
+    const reasons = result.dryRun.validationErrors.map((e) => `\n- ${e.message}`).join("");
     return [
       {
         type: "text" as const,
-        text: `Dry run: bulk mutation job over ${n} input(s) ${wouldSucceed ? "would succeed" : "would FAIL"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No job was submitted and no entities were mutated.\n\nTimestamp: ${result.timestamp}`,
+        text: `Dry run: bulk mutation job over ${n} input(s) ${wouldSucceed ? "would be submitted" : "would be REFUSED"} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}).${reasons}\n\nNo job was submitted and no entities were mutated.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

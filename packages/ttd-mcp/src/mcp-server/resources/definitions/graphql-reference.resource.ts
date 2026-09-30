@@ -406,10 +406,10 @@ mutation CreateBulkQuery {
 \`\`\`
 The input also accepts an optional \`bulkJobCallback: { callbackUrl, callbackHeaders: [{ key, value }] }\` (shown in TTD's samples; not exposed by the tool).
 
-\`ttd_graphql_query_bulk\` sends \`mutation CreateQueryBulk($input: CreateQueryBulkInput!) { createQueryBulk(input: $input) { data { id status } errors { … } } }\` with variables \`{ "input": { "query": "…", "queryVariables": "<JSON-encoded array of variable maps>" } }\`. **Unverified:** no TTD source shows \`queryVariables\`, the \`CreateQueryBulkInput\` type name, or \`status\` on the returned job.
+\`ttd_graphql_query_bulk\` sends \`mutation CreateQueryBulk($input: CreateQueryBulkInput!) { createQueryBulk(input: $input) { data { id status } errors { … } } }\` with variables \`{ "input": { "query": "…", "queryVariables": "<JSON-encoded array of variable maps>" } }\`. The tool sends \`queryVariables\` only when the caller passes \`variables\`; without them it sends TTD's documented \`{ query }\` input. **Unverified:** no TTD source shows \`queryVariables\`, the \`CreateQueryBulkInput\` type name, or \`status\` on the returned job.
 
 ### Submit a bulk mutation: \`createMutationBulk\`
-\`ttd_graphql_mutation_bulk\` sends \`mutation CreateMutationBulk($input: CreateMutationBulkInput!) { createMutationBulk(input: $input) { data { id status } errors { __typename ... on MutationError { field message } } } }\` with variables \`{ "input": { "mutation": "…", "mutationVariables": ["<JSON string per input>", …] } }\`. **Unverified:** no TTD source shows \`createMutationBulk\`, its input fields, whether mutation jobs can be cancelled, or how each entry binds to the mutation's variables.
+\`ttd_graphql_mutation_bulk\` sends \`mutation CreateMutationBulk($input: CreateMutationBulkInput!) { createMutationBulk(input: $input) { data { id status } errors { __typename ... on MutationError { field message } } } }\` with variables \`{ "input": { "mutation": "…", "mutationVariables": ["<JSON string per input>", …] } }\`. **Unverified:** no TTD source shows \`createMutationBulk\`, its input fields, whether mutation jobs can be cancelled, or how each entry binds to the mutation's variables. Because of that, the tool runs against the TTD sandbox only; against production it refuses unless the operator sets \`TTD_ALLOW_UNVERIFIED_MUTATION_BULK=true\`. It accepts at most 100 inputs and 15,000 GraphQL lexical tokens.
 
 TTD mutation names are entity first, then verb (\`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`), per TTD's Platform API reference.
 
