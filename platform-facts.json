@@ -637,6 +637,48 @@
       "codeRefs": ["packages/tiktok-mcp/src/config/index.ts:31"]
     },
     {
+      "id": "tiktok.async_report_download_endpoint",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "An async report task's output is fetched with `GET /open_api/v1.3/report/task/download/` (params: advertiser_id, task_id). For a task created with output_format CSV_DOWNLOAD or XLSX_DOWNLOAD it returns a JSON envelope with `download_url` (valid 1 hour; call again for a fresh one), `file_name` and `output_format`; for CSV_STRING it returns the CSV as a raw stream. The check endpoint returns no download URL. This is documented by TikTok (the vendor SDK spec omitted it, which is why #232 thought it undocumented). Read in a rendered browser, 2026-09-30.",
+      "value": "report/task/download/",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs/download-the-output-of-an-async-report-task/v1.3",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:283"]
+    },
+    {
+      "id": "tiktok.async_task_statuses",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "`GET /open_api/v1.3/report/task/check/` returns data.status in QUEUING, PROCESSING, SUCCESS, FAILED, CANCELED (message is set when FAILED). The server previously waited for DONE, which TikTok never returns, so a real task could never look in progress or finished. Read in a rendered browser, 2026-09-30.",
+      "value": "QUEUING",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs/get-the-status-of-an-async-report-task/v1.3",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:105"]
+    },
+    {
+      "id": "tiktok.async_report_create_options",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "`POST /open_api/v1.3/report/task/create/` takes output_format (CSV_STRING default, CSV_DOWNLOAD, XLSX_DOWNLOAD) and enable_report_title_translation (default true; valid only for BASIC and AUDIENCE reports; TikTok recommends false because translated titles change). Async reports have no time-range limit, and async filters are limited to campaign_ids, adgroup_ids and ad_ids. Read in a rendered browser, 2026-09-30.",
+      "value": "CSV_DOWNLOAD",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs/create-an-asynchronous-report-task/v1.3",
+      "status": "verified",
+      "verifiedAt": "2026-09-30",
+      "verifyBy": "2027-03-29",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:191"]
+    },
+    {
       "id": "ttd.rate_limit_default",
       "package": "ttd-mcp",
       "class": "behavioral-constraint",

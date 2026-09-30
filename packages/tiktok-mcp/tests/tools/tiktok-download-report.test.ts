@@ -37,18 +37,24 @@ import {
 } from "../../src/mcp-server/tools/definitions/download-report.tool.js";
 
 const mockDownloadReport = vi.fn();
+const mockGetReportDownloadUrl = vi.fn();
+const SIGNED_URL = "https://ads.tiktok.com/wsos_v2/statistics/object/wsos1?expire=1&sign=2";
+const taskInput = { advertiserId: "1234567890", taskId: "task-abc" } as const;
 
 beforeEach(() => {
   // Scrub the spill env so tests that don't opt into spill behavior stay
   // deterministic regardless of the developer's shell.
   delete process.env.REPORT_SPILL_BUCKET;
   mockDownloadReport.mockReset();
+  mockGetReportDownloadUrl.mockReset().mockResolvedValue({ downloadUrl: SIGNED_URL });
   mockSpillBodyToGcs.mockReset();
   mockSpillBodyToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
   mockResolveSession.mockReturnValue({
     tiktokReportingService: {
       downloadReport: mockDownloadReport,
+      getReportDownloadUrl: mockGetReportDownloadUrl,
     },
+    boundAdvertiserId: "1234567890",
   } as any);
 });
 
@@ -56,15 +62,40 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("downloadReportLogic", () => {
-  // The URL comes from the MCP client and is fetched server-side.
+  it("asks TikTok for the URL of the task and downloads exactly that", async () => {
+    mockDownloadReport.mockResolvedValueOnce({ headers: ["a"], rows: [], totalRows: 0 });
+
+    await downloadReportLogic({ ...taskInput, mode: "rows" } as any, baseContext, baseSdkContext);
+
+    expect(mockGetReportDownloadUrl).toHaveBeenCalledWith("task-abc", baseContext);
+    expect(mockDownloadReport).toHaveBeenCalledWith(SIGNED_URL, expect.any(Number), undefined, {
+      includeRawCsv: false,
+    });
+  });
+
+  it("refuses a task for another advertiser before calling TikTok", async () => {
+    await expect(
+      downloadReportLogic(
+        { advertiserId: "9999999999", taskId: "task-abc", mode: "rows" } as any,
+        baseContext,
+        baseSdkContext
+      )
+    ).rejects.toThrow();
+    expect(mockGetReportDownloadUrl).not.toHaveBeenCalled();
+    expect(mockDownloadReport).not.toHaveBeenCalled();
+  });
+
+  // The URL now comes from TikTok, not the client, but it is still fetched
+  // server-side: a bad value must never reach the network.
   it.each([
     "https://169.254.169.254/computeMetadata/v1/",
     "https://metadata.google.internal/computeMetadata/v1/",
     "https://localhost/report.csv",
-    "http://example.com/report.csv",
-  ])("refuses %s before fetching", async (downloadUrl) => {
+    "http://ads.tiktok.com/report.csv",
+  ])("refuses a returned URL of %s before fetching", async (downloadUrl) => {
+    mockGetReportDownloadUrl.mockResolvedValueOnce({ downloadUrl });
     await expect(
-      downloadReportLogic({ downloadUrl, mode: "rows" } as any, baseContext, baseSdkContext)
+      downloadReportLogic({ ...taskInput, mode: "rows" } as any, baseContext, baseSdkContext)
     ).rejects.toThrow("download URL");
     expect(mockDownloadReport).not.toHaveBeenCalled();
   });
@@ -80,7 +111,7 @@ describe("downloadReportLogic", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", mode: "rows" },
+      { ...taskInput, mode: "rows" },
       baseContext,
       baseSdkContext
     );
@@ -101,7 +132,7 @@ describe("downloadReportLogic", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1 },
+      { ...taskInput, maxRows: 1 },
       baseContext,
       baseSdkContext
     );
@@ -117,18 +148,11 @@ describe("downloadReportLogic", () => {
       totalRows: 0,
     });
 
-    await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
-    expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
-      10,
-      undefined,
-      { includeRawCsv: false }
-    );
+    expect(mockDownloadReport).toHaveBeenCalledWith(SIGNED_URL, 10, undefined, {
+      includeRawCsv: false,
+    });
   });
 
   it("persists rawCsv and returns a report-csv:// URI when storeRawCsv is true", async () => {
@@ -141,19 +165,16 @@ describe("downloadReportLogic", () => {
 
     const result = await downloadReportLogic(
       {
-        downloadUrl: "https://example.com/report.csv",
+        ...taskInput,
         storeRawCsv: true,
       },
       baseContext,
       baseSdkContext
     );
 
-    expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
-      10,
-      undefined,
-      { includeRawCsv: true }
-    );
+    expect(mockDownloadReport).toHaveBeenCalledWith(SIGNED_URL, 10, undefined, {
+      includeRawCsv: true,
+    });
     expect(result.rawCsvResourceUri).toMatch(/^report-csv:\/\//);
     expect(result.rawCsvByteLength).toBe(
       Buffer.byteLength("date,impressions\n2026-03-01,1000\n", "utf8")
@@ -174,18 +195,11 @@ describe("GCS spill integration", () => {
       totalRows: 0,
     });
 
-    await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
-    expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
-      10,
-      undefined,
-      { includeRawCsv: false }
-    );
+    expect(mockDownloadReport).toHaveBeenCalledWith(SIGNED_URL, 10, undefined, {
+      includeRawCsv: false,
+    });
   });
 
   it("forces includeRawCsv: true when REPORT_SPILL_BUCKET is set", async () => {
@@ -197,18 +211,11 @@ describe("GCS spill integration", () => {
       rawCsv: "date\n2026-03-01\n",
     });
 
-    await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
-    expect(mockDownloadReport).toHaveBeenCalledWith(
-      "https://example.com/report.csv",
-      10,
-      undefined,
-      { includeRawCsv: true }
-    );
+    expect(mockDownloadReport).toHaveBeenCalledWith(SIGNED_URL, 10, undefined, {
+      includeRawCsv: true,
+    });
   });
 
   it("returns spill metadata when the helper reports success", async () => {
@@ -230,11 +237,7 @@ describe("GCS spill integration", () => {
       mimeType: "text/csv",
     });
 
-    const result = await downloadReportLogic(
-      { downloadUrl: "https://analytics.tiktok.com/reports/task-abc/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    const result = await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
     expect(mockSpillBodyToGcs).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -242,7 +245,7 @@ describe("GCS spill integration", () => {
         mimeType: "text/csv",
         sessionId: "test-session",
         server: "tiktok",
-        objectId: "report.csv",
+        objectId: "task-abc",
         rowCount: 1,
       })
     );
@@ -268,11 +271,7 @@ describe("GCS spill integration", () => {
     });
     mockSpillBodyToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
 
-    const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    const result = await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
     expect(result.spill).toEqual({ error: "gcs unreachable" });
     expect(result.warnings.some((w) => w.includes("gcs unreachable"))).toBe(true);
@@ -288,11 +287,7 @@ describe("GCS spill integration", () => {
     });
     mockSpillBodyToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
 
-    const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
-      baseContext,
-      baseSdkContext
-    );
+    const result = await downloadReportLogic({ ...taskInput }, baseContext, baseSdkContext);
 
     expect(result.spill).toBeUndefined();
   });

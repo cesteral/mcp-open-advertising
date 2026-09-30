@@ -62,6 +62,9 @@ describe("the shipped ledger", () => {
     ["snapchat.stats_report_dimension", "2026-09-30"],
     ["snapchat.stats_day_bounds_account_timezone", "2026-09-30"],
     ["snapchat.campaign_objective_v2", "2026-09-30"],
+    ["tiktok.async_report_download_endpoint", "2026-09-30"],
+    ["tiktok.async_task_statuses", "2026-09-30"],
+    ["tiktok.async_report_create_options", "2026-09-30"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {

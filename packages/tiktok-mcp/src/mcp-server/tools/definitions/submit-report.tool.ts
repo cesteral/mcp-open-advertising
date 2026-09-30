@@ -35,11 +35,12 @@ Returns a \`taskId\` immediately. Use \`tiktok_check_report_status\` to poll for
 
 **Non-blocking workflow:**
 1. \`tiktok_submit_report\` → get \`taskId\`
-2. \`tiktok_check_report_status\` (repeat every 10s) → wait for state \`complete\`
-3. If the status check returns a \`downloadUrl\`, fetch it with \`tiktok_download_report\`
+2. \`tiktok_check_report_status\` (repeat every 10s) → wait for state \`complete\` (TikTok status SUCCESS; QUEUING and PROCESSING are in progress)
+3. \`tiktok_download_report\` with the same \`taskId\` → TikTok issues a signed download URL and the CSV is fetched and parsed
 
-TikTok's documented task-check response carries only \`status\` and \`message\` (no download URL),
-so prefer \`tiktok_get_report\`, which returns rows synchronously.`;
+The task is created with output_format CSV_DOWNLOAD and untranslated column titles, so the
+downloaded header row uses field names (\`campaign_id\`, \`spend\`). Async reports have no time-range
+limit. For a small report, \`tiktok_get_report\` returns rows synchronously with no polling.`;
 
 export const SubmitReportInputSchema = z
   .object({

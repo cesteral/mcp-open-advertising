@@ -5,10 +5,10 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
 import {
+  assertAccountScope,
   assertSafeDownloadUrl,
   ComputedMetricsFlagSchema,
   createServiceDownloadedReportView,
-  extractReportIdFromUrl,
   formatReportViewResponse,
   ReportViewInputSchema,
   ReportViewOutputSchema,
@@ -20,24 +20,27 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_download_report";
 const TOOL_TITLE = "Download TikTok Report";
-const TOOL_DESCRIPTION = `Download and parse a TikTok report from a download URL.
+const TOOL_DESCRIPTION = `Download and parse the output of a finished TikTok async report task.
 
-After a report task is DONE (via \`tiktok_check_report_status\`), use the \`downloadUrl\` to fetch and parse the CSV data.
+Give the \`taskId\` from \`tiktok_submit_report\`. TikTok issues a signed download URL for the task (valid for one hour; this tool asks for a fresh one each call) and the CSV is fetched and parsed.
 
 **Workflow:**
 1. \`tiktok_submit_report\` → get \`taskId\`
-2. \`tiktok_check_report_status\` → get \`downloadUrl\` when DONE
-3. \`tiktok_download_report\` with that URL → get a bounded summary or paged row slice
+2. \`tiktok_check_report_status\` → wait for state \`complete\`
+3. \`tiktok_download_report\` with that \`taskId\` → get a bounded summary or paged row slice
+
+Fails if the task is not finished, or was not created by \`tiktok_submit_report\` (other output formats are not supported).
 
 **Options:**
 - \`mode: "summary"\` (default) returns headers, counts, and a small preview
 - \`mode: "rows"\` returns one bounded page of rows
-- \`columns\` projects returned rows to selected columns
+- \`columns\` projects returned rows to selected columns (header names are TikTok field names, e.g. \`campaign_id\`, \`spend\`)
 - \`offset\` and \`maxRows\` page through rows; \`maxRows\` is capped at 200`;
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z.string().url().describe("Report download URL from tiktok_check_report_status"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    taskId: z.string().min(1).describe("Report task ID from tiktok_submit_report"),
     storeRawCsv: z
       .boolean()
       .optional()
@@ -74,14 +77,16 @@ const TIKTOK_COMPUTED_METRIC_ALIASES = {
 
 export async function downloadReportLogic(
   input: DownloadInput,
-  _context: RequestContext,
+  context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DownloadOutput> {
-  const { tiktokReportingService } = resolveSessionServices(sdkContext);
+  const { tiktokReportingService, boundAdvertiserId } = resolveSessionServices(sdkContext);
+  assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
-  // The URL arrives from the MCP client — refuse non-https, IP-literal and
-  // internal hosts before fetching it server-side.
-  assertSafeDownloadUrl(input.downloadUrl, { toolName: TOOL_NAME });
+  // TikTok issues the URL, but it is fetched server-side, so it is still
+  // checked: refuse non-https, IP-literal and internal hosts before any fetch.
+  const { downloadUrl } = await tiktokReportingService.getReportDownloadUrl(input.taskId, context);
+  assertSafeDownloadUrl(downloadUrl, { toolName: TOOL_NAME });
 
   return createServiceDownloadedReportView({
     input,
@@ -89,10 +94,10 @@ export async function downloadReportLogic(
     reportCsvStore,
     spillBodyToGcs,
     spillServer: "tiktok",
-    reportId: extractReportIdFromUrl(input.downloadUrl),
+    reportId: input.taskId,
     computedMetricAliases: TIKTOK_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      tiktokReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
+      tiktokReportingService.downloadReport(downloadUrl, fetchLimit, undefined, {
         includeRawCsv,
       }),
   });
@@ -123,13 +128,15 @@ export const downloadReportTool = {
     {
       label: "Download report summary preview",
       input: {
-        downloadUrl: "https://analytics.tiktok.com/reports/task-abc123/report.csv",
+        advertiserId: "1234567890",
+        taskId: "7001234567890123456",
       },
     },
     {
       label: "Download selected columns as a paged row slice",
       input: {
-        downloadUrl: "https://analytics.tiktok.com/reports/task-xyz789/report.csv",
+        advertiserId: "1234567890",
+        taskId: "7001234567890123456",
         mode: "rows",
         columns: ["campaign_id", "impressions", "spend"],
         maxRows: 50,

@@ -42,11 +42,10 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("checkReportStatusLogic", () => {
-  it("returns canonical 'complete' state with downloadUrl", async () => {
+  it("returns canonical 'complete' for TikTok's SUCCESS and publishes no download URL", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-1",
-      status: "DONE",
-      downloadUrl: "https://example.com/report.csv",
+      status: "SUCCESS",
     });
 
     const result = await checkReportStatusLogic(
@@ -57,15 +56,42 @@ describe("checkReportStatusLogic", () => {
 
     expect(result.taskId).toBe("task-1");
     expect(result.state).toBe("complete");
-    expect(result.rawStatus).toBe("DONE");
+    expect(result.rawStatus).toBe("SUCCESS");
     expect(result.isComplete).toBe(true);
-    expect(result.downloadUrl).toBe("https://example.com/report.csv");
+    expect(result).not.toHaveProperty("downloadUrl");
+  });
+
+  it("returns canonical 'pending' for QUEUING, so a waiting task is not reported as failed", async () => {
+    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-q", status: "QUEUING" });
+
+    const result = await checkReportStatusLogic(
+      { advertiserId: "1234567890", taskId: "task-q" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.state).toBe("pending");
+    expect(result.isComplete).toBe(false);
+    expect(checkReportStatusResponseFormatter(result)[0].text).toContain("Report in progress");
+  });
+
+  it("reports CANCELED as terminal, saying so", async () => {
+    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-c", status: "CANCELED" });
+
+    const result = await checkReportStatusLogic(
+      { advertiserId: "1234567890", taskId: "task-c" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.state).toBe("failed");
+    expect(result.errors?.[0]).toMatch(/cancel/i);
   });
 
   it("returns canonical 'running' state with isComplete false", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-2",
-      status: "RUNNING",
+      status: "PROCESSING",
     });
 
     const result = await checkReportStatusLogic(
@@ -75,15 +101,14 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.state).toBe("running");
-    expect(result.rawStatus).toBe("RUNNING");
+    expect(result.rawStatus).toBe("PROCESSING");
     expect(result.isComplete).toBe(false);
-    expect(result.downloadUrl).toBeUndefined();
   });
 
   // The shared fromTikTokStatus maps unknown statuses to "pending", so a status
   // string nobody anticipated was reported as pending forever.
   it("reports an unrecognized raw status as terminal 'failed' with the raw value, never pending", async () => {
-    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-u", status: "QUEUING" });
+    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-u", status: "SOMETHING_NEW" });
 
     const result = await checkReportStatusLogic(
       { advertiserId: "1234567890", taskId: "task-u" },
@@ -92,11 +117,11 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.state).toBe("failed");
-    expect(result.rawStatus).toBe("QUEUING");
-    expect(result.errors?.[0]).toContain("QUEUING");
+    expect(result.rawStatus).toBe("SOMETHING_NEW");
+    expect(result.errors?.[0]).toContain("SOMETHING_NEW");
     const text = checkReportStatusResponseFormatter(result)[0].text;
     expect(text).toContain("Report failed");
-    expect(text).toContain("QUEUING");
+    expect(text).toContain("SOMETHING_NEW");
     expect(text).not.toContain("in progress");
   });
 
@@ -117,7 +142,7 @@ describe("checkReportStatusLogic", () => {
   it("calls checkReportStatus with correct taskId", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-xyz",
-      status: "PENDING",
+      status: "QUEUING",
     });
 
     await checkReportStatusLogic(
@@ -131,25 +156,26 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when complete with URL", () => {
+  it("tells the caller to download by task id when complete", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-1",
       state: "complete",
-      rawStatus: "DONE",
+      rawStatus: "SUCCESS",
       isComplete: true,
-      downloadUrl: "https://example.com/report.csv",
       timestamp: new Date().toISOString(),
     });
 
     expect(content[0].text).toContain("Report complete");
     expect(content[0].text).toContain("tiktok_download_report");
+    expect(content[0].text).toContain("task-1");
+    expect(content[0].text).not.toContain("tiktok_get_report");
   });
 
   it("shows retry guidance when in progress", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-2",
       state: "running",
-      rawStatus: "RUNNING",
+      rawStatus: "PROCESSING",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });
@@ -169,18 +195,5 @@ describe("checkReportStatusResponseFormatter", () => {
     });
 
     expect(content[0].text).toContain("Report failed");
-  });
-
-  it("points to tiktok_get_report when complete without a download URL", () => {
-    const content = checkReportStatusResponseFormatter({
-      taskId: "task-4",
-      state: "complete",
-      rawStatus: "DONE",
-      isComplete: true,
-      timestamp: new Date().toISOString(),
-    });
-
-    expect(content[0].text).toContain("Report complete");
-    expect(content[0].text).toContain("tiktok_get_report");
   });
 });
