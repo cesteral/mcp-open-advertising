@@ -105,9 +105,27 @@ server, including the `*_search_tools` discovery tool where present.
 
 ### What Every Server Ships
 
-These connectors have grown past "thin REST wrappers." Beyond raw tool calls,
-every server in the fleet exposes the full surface of the modern MCP spec
-(protocol revisions `2025-03-26` through `2025-11-25`):
+Every server speaks MCP protocol revisions `2025-03-26`, `2025-06-18` and
+`2025-11-25`, the ones `@modelcontextprotocol/sdk` 1.27.1 implements; the
+Streamable HTTP transport rejects any other `MCP-Protocol-Version`. The current
+revision, `2026-07-28`, is not supported yet
+([#242](https://github.com/cesteral/mcp-open-advertising/issues/242)).
+
+That is not the whole spec. In the MCP conformance suite
+(`@modelcontextprotocol/conformance` 0.1.16) every server passes 13 of the 30
+active server scenarios — initialize, ping, logging level, tool list and call,
+resource list, read and templates, prompt list and get, concurrent SSE streams
+— and [`conformance/expected-failures.yaml`](conformance/expected-failures.yaml)
+gives the reason for each of the other 17. Not implemented: completions,
+resource subscriptions, sampling, progress notifications, image / audio /
+embedded-resource content, and SSE stream resumption. Known defects:
+elicitation requests (including the destructive-action confirmations below)
+and log notifications go out on the standalone GET stream instead of the
+calling request's stream, so a client that never opens that optional stream
+never receives them; and the default self-host configuration has no
+DNS-rebinding protection until `MCP_ALLOWED_ORIGINS` is set.
+
+Beyond raw tool calls, every server ships:
 
 - **MCP Prompts** — on-demand, multi-step workflow guidance (campaign launch,
   reporting, troubleshooting) so agents don't have to rediscover each
