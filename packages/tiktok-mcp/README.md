@@ -246,6 +246,26 @@ Client-side validation of entity payloads without making API calls.
 - `mode` (string, required): Validation mode (`create` or `update`)
 - `data` (object, required): Entity data to validate
 
+### Media
+
+#### 22. `tiktok_upload_image` / 23. `tiktok_upload_video`
+
+Download an image or video from a URL and upload it to the advertiser's asset
+library (`file/image/ad/upload/`, `file/video/ad/upload/`, multipart with the
+required MD5 signature). Reference the returned IDs in an ad's `creatives[]`.
+
+### Client-side helpers
+
+#### 24. `tiktok_get_pacing_status`
+
+Pacing calculator; makes no API call. Pass spend from `tiktok_get_report` and
+the budget and flight dates from `tiktok_get_entity`. Flight dates live on ad
+groups (`schedule_start_time` / `schedule_end_time`), not campaigns.
+
+#### 25. `tiktok_search_tools`
+
+Rank this server's tools against a natural-language query.
+
 ## Supported Entity Types
 
 | Entity Type | API Object | Notes                                           |
@@ -259,8 +279,6 @@ entity in v1.3 (no `creative/adcreative/*` endpoints); upload assets with `tikto
 `tiktok_upload_video` and reference them in the ad's `creatives[]`.
 
 ## Current Status
-
-**Phase: Production-Ready**
 
 Tools target TikTok Marketing API v1.3 as described by TikTok's official Business API SDK
 (github.com/tiktok/tiktok-business-api-sdk). Clients authenticate to this server with

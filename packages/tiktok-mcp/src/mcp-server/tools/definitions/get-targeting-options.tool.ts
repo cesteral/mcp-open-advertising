@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { assertAccountScope } from "@cesteral/shared";
+import { assertAccountScope, JsonRpcErrorCode, McpError } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -45,7 +45,9 @@ export const GetTargetingOptionsInputSchema = z
     promotionType: z
       .string()
       .optional()
-      .describe("Promotion type used by LOCATION or ISP lookups when required"),
+      .describe(
+        "Promotion target type for LOCATION lookups (sent as `promotion_target_type`, the /tool/region/ parameter)"
+      ),
     operatingSystem: z
       .enum(["ANDROID", "IOS"])
       .optional()
@@ -80,13 +82,25 @@ export async function getTargetingOptionsLogic(
   const { tiktokService, boundAdvertiserId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.advertiserId, boundAdvertiserId, "advertiserId");
 
+  // /tool/interest_keyword/recommend/ takes `keyword` as a required argument
+  // (tiktok-business-api-sdk python_sdk ToolApi.tool_interest_keyword_recommend
+  // (advertiser_id, keyword, access_token, …)); fail here rather than upstream.
+  if (input.optionType === "INTEREST_KEYWORD" && !input.keyword) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "INTEREST_KEYWORD lookups require `keyword` (TikTok's /tool/interest_keyword/recommend/ requires it)"
+    );
+  }
+
   const options = (await tiktokService.getTargetingOptions(
     input.optionType,
     {
       ...(input.keyword ? { keyword: input.keyword } : {}),
       ...(input.placements ? { placements: input.placements } : {}),
       ...(input.objectiveType ? { objective_type: input.objectiveType } : {}),
-      ...(input.promotionType ? { promotion_type: input.promotionType } : {}),
+      // /tool/region/ names this `promotion_target_type` (python_sdk ToolApi.tool_region
+      // all_params); `promotion_type` is not one of its parameters.
+      ...(input.promotionType ? { promotion_target_type: input.promotionType } : {}),
       ...(input.operatingSystem ? { operating_system: input.operatingSystem } : {}),
       ...(input.locationIds ? { location_ids: input.locationIds } : {}),
       ...(input.scene ? { scene: input.scene } : {}),
