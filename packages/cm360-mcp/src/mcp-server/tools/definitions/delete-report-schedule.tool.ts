@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   elicitDeleteConfirmation,
+  NO_UNTRUSTED_CONTENT,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -241,4 +242,6 @@ export const deleteReportScheduleTool = {
   ],
   logic: deleteReportScheduleLogic,
   responseFormatter: deleteReportScheduleResponseFormatter,
+  // The delete dry run is symbolic (no read) and the delete response is discarded; text names only the caller's report ID.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

@@ -10,6 +10,7 @@ import type { SdkContext } from "@cesteral/shared";
 import {
   validateEntityResponseFormatter,
   buildNextAction,
+  NO_UNTRUSTED_CONTENT,
   type ValidationIssue,
 } from "@cesteral/shared";
 
@@ -288,4 +289,6 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  // Purely local schema validation of caller-supplied data; issues quote only the caller's own payload.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };
