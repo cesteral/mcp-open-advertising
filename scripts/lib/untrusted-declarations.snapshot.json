@@ -131,6 +131,102 @@
       "contentBlocks": []
     }
   },
+  "cm360-mcp": {
+    "cm360_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "cm360_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "cm360_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "cm360_check_report_status": {
+      "structuredPaths": ["$.file", "$.errors"],
+      "contentBlocks": [0]
+    },
+    "cm360_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "cm360_create_report_schedule": {
+      "structuredPaths": ["$.reportName", "$.schedule"],
+      "contentBlocks": [0]
+    },
+    "cm360_delete_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "cm360_delete_report_schedule": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "cm360_download_report": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "cm360_get_ad_preview": {
+      "structuredPaths": ["$.adName", "$.previewUrl", "$.ad"],
+      "contentBlocks": [0]
+    },
+    "cm360_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "cm360_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "cm360_get_report": {
+      "structuredPaths": ["$.file"],
+      "contentBlocks": [0]
+    },
+    "cm360_get_report_breakdowns": {
+      "structuredPaths": ["$.file"],
+      "contentBlocks": [0]
+    },
+    "cm360_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "cm360_list_report_schedules": {
+      "structuredPaths": ["$.schedules", "$.raw"],
+      "contentBlocks": [0]
+    },
+    "cm360_list_targeting_options": {
+      "structuredPaths": ["$.options"],
+      "contentBlocks": [0]
+    },
+    "cm360_list_user_profiles": {
+      "structuredPaths": ["$.profiles"],
+      "contentBlocks": [0]
+    },
+    "cm360_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "cm360_submit_report": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "cm360_update_entity": {
+      "structuredPaths": ["$.entity", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "cm360_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    }
+  },
   "dbm-mcp": {
     "dbm_get_campaign_delivery": {
       "structuredPaths": [],
@@ -166,6 +262,198 @@
         "$.previewRows",
         "$.warnings"
       ],
+      "contentBlocks": [0]
+    }
+  },
+  "dv360-mcp": {
+    "dv360_adjust_line_item_bids": {
+      "structuredPaths": ["$.successful", "$.failed"],
+      "contentBlocks": [0]
+    },
+    "dv360_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "dv360_bulk_update_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "dv360_bulk_update_status": {
+      "structuredPaths": ["$.results", "$.successful", "$.failed"],
+      "contentBlocks": [0]
+    },
+    "dv360_create_assigned_targeting": {
+      "structuredPaths": ["$.createdTargetingOption"],
+      "contentBlocks": [0]
+    },
+    "dv360_create_custom_bidding_algorithm": {
+      "structuredPaths": ["$.algorithm", "$.scriptUpload", "$.rulesUpload"],
+      "contentBlocks": [0]
+    },
+    "dv360_create_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
+    "dv360_delete_assigned_targeting": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_delete_entity": {
+      "structuredPaths": ["$.deletedEntity", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "dv360_duplicate_entity": {
+      "structuredPaths": ["$.duplicatedEntity", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "dv360_get_ad_preview": {
+      "structuredPaths": ["$.creativeName"],
+      "contentBlocks": [0]
+    },
+    "dv360_get_assigned_targeting": {
+      "structuredPaths": ["$.assignedTargetingOption"],
+      "contentBlocks": [0]
+    },
+    "dv360_get_delivery_estimate": {
+      "structuredPaths": ["$.estimate"],
+      "contentBlocks": [0]
+    },
+    "dv360_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "dv360_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_list_assigned_targeting": {
+      "structuredPaths": ["$.assignedTargetingOptions"],
+      "contentBlocks": [0]
+    },
+    "dv360_list_custom_bidding_algorithms": {
+      "structuredPaths": ["$.algorithms"],
+      "contentBlocks": [0]
+    },
+    "dv360_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "dv360_manage_custom_bidding_rules": {
+      "structuredPaths": ["$.rules", "$.rulesList"],
+      "contentBlocks": [0]
+    },
+    "dv360_manage_custom_bidding_script": {
+      "structuredPaths": ["$.script", "$.scripts"],
+      "contentBlocks": [0]
+    },
+    "dv360_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_update_entity": {
+      "structuredPaths": ["$.entity", "$.previousValues", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "dv360_upload_image": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_upload_video": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_validate_entity": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "dv360_validate_targeting_config": {
+      "structuredPaths": ["$.issues"],
+      "contentBlocks": [0]
+    }
+  },
+  "gads-mcp": {
+    "gads_adjust_bids": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "gads_bulk_create_entities": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "gads_bulk_mutate": {
+      "structuredPaths": ["$.mutateResult"],
+      "contentBlocks": [0]
+    },
+    "gads_bulk_update_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
+    },
+    "gads_create_entity": {
+      "structuredPaths": ["$.mutateResult", "$.after", "$.dryRun"],
+      "contentBlocks": [0]
+    },
+    "gads_duplicate_entity": {
+      "structuredPaths": ["$.result", "$.dryRun", "$.after"],
+      "contentBlocks": [0]
+    },
+    "gads_gaql_search": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "gads_get_ad_preview": {
+      "structuredPaths": ["$.finalUrls"],
+      "contentBlocks": [0]
+    },
+    "gads_get_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
+    "gads_get_insights": {
+      "structuredPaths": [
+        "$.headers",
+        "$.selectedColumns",
+        "$.rows",
+        "$.previewRows",
+        "$.warnings"
+      ],
+      "contentBlocks": [0]
+    },
+    "gads_get_pacing_status": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "gads_list_accounts": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
+    "gads_list_entities": {
+      "structuredPaths": ["$.entities"],
+      "contentBlocks": [0]
+    },
+    "gads_remove_entity": {
+      "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "gads_update_entity": {
+      "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
+      "contentBlocks": [0]
+    },
+    "gads_upload_image": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": []
+    },
+    "gads_upload_video": {
+      "structuredPaths": ["$.result"],
+      "contentBlocks": []
+    },
+    "gads_validate_entity": {
+      "structuredPaths": ["$.issues"],
       "contentBlocks": [0]
     }
   },

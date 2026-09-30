@@ -77,4 +77,9 @@ export const listUserProfilesTool = {
   ],
   logic: listUserProfilesLogic,
   responseFormatter: listUserProfilesResponseFormatter,
+  // Profile records carry account and user names.
+  untrustedContent: {
+    structuredPaths: ["$.profiles"],
+    contentBlocks: [0],
+  },
 };

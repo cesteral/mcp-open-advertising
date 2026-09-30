@@ -248,4 +248,9 @@ export const uploadVideoTool = {
   ],
   logic: uploadVideoLogic,
   responseFormatter: uploadVideoResponseFormatter,
+  // result is the raw AssetService response; the text prints only the new resource name. The dry run is symbolic, so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.result"],
+    contentBlocks: [],
+  },
 };

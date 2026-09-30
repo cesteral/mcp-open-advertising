@@ -250,4 +250,6 @@ export const validateTargetingConfigTool = {
   },
   logic: validateTargetingConfigLogic,
   responseFormatter: validateTargetingConfigResponseFormatter,
+  // issue text embeds the platform's error message when a targeting read fails.
+  untrustedContent: { structuredPaths: ["$.issues"], contentBlocks: [0] },
 };

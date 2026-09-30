@@ -257,4 +257,9 @@ export const updateEntityTool = {
   ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
+  // The dry run reads the entity (expectedPostState.displayName) and validationErrors carry Google's raw validateOnly error body, printed in the dry-run text.
+  untrustedContent: {
+    structuredPaths: ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
+    contentBlocks: [0],
+  },
 };

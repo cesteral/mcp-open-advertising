@@ -258,4 +258,9 @@ export const deleteEntityTool = {
   },
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
+  // The dry run reads the entity (displayName in expectedPostState).
+  untrustedContent: {
+    structuredPaths: ["$.deletedEntity", "$.dryRun", "$.before", "$.after"],
+    contentBlocks: [0],
+  },
 };

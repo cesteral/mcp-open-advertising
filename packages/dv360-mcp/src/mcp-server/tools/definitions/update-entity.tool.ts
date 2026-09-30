@@ -356,4 +356,9 @@ export const updateEntityTool = {
   },
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
+  // The dry run reads the live entity, so its expected post-state carries platform text.
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.previousValues", "$.dryRun", "$.before", "$.after"],
+    contentBlocks: [0],
+  },
 };

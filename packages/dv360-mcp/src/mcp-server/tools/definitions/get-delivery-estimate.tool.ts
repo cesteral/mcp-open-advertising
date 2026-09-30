@@ -108,4 +108,5 @@ export const getDeliveryEstimateTool = {
   ],
   logic: getDeliveryEstimateLogic,
   responseFormatter: getDeliveryEstimateResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.estimate"], contentBlocks: [0] },
 };

@@ -347,4 +347,9 @@ export const bulkCreateEntitiesTool = {
   ],
   logic: bulkCreateEntitiesLogic,
   responseFormatter: bulkCreateEntitiesResponseFormatter,
+  // Per-item entity and per-item error text from the platform's partial-failure details. The dry run is symbolic, so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

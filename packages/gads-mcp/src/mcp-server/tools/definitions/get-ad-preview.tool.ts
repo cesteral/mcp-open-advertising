@@ -130,4 +130,9 @@ export const getAdPreviewTool = {
   ],
   logic: getAdPreviewLogic,
   responseFormatter: getAdPreviewResponseFormatter,
+  // finalUrls are advertiser-supplied click URLs; the other fields are ids and enum-like ad type.
+  untrustedContent: {
+    structuredPaths: ["$.finalUrls"],
+    contentBlocks: [0],
+  },
 };

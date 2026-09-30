@@ -6,6 +6,7 @@ import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   validateEntityResponseFormatter,
+  NO_UNTRUSTED_CONTENT,
   validateEnumFieldsStructured,
   buildNextAction,
   type FieldRule,
@@ -303,4 +304,6 @@ export const validateEntityTool = {
   ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
+  // Purely local validation of the caller's own payload; no platform call. Written by hand, not built by createValidateEntityTool, so it needs its own declaration.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

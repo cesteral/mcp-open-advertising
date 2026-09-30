@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   assertGovernedEffectDryRun,
+  NO_UNTRUSTED_CONTENT,
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
@@ -268,4 +269,6 @@ export const submitReportTool = {
   ],
   logic: submitReportLogic,
   responseFormatter: submitReportResponseFormatter,
+  // Returns only platform-generated report and file IDs; the dry run is symbolic and the text names only IDs.
+  untrustedContent: NO_UNTRUSTED_CONTENT,
 };

@@ -384,4 +384,9 @@ export const bulkMutateTool = {
   ],
   logic: bulkMutateLogic,
   responseFormatter: bulkMutateResponseFormatter,
+  // mutateResult is the raw :mutate response, including partialFailureError messages. The dry run is symbolic (local validation only), so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.mutateResult"],
+    contentBlocks: [0],
+  },
 };

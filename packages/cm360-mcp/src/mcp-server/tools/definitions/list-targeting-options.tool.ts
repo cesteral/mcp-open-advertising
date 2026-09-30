@@ -137,4 +137,8 @@ export const listTargetingOptionsTool = {
   ],
   logic: listTargetingOptionsLogic,
   responseFormatter: listTargetingOptionsResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.options"],
+    contentBlocks: [0],
+  },
 };

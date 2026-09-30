@@ -143,4 +143,5 @@ export const getAssignedTargetingTool = {
   },
   logic: getAssignedTargetingLogic,
   responseFormatter: getAssignedTargetingResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.assignedTargetingOption"], contentBlocks: [0] },
 };

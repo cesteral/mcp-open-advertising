@@ -374,4 +374,9 @@ export const adjustBidsTool = {
   ],
   logic: adjustBidsLogic,
   responseFormatter: adjustBidsResponseFormatter,
+  // adGroupName and per-item error text come from the platform. The dry run is symbolic, so $.dryRun is not declared.
+  untrustedContent: {
+    structuredPaths: ["$.results"],
+    contentBlocks: [0],
+  },
 };

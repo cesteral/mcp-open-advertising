@@ -502,4 +502,5 @@ export const adjustLineItemBidsTool = {
   },
   logic: adjustLineItemBidsLogic,
   responseFormatter: adjustLineItemBidsResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.successful", "$.failed"], contentBlocks: [0] },
 };

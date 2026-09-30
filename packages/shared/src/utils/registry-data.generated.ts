@@ -95,7 +95,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "ttd-mcp",
@@ -165,7 +165,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "meta-mcp",
@@ -284,7 +284,7 @@ export const REGISTRY_DATA: RegistryData = {
           }
         ]
       },
-      "untrustedPathReporting": "unsupported"
+      "untrustedPathReporting": "per-response"
     },
     {
       "package": "snapchat-mcp",

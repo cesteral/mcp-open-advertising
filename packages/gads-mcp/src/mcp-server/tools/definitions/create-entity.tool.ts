@@ -225,4 +225,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
+  // The dry run is validated natively (validateOnly), so validationErrors carry Google's raw error body; after carries the created entity's displayName.
+  untrustedContent: {
+    structuredPaths: ["$.mutateResult", "$.after", "$.dryRun"],
+    contentBlocks: [0],
+  },
 };

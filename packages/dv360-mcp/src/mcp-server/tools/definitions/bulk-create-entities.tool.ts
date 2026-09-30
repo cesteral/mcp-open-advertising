@@ -496,4 +496,5 @@ export const bulkCreateEntitiesTool = {
   },
   logic: bulkCreateEntitiesLogic,
   responseFormatter: bulkCreateEntitiesResponseFormatter,
+  untrustedContent: { structuredPaths: ["$.results"], contentBlocks: [0] },
 };

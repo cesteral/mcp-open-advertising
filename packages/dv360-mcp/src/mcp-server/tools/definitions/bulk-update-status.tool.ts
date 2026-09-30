@@ -526,4 +526,8 @@ export const bulkUpdateStatusTool = {
   },
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
+  untrustedContent: {
+    structuredPaths: ["$.results", "$.successful", "$.failed"],
+    contentBlocks: [0],
+  },
 };
