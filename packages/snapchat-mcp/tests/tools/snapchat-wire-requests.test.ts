@@ -955,13 +955,14 @@ describe("snapchat_adjust_bids → read-modify-write of bid_micro per ad squad",
 // ─── snapchat_duplicate_entity ──────────────────────────────────────────────
 
 describe("snapchat_duplicate_entity → read the source, POST a copy (no native copy)", () => {
-  it("campaign → POST /v1/adaccounts/{id}/campaigns with the source minus system fields", async () => {
+  it("campaign → POST /v1/adaccounts/{id}/campaigns with the source minus system fields, PAUSED", async () => {
     const out = await duplicateEntityLogic(
       DuplicateEntityInputSchema.parse({
         entityType: "campaign",
         adAccountId: ACCOUNT,
         entityId: CAMP,
-        options: { name: "Autumn (copy)" },
+        // A status override is ignored: copies are always created PAUSED.
+        options: { name: "Autumn (copy)", status: "ACTIVE" },
       }),
       ctx,
       sdk
@@ -975,16 +976,16 @@ describe("snapchat_duplicate_entity → read the source, POST a copy (no native 
     // basis: unverified (code-only) — that Snap has no copy endpoint, and
     // which fields the create rejects (`id`, `created_at`, `updated_at`,
     // `delivery_status` are dropped; `ad_account_id` is re-injected from the
-    // route). The copy keeps the source's `status` — ACTIVE here, so it would
-    // deliver at once; the tool's description states this, unlike gads /
-    // pinterest / msads / dv360, which always create the copy paused.
+    // route). The copy is always created PAUSED, whatever the source's status
+    // (ACTIVE here) or `options.status`, so it cannot deliver until someone
+    // activates it — as gads / pinterest / msads / dv360 do.
     expect(req.url).toBe(`${API}/v1/adaccounts/${ACCOUNT}/campaigns`);
     expectSnapJson(req, { body: true });
     expect(req.body).toEqual({
       campaigns: [
         {
           name: "Autumn (copy)",
-          status: "ACTIVE",
+          status: "PAUSED",
           objective_v2_properties: { objective_v2_type: "TRAFFIC" },
           daily_budget_micro: 50_000_000,
           start_time: "2026-08-02T00:00:00.000Z",
@@ -996,8 +997,8 @@ describe("snapchat_duplicate_entity → read the source, POST a copy (no native 
     expect(remaining()).toBe(LIMIT - 1 - 3);
   });
 
-  it("dry_run reads the source but sends no POST", async () => {
-    await duplicateEntityLogic(
+  it("dry_run reads the source, projects a PAUSED copy and sends no POST", async () => {
+    const out = await duplicateEntityLogic(
       DuplicateEntityInputSchema.parse({
         entityType: "campaign",
         adAccountId: ACCOUNT,
@@ -1009,6 +1010,7 @@ describe("snapchat_duplicate_entity → read the source, POST a copy (no native 
     );
     expect(snapWrites()).toHaveLength(0);
     expect(trail()).toEqual([`GET /v1/campaigns/${CAMP}`]);
+    expect(out.dryRun?.expectedPostState?.status.platformRaw).toBe("PAUSED");
   });
 });
 

@@ -17,6 +17,7 @@
  */
 
 import { assertGovernedDryRunResult } from "@cesteral/shared";
+import { buildSnapchatDuplicateCopy } from "./duplicate-copy.js";
 import type {
   DispatchedCapability,
   DryRunResult,
@@ -138,7 +139,8 @@ export interface SnapchatDuplicateDryRunArgs {
 
 /**
  * Symbolic dry-run for `snapchat_duplicate_entity`. Reads the source entity and
- * projects the would-be copy (source fields with any `options` overlaid, empty
+ * projects the would-be copy (source fields with any `options` overlaid and
+ * `status` forced to PAUSED, empty
  * new ID) as the expected post-state. Duplicate has no `before`. A read failure
  * on an in-scope kind fails the governed call via `assertGovernedDryRunResult`.
  */
@@ -157,7 +159,9 @@ export async function runSnapchatDuplicateDryRun(
       | Record<string, unknown>
       | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildSnapchatSnapshot(args.entityType, "", source, args.options ?? {});
+      // Project the copy that would be created: options overlaid, status PAUSED.
+      const { body } = buildSnapchatDuplicateCopy(source, args.options);
+      const snapshot = buildSnapchatSnapshot(args.entityType, "", source, body);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

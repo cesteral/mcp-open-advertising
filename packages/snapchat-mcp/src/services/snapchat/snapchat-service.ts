@@ -18,6 +18,7 @@ import type {
   SnapchatAdAccount,
 } from "./types.js";
 
+import { buildSnapchatDuplicateCopy } from "../../mcp-server/tools/utils/duplicate-copy.js";
 import type {
   SnapchatMediaUploadResponse,
   SnapchatMediaGetResponse,
@@ -660,23 +661,8 @@ export class SnapchatService {
       unknown
     >;
 
-    // System-managed fields the create endpoint rejects or reassigns.
-    const SYSTEM_FIELDS = [
-      "id",
-      "created_at",
-      "updated_at",
-      "ad_account_id",
-      "delivery_status",
-      "deleted",
-    ] as const;
-    const body: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(source)) {
-      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
-        body[key] = val;
-      }
-    }
-    // Caller overrides (e.g. a new name) win over the copied fields.
-    if (options) Object.assign(body, options);
+    // Always PAUSED: a copy of a live campaign must not spend at once.
+    const { body } = buildSnapchatDuplicateCopy(source, options);
 
     return this.createEntity(entityType, filters, body, context);
   }
