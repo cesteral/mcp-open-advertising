@@ -154,22 +154,23 @@ Batch adjust campaign bid amounts with percentage or absolute changes (safe read
 
 #### 13. `linkedin_search_targeting`
 
-Search for targeting audience facets (skills, companies, locations, job titles) by keyword.
+Get the values inside a targeting facet (the URNs for `targetingCriteria`) from LinkedIn's `adTargetingEntities` API. The finder is chosen from the arguments.
 
 **Parameters:**
 
-- `facetType` (string, required): Facet type to search (e.g., `skills`, `companies`, `locations`, `industries`)
-- `query` (string, optional): Search keyword
-- `limit` (number, optional): Max results (default 25)
+- `facet` (string): Facet name (e.g. `industries`, `seniorities`, `locations`) or its `urn:li:adTargetingFacet:` URN. Required unless `urns` is given
+- `query` (string, optional): Search within the facet (typeahead)
+- `entities` (array, optional): Value URNs to find similar values for
+- `urns` (array, optional): Value URNs to resolve to names (takes no facet)
+- `entityType` (string, optional): Restrict a search or similar-entities request to one entity type
+- `locale` (object, optional): `{ language, country }`, e.g. `{ "language": "en", "country": "US" }`
+- `limit` (number, optional): Most values returned (default 100). LinkedIn documents no paging, so this cuts the response
+
+A facet LinkedIn lists as search-only (`locations`, `schools`, `employers*`, `groups`) cannot be browsed; browse-only facets (`seniorities`, `genders`, `ageRanges`, …) cannot be searched.
 
 #### 14. `linkedin_get_targeting_options`
 
-Browse available targeting categories for an ad account.
-
-**Parameters:**
-
-- `adAccountUrn` (string, required): Ad Account URN
-- `facetType` (string, optional): Filter by facet type
+List the targeting facets (names, URNs, entity types, supported finders). Takes no parameters: LinkedIn's facet list does not depend on the ad account.
 
 ### Specialized
 
@@ -185,25 +186,37 @@ Duplicate a campaign group, campaign, or creative.
 
 #### 16. `linkedin_get_delivery_forecast`
 
-Get audience size and delivery forecast for a targeting configuration.
+Forecast impressions, clicks, spend and related metrics for a campaign setup (`GET /rest/adSupplyForecasts`). It does not return an audience size; use `linkedin_get_audience_count` for that.
 
 **Parameters:**
 
 - `adAccountUrn` (string, required): Ad Account URN
+- `campaignType` (string, required): `SPONSORED_UPDATES`, `SPONSORED_INMAILS` or `DYNAMIC`
+- `startTime`, `endTime` (ISO 8601 strings, required): Forecast range; the start must be in the future
+- `targetingCriteria` (object, required): Targeting criteria specification
+- `dailyBudget` / `totalBudget` (`{ amount, currencyCode }`): one is required; `amount` is a decimal string in major units
+- `competingBid`, `optimizationTarget`, `campaign`, `creativeType`, `objectiveType`, `enableAudienceNetwork`, `enableAudienceExpansion`, `connectedTelevisionOnly`, `targetCost`, `costCap` (optional)
+
+#### 17. `linkedin_get_audience_count`
+
+Count the members matching a targeting criteria (`GET /rest/audienceCounts`). Returns `active` and `total`; LinkedIn reports `total` as 0 below 300 members.
+
+**Parameters:**
+
 - `targetingCriteria` (object, required): Targeting criteria specification
 
-#### 17. `linkedin_get_ad_preview`
+#### 18. `linkedin_get_ad_preview`
 
-Get ad preview rendering for a creative.
+Preview an existing creative (`GET /rest/adPreviews`). Each preview is an `<iframe>` valid for about 3 hours.
 
 **Parameters:**
 
 - `creativeUrn` (string, required): Creative URN to preview
-- `adFormat` (string, optional): Ad format for preview rendering
+- `adAccountUrn` (string, required): The ad account the creative belongs to
 
 ### Validation
 
-#### 18. `linkedin_validate_entity`
+#### 19. `linkedin_validate_entity`
 
 Client-side validation of entity payloads without making API calls.
 
@@ -228,14 +241,17 @@ Client-side validation of entity payloads without making API calls.
 ## Current Status
 
 **Phase: not verified against LinkedIn.** No tool on this server has been
-exercised against a live LinkedIn account, and every endpoint is recorded in
-`platform-facts.json` as `unverified`.
+exercised against a live LinkedIn account. Each endpoint is recorded in
+`platform-facts.json`: `verified` where it was read from LinkedIn's own
+documentation, `unverified` where it was not.
 
 The `/v2/` → `/rest/` migration is staged and incomplete (#210): ad accounts,
-campaign and campaign-group list/create, analytics and targeting facets use the
-versioned `/rest/` surface; get/update/delete for campaigns, campaign groups and
-creatives, plus creatives, conversions, delivery forecasts, ad previews and the
-image/video uploads, still call legacy `/v2/` paths.
+campaign and campaign-group list/create, analytics, targeting (facets and
+entities), delivery forecasts, audience counts and ad previews use the versioned
+`/rest/` surface; get/update/delete for campaigns, campaign groups and creatives,
+plus creatives, conversions and the image/video uploads, still call legacy `/v2/`
+paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
+documentation (read 2026-10-01) but have not been run against a live account.
 
 ## Development
 
@@ -272,7 +288,7 @@ pnpm run typecheck
 ### Key Components
 
 - **`LinkedInHttpClient`** - HTTP client for the LinkedIn Marketing API with versioned headers and Rest.li 2.0 query encoding
-- **`LinkedInService`** - CRUD, bulk ops, duplication, targeting, delivery forecasts, ad previews
+- **`LinkedInService`** - CRUD, bulk ops, duplication, targeting, audience counts, delivery forecasts, ad previews
 - **`LinkedInReportingService`** - Analytics queries with breakdowns and pivots
 - **`LinkedInBearerAuthStrategy`** - Bearer token auth via LinkedIn API validation
 - **`LinkedInAuthAdapter`** - Token management for per-session API calls

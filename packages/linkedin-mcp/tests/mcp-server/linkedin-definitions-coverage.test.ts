@@ -34,11 +34,12 @@ const linkedInService = {
   adjustBids: vi.fn(async (adjustments: Array<{ campaignUrn: string }>) => ({
     results: adjustments.map((a) => ({ campaignUrn: a.campaignUrn, success: true })),
   })),
-  searchTargeting: vi.fn(async () => ({ elements: [{ id: "targeting-1" }] })),
-  getTargetingOptions: vi.fn(async () => ({ elements: [{ id: "targeting-option-1" }] })),
+  getTargetingEntities: vi.fn(async () => ({ elements: [{ urn: "urn:li:industry:1" }] })),
+  listTargetingFacets: vi.fn(async () => ({ elements: [{ facetName: "industries" }] })),
+  getAudienceCount: vi.fn(async () => ({ elements: [{ active: 10, total: 1000 }] })),
   duplicateEntity: vi.fn(async () => ({ id: "urn:li:test:copy" })),
-  getDeliveryForecast: vi.fn(async () => ({ forecast: { impressions: 1000 } })),
-  getAdPreviews: vi.fn(async () => ({ previews: [{ preview: "<html></html>" }] })),
+  getAdSupplyForecast: vi.fn(async () => ({ elements: [] })),
+  getAdPreviews: vi.fn(async () => ({ elements: [{ preview: "<iframe></iframe>" }] })),
   client: {
     post: vi.fn(async () => ({
       value: {
@@ -80,7 +81,7 @@ describe("LinkedIn MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 28 : 22); // 22 business (21 + linkedin_search_tools) + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 23 business (22 + linkedin_search_tools) + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

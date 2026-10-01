@@ -504,6 +504,10 @@
       "structuredPaths": ["$.results", "$.warnings"],
       "contentBlocks": [0]
     },
+    "linkedin_get_audience_count": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
     "linkedin_get_delivery_forecast": {
       "structuredPaths": ["$.forecast"],
       "contentBlocks": [0]
@@ -517,7 +521,7 @@
       "contentBlocks": []
     },
     "linkedin_get_targeting_options": {
-      "structuredPaths": ["$.options"],
+      "structuredPaths": ["$.facets"],
       "contentBlocks": [0]
     },
     "linkedin_list_ad_accounts": {
@@ -529,7 +533,7 @@
       "contentBlocks": [0]
     },
     "linkedin_search_targeting": {
-      "structuredPaths": ["$.results"],
+      "structuredPaths": ["$.elements"],
       "contentBlocks": [0]
     },
     "linkedin_search_tools": {

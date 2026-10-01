@@ -78,10 +78,13 @@ linkedin_create_entity({
 ## Step 3: Preview Creative
 
 \`\`\`json
-linkedin_get_ad_preview({
-  "creativeUrn": "{creativeUrn_from_step_2}",
-  "adFormat": "SPONSORED_IMAGE"
-})
+{
+  "tool": "linkedin_get_ad_preview",
+  "params": {
+    "creativeUrn": "{creativeUrn_from_step_2}",
+    "adAccountUrn": "${adAccountUrn}"
+  }
+}
 \`\`\`
 
 ## Step 4: Activate Creative

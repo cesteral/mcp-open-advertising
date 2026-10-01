@@ -81,6 +81,14 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_analytics_pivots", "2026-10-01"],
     ["linkedin.ad_analytics_limits", "2026-10-01"],
     ["linkedin.rate_limit_daily_per_app_member", "2026-10-01"],
+    ["linkedin.ad_targeting_entities_finders", "2026-10-01"],
+    ["linkedin.ad_targeting_facet_urns", "2026-10-01"],
+    ["linkedin.ad_targeting_value_urns", "2026-10-01"],
+    ["linkedin.targeting_criteria_shape", "2026-10-01"],
+    ["linkedin.locations_are_typeahead_only", "2026-10-01"],
+    ["linkedin.ad_supply_forecasts_path", "2026-10-01"],
+    ["linkedin.audience_counts_path", "2026-10-01"],
+    ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
