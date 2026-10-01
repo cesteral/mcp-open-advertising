@@ -298,7 +298,7 @@ The freshness half is deliberately **not** PR-blocking, for the same reason as `
 
 ## Wire-Request Coverage (#236)
 
-A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocked unit test. Each package's `tests/**/*wire*.test.ts` calls the tool's `*Logic` with only `fetch` stubbed and asserts the exact upstream method, URL and body against a vendor source cited in a `// basis:` comment. `scripts/lib/wire-request-coverage.test.mjs` boots every server and fails if a write tool's `*Logic` is never called (or its name never appears as a string literal; comments do not count) in a basis-citing wire test of its own package. The current gaps — all of snapchat and linkedin, plus `tiktok_submit_report` — are in `wire-request-coverage-allowlist.json`, which may only shrink: an entry that is now covered, no longer a write, or gone fails too.
+A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocked unit test. Each package's `tests/**/*wire*.test.ts` calls the tool's `*Logic` with only `fetch` stubbed and asserts the exact upstream method, URL and body against a vendor source cited in a `// basis:` comment. `scripts/lib/wire-request-coverage.test.mjs` boots every server and fails if a write tool's `*Logic` is never called (or its name never appears as a string literal; comments do not count) in a basis-citing wire test of its own package. The current gaps — all of linkedin, plus `tiktok_submit_report` — are in `wire-request-coverage-allowlist.json`, which may only shrink: an entry that is now covered, no longer a write, or gone fails too.
 
 ## Tool Failure Logging
 
