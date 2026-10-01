@@ -73,12 +73,25 @@ const ConversionUpdateRowSchema = z.object({
     .array(z.object({ name: z.string(), value: z.string() }))
     .optional()
     .describe("Updated custom dimension values"),
+  adUserDataConsent: z
+    .enum(["GRANTED", "DENIED"])
+    .optional()
+    .describe(
+      "Consent for core platform services (v2 `adUserDataConsent`): GRANTED or DENIED. No default; omit when not specified."
+    ),
 });
 
 export const UpdateConversionsInputSchema = z
   .object({
     agencyId: z.string().min(1).describe("SA360 agency ID"),
     advertiserId: z.string().min(1).describe("SA360 advertiser ID"),
+    customerId: z
+      .string()
+      .regex(/^\d+$/, "customerId must be numeric")
+      .optional()
+      .describe(
+        "Customer ID of the client account in the new Search Ads 360 experience (v2 `Conversion.customerId`). Optional; when given it is sent on every conversion next to agencyId and advertiserId."
+      ),
     conversions: z
       .array(ConversionUpdateRowSchema)
       .min(1)
@@ -183,7 +196,8 @@ export async function updateConversionsLogic(
     input.agencyId,
     input.advertiserId,
     input.conversions,
-    context
+    context,
+    input.customerId
   );
 
   // Reconcile the API response against the request: SA360 can return HTTP 200

@@ -46,6 +46,12 @@ export interface ConversionRow {
   customMetric?: Array<{ name: string; value: number }>;
   /** Custom dimension values */
   customDimension?: Array<{ name: string; value: string }>;
+  /**
+   * Consent for core platform services (v2 `Conversion.adUserDataConsent`,
+   * enum UNKNOWN | GRANTED | DENIED, "No default value"). UNKNOWN is "Not
+   * specified", so only GRANTED / DENIED are sent.
+   */
+  adUserDataConsent?: "GRANTED" | "DENIED";
 }
 
 /**
@@ -67,15 +73,25 @@ const CONVERSION_ROW_KEYS = [
   "state",
   "customMetric",
   "customDimension",
+  "adUserDataConsent",
 ] as const satisfies ReadonlyArray<keyof ConversionRow>;
 
 /** Build one v2 `Conversion` request object. Exported for tests. */
 export function toV2Conversion(
   row: ConversionRow,
   agencyId: string,
-  advertiserId: string
+  advertiserId: string,
+  customerId?: string
 ): Record<string, unknown> {
-  const out: Record<string, unknown> = { agencyId, advertiserId };
+  // v2 `Conversion.customerId`: "Customer ID of a client account in the new
+  // Search Ads 360 experience". Sent next to the legacy agency/advertiser ids
+  // when the caller gives it; whether migrated advertisers require it is
+  // unverified (sa360 #10).
+  const out: Record<string, unknown> = {
+    agencyId,
+    advertiserId,
+    ...(customerId !== undefined ? { customerId } : {}),
+  };
   const source = row as unknown as Record<string, unknown>;
   for (const key of CONVERSION_ROW_KEYS) {
     if (source[key] !== undefined) out[key] = source[key];
@@ -106,7 +122,8 @@ export class ConversionService {
     agencyId: string,
     advertiserId: string,
     conversions: ConversionRow[],
-    context?: RequestContext
+    context?: RequestContext,
+    customerId?: string
   ): Promise<unknown> {
     // Keys must match the limiter's `sa360:*` pattern. These were `sa360v2:…`,
     // which matches nothing, so the v2 API was never throttled.
@@ -117,7 +134,9 @@ export class ConversionService {
       "Inserting SA360 conversions"
     );
 
-    const conversionRows = conversions.map((c) => toV2Conversion(c, agencyId, advertiserId));
+    const conversionRows = conversions.map((c) =>
+      toV2Conversion(c, agencyId, advertiserId, customerId)
+    );
 
     const result = await this.httpClient.fetch("/conversion", context, {
       method: "POST",
@@ -140,7 +159,8 @@ export class ConversionService {
     agencyId: string,
     advertiserId: string,
     conversions: ConversionRow[],
-    context?: RequestContext
+    context?: RequestContext,
+    customerId?: string
   ): Promise<unknown> {
     await this.rateLimiter.consume(`sa360:v2:${advertiserId}`);
 
@@ -149,7 +169,9 @@ export class ConversionService {
       "Updating SA360 conversions"
     );
 
-    const conversionRows = conversions.map((c) => toV2Conversion(c, agencyId, advertiserId));
+    const conversionRows = conversions.map((c) =>
+      toV2Conversion(c, agencyId, advertiserId, customerId)
+    );
 
     const result = await this.httpClient.fetch("/conversion", context, {
       method: "PUT",

@@ -26,7 +26,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { insertConversionsLogic } from "../../src/mcp-server/tools/definitions/insert-conversions.tool.js";
+import {
+  insertConversionsLogic,
+  InsertConversionsInputSchema,
+} from "../../src/mcp-server/tools/definitions/insert-conversions.tool.js";
 import { updateConversionsLogic } from "../../src/mcp-server/tools/definitions/update-conversions.tool.js";
 import {
   submitReportLogic,
@@ -168,6 +171,54 @@ describe("sa360_insert_conversions → doubleclicksearch.conversion.insert", () 
     expect(session.rateLimiter.getRemainingTokens("sa360:v2:21700000000011523")).toBeLessThan(
       session.rateLimiter.getRemainingTokens("sa360:v2:untouched")
     );
+  });
+
+  it("sends customerId and adUserDataConsent when given (sa360 #10)", async () => {
+    stub.route({
+      method: "POST",
+      path: "/doubleclicksearch/v2/conversion",
+      response: { kind: "doubleclicksearch#conversionList", conversion: [{ conversionId: "o" }] },
+    });
+
+    await insertConversionsLogic(
+      InsertConversionsInputSchema.parse({
+        agencyId: "1",
+        advertiserId: "2",
+        customerId: "1234567890",
+        conversions: [
+          {
+            clickId: "c",
+            conversionId: "o",
+            conversionTimestamp: "1700000000000",
+            segmentationId: "3",
+            adUserDataConsent: "GRANTED",
+          },
+        ],
+      }),
+      ctx,
+      sdk
+    );
+
+    // basis: v2 discovery (rev 20260928) `schemas.Conversion.customerId`
+    // (string, "Customer ID of a client account in the new Search Ads 360
+    // experience") and `schemas.Conversion.adUserDataConsent` (enum UNKNOWN |
+    // GRANTED | DENIED, "No default value").
+    expect(onlyRequestTo(V2_HOST).body).toEqual({
+      kind: "doubleclicksearch#conversionList",
+      conversion: [
+        {
+          agencyId: "1",
+          advertiserId: "2",
+          customerId: "1234567890",
+          clickId: "c",
+          conversionId: "o",
+          conversionTimestamp: "1700000000000",
+          segmentationType: "FLOODLIGHT",
+          segmentationId: "3",
+          adUserDataConsent: "GRANTED",
+        },
+      ],
+    });
   });
 
   it("sends nothing when the confirmation is declined", async () => {
