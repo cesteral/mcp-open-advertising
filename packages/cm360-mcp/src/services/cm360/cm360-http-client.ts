@@ -3,12 +3,7 @@
 
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import {
-  assertSafeDownloadUrl,
-  fetchWithTimeout,
-  executeWithRetry,
-  type RetryConfig,
-} from "@cesteral/shared";
+import { assertSafeDownloadUrl, executeWithRetry, type RetryConfig } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { withCM360ApiSpan } from "../../utils/platform.js";
 
@@ -67,48 +62,29 @@ export class CM360HttpClient {
     });
 
     const method = options?.method || "GET";
-    const maxRetries = 3;
 
+    // Same retry policy as `fetch` (and as the server card publishes), with
+    // the download's own timeout. `rawResponse` hands back the CSV body
+    // unread, while every attempt lands in the upstream trail that
+    // `tool_failure` logs read. A non-2xx response throws `McpError`, as
+    // `fetch` does.
     return withCM360ApiSpan(`api.raw.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-
-      let lastResponse: Response | undefined;
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const accessToken = await this.authAdapter.getAccessToken();
-        const response = await fetchWithTimeout(url, timeoutMs, context, {
-          ...options,
-          headers: {
-            ...options?.headers,
-            Authorization: `Bearer ${accessToken}`,
+      return executeWithRetry(
+        { ...RETRY_CONFIG, timeoutMs },
+        {
+          url,
+          fetchOptions: options,
+          context,
+          logger: this.logger,
+          getHeaders: async () => {
+            const accessToken = await this.authAdapter.getAccessToken();
+            return { Authorization: `Bearer ${accessToken}` };
           },
-        });
-
-        if (response.ok || (response.status < 500 && response.status !== 429)) {
-          span.setAttribute("http.response.status_code", response.status);
-          return response;
+          rawResponse: true,
         }
-
-        lastResponse = response;
-        if (attempt < maxRetries) {
-          const delayMs = Math.min(1_000 * Math.pow(2, attempt), 10_000);
-          this.logger.warn(
-            {
-              url,
-              method,
-              status: response.status,
-              attempt: attempt + 1,
-              maxRetries,
-              requestId: context?.requestId,
-            },
-            "Retrying CM360 raw fetch after transient error"
-          );
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
-
-      span.setAttribute("http.response.status_code", lastResponse!.status);
-      return lastResponse!;
+      );
     });
   }
 }

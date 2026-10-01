@@ -142,6 +142,16 @@ export interface RetryableRequestOptions {
    * throttle.
    */
   throttleDelayMs?: (status: number, errorBody: string) => number | undefined;
+  /**
+   * Return a successful (2xx) `Response` unread instead of parsing it as JSON.
+   *
+   * For bodies that are not JSON, such as a report CSV download, which still
+   * need the shared retry policy and the upstream trail `tool_failure` logs
+   * read. Failures behave exactly as without it: recorded, retried per the
+   * policy, then thrown as `McpError`. `validateResponseBody` is not applied,
+   * since the body is never read here.
+   */
+  rawResponse?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,12 +320,21 @@ function calculateBackoff(
  * Execute a fetch request with exponential backoff retry on transient errors.
  *
  * Retries on HTTP 429 and 5xx. Respects `Retry-After` header for 429s.
- * Returns parsed JSON on success, or `{}` for 204 No Content.
+ * Returns parsed JSON on success, or `{}` for 204 No Content. With
+ * `rawResponse: true` it returns the successful `Response` unread instead.
  *
  * If `validateResponseBody` is provided, calls it after parsing a successful
  * response. If the validator throws with `data.retryable = true`, the request
  * is retried up to `maxRetries` times.
  */
+export async function executeWithRetry(
+  config: RetryConfig,
+  options: RetryableRequestOptions & { rawResponse: true }
+): Promise<Response>;
+export async function executeWithRetry(
+  config: RetryConfig,
+  options: RetryableRequestOptions
+): Promise<unknown>;
 export async function executeWithRetry(
   config: RetryConfig,
   options: RetryableRequestOptions
@@ -382,6 +401,19 @@ export async function executeWithRetry(
 
     if (response.ok) {
       setSpanAttribute("http.response.status_code", response.status);
+      if (options.rawResponse) {
+        recordUpstreamRequest({
+          method,
+          url,
+          status: response.status,
+          durationMs: Date.now() - attemptStart,
+          attempt,
+          requestBodyRedacted,
+          requestHeadersRedacted,
+          responseHeadersRedacted: redactHeaders(response.headers),
+        });
+        return response;
+      }
       if (response.status === 204) {
         recordUpstreamRequest({
           method,
