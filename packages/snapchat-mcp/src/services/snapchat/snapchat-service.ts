@@ -320,14 +320,35 @@ export class SnapchatService {
   ): Promise<{ mergedItem: Record<string, unknown>; pathParams: Record<string, string> }> {
     const currentEntity = await this.getEntity(entityType, entityId, context);
     const pathParams = this.resolveUpdatePathParams(entityType, currentEntity, filters);
-    return {
-      mergedItem: {
-        ...(currentEntity as unknown as Record<string, unknown>),
-        ...data,
-        id: entityId,
-      },
-      pathParams,
+    const mergedItem: Record<string, unknown> = {
+      ...(currentEntity as unknown as Record<string, unknown>),
+      ...data,
+      id: entityId,
     };
+
+    // The route's parent comes from the caller's filter when given, the body's
+    // from the entity as read (or the patch). Refuse a disagreement rather than
+    // PUT an entity into another parent's collection — the same rule
+    // `resolveCreateTarget` applies to creates (#236).
+    const { bodyField, pathParam } = PARENT_LINKS[entityType];
+    const bodyParent = mergedItem[bodyField];
+    const routeParent = pathParams[pathParam];
+    if (
+      bodyParent !== undefined &&
+      bodyParent !== null &&
+      bodyParent !== "" &&
+      routeParent !== undefined &&
+      String(bodyParent) !== routeParent
+    ) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${getEntityConfig(entityType).displayName} ${entityId} has ${bodyField} '${String(bodyParent)}', ` +
+          `but ${pathParam} '${routeParent}' was given. The update is sent to the parent's collection, ` +
+          `so the two must match; pass ${pathParam} '${String(bodyParent)}'.`
+      );
+    }
+
+    return { mergedItem, pathParams };
   }
 
   /**
