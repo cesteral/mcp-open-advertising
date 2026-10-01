@@ -25,7 +25,10 @@ import { deleteEntityLogic } from "../../src/mcp-server/tools/definitions/delete
 import { duplicateEntityLogic } from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
-import { bulkUpdateStatusLogic } from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
+import {
+  bulkUpdateStatusLogic,
+  BulkUpdateStatusInputSchema,
+} from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
 import { adjustBidsLogic } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
 import { manageAdExtensionsLogic } from "../../src/mcp-server/tools/definitions/manage-ad-extensions.tool.js";
 import { manageCriterionsLogic } from "../../src/mcp-server/tools/definitions/manage-criterions.tool.js";
@@ -471,6 +474,21 @@ describe("msads_bulk_update_entities", () => {
 });
 
 describe("msads_bulk_update_status", () => {
+  // msads #3. basis: MicrosoftDocs/Advertising bingads-13 campaign.md Status
+  // "Possible values are Active and Paused"; adgroup.md "Active, Expired, and
+  // Paused. The Expired status is read-only"; ad.md "You can set the ad status
+  // to Active or Paused"; campaignstatus.md / adgroupstatus.md / adstatus.md /
+  // keywordstatus.md: Deleted "is for internal use only".
+  it("accepts only Active and Paused", () => {
+    const base = { entityType: "campaign", entityIds: ["1"], accountId: "9" };
+    for (const status of ["Active", "Paused"]) {
+      expect(BulkUpdateStatusInputSchema.safeParse({ ...base, status }).success).toBe(true);
+    }
+    for (const status of ["Deleted", "active", "Expired"]) {
+      expect(BulkUpdateStatusInputSchema.safeParse({ ...base, status }).success).toBe(false);
+    }
+  });
+
   it("campaign → one PUT /Campaigns { AccountId, Campaigns: [{ Id, Status }] } per id", async () => {
     stub.route({
       method: "PUT",

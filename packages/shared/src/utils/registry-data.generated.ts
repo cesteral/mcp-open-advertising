@@ -569,13 +569,6 @@ export const REGISTRY_DATA: RegistryData = {
               "update_status"
             ],
             "note": "Setting Status=Deleted removes the entity; Microsoft Advertising has no undelete and no tool on this server restores it. Terminal only for that status value."
-          },
-          {
-            "tool": "msads_bulk_update_status",
-            "operations": [
-              "bulk_job"
-            ],
-            "note": "Accepts Deleted (free-form status), which cannot be reversed. Terminal only when the batch sets Deleted; Active/Paused are reversible."
           }
         ]
       },
