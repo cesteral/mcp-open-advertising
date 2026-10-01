@@ -2293,6 +2293,10 @@ describe("ttd_graphql_mutation_bulk → createMutationBulk (sandbox only, #231)"
     { id: "bl1", bidLinesToRemove: [{ domainFragment: "example.com" }] },
     { id: "bl2", bidLinesToRemove: [{ domainFragment: "example.com" }] },
   ];
+  const EXPECTED_VARIABLES = {
+    mutation: MUTATION,
+    mutationVariables: INPUTS.map((input) => JSON.stringify({ input })),
+  };
   // TTD's production GraphQL endpoint per every platform sample (PROD_GQL_URL,
   // e.g. platform Python/Campaign/Creating/CreateCampaignWorkflowREST.py:17).
   const PRODUCTION_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
@@ -2352,15 +2356,18 @@ describe("ttd_graphql_mutation_bulk → createMutationBulk (sandbox only, #231)"
     // Python/Campaign/Creating/CreateCampaignWorkflowREST.py:16
     // (EXTERNAL_SB_GQL_URL, same value); TTD-Auth as on production.
     expectGraphqlRequest(req, SANDBOX_GRAPHQL_URL);
-    // basis: unverified (code-only) — no TTD source this repo can reach shows
-    // createMutationBulk, CreateMutationBulkInput, `mutation` /
-    // `mutationVariables`, or how an entry binds to the mutation's variables.
-    // This pins what a sandbox run would send, so that run can confirm it.
-    expect(gqlQuery(req)).toMatch(/\$input: CreateMutationBulkInput!/);
-    expect(gqlQuery(req)).toMatch(/createMutationBulk\(input: \$input\)/);
-    expect(gqlVariables(req)).toEqual({
-      input: { mutation: MUTATION, mutationVariables: INPUTS.map((i) => JSON.stringify(i)) },
-    });
+    // basis: TTD GraphQL "Bulk operations" page (open.thetradedesk.com
+    // .../Foundations/resources/doc/GqlBulkOperations, read 2026-10-01 for
+    // #262; platform-facts ttd.bulk_mutation_variable_binding):
+    // createMutationBulk(input: { mutation, mutationVariables }), with each
+    // mutationVariables entry a JSON-encoded string keyed by the mutation's
+    // one variable (`{ "input": { ... } }`). The declared type of
+    // $mutationVariables is not shown there — a sandbox run confirms it.
+    expect(gqlQuery(req)).toMatch(/\$mutation: String!, \$mutationVariables: \[String!\]!/);
+    expect(gqlQuery(req)).toMatch(
+      /createMutationBulk\(input: \{ mutation: \$mutation, mutationVariables: \$mutationVariables \}\)/
+    );
+    expect(gqlVariables(req)).toEqual(EXPECTED_VARIABLES);
     expect(out.jobId).toBe("mjob1");
     expect(remaining()).toBe(LIMIT - 1);
   });
@@ -2380,9 +2387,7 @@ describe("ttd_graphql_mutation_bulk → createMutationBulk (sandbox only, #231)"
     );
     const req = onlyMutation(PRODUCTION_GRAPHQL_URL);
     expectGraphqlRequest(req, PRODUCTION_GRAPHQL_URL);
-    expect(gqlVariables(req)).toEqual({
-      input: { mutation: MUTATION, mutationVariables: INPUTS.map((i) => JSON.stringify(i)) },
-    });
+    expect(gqlVariables(req)).toEqual(EXPECTED_VARIABLES);
   });
 });
 
