@@ -36,9 +36,9 @@ function generateStatusToolDescription(): string {
   let description = `Batch update entity status (active/paused) for multiple entities in a single operation (Tier 2 workflow tool).
 
 **Important Notes:**
-- Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED, ENTITY_STATUS_DRAFT
+- Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED. ENTITY_STATUS_DRAFT is not offered: an insertion order or line item cannot be changed back to DRAFT from any other status, and a campaign never takes it.
 - Cannot unarchive once archived (status change is irreversible)
-- Pausing a parent entity (campaign, IO) pauses all children
+- Pausing a campaign or insertion order does not change its children's status; the children keep their own status but cannot spend while the parent is not active
 
 **Common Status Operations:**`;
 
@@ -65,12 +65,7 @@ export const BulkUpdateStatusInputSchema = z
       .describe("Advertiser ID (required for campaign, insertionOrder, lineItem, adGroup)"),
     entityIds: z.array(z.string()).min(1).max(50).describe("List of entity IDs to update (max 50)"),
     status: z
-      .enum([
-        "ENTITY_STATUS_ACTIVE",
-        "ENTITY_STATUS_PAUSED",
-        "ENTITY_STATUS_ARCHIVED",
-        "ENTITY_STATUS_DRAFT",
-      ])
+      .enum(["ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_ARCHIVED"])
       .describe("Target entity status"),
     reason: z.string().optional().describe("Reason for status change (audit trail)"),
     dry_run: z

@@ -94,9 +94,9 @@ Check the response for:
 - \`failed\` array — entities that failed (includes \`error\` message)
 - \`totalSuccessful\` / \`totalFailed\` counts
 
-⚠️ **GOTCHA**: Valid statuses are \`ENTITY_STATUS_ACTIVE\`, \`ENTITY_STATUS_PAUSED\`, \`ENTITY_STATUS_ARCHIVED\`, \`ENTITY_STATUS_DRAFT\`. Archiving is **irreversible** — you cannot unarchive.
+⚠️ **GOTCHA**: Valid statuses are \`ENTITY_STATUS_ACTIVE\`, \`ENTITY_STATUS_PAUSED\`, \`ENTITY_STATUS_ARCHIVED\`. An insertion order or line item cannot go back to \`ENTITY_STATUS_DRAFT\` once it has left it. Archiving is **irreversible** — you cannot unarchive.
 
-⚠️ **GOTCHA**: Pausing a parent entity (campaign, IO) effectively pauses all children. The children's own status doesn't change, but they stop serving.
+⚠️ **GOTCHA**: Pausing a parent entity (campaign, IO) does not change its children's status, but they cannot spend while the parent is not active.
 
 ---
 
