@@ -47,15 +47,18 @@ const registerResponse = {
 };
 
 describe("linkedin uploads governance contract (effect class)", () => {
-  let client: { post: ReturnType<typeof vi.fn>; putBinary: ReturnType<typeof vi.fn> };
+  let linkedInService: {
+    registerAssetUpload: ReturnType<typeof vi.fn>;
+    uploadAssetBinary: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = {
-      post: vi.fn().mockResolvedValue(registerResponse),
-      putBinary: vi.fn().mockResolvedValue(undefined),
+    linkedInService = {
+      registerAssetUpload: vi.fn().mockResolvedValue(registerResponse),
+      uploadAssetBinary: vi.fn().mockResolvedValue(undefined),
     };
-    mockResolveSessionServices.mockReturnValue({ linkedInService: { client } });
+    mockResolveSessionServices.mockReturnValue({ linkedInService });
   });
 
   const cases = [
@@ -81,7 +84,7 @@ describe("linkedin uploads governance contract (effect class)", () => {
     describe(c.label, () => {
       it("dry_run returns a symbolic effect preview, no download or API call", async () => {
         const result = await c.logic({ ...c.input, dry_run: true } as any, ctx, sdk);
-        expect(client.post).not.toHaveBeenCalled();
+        expect(linkedInService.registerAssetUpload).not.toHaveBeenCalled();
         expect(result.assetUrn).toBeUndefined();
         expect(result.dryRun?.expectedEffect).toEqual({
           effectKind: "asset_uploaded",
@@ -107,7 +110,7 @@ describe("linkedin uploads governance contract (effect class)", () => {
 
       it("execute returns the effect identity + null-kind capability", async () => {
         const result = await c.logic({ ...c.input } as any, ctx, sdk);
-        expect(client.putBinary).toHaveBeenCalledOnce();
+        expect(linkedInService.uploadAssetBinary).toHaveBeenCalledOnce();
         expect(result.assetUrn).toBe("urn:li:digitalmediaAsset:abc");
         expect(result.effect).toEqual({
           effectKind: "asset_uploaded",

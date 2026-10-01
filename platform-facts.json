@@ -388,7 +388,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:353"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:399"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string. The rewrite onto the documented finders is tracked with the targeting changes (#210)."
     },
     {
@@ -434,7 +434,7 @@
       "verifyBy": "2026-12-15",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:476"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:522"],
       "verificationBasis": "corroborated-secondary",
       "note": "Corroborated by secondary sources (vendor doc excerpts surfaced via search), NOT read off LinkedIn's endpoint reference: learn.microsoft.com and developer.linkedin.com are both blocked by this repo's egress policy."
     },
@@ -450,7 +450,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:92"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:140"],
       "note": "Read 2026-10-01. /rest/images and /rest/videos q=associatedAccount, and adAnalytics, still take start/count."
     },
     {

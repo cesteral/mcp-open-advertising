@@ -59,7 +59,8 @@
  *
  * Rate limiting: one process-wide key, `linkedin:default`
  * (`bulk-capacity.ts LINKEDIN_ENTITY_KEY`): an entity read draws 1 token and
- * every create / partial update / delete 3 (`linkedin-service.ts`). Default
+ * every create / partial update / delete, and each media-upload POST and
+ * binary PUT, 3 (`linkedin-service.ts LINKEDIN_WRITE_TOKENS`). Default
  * limit `mcpConfig.linkedinRateLimitPerMinute` (10/min) — each test stays
  * within one window.
  */
@@ -947,10 +948,56 @@ describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTIO
       expect(put.rawBody).toEqual(Buffer.from(bytes));
 
       expect(out.assetUrn).toBe(ASSET);
-      // basis: unverified (code-only) — the register POST goes through
-      // `linkedInService.client.post`, which bypasses LinkedInService's
-      // limiter, so an upload draws NO token (see the it.todo below).
-      expect(remaining()).toBe(LIMIT);
+      // basis: unverified (code-only) — the server's own cost model, not a
+      // LinkedIn figure: the register POST and the binary PUT are each a write
+      // (`LINKEDIN_WRITE_TOKENS`, 3) on `linkedin:default`.
+      expect(remaining()).toBe(LIMIT - 2 * 3);
+    });
+
+    it(`${c.tool}: the register POST and the binary PUT each draw a write token before sending`, async () => {
+      // Tokens left at the moment each upstream request reaches fetch. The
+      // upload tools used to call the HTTP client directly, so both read LIMIT.
+      const seenAt: Record<string, number> = {};
+      const recordRemaining = (req: WireRequest) => {
+        seenAt[req.method] = remaining();
+        return true;
+      };
+      stub.route({
+        method: "GET",
+        host: MEDIA_HOST,
+        path: c.mediaPath,
+        rawBody: new Uint8Array([1, 2, 3]),
+        contentType: c.contentType,
+      });
+      stub.route({
+        method: "POST",
+        path: "/v2/assets",
+        match: recordRemaining,
+        response: {
+          value: {
+            uploadMechanism: {
+              "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                uploadUrl: UPLOAD_URL,
+              },
+            },
+            asset: ASSET,
+          },
+        },
+      });
+      stub.route({
+        method: "PUT",
+        path: new URL(UPLOAD_URL).pathname,
+        match: recordRemaining,
+        status: 201,
+        rawBody: "",
+      });
+
+      await c.run(`https://${MEDIA_HOST}${c.mediaPath}`);
+
+      expect(seenAt).toEqual({
+        POST: LIMIT - 3,
+        PUT: LIMIT - 2 * 3,
+      });
     });
 
     it(`${c.tool}: dry_run downloads and uploads nothing`, async () => {
@@ -959,11 +1006,6 @@ describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTIO
     });
   }
 
-  it.todo(
-    "linkedin_upload_image / linkedin_upload_video: the registerUpload POST and the binary PUT draw " +
-      "no linkedin:default token (they call LinkedInService.client directly), so uploads are invisible " +
-      "to the process rate limiter; metering them needs a cost decision no vendor source states"
-  );
   it.todo(
     "linkedin_upload_image / linkedin_upload_video: the tool descriptions promise a 3-step " +
       "'register → upload binary → confirm' flow, but no confirm request is ever sent; correcting " +
