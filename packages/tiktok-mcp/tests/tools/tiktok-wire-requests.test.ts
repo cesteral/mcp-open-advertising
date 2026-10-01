@@ -528,6 +528,128 @@ describe("tiktok_update_entity → {campaign,adgroup,ad}/update/", () => {
   });
 });
 
+describe("tiktok_update_entity with data.operation_status → {entity}/status/update/", () => {
+  it("campaign DISABLE → POST campaign/status/update/, never campaign/update/", async () => {
+    stub.route({
+      method: "GET",
+      path: `${V}/campaign/get/`,
+      data: {
+        list: [{ campaign_id: "1800000000000001", campaign_name: "Autumn", budget: 100 }],
+        page_info: { page: 1, page_size: 1, total_number: 1, total_page: 1 },
+      },
+    });
+
+    const out = await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "campaign",
+        advertiserId: ADV,
+        entityId: "1800000000000001",
+        data: { operation_status: "DISABLE" },
+      }),
+      ctx,
+      sdk
+    );
+
+    const req = onlyWrite();
+    // basis: TikTok SDK (tiktok-business-api-sdk @ f809c39) python_sdk/docs:
+    // CampaignUpdateBody has no operation_status; CampaignStatusUpdateBody is
+    // (advertiser_id, campaign_ids list[str], operation_status str), sent by
+    // campaign_creation_api.py campaign_status_update — POST
+    // /open_api/v1.3/campaign/status/update/.
+    expect(req.method).toBe("POST");
+    expect(req.url).toBe(`${API}/campaign/status/update/`);
+    expectJsonAuth(req);
+    expect(req.body).toEqual({
+      advertiser_id: ADV,
+      campaign_ids: ["1800000000000001"],
+      operation_status: "DISABLE",
+    });
+    // Pre-state read, the status write, then a re-read for `after` (the status
+    // endpoint returns no entity).
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      `GET ${V}/campaign/get/`,
+      `POST ${V}/campaign/status/update/`,
+      `GET ${V}/campaign/get/`,
+    ]);
+    expect(out.updated).toBe(true);
+    expect(out.dispatchedCapability.operation).toBe("pause");
+    expect(remaining()).toBe(LIMIT - 2 * TIKTOK_READ_TOKENS - TIKTOK_WRITE_TOKENS);
+  });
+
+  it("ad ENABLE → POST ad/status/update/ with ad_ids, no adgroup_id lookup", async () => {
+    const AD_ID = "1600000000000001";
+    await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "ad",
+        advertiserId: ADV,
+        entityId: AD_ID,
+        data: { operation_status: "ENABLE" },
+      }),
+      ctx,
+      sdk
+    );
+    // basis: AdStatusUpdateBody (advertiser_id, ad_ids, operation_status);
+    // ad_api.py ad_status_update — POST /open_api/v1.3/ad/status/update/.
+    const req = onlyWrite();
+    expect(req.url).toBe(`${API}/ad/status/update/`);
+    expect(req.body).toEqual({ advertiser_id: ADV, ad_ids: [AD_ID], operation_status: "ENABLE" });
+  });
+
+  it("refuses operation_status mixed with field changes, sending no write", async () => {
+    await expect(
+      updateEntityLogic(
+        UpdateEntityInputSchema.parse({
+          entityType: "campaign",
+          advertiserId: ADV,
+          entityId: "1800000000000001",
+          data: { operation_status: "DISABLE", budget: 200 },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/operation_status must be sent on its own/);
+    expect(apiRequests()).toHaveLength(0);
+  });
+
+  it("refuses DELETE, pointing to tiktok_delete_entity, sending nothing", async () => {
+    await expect(
+      updateEntityLogic(
+        UpdateEntityInputSchema.parse({
+          entityType: "adGroup",
+          advertiserId: ADV,
+          entityId: "1700000000000001",
+          data: { operation_status: "DELETE" },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/tiktok_delete_entity/);
+    expect(apiRequests()).toHaveLength(0);
+  });
+
+  it("dry_run reports a mixed payload as would-fail and sends no POST", async () => {
+    stub.route({
+      method: "GET",
+      path: `${V}/campaign/get/`,
+      data: { list: [{ campaign_id: "1800000000000001", campaign_name: "Autumn" }] },
+    });
+    const out = await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "campaign",
+        advertiserId: ADV,
+        entityId: "1800000000000001",
+        data: { operation_status: "ENABLE", campaign_name: "x" },
+        dry_run: true,
+      }),
+      ctx,
+      sdk
+    );
+    expect(out.dryRun?.wouldSucceed).toBe(false);
+    expect(out.dryRun?.validationErrors.map((e) => e.code)).toEqual(["MIXED_STATUS_UPDATE"]);
+    expect(writes()).toHaveLength(0);
+  });
+});
+
 describe("tiktok_delete_entity → {entity}/status/update/ operation_status DELETE", () => {
   it("one POST carrying every id and operation_status DELETE", async () => {
     await deleteEntityLogic(

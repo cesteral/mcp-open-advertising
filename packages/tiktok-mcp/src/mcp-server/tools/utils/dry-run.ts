@@ -77,6 +77,46 @@ export function symbolicValidate(data: Record<string, unknown>): DryRunValidatio
 }
 
 /**
+ * Update-only checks for a status change sent through `tiktok_update_entity`
+ * as `data.operation_status`. Pure (no I/O).
+ *
+ * basis: TikTok's official SDK (tiktok/tiktok-business-api-sdk @ f809c39,
+ * python_sdk/docs): CampaignUpdateBody, AdgroupUpdateBody and AdUpdateBody
+ * have no `operation_status` field, while CampaignStatusUpdateBody,
+ * AdgroupStatusUpdateBody and AdStatusUpdateBody take `operation_status` with
+ * the id list (`campaign_ids` / `adgroup_ids` / `ad_ids`). So a status change
+ * goes to `{entity}/status/update/` as its own request (`updateEntityLogic`),
+ * and cannot ride along with field changes to `{entity}/update/`, where it used
+ * to be dropped while the call reported a pause or resume.
+ *
+ * DELETE is refused here: it is irreversible, and `tiktok_delete_entity` asks
+ * for confirmation first.
+ */
+export function updateStatusShapeErrors(data: Record<string, unknown>): DryRunValidationError[] {
+  if (!("operation_status" in data)) return [];
+  const errors: DryRunValidationError[] = [];
+  const others = Object.keys(data).filter(
+    (key) => key !== "operation_status" && key !== "advertiser_id"
+  );
+  if (others.length > 0) {
+    errors.push({
+      code: "MIXED_STATUS_UPDATE",
+      message: `operation_status must be sent on its own: TikTok changes status through {entity}/status/update/, a separate request from the {entity}/update/ that takes ${others.join(", ")}. Send the field changes and the status change as two calls.`,
+      field: "data.operation_status",
+    });
+  }
+  if (data.operation_status === "DELETE") {
+    errors.push({
+      code: "DELETE_NOT_SUPPORTED",
+      message:
+        "operation_status DELETE is irreversible and is not sent through tiktok_update_entity; use tiktok_delete_entity, which asks for confirmation.",
+      field: "data.operation_status",
+    });
+  }
+  return errors;
+}
+
+/**
  * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
  * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
  * mirrors what the dry-run handler does in-tool.
@@ -184,11 +224,16 @@ export async function runTiktokUpdateDryRun(
   service: TiktokServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
+  const isStatusChange = "operation_status" in input.data;
   const validationErrors = [
     ...symbolicValidate(input.data),
+    ...updateStatusShapeErrors(input.data),
     // An ad update must map onto AdUpdateBody (creatives[0].ad_id = entityId);
     // the execute path refuses the same payloads (TikTokService.updateEntity).
-    ...(input.entityType === "ad" ? adUpdateShapeErrors(input.entityId, input.data) : []),
+    // A status change goes to ad/status/update/ instead, which takes ad_ids.
+    ...(input.entityType === "ad" && !isStatusChange
+      ? adUpdateShapeErrors(input.entityId, input.data)
+      : []),
   ];
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
