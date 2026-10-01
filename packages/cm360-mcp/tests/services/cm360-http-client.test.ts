@@ -17,7 +17,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { CM360HttpClient } from "../../src/services/cm360/cm360-http-client.js";
+import { CM360HttpClient, RETRY_CONFIG } from "../../src/services/cm360/cm360-http-client.js";
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 
 const mockExecuteWithRetry = vi.mocked(executeWithRetry);
@@ -150,24 +150,24 @@ describe("CM360HttpClient", () => {
   });
 
   describe("fetchRaw", () => {
-    it("makes raw authenticated fetch with correct URL and timeout", async () => {
+    const DOWNLOAD_URL = "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media";
+
+    // Cross-fleet #22: fetchRaw used to loop by hand, so a failed download left
+    // no upstream trail in tool_failure logs and ignored Retry-After. It now
+    // goes through executeWithRetry with the client's own policy.
+    it("delegates to executeWithRetry with rawResponse, the shared policy and the download timeout", async () => {
       const resp = mockResponse(200, "csv-data");
-      mockFetchWithTimeout.mockResolvedValueOnce(resp);
+      mockExecuteWithRetry.mockResolvedValueOnce(resp);
 
-      const result = await client.fetchRaw(
-        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
-        30_000
-      );
+      const result = await client.fetchRaw(DOWNLOAD_URL, 30_000);
 
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
-      const callArgs = mockFetchWithTimeout.mock.calls[0];
-      expect(callArgs[0]).toBe(
-        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media"
-      );
-      expect(callArgs[1]).toBe(30_000);
-
-      const options = callArgs[3] as RequestInit;
-      const headers = options.headers as Record<string, string>;
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+      expect(mockExecuteWithRetry).toHaveBeenCalledTimes(1);
+      const [retryConfig, requestOptions] = mockExecuteWithRetry.mock.calls[0];
+      expect(retryConfig).toEqual({ ...RETRY_CONFIG, timeoutMs: 30_000 });
+      expect(requestOptions.url).toBe(DOWNLOAD_URL);
+      expect(requestOptions.rawResponse).toBe(true);
+      const headers = await requestOptions.getHeaders();
       expect(headers.Authorization).toBe("Bearer mock-access-token");
       expect(result).toBe(resp);
     });
@@ -182,41 +182,33 @@ describe("CM360HttpClient", () => {
     ])("refuses %s without fetching a token or the URL", async (url) => {
       await expect(client.fetchRaw(url, 30_000)).rejects.toThrow("download URL");
       expect(authAdapter.getAccessToken).not.toHaveBeenCalled();
+      expect(mockExecuteWithRetry).not.toHaveBeenCalled();
       expect(mockFetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    it("passes request context to fetchWithTimeout", async () => {
-      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, "ok"));
+    it("passes request context and fetch options through", async () => {
+      mockExecuteWithRetry.mockResolvedValueOnce(mockResponse(200, "ok"));
       const context = { requestId: "req-456" };
 
-      await client.fetchRaw(
-        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
-        30_000,
-        context
-      );
+      await client.fetchRaw(DOWNLOAD_URL, 30_000, context, {
+        method: "GET",
+        headers: { Accept: "text/csv" },
+      });
 
-      const callArgs = mockFetchWithTimeout.mock.calls[0];
-      expect(callArgs[2]).toEqual(context);
+      const requestOptions = mockExecuteWithRetry.mock.calls[0][1];
+      expect(requestOptions.context).toEqual(context);
+      expect(requestOptions.fetchOptions?.method).toBe("GET");
+      expect((requestOptions.fetchOptions?.headers as Record<string, string>).Accept).toBe(
+        "text/csv"
+      );
     });
 
-    it("passes additional options to fetchWithTimeout", async () => {
-      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, "ok"));
+    it("propagates errors from executeWithRetry", async () => {
+      mockExecuteWithRetry.mockRejectedValueOnce(new Error("CM360 API request failed: 404"));
 
-      await client.fetchRaw(
-        "https://www.googleapis.com/dfareporting/v5/reports/1/files/2?alt=media",
-        30_000,
-        undefined,
-        {
-          method: "GET",
-          headers: { Accept: "text/csv" },
-        }
+      await expect(client.fetchRaw(DOWNLOAD_URL, 30_000)).rejects.toThrow(
+        "CM360 API request failed: 404"
       );
-
-      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
-      expect(options.method).toBe("GET");
-      const headers = options.headers as Record<string, string>;
-      expect(headers.Accept).toBe("text/csv");
-      expect(headers.Authorization).toBe("Bearer mock-access-token");
     });
   });
 });

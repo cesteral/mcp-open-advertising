@@ -1,0 +1,5 @@
+{
+  "$comment": "Write tools (readOnlyHint === false) with no vendor-sourced wire-request test in their own package, checked by wire-request-coverage.test.mjs (#236). `uncovered` may only shrink: an entry whose tool is now covered, is no longer a write, or no longer exists fails the ratchet. `noUpstream` is for a write tool that never issues an upstream request (so there is no wire to assert); state why. Empty is the goal for `uncovered`.",
+  "uncovered": [],
+  "noUpstream": []
+}

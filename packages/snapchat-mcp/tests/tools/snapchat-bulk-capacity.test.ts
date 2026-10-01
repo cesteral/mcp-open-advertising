@@ -79,7 +79,10 @@ function fakeGet(path: string) {
   const entity: Record<string, unknown> = { id, name: "n", status: "ACTIVE" };
   if (collection === "campaigns" || collection === "creatives") entity.ad_account_id = ACCOUNT;
   if (collection === "adsquads") entity.campaign_id = `camp-of-${id}`;
-  if (collection === "ads") entity.ad_squad_id = `squad-of-${id}`;
+  // Every ad lives in ad squad "s1", the `adSquadId` the ad batches below name:
+  // an update whose route names another squad than the entity's own is refused
+  // (`buildMergedUpdateItem`, #236).
+  if (collection === "ads") entity.ad_squad_id = "s1";
   return { [collection]: [{ sub_request_status: "SUCCESS", [ENTITY_KEY[collection]]: entity }] };
 }
 
@@ -183,6 +186,13 @@ describe("snapchat bulk capacity pre-check (real default limiter: 10/min, 120s b
     });
 
     it("a batch that fits proceeds, consuming exactly the modeled tokens", async () => {
+      // The ads must belong to the `adSquadId` the call names: an update is PUT
+      // to its own parent's route, and a mismatch is refused before any write.
+      http.get.mockImplementation(async (path: string) => {
+        const response = fakeGet(path) as Record<string, Array<Record<string, any>>>;
+        if (path.startsWith("/v1/ads/")) response.ads![0]!.ad.ad_squad_id = "s1";
+        return response;
+      });
       const result = await bulkUpdateStatusLogic(input("ad", 2), ctx, sdk);
       expect(mockElicitStatus).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(6); // 2 ads + 2 squads + 2 campaigns

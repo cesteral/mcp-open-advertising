@@ -217,12 +217,16 @@ export class LinkedInHttpClient {
     return withLinkedInApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
+      const response = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
         url,
         fetchOptions: options,
         context,
         logger: this.logger,
         fetchFn: fetchWithTimeout,
+        // Read the body here, not in executeWithRetry: a Rest.li CREATE answers
+        // 201 with an EMPTY body, which its JSON parse cannot read (see
+        // readLinkedInResponse). Failures are recorded and thrown as before.
+        rawResponse: true,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {
@@ -242,7 +246,48 @@ export class LinkedInHttpClient {
         },
         buildNextAction: buildLinkedInNextAction,
       });
-      return result;
+      return readLinkedInResponse(response);
     });
+  }
+}
+
+/** Rest.li's response header carrying a created entity's key. */
+const RESTLI_CREATED_ID_HEADER = "x-restli-id";
+
+/**
+ * The value of a successful LinkedIn response.
+ *
+ * A Rest.li CREATE answers `201 Created` with NO body; the new entity's key is
+ * in the `x-restli-id` response header. That is the CREATE fixture of both of
+ * LinkedIn's official clients — linkedin-api-js-client @ e4a1fae
+ * `tests/restli-client.test.ts` (`data: null, status: 201, headers:
+ * { 'x-restli-id': 123 }`; read by `lib/utils/restli-utils.ts
+ * getCreatedEntityId`) and linkedin-api-python-client @ 6331e52
+ * `tests/clients/restli/client_test.py` (`"json": None, "status": 201`).
+ * Not exercised against LinkedIn.
+ * Parsing every non-204 success as JSON made a create that LinkedIn had
+ * committed throw `Unexpected end of JSON input`, losing the new id and
+ * inviting a retry that creates a duplicate (#236).
+ *
+ * So: an empty body reads as `{}` (as a 204 already did), and a created key is
+ * surfaced as `id` unless the body already carries one. The key arrives
+ * percent-encoded (`urn%3Ali%3AsponsoredCreative%3A123`) and is decoded; a
+ * compound Rest.li key would keep its `(k:v)` structure.
+ */
+async function readLinkedInResponse(response: Response): Promise<unknown> {
+  const text = response.status === 204 ? "" : await response.text();
+  const body: unknown = text.trim() === "" ? {} : JSON.parse(text);
+  const createdId = response.headers.get(RESTLI_CREATED_ID_HEADER);
+  if (createdId && body !== null && typeof body === "object" && !Array.isArray(body)) {
+    if (!("id" in body)) return { ...body, id: decodeRestliKey(createdId) };
+  }
+  return body;
+}
+
+function decodeRestliKey(key: string): string {
+  try {
+    return decodeURIComponent(key);
+  } catch {
+    return key;
   }
 }

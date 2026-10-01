@@ -54,6 +54,7 @@ describe("LinkedInHttpClient", () => {
       ok: true,
       status: 200,
       json: async () => body,
+      text: async () => JSON.stringify(body),
       headers: new Headers(),
     } as unknown as Response);
   }

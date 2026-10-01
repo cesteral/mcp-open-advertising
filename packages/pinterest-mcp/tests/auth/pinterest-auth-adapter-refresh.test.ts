@@ -6,7 +6,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return { ...actual, fetchWithTimeout: vi.fn() };
 });
 
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, JsonRpcErrorCode, McpError } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import {
@@ -356,6 +356,28 @@ describe("PinterestRefreshTokenAdapter", () => {
       await expect(adapter.getAccessToken()).rejects.toThrow(
         "Pinterest token refresh failed: 401 Unauthorized. Invalid credentials"
       );
+    });
+
+    // basis: Pinterest OpenAPI v5.28.0 `oauth/token` responses (401 = authentication
+    // failed, 403 = refused, body `Pinterest.Lib.Error { code, message }`). A rejected
+    // credential must surface as an auth failure, not an InternalError (fleet review #12).
+    it.each([
+      [401, "Unauthorized", JsonRpcErrorCode.Unauthorized],
+      [403, "Forbidden", JsonRpcErrorCode.Forbidden],
+      [400, "Bad Request", JsonRpcErrorCode.InvalidRequest],
+      [503, "Service Unavailable", JsonRpcErrorCode.ServiceUnavailable],
+    ])("maps a %i from the token endpoint by its status", async (status, statusText, code) => {
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status,
+        statusText,
+        text: async () => JSON.stringify({ code: 2, message: "Authentication failed." }),
+      } as unknown as Response);
+
+      const error = await adapter.getAccessToken().catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(McpError);
+      expect((error as McpError).code).toBe(code);
     });
 
     it("error when access_token is missing from response", async () => {

@@ -190,35 +190,16 @@ Input: {
 \`\`\`
 
 ### Site Lists (for inventory targeting)
-\`\`\`
-Tool: ttd_create_entity
-Input: {
-  "entityType": "siteList",
-  "advertiserId": "${advertiserId}",
-  "data": {
-    "SiteListName": "Premium Publishers",
-    "AdvertiserId": "${advertiserId}",
-    "SiteListType": "Whitelist",
-    "Sites": ["nytimes.com", "bbc.com"]
-  }
-}
-\`\`\`
+No tool here creates site lists, and \`ttd_create_entity\` does not accept \`siteList\`. Use an existing \`SiteListId\` (ask the user) in the ad group's \`RTBAttributes\`.
 
 ### Bid Lists (for dimensional bid adjustments)
+Bid lists are not a \`ttd_create_entity\` type. Create one with \`ttd_manage_bid_list\`, which calls TTD's GraphQL \`bidListCreate\`. \`data\` is a \`BidListCreateInput\` object, not the retired REST shape (\`BidListName\`, \`BidListEntries\`). This server does not document that input's fields; take them from TTD's GraphQL schema documentation. Preview it first:
 \`\`\`
-Tool: ttd_create_entity
+Tool: ttd_manage_bid_list
 Input: {
-  "entityType": "bidList",
-  "advertiserId": "${advertiserId}",
-  "data": {
-    "BidListName": "Geo Bid Modifiers",
-    "AdvertiserId": "${advertiserId}",
-    "BidListDimension": "GeoRegion",
-    "BidListAdjustmentType": "PercentageAdjustment",
-    "BidListEntries": [
-      { "DimensionValue": "US-CA", "AdjustmentValue": 50, "IsEnabled": true }
-    ]
-  }
+  "operation": "create",
+  "data": { /* BidListCreateInput for advertiser ${advertiserId} */ },
+  "dry_run": true
 }
 \`\`\`
 

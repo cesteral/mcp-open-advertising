@@ -7,7 +7,7 @@ import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   assertSafeDownloadUrl,
-  fetchWithTimeout,
+  fetchGuardedDownload,
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   McpError,
   mapHttpStatusToJsonRpc,
@@ -157,15 +157,16 @@ export class SA360ReportingService {
 
     // Download URLs are absolute Google storage URLs — bypass httpClient
     // to avoid baseUrl prepending and JSON parsing of CSV responses.
+    // Redirects are followed by hand: each target must pass the same SSRF
+    // checks, and the bearer token is dropped once a hop changes origin, on
+    // every Node release (fleet review sa360 #3, cm360 #1).
     const accessToken = await this.authAdapter.getAccessToken();
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+    const response = await fetchGuardedDownload(downloadUrl, {
+      timeoutMs: DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
       context,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
+      init: { headers: { Authorization: `Bearer ${accessToken}` } },
+      toolName: "sa360_download_report",
+    });
 
     if (!response.ok) {
       throw new McpError(

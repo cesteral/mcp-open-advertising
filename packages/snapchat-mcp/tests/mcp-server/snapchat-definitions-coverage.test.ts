@@ -50,15 +50,13 @@ const snapchatService = {
   getCreativePreview: vi.fn(async () => ({
     creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=123",
   })),
-  client: {
-    post: vi.fn(async () => ({
-      media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
-    })),
-    postMultipart: vi.fn(async () => ({ request_status: "SUCCESS" })),
-    get: vi.fn(async () => ({
-      media: [{ media: { id: "media-test-123", media_status: "READY" } }],
-    })),
-  },
+  createMedia: vi.fn(async () => ({
+    media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
+  })),
+  uploadMediaFile: vi.fn(async () => undefined),
+  getMedia: vi.fn(async () => ({
+    media: [{ media: { id: "media-test-123", media_status: "READY" } }],
+  })),
 };
 
 const snapchatReportingService = {

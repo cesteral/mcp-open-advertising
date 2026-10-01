@@ -19,6 +19,7 @@ import {
   fetchWithTimeout,
   fingerprintCredentials,
   JsonRpcErrorCode,
+  mapHttpStatusToJsonRpc,
   McpError,
   OAuth2RefreshAdapterBase,
 } from "@cesteral/shared";
@@ -197,8 +198,16 @@ export class PinterestRefreshTokenAdapter
         );
         if (!response.ok) {
           const errorBody = await response.text().catch(() => "");
+          // basis: Pinterest OpenAPI v5.28.0 (vendored as src/generated/types.ts),
+          // operation `oauth/token`: 401 "Authentication is required and has
+          // either failed or not been provided", 403 "the server is refusing
+          // action", 400/404, each with a `Pinterest.Lib.Error { code, message }`
+          // body — not RFC 6749's `{ error }`, so the shared OAuth2 classifier
+          // (which reads `error`) cannot apply. The status itself says what
+          // failed: a rejected credential is Unauthorized (HTTP 401 with the
+          // auth hint), not an InternalError that reads as a server fault.
           throw new McpError(
-            JsonRpcErrorCode.InternalError,
+            mapHttpStatusToJsonRpc(response.status),
             `Pinterest token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
           );
         }

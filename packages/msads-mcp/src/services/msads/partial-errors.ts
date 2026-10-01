@@ -184,6 +184,41 @@ export function mapMsAdsItemOutcomes(
 }
 
 /**
+ * Merge the responses of a delete sent in several chunks into one response of
+ * the same shape, as if the whole id list had been one request: every
+ * BatchError's `Index` is rebased from chunk-relative to the caller's id list,
+ * so `mapMsAdsItemOutcomes(merged, totalIds)` reports per-id outcomes.
+ *
+ * A BatchError without a usable `Index` can only be placed within its chunk.
+ * In a one-id chunk it is that id's; otherwise it is copied onto every id of
+ * that chunk as "outcome unknown" — never onto ids of other chunks, whose
+ * responses said nothing about it.
+ */
+export function mergeMsAdsDeleteResults(
+  chunks: Array<{ offset: number; size: number; result: unknown }>
+): { PartialErrors: MsAdsBatchError[] } {
+  const merged: MsAdsBatchError[] = [];
+  for (const { offset, size, result } of chunks) {
+    for (const error of collectMsAdsBatchErrors(result)) {
+      if (validIndex(error.Index, size)) {
+        merged.push({ ...error, Index: offset + error.Index });
+      } else if (size === 1) {
+        merged.push({ ...error, Index: offset });
+      } else {
+        for (let i = 0; i < size; i++) {
+          merged.push({
+            ...error,
+            Index: offset + i,
+            Message: `Outcome unknown — batch error without an item index: ${error.Message ?? "no message"}`,
+          });
+        }
+      }
+    }
+  }
+  return { PartialErrors: merged };
+}
+
+/**
  * Throw a McpError when a single-entity write (Add / Update of one logical
  * entity) was rejected in any part. The upstream BatchError text is carried in
  * the message and the structured errors in `data.partialErrors`.

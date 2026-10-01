@@ -30,10 +30,17 @@
  * search and audience estimate draw 1; a media upload draws 3 and each
  * video-info poll 1.
  *
- * Covered elsewhere: the async report chain (`tiktok_submit_report` →
- * `tiktok_check_report_status` → `tiktok_download_report`, #232/#259) is
- * tested in `tests/services/tiktok-reporting-service.test.ts` and the tools'
- * own tests. Everything else not listed here sends only GETs.
+ * `tiktok_submit_report` (POST report/task/create/) is pinned at the end
+ * against `python_sdk/business_api_client/api/reporting_api.py`
+ * `report_task_create` and `models/report_task_create_body.py`, plus the
+ * platform-facts `tiktok.async_report_create_options` fact (verified
+ * 2026-09-30 from TikTok's own create-task page). It draws one token from the
+ * per-token REPORTING bucket (`{quotaKey}:reporting`), not the CRUD bucket.
+ *
+ * Covered elsewhere: the rest of the async report chain
+ * (`tiktok_check_report_status` → `tiktok_download_report`, #232/#259) only
+ * GETs and is tested in `tests/services/tiktok-reporting-service.test.ts` and
+ * the tools' own tests. Everything else not listed here sends only GETs.
  */
 
 import { createHash } from "node:crypto";
@@ -99,6 +106,10 @@ import {
   uploadVideoLogic,
   UploadVideoInputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-video.tool.js";
+import {
+  submitReportLogic,
+  SubmitReportInputSchema,
+} from "../../src/mcp-server/tools/definitions/submit-report.tool.js";
 import {
   installFetchStub,
   createWireSession,
@@ -1154,5 +1165,153 @@ describe("media uploads (multipart)", () => {
       sdk
     );
     expect(stub.requests).toHaveLength(0);
+  });
+});
+
+describe("tiktok_submit_report → report/task/create/", () => {
+  /** The per-token reporting bucket (rate-limit-keys.ts tiktokReportingQuotaKey). */
+  const reportingRemaining = () => rateLimiter.getRemainingTokens(`${session.quotaKey}:reporting`);
+
+  it("BASIC → POST report/task/create/ asking for a downloadable CSV with untranslated titles", async () => {
+    stub.route({
+      method: "POST",
+      path: `${V}/report/task/create/`,
+      data: { task_id: "7300000000000000001" },
+    });
+
+    const out = await submitReportLogic(
+      SubmitReportInputSchema.parse({
+        advertiserId: ADV,
+        dataLevel: "AUCTION_CAMPAIGN",
+        dimensions: ["campaign_id", "stat_time_day"],
+        metrics: ["impressions", "clicks", "spend"],
+        startDate: "2026-09-01",
+        endDate: "2026-09-07",
+        orderField: "spend",
+        orderType: "DESC",
+      }),
+      ctx,
+      sdk
+    );
+
+    const req = onlyWrite();
+    // basis: reporting_api.py report_task_create — POST
+    // /open_api/v1.3/report/task/create/, `header_params['Access-Token']`,
+    // Content-Type application/json, JSON body ReportTaskCreateBody;
+    // report_task_create_body.py swagger_types: advertiser_id (str),
+    // report_type (str, required), service_type (str), data_level (str),
+    // dimensions list[str] (required), metrics list[str], start_date (str),
+    // end_date (str), order_field (str), order_type (str), output_format
+    // (str), enable_report_title_translation (bool).
+    // basis: platform-facts tiktok.async_report_create_options (verified
+    // 2026-09-30, TikTok "Create an asynchronous report task" v1.3):
+    // output_format CSV_DOWNLOAD is a documented value, and
+    // enable_report_title_translation=false is valid for BASIC and AUDIENCE.
+    expect(req.method).toBe("POST");
+    expect(req.url).toBe(`${API}/report/task/create/`);
+    expectJsonAuth(req);
+    expect(req.body).toEqual({
+      advertiser_id: ADV,
+      report_type: "BASIC",
+      service_type: "AUCTION",
+      output_format: "CSV_DOWNLOAD",
+      enable_report_title_translation: false,
+      data_level: "AUCTION_CAMPAIGN",
+      dimensions: ["campaign_id", "stat_time_day"],
+      metrics: ["impressions", "clicks", "spend"],
+      start_date: "2026-09-01",
+      end_date: "2026-09-07",
+      order_field: "spend",
+      order_type: "DESC",
+    });
+    expect(out.taskId).toBe("7300000000000000001");
+    expect(out.effect).toEqual({
+      effectKind: "report_requested",
+      summary: { report_type: "BASIC", report_handle: "7300000000000000001" },
+    });
+    // basis: unverified (code-only) — submit_report asks for no confirmation
+    // (an effect write with no platform-state change beyond a report task).
+    expect(sdk.elicitInput).not.toHaveBeenCalled();
+    expect(apiRequests()).toHaveLength(1);
+    // basis: unverified (code-only) — rate-limit-keys.ts: one token from the
+    // reporting bucket, none from the CRUD bucket.
+    expect(reportingRemaining()).toBe(LIMIT - 1);
+    expect(remaining()).toBe(LIMIT);
+  });
+
+  it("PLAYABLE_MATERIAL → no enable_report_title_translation, no data_level when none is given", async () => {
+    stub.route({
+      method: "POST",
+      path: `${V}/report/task/create/`,
+      data: { task_id: "7300000000000000002" },
+    });
+
+    await submitReportLogic(
+      SubmitReportInputSchema.parse({
+        advertiserId: ADV,
+        reportType: "PLAYABLE_MATERIAL",
+        serviceType: "RESERVATION",
+        dimensions: ["playable_id"],
+        metrics: ["impressions"],
+        startDate: "2026-09-01",
+        endDate: "2026-09-02",
+      }),
+      ctx,
+      sdk
+    );
+
+    const req = onlyWrite();
+    // basis: platform-facts tiktok.async_report_create_options —
+    // enable_report_title_translation is valid only for BASIC and AUDIENCE,
+    // so it is omitted here. report_task_create_body.py: service_type (str).
+    expect(req.url).toBe(`${API}/report/task/create/`);
+    expectJsonAuth(req);
+    expect(req.body).toEqual({
+      advertiser_id: ADV,
+      report_type: "PLAYABLE_MATERIAL",
+      service_type: "RESERVATION",
+      output_format: "CSV_DOWNLOAD",
+      dimensions: ["playable_id"],
+      metrics: ["impressions"],
+      start_date: "2026-09-01",
+      end_date: "2026-09-02",
+    });
+  });
+
+  it("refuses an advertiserId other than the session's and sends nothing", async () => {
+    await expect(
+      submitReportLogic(
+        SubmitReportInputSchema.parse({
+          advertiserId: "7000000000000000999",
+          dimensions: ["campaign_id"],
+          metrics: ["spend"],
+          startDate: "2026-09-01",
+          endDate: "2026-09-02",
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow();
+    expect(apiRequests()).toHaveLength(0);
+    expect(reportingRemaining()).toBe(LIMIT);
+  });
+
+  it("dry_run sends nothing and draws nothing", async () => {
+    const out = await submitReportLogic(
+      SubmitReportInputSchema.parse({
+        advertiserId: ADV,
+        dimensions: ["campaign_id"],
+        metrics: ["spend"],
+        startDate: "2026-09-01",
+        endDate: "2026-09-02",
+        dry_run: true,
+      }),
+      ctx,
+      sdk
+    );
+    expect(out.taskId).toBeUndefined();
+    expect(out.dryRun?.wouldSucceed).toBe(true);
+    expect(stub.requests).toHaveLength(0);
+    expect(reportingRemaining()).toBe(LIMIT);
   });
 });

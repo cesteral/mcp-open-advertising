@@ -30,21 +30,29 @@ const TOOL_DESCRIPTION = `Duplicate a Snapchat Ads entity (copy it).
 **Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
 
 Creates a copy of the entity (clone via read + create — Snapchat has no native copy API).
-The copy preserves the source's settings, including its status, unless overridden via \`options\`.
-Use \`options\` (e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.`;
+The copy preserves the source's settings, overridden by any fields in \`options\`.
+
+\`status\`: the copy is always created \`PAUSED\` (a \`status\` in \`options\` is ignored), so it
+cannot spend until you activate it with \`snapchat_update_entity\` or \`snapchat_bulk_update_status\`.
+Use \`options\` (e.g. \`{ "name": "Copy of …" }\`) to rename the copy.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
     adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
-    options: z.record(z.any()).optional().describe("Optional copy overrides (e.g., new name)"),
+    options: z
+      .record(z.any())
+      .optional()
+      .describe(
+        "Optional copy overrides (e.g., new name). A status here is ignored: the copy is always PAUSED."
+      ),
     dry_run: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied) without calling the Snapchat API. No copy is created."
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied and `status` forced to `PAUSED`) without calling the Snapchat API. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a Snapchat Ads entity");

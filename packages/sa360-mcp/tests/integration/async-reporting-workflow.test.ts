@@ -11,7 +11,16 @@ const { mockFetchWithTimeout } = vi.hoisted(() => ({
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchWithTimeout: mockFetchWithTimeout };
+  return {
+    ...actual,
+    fetchWithTimeout: mockFetchWithTimeout,
+    // The download goes through the redirect-guarded fetch; route it to the same
+    // mock with fetchWithTimeout's argument order so the assertions read alike.
+    fetchGuardedDownload: (
+      url: string,
+      o: { timeoutMs: number; context?: unknown; init?: RequestInit }
+    ) => mockFetchWithTimeout(url, o.timeoutMs, o.context, o.init),
+  };
 });
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@
  */
 
 import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
+import { fetchWithTimeout } from "./fetch-with-timeout.js";
 
 export interface DownloadUrlGuardOptions {
   /**
@@ -101,5 +102,103 @@ export function assertSafeDownloadUrl(rawUrl: string, options: DownloadUrlGuardO
   if (reason) {
     const prefix = options.toolName ? `${options.toolName}: ` : "";
     throw new McpError(JsonRpcErrorCode.InvalidParams, `${prefix}download URL ${reason}`);
+  }
+}
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/** Redirects a guarded download follows before giving up (Fetch's own limit is 20). */
+export const MAX_GUARDED_DOWNLOAD_REDIRECTS = 5;
+
+export interface GuardedDownloadOptions {
+  timeoutMs: number;
+  context?: { requestId?: string };
+  init?: RequestInit;
+  /** Tool name for error messages. */
+  toolName?: string;
+  /**
+   * Request headers that carry a credential and must not reach another origin,
+   * in addition to `Authorization` (e.g. `TTD-Auth`). Matched case-insensitively.
+   */
+  credentialHeaders?: readonly string[];
+}
+
+/**
+ * GET a report download that `assertSafeDownloadUrl` already admitted,
+ * following redirects by hand so each hop gets the same treatment:
+ *
+ * - Every redirect target passes the generic checks of `checkDownloadUrl`
+ *   (https, a public hostname, no IP literal, no embedded credentials) before
+ *   it is requested. With `redirect: "follow"` only the first URL was checked,
+ *   so an admitted host could bounce the server to an internal address.
+ * - Credential headers are dropped once the target's origin differs from the
+ *   origin they were sent to. That is the Fetch standard's rule for
+ *   `Authorization` on a cross-origin redirect (HTTP-redirect fetch, step
+ *   "remove `Authorization` from request's header list"), applied here so it
+ *   holds on every Node release and for custom credential headers, which the
+ *   standard does not know about.
+ *
+ * The caller's host allowlist is not re-applied to redirect targets: a hop off
+ * the allowlist no longer carries the credential the allowlist protects.
+ */
+export async function fetchGuardedDownload(
+  url: string,
+  options: GuardedDownloadOptions
+): Promise<Response> {
+  const credentialNames = new Set(
+    ["authorization", ...(options.credentialHeaders ?? [])].map((h) => h.toLowerCase())
+  );
+  const headers = new Headers(options.init?.headers);
+  let current = new URL(url);
+  const deadline = Date.now() + options.timeoutMs;
+
+  for (let hop = 0; ; hop++) {
+    const response = await fetchWithTimeout(
+      current.href,
+      Math.max(1, deadline - Date.now()),
+      options.context,
+      {
+        ...options.init,
+        headers: Object.fromEntries(headers.entries()),
+        redirect: "manual",
+      }
+    );
+
+    const location = response.headers.get("location");
+    if (!REDIRECT_STATUSES.has(response.status) || !location) return response;
+
+    const prefix = options.toolName ? `${options.toolName}: ` : "";
+    if (hop >= MAX_GUARDED_DOWNLOAD_REDIRECTS) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `${prefix}report download redirected more than ${MAX_GUARDED_DOWNLOAD_REDIRECTS} times`
+      );
+    }
+
+    let next: URL;
+    try {
+      next = new URL(location, current);
+    } catch {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `${prefix}report download redirected to an invalid location`
+      );
+    }
+    const reason = checkDownloadUrl(next.href);
+    if (reason) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `${prefix}report download redirect refused: target ${reason}`
+      );
+    }
+
+    if (next.origin !== current.origin) {
+      for (const name of [...headers.keys()]) {
+        if (credentialNames.has(name.toLowerCase())) headers.delete(name);
+      }
+    }
+    // Release the redirect response's connection before the next request.
+    await response.body?.cancel().catch(() => undefined);
+    current = next;
   }
 }
