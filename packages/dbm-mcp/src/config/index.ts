@@ -36,7 +36,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Rate Limiting
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
-  // Override via RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  // Override via DBM_RATE_LIMIT_PER_MINUTE (legacy name: RATE_LIMIT_PER_MINUTE).
   rateLimitPerMinute: z.number().default(10),
 
   // Report Settings (Bid Manager async reports with exponential backoff)
@@ -49,6 +49,16 @@ const ConfigSchema = BaseConfigSchema.extend({
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
+
+/**
+ * The per-minute rate limit from the environment, or undefined for the default.
+ * The prefixed name wins; the unprefixed one is the name this server used
+ * before it matched the rest of the fleet (fleet review _cross-fleet #27).
+ */
+function readRateLimitEnv(): number | undefined {
+  const raw = process.env.DBM_RATE_LIMIT_PER_MINUTE || process.env.RATE_LIMIT_PER_MINUTE;
+  return raw ? Number(raw) : undefined;
+}
 
 /**
  * Parse and validate configuration from environment variables
@@ -71,10 +81,10 @@ export function parseConfig(): AppConfig {
     serviceAccountJson: process.env.SERVICE_ACCOUNT_JSON,
     serviceAccountFile: process.env.SERVICE_ACCOUNT_FILE,
 
-    // Rate Limiting
-    rateLimitPerMinute: process.env.RATE_LIMIT_PER_MINUTE
-      ? Number(process.env.RATE_LIMIT_PER_MINUTE)
-      : undefined,
+    // Rate Limiting. DBM_RATE_LIMIT_PER_MINUTE matches the fleet's
+    // <PLATFORM>_RATE_LIMIT_PER_MINUTE; the unprefixed RATE_LIMIT_PER_MINUTE
+    // this server read before is still accepted when the prefixed one is unset.
+    rateLimitPerMinute: readRateLimitEnv(),
 
     // Report Settings
     reportCacheTtlMs: process.env.REPORT_CACHE_TTL_MS
