@@ -178,7 +178,11 @@ describe("TTD long-tail governance contracts (effect class)", () => {
 
   it("graphql_mutation_bulk: dry_run previews inputs count; execute emits the job, no raw payloads", async () => {
     const dry = await graphqlMutationBulkLogic(
-      { mutation: "mutation{x}", inputs: [{ a: 1 }, { a: 2 }, { a: 3 }], dry_run: true } as any,
+      {
+        mutation: "mutation($input: X!){x(input: $input){id}}",
+        inputs: [{ a: 1 }, { a: 2 }, { a: 3 }],
+        dry_run: true,
+      } as any,
       ctx,
       sdk
     );
@@ -189,7 +193,7 @@ describe("TTD long-tail governance contracts (effect class)", () => {
       data: { createMutationBulk: { data: { id: "m1", status: "QUEUED" } } },
     });
     const exec = await graphqlMutationBulkLogic(
-      { mutation: "mutation{x}", inputs: [{ a: 1 }] } as any,
+      { mutation: "mutation($input: X!){x(input: $input){id}}", inputs: [{ a: 1 }] } as any,
       ctx,
       sdk
     );

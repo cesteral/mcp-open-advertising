@@ -1386,7 +1386,12 @@
       "contentBlocks": [0]
     },
     "ttd_graphql_bulk_job": {
-      "structuredPaths": ["$.gqlErrors"],
+      "structuredPaths": [
+        "$.runtimeErrors",
+        "$.mutationGqlErrors",
+        "$.queryGqlErrors",
+        "$.rawResult"
+      ],
       "contentBlocks": [0]
     },
     "ttd_graphql_cancel_bulk_job": {

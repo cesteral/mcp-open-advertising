@@ -51,7 +51,7 @@ TTD supports these bulk operation tools:
 | \`ttd_archive_entities\` | Archive (soft-delete) campaigns or ad groups | 100 |
 | \`ttd_adjust_bids\` | Adjust ad group bid CPMs | 50 |
 | \`ttd_graphql_query_bulk\` | Bulk GraphQL queries (async job) | per job limits |
-| \`ttd_graphql_mutation_bulk\` | Bulk GraphQL mutations (async, non-cancelable). Unverified operation: sandbox only unless the operator opts in | 100 |
+| \`ttd_graphql_mutation_bulk\` | Bulk GraphQL mutations (async, non-cancelable). Never yet run against TTD: sandbox only unless the operator opts in | 100 |
 
 ---
 
