@@ -136,6 +136,25 @@ describe("dbm_run_custom_query_async over MCP", () => {
     await waitForTerminal(client, created.task.taskId);
   });
 
+  it("runs the query without the synchronous wall-time cap", async () => {
+    const created = await client.request(
+      {
+        method: "tools/call",
+        params: { name: "dbm_run_custom_query_async", arguments: toolArgs, task: { ttl: 60_000 } },
+      },
+      CreateTaskResultSchema
+    );
+    await waitForTerminal(client, created.task.taskId);
+
+    // The task TTL is sized from the full worst-case run, so capping the run at
+    // reportSyncMaxWallTimeMs would cut it short for no reason (dbm #2).
+    const { bidManagerService } = mockResolveSessionServices.mock.results[0]!.value;
+    expect(bidManagerService.executeCustomQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ reportType: "STANDARD" }),
+      { maxWallTimeMs: null }
+    );
+  });
+
   it("records the real failure message when the query fails", async () => {
     mockResolveSessionServices.mockReturnValue({
       bidManagerService: {

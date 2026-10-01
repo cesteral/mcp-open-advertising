@@ -22,6 +22,30 @@ export type ReportTimingConfig = Pick<
   | "reportRetryCooldownMs"
 >;
 
+/**
+ * Default wall-time cap on one synchronous Bid Manager report run, in ms.
+ *
+ * Without it, a synchronous tool call could sit in the create → run → poll →
+ * retry loop for about 72 minutes with the default poll and retry settings
+ * (fleet review 2026-09, dbm #2). The hosted deploy cannot answer that call
+ * anyway: `terraform/modules/mcp-service/main.tf` sets no `timeout` on the
+ * Cloud Run service template, so the platform default applies.
+ *
+ * basis: Cloud Run Admin API v1 discovery document
+ * (https://run.googleapis.com/$discovery/rest?version=v1, revision 20260925),
+ * `RevisionSpec.timeoutSeconds`: "TimeoutSeconds holds the max duration the
+ * instance is allowed for responding to a request. Cloud Run: defaults to 300
+ * seconds (5 minutes)."
+ *
+ * 240 s stops waiting before that 300 s, leaving a minute for the CSV
+ * download, the saved-query delete and the response, so the caller gets a
+ * Timeout error naming the cause instead of a severed connection.
+ * `REPORT_SYNC_MAX_WALL_TIME_MS` overrides it (a self-hosted or stdio server
+ * whose client waits longer can raise it); `dbm_run_custom_query_async` is the
+ * path for runs that need longer.
+ */
+export const DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS = 240_000;
+
 /** Backoff multiplier `pollForCompletion` uses when the caller passes none. */
 export const REPORT_POLL_BACKOFF_MULTIPLIER = 2;
 

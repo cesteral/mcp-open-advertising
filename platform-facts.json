@@ -532,7 +532,7 @@
       "verifyBy": "2027-03-24",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/dbm-mcp/src/config/index.ts:40"]
+      "codeRefs": ["packages/dbm-mcp/src/config/index.ts:41"]
     },
     {
       "id": "dv360.rate_limit_default",

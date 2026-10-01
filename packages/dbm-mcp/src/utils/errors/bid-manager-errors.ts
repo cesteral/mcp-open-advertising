@@ -248,3 +248,54 @@ export class RetryExhaustedError extends BidManagerError {
     this.lastError = options?.lastError;
   }
 }
+
+/**
+ * A synchronous report run hit its wall-time cap (`reportSyncMaxWallTimeMs`)
+ * before the report finished. `Timeout`-coded; the message keeps the last
+ * attempt's cause (if any), because `cause` never reaches the client.
+ */
+export class ReportWallTimeExceededError extends BidManagerError {
+  public readonly queryId?: string;
+  public readonly reportId?: string;
+  public readonly maxWallTimeMs: number;
+
+  constructor(
+    maxWallTimeMs: number,
+    options?: {
+      queryId?: string;
+      reportId?: string;
+      attempts?: number;
+      lastError?: Error;
+      lastStatus?: string;
+    }
+  ) {
+    const seconds = Math.round(maxWallTimeMs / 1000);
+    const queryInfo = options?.queryId ? ` for query ${options.queryId}` : "";
+    const statusInfo = options?.lastStatus ? ` (last status: ${options.lastStatus})` : "";
+    const lastError = options?.lastError;
+    const causeInfo = lastError?.message ? `; last error: ${lastError.message}` : "";
+
+    super(
+      `Bid Manager report did not finish within the ${seconds}s synchronous wall-time cap` +
+        ` (REPORT_SYNC_MAX_WALL_TIME_MS)${queryInfo}${statusInfo}${causeInfo}.` +
+        " Narrow the date range or dimensions, or run the query with" +
+        " dbm_run_custom_query_async, which is not capped.",
+      {
+        code: JsonRpcErrorCode.Timeout,
+        cause: lastError,
+        data: {
+          maxWallTimeMs,
+          queryId: options?.queryId,
+          reportId: options?.reportId,
+          attempts: options?.attempts,
+          lastStatus: options?.lastStatus,
+          lastErrorMessage: lastError?.message,
+        },
+      }
+    );
+    this.name = "ReportWallTimeExceededError";
+    this.queryId = options?.queryId;
+    this.reportId = options?.reportId;
+    this.maxWallTimeMs = maxWallTimeMs;
+  }
+}

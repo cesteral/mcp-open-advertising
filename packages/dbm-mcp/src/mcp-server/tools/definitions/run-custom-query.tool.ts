@@ -13,6 +13,7 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition, ToolUntrustedDeclaration } from "@cesteral/shared";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import type { ReportRunOptions } from "../../../services/bid-manager/BidManagerService.js";
 
 const TOOL_NAME = "dbm_run_custom_query";
 const TOOL_TITLE = "Run Custom Query";
@@ -149,7 +150,8 @@ export type RunCustomQueryOutput = z.infer<typeof RunCustomQueryOutputSchema>;
 export async function runCustomQueryLogic(
   input: RunCustomQueryInput,
   _context: RequestContext,
-  sdkContext?: SdkContext
+  sdkContext?: SdkContext,
+  runOptions?: ReportRunOptions
 ): Promise<RunCustomQueryOutput> {
   const strictValidation = input.strictValidation !== false;
 
@@ -177,13 +179,18 @@ export async function runCustomQueryLogic(
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Execute custom query via BidManagerService
-  const result = await bidManagerService.executeCustomQuery({
-    reportType: input.reportType,
-    groupBys: input.groupBys,
-    metrics: input.metrics,
-    filters: input.filters,
-    dateRange: input.dateRange,
-  });
+  const result = await bidManagerService.executeCustomQuery(
+    {
+      reportType: input.reportType,
+      groupBys: input.groupBys,
+      metrics: input.metrics,
+      filters: input.filters,
+      dateRange: input.dateRange,
+    },
+    // Omitted for the synchronous tool, so the run is capped at
+    // reportSyncMaxWallTimeMs; the async task tool passes { maxWallTimeMs: null }.
+    runOptions
+  );
 
   const warningsOut = warnings.length > 0 ? [...warnings] : [];
   const rows = result.data;
