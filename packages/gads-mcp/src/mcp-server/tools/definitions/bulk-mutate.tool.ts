@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
@@ -44,7 +45,7 @@ Maximum: thousands of operations per call (subject to Google Ads API limits).
 export const BulkMutateInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to mutate"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     operations: z
       .array(z.record(z.any()))
       .min(1)

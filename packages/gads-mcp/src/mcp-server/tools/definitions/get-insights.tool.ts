@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { addComputedMetrics } from "../utils/computed-metrics.js";
 import {
@@ -77,10 +78,7 @@ const ENTITY_NAME_FIELD_MAP: Record<string, string> = {
 
 export const GetInsightsInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "customerId must be numeric")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     entityType: z.enum(ENTITY_TYPE_ENUM).describe("Type of entity to get insights for"),
     entityId: z
       .string()

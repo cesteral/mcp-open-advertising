@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
@@ -44,7 +45,7 @@ const EFFECT_KIND = "entities_created";
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     items: z
       .array(z.record(z.any()))
       .min(1)

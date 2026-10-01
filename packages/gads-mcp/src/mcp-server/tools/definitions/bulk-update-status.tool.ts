@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getStatusCapableEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
@@ -44,7 +45,7 @@ export const BulkUpdateStatusInputSchema = z
     entityType: z
       .enum(getStatusCapableEntityTypeEnum())
       .describe("Type of entities to update (only types with a status field)"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     entityIds: z
       .array(z.string().min(1))
       .min(1)

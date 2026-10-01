@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
@@ -53,10 +54,7 @@ function toImageMimeType(contentType: string): string | undefined {
 
 export const UploadImageInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     name: z.string().min(1).describe("Asset name (unique within the account)"),
     mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
     dry_run: z

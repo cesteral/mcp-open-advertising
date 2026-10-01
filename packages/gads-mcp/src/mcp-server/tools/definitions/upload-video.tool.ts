@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   assertGovernedEffectDryRun,
@@ -48,10 +49,7 @@ const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
 export const UploadVideoInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     name: z.string().min(1).describe("Asset name (unique within the account)"),
     youtubeVideoId: z
       .string()
