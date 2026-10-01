@@ -2,7 +2,7 @@
   "name": "@cesteral/linkedin-mcp",
   "mcpName": "io.github.cesteral/linkedin-mcp",
   "version": "1.3.0",
-  "description": "LinkedIn Ads MCP Server - Campaign entity management and reporting via LinkedIn Marketing API v2",
+  "description": "LinkedIn Ads MCP Server - Campaign entity management and reporting via the versioned LinkedIn Marketing API",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

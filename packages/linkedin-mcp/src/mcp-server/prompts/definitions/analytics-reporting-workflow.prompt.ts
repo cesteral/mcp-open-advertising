@@ -42,7 +42,8 @@ linkedin_get_analytics({
   "adAccountUrn": "${adAccountUrn}",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07",
-  "metrics": ["impressions", "clicks", "costInUsd", "conversions", "costPerConversion"],
+  "metrics": ["impressions", "clicks", "costInUsd", "externalWebsiteConversions"],
+  "includeComputedMetrics": true,
   "pivot": "${pivot}",
   "timeGranularity": "ALL"
 })
@@ -79,7 +80,8 @@ linkedin_get_analytics({
   "adAccountUrn": "${adAccountUrn}",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07",
-  "metrics": ["conversions", "costPerConversion", "conversionValueInLocalCurrency"],
+  "metrics": ["externalWebsiteConversions", "oneClickLeads", "conversionValueInLocalCurrency"],
+  "includeComputedMetrics": true,
   "pivot": "${pivot}",
   "timeGranularity": "MONTHLY"
 })
@@ -101,7 +103,8 @@ linkedin_get_analytics({
 | \`MEMBER_COMPANY_SIZE\` | By company size |
 | \`MEMBER_SENIORITY\` | By seniority level |
 | \`MEMBER_INDUSTRY\` | By industry |
-| \`MEMBER_GEO_COUNTRY\` | By country |
+| \`MEMBER_COUNTRY_V2\` | By country |
+| \`MEMBER_REGION_V2\` | By region |
 
 ## Available Time Granularities
 
@@ -109,10 +112,12 @@ linkedin_get_analytics({
 
 ## Tips
 
-- Data may lag up to **24-48 hours**
-- Maximum date range is **365 days**
+- Performance metrics (account, campaign, creative) are near real-time. Demographic (\`MEMBER_*\`) metrics can lag **12 to 24 hours**, and \`videoWatchTime\` up to **48 hours**
+- Performance data is retained for 10 years, demographic data for 2 years
+- LinkedIn returns at most **15,000 rows** and does not paginate: narrow the range or pivot if you get a warning
 - Use \`timeGranularity: "DAILY"\` for trend analysis
-- Combine pivots with breakdowns for deeper insight
-- \`costInUsd\` is always in USD regardless of account currency
+- Use \`linkedin_get_analytics_breakdowns\` to compare several single-dimension pivots in one call (results are not cross-tabulated)
+- \`costInUsd\` is always in USD regardless of account currency; \`costInLocalCurrency\` is in the account's currency
+- LinkedIn has no CTR, CPC, CPA or frequency field: set \`includeComputedMetrics\` to compute them
 `;
 }

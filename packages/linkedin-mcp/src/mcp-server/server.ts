@@ -68,14 +68,14 @@ export async function createMcpServer(
     buildServerInfo("linkedin-mcp", {
       version: packageJson.version,
       description:
-        "LinkedIn Ads campaign management, analytics, and optimization via LinkedIn Marketing API v2. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics with pivot breakdowns, bulk operations, targeting search, delivery forecasts, and ad previews.",
+        "LinkedIn Ads campaign management, analytics, and optimization via the versioned LinkedIn Marketing API. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics with pivot breakdowns, bulk operations, targeting search, delivery forecasts, and ad previews.",
     }),
     {
       capabilities: {
         logging: {},
       },
       instructions:
-        "LinkedIn Ads campaign management server. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics, targeting, and bulk operations via LinkedIn Marketing API v2. " +
+        "LinkedIn Ads campaign management server. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics, targeting, and bulk operations via the versioned LinkedIn Marketing API. " +
         "Use linkedin_list_ad_accounts to discover accounts, linkedin_list_entities to browse entities. " +
         "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }

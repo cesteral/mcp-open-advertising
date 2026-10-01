@@ -16,23 +16,34 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  ANALYTICS_MAX_FIELDS,
+  LINKEDIN_ANALYTICS_PIVOTS,
+  analyticsTruncationWarning,
+} from "../../../services/linkedin/analytics-fields.js";
 
 const TOOL_NAME = "linkedin_get_analytics";
 const TOOL_TITLE = "Get LinkedIn Ads Analytics";
 const TOOL_DESCRIPTION = `Get analytics metrics for a LinkedIn Ads account.
 
-Uses the LinkedIn /rest/adAnalytics endpoint with offset-based date ranges.
+Uses LinkedIn's \`/rest/adAnalytics\` \`analytics\` finder: one pivot, one date range, one time granularity.
 
-**Available pivots:** CAMPAIGN, CAMPAIGN_GROUP, CREATIVE, MEMBER_COMPANY_SIZE,
-MEMBER_INDUSTRY, MEMBER_SENIORITY, MEMBER_JOB_TITLE, MEMBER_JOB_FUNCTION,
-MEMBER_COUNTRY, MEMBER_REGION
+**Pivots:** ${LINKEDIN_ANALYTICS_PIVOTS.join(", ")}. The geo pivots are MEMBER_COUNTRY_V2 and MEMBER_REGION_V2.
 
-**Available metrics:** impressions, clicks, costInUsd, conversions,
-externalWebsiteConversions, leadGenerationMailContactInfoShares, oneClickLeads,
-videoViews, videoCompletions, videoFirstQuartileCompletions,
-videoMidpointCompletions, videoThirdQuartileCompletions
+**Metrics** (LinkedIn's field names): impressions, clicks, costInUsd, costInLocalCurrency,
+externalWebsiteConversions, externalWebsitePostClickConversions, externalWebsitePostViewConversions,
+leadGenerationMailContactInfoShares, oneClickLeads, videoViews, videoStarts, videoCompletions,
+videoFirstQuartileCompletions, videoMidpointCompletions, videoThirdQuartileCompletions,
+likes, comments, shares, follows, totalEngagements, landingPageClicks, conversionValueInLocalCurrency,
+approximateMemberReach (non-demographic pivots, date ranges of 92 days or less).
+There are no \`conversions\`, \`reach\`, \`frequency\`, CTR or cost-per-conversion fields; set
+\`includeComputedMetrics\` for CTR, CPC, CPM, CPA and ROAS.
 
-**timeGranularity values:** DAILY, MONTHLY, YEARLY, ALL`;
+**Fields.** With no \`metrics\`, a default set is requested. \`dateRange\` and \`pivotValues\` are added so each row says which date and pivot value it belongs to. LinkedIn allows at most ${ANALYTICS_MAX_FIELDS} fields, and those two count, so pass at most ${ANALYTICS_MAX_FIELDS - 2} metrics.
+
+**timeGranularity values:** DAILY, MONTHLY, YEARLY, ALL. With ALL, a range that reaches outside the 6-month daily-retention window is rounded to whole months.
+
+**Limits (LinkedIn):** the endpoint is not paginated and returns at most 15,000 rows; a warning is added when that many come back. Demographic (MEMBER_*) pivots return only the top 100 values per creative per day, drop values with fewer than 3 events, and exclude conversionValueInLocalCurrency and approximateMemberReach. Demographic metrics can lag 12 to 24 hours.`;
 
 export const GetAnalyticsInputSchema = z
   .object({
@@ -56,9 +67,17 @@ export const GetAnalyticsInputSchema = z
       .describe("End date in YYYY-MM-DD format (required if datePreset not provided)"),
     metrics: z
       .array(z.string())
+      .max(ANALYTICS_MAX_FIELDS)
       .optional()
-      .describe("Metrics to retrieve (defaults to impressions, clicks, costInUsd, conversions)"),
-    pivot: z.string().optional().describe("Dimension to pivot on (default: CAMPAIGN)"),
+      .describe(
+        `LinkedIn metric names (defaults to impressions, clicks, costInUsd, costInLocalCurrency, externalWebsiteConversions, leadGenerationMailContactInfoShares, oneClickLeads). dateRange and pivotValues are added and count toward LinkedIn's limit of ${ANALYTICS_MAX_FIELDS} fields, so pass at most ${ANALYTICS_MAX_FIELDS - 2}`
+      ),
+    pivot: z
+      .enum(LINKEDIN_ANALYTICS_PIVOTS)
+      .optional()
+      .describe(
+        "Dimension to pivot on (default: CAMPAIGN). Geo pivots are MEMBER_COUNTRY_V2 / MEMBER_REGION_V2"
+      ),
     timeGranularity: z
       .enum(["DAILY", "MONTHLY", "YEARLY", "ALL"])
       .optional()
@@ -90,7 +109,7 @@ const LINKEDIN_COMPUTED_METRIC_ALIASES = {
   cost: ["costInUsd", "costInLocalCurrency"],
   impressions: ["impressions"],
   clicks: ["clicks"],
-  conversions: ["externalWebsiteConversions", "conversions", "oneClickLeads"],
+  conversions: ["externalWebsiteConversions", "oneClickLeads"],
   conversionValue: ["conversionValueInLocalCurrency"],
 };
 
@@ -130,6 +149,8 @@ export async function getAnalyticsLogic(
     return record;
   });
 
+  const truncationWarning = analyticsTruncationWarning(rawElements.length);
+
   const augmented = input.includeComputedMetrics
     ? appendComputedMetricsToRows(stringRows, LINKEDIN_COMPUTED_METRIC_ALIASES)
     : stringRows;
@@ -137,11 +158,16 @@ export async function getAnalyticsLogic(
     ? augmented[0]?._computedMetricsWarnings
     : undefined;
 
+  const warnings = [
+    ...(computedWarning ? [`computed metrics: ${computedWarning}`] : []),
+    ...(truncationWarning ? [truncationWarning] : []),
+  ];
+
   const view = createReportView({
     rows: augmented,
     totalRows: augmented.length,
     input,
-    warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
+    warnings: warnings.length > 0 ? warnings : undefined,
     // Preset already resolved to concrete dates above, so the window is known
     // even when the caller passed a preset.
     metricContext: buildMetricContext({

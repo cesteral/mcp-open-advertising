@@ -171,7 +171,7 @@ linkedin_get_analytics({
   "adAccountUrn": "${adAccountUrn}",
   "startDate": "2026-03-01",
   "endDate": "2026-03-31",
-  "metrics": ["impressions", "clicks", "costInUsd", "conversions"],
+  "metrics": ["impressions", "clicks", "costInUsd", "externalWebsiteConversions"],
   "pivot": "CAMPAIGN",
   "timeGranularity": "DAILY"
 })

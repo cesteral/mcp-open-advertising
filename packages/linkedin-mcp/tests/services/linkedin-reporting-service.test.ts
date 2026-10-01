@@ -38,6 +38,8 @@ describe("LinkedInReportingService", () => {
     expect(params.pivot).toBe("CAMPAIGN");
     expect(params.timeGranularity).toBe("DAILY");
     expect(params.fields).toContain("impressions");
+    expect(params.fields).toContain("pivotValues");
+    expect(params.fields).not.toContain("conversions");
     expect(mockRateLimiter.consume).toHaveBeenCalledWith("linkedin:urn:li:sponsoredAccount:123");
   });
 
@@ -78,7 +80,8 @@ describe("LinkedInReportingService", () => {
     expect(Object.keys(params)).not.toContain("dateRange.start.month");
     expect(params.pivot).toBe("MEMBER_JOB_FUNCTION");
     expect(params.timeGranularity).toBe("MONTHLY");
-    expect(params.fields).toBe("impressions,videoViews");
+    // dateRange and pivotValues are added so rows can be attributed to a date and a pivot value.
+    expect(params.fields).toBe("impressions,videoViews,dateRange,pivotValues");
     expect(params.dateRange).toEqual({
       start: { year: 2026, month: 4, day: 1 },
       end: { year: 2026, month: 4, day: 30 },
