@@ -10,6 +10,7 @@ import {
   CreateEntityInputSchema,
   createEntityLogic,
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
+import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 
 const ctx = { requestId: "r", timestamp: new Date().toISOString(), operation: "t" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -141,5 +142,18 @@ describe("createEntityLogic governance contract", () => {
       createEntityLogic({ entityType: "campaign", customerId: "1", data: {} } as any, ctx, sdk)
     ).rejects.toThrow(/at least one field/);
     expect(svc.createEntity).not.toHaveBeenCalled();
+  });
+});
+
+// gads #12: a version literal in a governed description makes every API
+// version bump move that tool's definitionHash (v23 → v25 did, in #255).
+describe("governed gads tool descriptions", () => {
+  it("name no Google Ads API version", () => {
+    const governed = allTools.filter(
+      (t) => (t.annotations as { cesteral?: unknown } | undefined)?.cesteral !== undefined
+    );
+    expect(governed.length).toBeGreaterThan(0);
+    const withVersion = governed.filter((t) => /\bv2\d\b/.test(t.description)).map((t) => t.name);
+    expect(withVersion).toEqual([]);
   });
 });
