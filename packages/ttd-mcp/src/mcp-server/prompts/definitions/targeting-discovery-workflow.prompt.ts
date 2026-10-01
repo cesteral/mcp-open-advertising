@@ -53,36 +53,26 @@ TTD targeting is configured at the **ad group level** via \`RTBAttributes\`. Key
 
 > Fetch \`entity-schema://adGroup\` for the full \`RTBAttributes\` targeting field reference.
 
+**What the tools cover.** \`ttd_create_entity\` and \`ttd_list_entities\` accept only the entity types \`advertiser\`, \`campaign\`, \`adGroup\`, \`creative\` and \`conversionTracker\`. Site lists, bid lists and deals are not among them:
+
+| Object | Tool |
+|--------|------|
+| Bid lists | \`ttd_manage_bid_list\` (one, by GraphQL) and \`ttd_bulk_manage_bid_lists\` (up to 50) |
+| Site lists | None. Attach an existing \`SiteListId\` to the ad group |
+| Deals | None. Attach an existing \`DealId\` to the ad group |
+
+Never call \`ttd_create_entity\` or \`ttd_list_entities\` with \`siteList\`, \`bidList\` or \`deal\`: input validation rejects them.
+
 ---
 
 ## Step 1: Inventory Targeting — Site Lists
 
-### Browse Existing Site Lists
+No tool here creates or lists site lists. Use a site list that already exists in TTD:
 
-\`\`\`
-Tool: ttd_list_entities
-Input: {
-  "entityType": "siteList",
-  "advertiserId": "${advertiserId}"
-}
-\`\`\`
+- Ask the user for its \`SiteListId\`, or
+- Read one from an ad group that already uses it: \`ttd_get_entity\` with \`{ "entityType": "adGroup", "entityId": "{AdGroupId}" }\`, then look in \`RTBAttributes\`.
 
-### Create a New Site List (Allowlist)
-
-\`\`\`
-Tool: ttd_create_entity
-Input: {
-  "entityType": "siteList",
-  "data": {
-    "SiteListName": "Premium News Publishers",
-    "AdvertiserId": "${advertiserId}",
-    "SiteListType": "Whitelist",
-    "Sites": ["nytimes.com", "bbc.com", "reuters.com", "theguardian.com"]
-  }
-}
-\`\`\`
-
-**Save**: Note the returned \`SiteListId\` — you'll reference it in the ad group.
+If the user needs a new site list, tell them it has to be created outside this server (for example in the TTD UI).
 
 ### Site List Types
 
@@ -131,39 +121,22 @@ TTD uses ISO country codes and region identifiers for geo targeting.
 
 ### Geo Bid Adjustments via Bid Lists
 
-To bid differently by region (not just include/exclude):
+To bid differently by region (not just include/exclude), create a bid list with \`ttd_manage_bid_list\`. It calls TTD's GraphQL \`bidListCreate\` mutation, so \`data\` is a \`BidListCreateInput\` object, not the retired REST shape (\`BidListName\`, \`BidListEntries\`). This server does not document that input's fields; take them from TTD's GraphQL schema documentation. Preview it first:
 
 \`\`\`
-Tool: ttd_create_entity
+Tool: ttd_manage_bid_list
 Input: {
-  "entityType": "bidList",
-  "data": {
-    "BidListName": "US Regional Bid Modifiers",
-    "AdvertiserId": "${advertiserId}",
-    "BidListDimension": "GeoRegion",
-    "BidListAdjustmentType": "PercentageAdjustment",
-    "BidListEntries": [
-      { "DimensionValue": "US-CA", "AdjustmentValue": 50, "IsEnabled": true },
-      { "DimensionValue": "US-NY", "AdjustmentValue": 30, "IsEnabled": true },
-      { "DimensionValue": "US-TX", "AdjustmentValue": -20, "IsEnabled": true }
-    ]
-  }
+  "operation": "create",
+  "data": { /* BidListCreateInput for advertiser ${advertiserId} */ },
+  "dry_run": true
 }
 \`\`\`
+
+Then run it again without \`dry_run\`. Note the returned bid list \`id\`.
 
 ---
 
 ## Step 3: Audience Targeting
-
-### Browse Available Deals (PMP)
-
-\`\`\`
-Tool: ttd_list_entities
-Input: {
-  "entityType": "deal",
-  "advertiserId": "${advertiserId}"
-}
-\`\`\`
 
 ### Bid Lists for Audience Signals
 
@@ -178,35 +151,26 @@ Bid lists support several targeting dimensions:
 | \`DealId\` | Per-deal bid modifiers |
 | \`SiteId\` | Per-site bid modifiers |
 
-### Browse Bid Lists
+### Read Bid Lists
+
+No tool lists bid lists. Read one by ID:
 
 \`\`\`
-Tool: ttd_list_entities
+Tool: ttd_manage_bid_list
 Input: {
-  "entityType": "bidList",
-  "advertiserId": "${advertiserId}"
+  "operation": "get",
+  "bidListId": "{BidListId}",
+  "selection": "id name"
 }
 \`\`\`
+
+To read up to 50 at once, use \`ttd_bulk_manage_bid_lists\` with \`operation: "batch_get"\` and \`bidListIds\`.
 
 ---
 
 ## Step 4: Private Marketplace (PMP) Deals
 
-### Create a Deal
-
-\`\`\`
-Tool: ttd_create_entity
-Input: {
-  "entityType": "deal",
-  "data": {
-    "DealName": "Premium Video PMP",
-    "AdvertiserId": "${advertiserId}",
-    "DealId": "publisher-deal-id-123",
-    "SupplyVendor": "Xandr",
-    "CPMInUSD": 12.00
-  }
-}
-\`\`\`
+No tool here creates or lists deals. Ask the user for the \`DealId\` of a deal that already exists in TTD.
 
 ### Attach Deal to Ad Group
 
@@ -265,9 +229,7 @@ Input: {
 ## Related Resources
 
 - \`entity-schema://adGroup\` — Full RTBAttributes targeting field reference
-- \`entity-schema://siteList\` — Site list fields and site format
-- \`entity-schema://bidList\` — Bid list dimension options and entry format
-- \`entity-schema://deal\` — Deal fields and supply vendor codes
+- \`graphql-reference://ttd\` — GraphQL query and mutation patterns
 - \`entity-examples://adGroup\` — Example ad groups with common targeting patterns
 `;
 }

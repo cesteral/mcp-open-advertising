@@ -70,6 +70,12 @@ describe("prompt update guidance", () => {
  * entity (the 2026-04-01 live-test fix removed it), so every such call fails
  * input validation. Every entityType a prompt names must be one some
  * registered tool accepts.
+ *
+ * Found while fixing "ad": ttd_campaign_setup_workflow and
+ * ttd_targeting_discovery_workflow also sent siteList, bidList and deal to
+ * ttd_create_entity / ttd_list_entities, and pointed at entity-schema://
+ * resources for them that are not registered. Bid lists now go through
+ * ttd_manage_bid_list; no tool manages site lists or deals.
  */
 describe("prompt entityType literals", () => {
   function enumValues(schema: unknown): string[] {
@@ -87,24 +93,40 @@ describe("prompt entityType literals", () => {
     }
     expect(accepted.size).toBeGreaterThan(0);
 
-    // Known-wrong, pinned so the list can only shrink: siteList / bidList /
-    // deal are not entity types any tool accepts either (bid lists go through
-    // ttd_manage_bid_list). Found while fixing "ad"; open in
-    // docs/reviews/2026-09-fleet-review/STATUS.md. When a prompt stops naming
-    // one, remove it here — the second assertion fails until you do.
-    const KNOWN_UNSUPPORTED = new Set(["siteList", "bidList", "deal"]);
-
     const unknown: string[] = [];
-    const knownSeen = new Set<string>();
     for (const [name, def] of promptRegistry) {
       const text = def.generateMessage({ advertiserId: "adv1", entityType: "campaign" });
       for (const match of text.matchAll(/"entityType":\s*"([A-Za-z]+)"/g)) {
-        if (accepted.has(match[1])) continue;
-        if (KNOWN_UNSUPPORTED.has(match[1])) knownSeen.add(match[1]);
-        else unknown.push(`${name}: ${match[1]}`);
+        if (!accepted.has(match[1])) unknown.push(`${name}: ${match[1]}`);
       }
     }
     expect(unknown).toEqual([]);
-    expect([...knownSeen].sort()).toEqual([...KNOWN_UNSUPPORTED].sort());
+  });
+});
+
+describe("prompt resource references", () => {
+  it("names only registered resources", async () => {
+    const { allResources } = await import("../../src/mcp-server/resources/index.js");
+    const registered = new Set(allResources.map((r) => r.uri));
+    const schemes = [...new Set([...registered].map((uri) => uri.split("://")[0]))];
+    expect(schemes.length).toBeGreaterThan(0);
+    // Concrete URIs only: `entity-schema://{entityType}` templates are skipped.
+    const uriPattern = new RegExp(`\\b(?:${schemes.join("|")})://[A-Za-z]+\\b`, "g");
+
+    const unknown: string[] = [];
+    for (const [name, def] of promptRegistry) {
+      const text = def.generateMessage({ advertiserId: "adv1", entityType: "campaign" });
+      for (const [uri] of text.matchAll(uriPattern)) {
+        if (!registered.has(uri)) unknown.push(`${name}: ${uri}`);
+      }
+    }
+    expect(unknown).toEqual([]);
+  });
+
+  it("sends bid lists to ttd_manage_bid_list, not ttd_create_entity", () => {
+    for (const name of ["ttd_campaign_setup_workflow", "ttd_targeting_discovery_workflow"]) {
+      const text = promptRegistry.get(name)!.generateMessage({ advertiserId: "adv1" });
+      expect(text, name).toContain("Tool: ttd_manage_bid_list");
+    }
   });
 });
