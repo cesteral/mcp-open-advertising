@@ -53,6 +53,7 @@ export const linkedInWorkflowIdByToolName: Record<string, string> = {
   // Targeting
   linkedin_search_targeting: "mcp.execute.linkedin_entity_read",
   linkedin_get_targeting_options: "mcp.execute.linkedin_entity_read",
+  linkedin_get_audience_count: "mcp.execute.linkedin_entity_read",
   // Specialized
   linkedin_duplicate_entity: "mcp.execute.linkedin_entity_update",
   linkedin_get_delivery_forecast: "mcp.execute.linkedin_entity_read",
