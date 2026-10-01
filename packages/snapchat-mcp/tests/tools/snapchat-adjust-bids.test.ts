@@ -18,6 +18,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import {
   adjustBidsLogic,
   adjustBidsResponseFormatter,
+  adjustBidsTool,
   AdjustBidsOutputSchema,
 } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
 import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
@@ -115,5 +116,39 @@ describe("snapchat_adjust_bids governance contract (effect class)", () => {
     } as any);
     expect(content[0].text).toContain("Dry run: adjusting bids on 1 ad squad(s) would succeed");
     expect(content[0].text).not.toContain("succeeded,");
+  });
+});
+
+// The service reads and writes `bid_micro` (snapchat-service.ts adjustBids);
+// the description used to say "bid_price", TikTok's field name (snapchat #19).
+describe("snapchat_adjust_bids description", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockResolveSessionServices.mockReturnValue({
+      snapchatService: {
+        adjustBids: vi.fn().mockResolvedValue({
+          results: [{ adGroupId: "ag-1", success: true, previousBid: 1, newBid: 1.5 }],
+        }),
+      },
+      boundAdAccountId: "1",
+    });
+    mockElicit.mockResolvedValue(true);
+  });
+
+  it("names the field the tool writes, not TikTok's bid_price", () => {
+    expect(adjustBidsTool.description).not.toContain("bid_price");
+    expect(adjustBidsTool.description).toContain("bid_micro");
+    expect(adjustBidsTool.description).toContain("bid_strategy");
+  });
+
+  it("asks for confirmation with the bid_micro wording", async () => {
+    await adjustBidsLogic(
+      { adAccountId: "1", adjustments: [{ adGroupId: "ag-1", bidPrice: 1.5 }], dry_run: false },
+      ctx,
+      sdk
+    );
+    expect(mockElicit).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Applying bid_micro changes." })
+    );
   });
 });
