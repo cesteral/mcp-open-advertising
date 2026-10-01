@@ -12,7 +12,6 @@ import {
 } from "@cesteral/shared";
 import {
   getEntityConfig,
-  getCanonicalEntityType,
   getEntityContract,
   interpolatePath,
   encodePathSegment,
@@ -209,7 +208,6 @@ export class AmazonDspService {
     pageSize = 25,
     context?: RequestContext
   ): Promise<{ entities: AmazonDspEntityMap[T][]; pageInfo: AmazonDspPageInfo }> {
-    const canonicalType = getCanonicalEntityType(entityType);
     const config = getEntityConfig(entityType);
 
     const params: Record<string, string> = {
@@ -233,10 +231,8 @@ export class AmazonDspService {
       context
     )) as AmazonDspRawListResponse;
 
-    const entities = ((result?.[
-      config.responseKey
-    ] as AmazonDspEntityMap[typeof canonicalType][]) ?? []) as AmazonDspEntityMap[T][];
-    const totalResults = result?.totalResults ?? 0;
+    const entities = (result?.[config.responseKey] as AmazonDspEntityMap[T][] | undefined) ?? [];
+    const totalResults = typeof result?.totalResults === "number" ? result.totalResults : undefined;
 
     return {
       entities,
@@ -355,7 +351,7 @@ export class AmazonDspService {
     )) as AmazonDspRawListResponse;
 
     const entities = (result?.response as AmazonDspAdvertiser[]) ?? [];
-    const totalResults = result?.totalResults ?? 0;
+    const totalResults = typeof result?.totalResults === "number" ? result.totalResults : undefined;
 
     return {
       entities,

@@ -31,6 +31,7 @@ describe("meta_adjust_bids governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = {
+      quotaScope: { quotaUser: "u-1" },
       getEntity: vi.fn().mockResolvedValue({ id: "as-1", name: "Ad Set 1", bid_amount: 100 }),
       updateEntity: vi.fn().mockResolvedValue({}),
     };

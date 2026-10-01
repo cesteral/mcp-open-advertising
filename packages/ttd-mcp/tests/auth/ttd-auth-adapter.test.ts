@@ -3,6 +3,7 @@ import {
   TtdDirectTokenAuthAdapter,
   parseTtdDirectTokenFromHeaders,
   getTtdDirectTokenFingerprint,
+  ttdQuotaClient,
 } from "../../src/auth/ttd-auth-adapter.js";
 
 const fetchWithTimeoutMock = vi.fn();
@@ -54,26 +55,36 @@ describe("TtdDirectTokenAuthAdapter", () => {
   });
 
   it("returns the provided token", async () => {
-    const adapter = new TtdDirectTokenAuthAdapter(
-      "direct-token-123",
-      "direct-token",
-      TEST_GRAPHQL_URL
-    );
+    const adapter = new TtdDirectTokenAuthAdapter("direct-token-123", TEST_GRAPHQL_URL);
     await expect(adapter.getAccessToken()).resolves.toBe("direct-token-123");
   });
 
-  it("defaults partnerId to direct-token", () => {
+  it("derives a non-secret rate-limit identity from the token, without a network call", () => {
     const adapter = new TtdDirectTokenAuthAdapter("direct-token-123");
-    expect(adapter.partnerId).toBe("direct-token");
+    expect(adapter.quotaClient).toBe(ttdQuotaClient("direct-token-123"));
+    expect(adapter.quotaClient).toMatch(/^[0-9a-f]{16}$/);
+    expect(adapter.quotaClient).not.toContain("direct-token-123");
+    // Not the session-binding fingerprint, nor a prefix of it: neither value
+    // can be read off the other.
+    const binding = getTtdDirectTokenFingerprint({ token: "direct-token-123" });
+    expect(binding.startsWith(adapter.quotaClient)).toBe(false);
+    expect(fetchWithTimeoutMock).not.toHaveBeenCalled();
+  });
+
+  it("gives each token its own identity and the same token the same one", () => {
+    const a = new TtdDirectTokenAuthAdapter("token-A");
+    const b = new TtdDirectTokenAuthAdapter("token-B");
+    const a2 = new TtdDirectTokenAuthAdapter(
+      "token-A",
+      "https://ext-api.sb.thetradedesk.com/graphql"
+    );
+    expect(a.quotaClient).not.toBe(b.quotaClient);
+    expect(a2.quotaClient).toBe(a.quotaClient);
   });
 
   it("validates by issuing a GraphQL query and memoizes the result", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(okResponse());
-    const adapter = new TtdDirectTokenAuthAdapter(
-      "direct-token-123",
-      "direct-token",
-      TEST_GRAPHQL_URL
-    );
+    const adapter = new TtdDirectTokenAuthAdapter("direct-token-123", TEST_GRAPHQL_URL);
 
     await adapter.validate();
     await adapter.validate();
@@ -87,20 +98,20 @@ describe("TtdDirectTokenAuthAdapter", () => {
   });
 
   it("rejects empty tokens before issuing the network call", async () => {
-    const adapter = new TtdDirectTokenAuthAdapter("", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter("", TEST_GRAPHQL_URL);
     await expect(adapter.validate()).rejects.toThrow(/empty/);
     expect(fetchWithTimeoutMock).not.toHaveBeenCalled();
   });
 
   it("rejects tokens containing whitespace before issuing the network call", async () => {
-    const adapter = new TtdDirectTokenAuthAdapter("bad token", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter("bad token", TEST_GRAPHQL_URL);
     await expect(adapter.validate()).rejects.toThrow(/whitespace/);
     expect(fetchWithTimeoutMock).not.toHaveBeenCalled();
   });
 
   it("throws Unauthorized McpError on HTTP 401", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(errorResponse(401, "Unauthorized", "bad token"));
-    const adapter = new TtdDirectTokenAuthAdapter("invalid", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter("invalid", TEST_GRAPHQL_URL);
 
     await expect(adapter.validate()).rejects.toMatchObject({
       code: -32006,
@@ -114,6 +125,21 @@ describe("TtdDirectTokenAuthAdapter", () => {
         errors: [{ message: "not authenticated", extensions: { code: "UNAUTHENTICATED" } }],
       })
     );
+    const adapter = new TtdDirectTokenAuthAdapter("invalid", TEST_GRAPHQL_URL);
+
+    await expect(adapter.validate()).rejects.toMatchObject({ code: -32006 });
+  });
+
+  // basis: vendored TTD GraphQL docs (docs/api/thetradedesk_graphql_api_docs.md,
+  // "Error Codes"): AUTHENTICATION_FAILURE is TTD's code for invalid credentials.
+  // Fleet review 2026-09, ttd GraphQL #11: with a message that does not say
+  // "auth"/"token", it used to surface as InternalError (HTTP 500).
+  it("throws Unauthorized McpError on TTD's AUTHENTICATION_FAILURE code", async () => {
+    fetchWithTimeoutMock.mockResolvedValueOnce(
+      okResponse({
+        errors: [{ message: "Access denied", extensions: { code: "AUTHENTICATION_FAILURE" } }],
+      })
+    );
     const adapter = new TtdDirectTokenAuthAdapter("invalid", "direct-token", TEST_GRAPHQL_URL);
 
     await expect(adapter.validate()).rejects.toMatchObject({ code: -32006 });
@@ -121,7 +147,7 @@ describe("TtdDirectTokenAuthAdapter", () => {
 
   it("throws InternalError McpError on non-auth HTTP failures", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(errorResponse(500, "Server Error"));
-    const adapter = new TtdDirectTokenAuthAdapter("token", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter("token", TEST_GRAPHQL_URL);
 
     await expect(adapter.validate()).rejects.toMatchObject({ code: -32603 });
   });

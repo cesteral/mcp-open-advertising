@@ -22,6 +22,12 @@ import {
   msadsTroubleshootEntityPrompt,
   getMsAdsTroubleshootEntityMessage,
 } from "./definitions/troubleshoot-entity.prompt.js";
+import {
+  crossPlatformCampaignSetupPrompt,
+  crossPlatformPerformancePrompt,
+  getCrossPlatformCampaignSetupMessage,
+  getCrossPlatformPerformanceMessage,
+} from "@cesteral/shared";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -62,6 +68,20 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: msadsTroubleshootEntityPrompt,
       generateMessage: getMsAdsTroubleshootEntityMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
+    },
+  ],
+  [
+    crossPlatformCampaignSetupPrompt.name,
+    {
+      prompt: crossPlatformCampaignSetupPrompt,
+      generateMessage: getCrossPlatformCampaignSetupMessage,
     },
   ],
 ]);

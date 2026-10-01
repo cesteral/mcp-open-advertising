@@ -103,7 +103,7 @@ describe("dv360_create_custom_bidding_algorithm", () => {
 
       expect(mockDv360Service.createEntity).toHaveBeenCalledWith(
         "customBiddingAlgorithm",
-        {},
+        { advertiserId: "adv-1" },
         expect.objectContaining({
           displayName: "Test Algorithm",
           customBiddingAlgorithmType: "SCRIPT_BASED",
@@ -142,7 +142,7 @@ describe("dv360_create_custom_bidding_algorithm", () => {
 
       expect(mockDv360Service.createEntity).toHaveBeenCalledWith(
         "customBiddingAlgorithm",
-        {},
+        { partnerId: "partner-1" },
         expect.objectContaining({
           partnerId: "partner-1",
           sharedAdvertiserIds: ["adv-1", "adv-2"],
@@ -369,7 +369,7 @@ describe("dv360_create_custom_bidding_algorithm", () => {
 
       expect(mockDv360Service.createEntity).toHaveBeenCalledWith(
         "customBiddingAlgorithm",
-        {},
+        { advertiserId: "adv-1" },
         expect.objectContaining({ displayName: "Elicited Name" }),
         expect.any(Object)
       );
@@ -399,7 +399,7 @@ describe("dv360_create_custom_bidding_algorithm", () => {
 
       expect(mockDv360Service.createEntity).toHaveBeenCalledWith(
         "customBiddingAlgorithm",
-        {},
+        { advertiserId: "elicited-adv-1" },
         expect.objectContaining({ advertiserId: "elicited-adv-1" }),
         expect.any(Object)
       );

@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -62,12 +63,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "amazon-dsp-mcp",
+    buildServerInfo("amazon-dsp-mcp", {
       version: packageJson.version,
       description:
         "Amazon DSP campaign management and reporting via the Amazon Advertising API. Supports campaign, ad group, creative, audience, profile-scoped auth, async reporting, targeting, and preview workflows.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

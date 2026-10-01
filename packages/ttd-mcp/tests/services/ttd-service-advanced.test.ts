@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 function createMockLogger() {
   return {
@@ -19,7 +18,7 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
     fetchDirect: vi.fn().mockResolvedValue({}),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   } as any;
 }
 
@@ -41,48 +40,6 @@ describe("TtdService advanced methods", () => {
     rateLimiter = createMockRateLimiter();
     service = new TtdService(createMockLogger(), rateLimiter, httpClient, TEST_GRAPHQL_URL);
     vi.clearAllMocks();
-  });
-
-  describe("testCreateOrUpdate", () => {
-    it("returns valid=true for create when API call succeeds", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1" });
-
-      const result = await service.testCreateOrUpdate("campaign", { CampaignName: "A" }, "create");
-
-      expect(result).toEqual({ valid: true });
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign");
-      expect(options.method).toBe("POST");
-    });
-
-    it("returns valid=true for update when API call succeeds", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1" });
-
-      const result = await service.testCreateOrUpdate(
-        "campaign",
-        { CampaignName: "A" },
-        "update",
-        "c1"
-      );
-
-      expect(result).toEqual({ valid: true });
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      // TTD PUT: no ID in URL, ID injected into body
-      expect(path).toBe("/campaign");
-      expect(options.method).toBe("PUT");
-      expect(JSON.parse(options.body)).toEqual({ CampaignId: "c1", CampaignName: "A" });
-    });
-
-    it("returns valid=false and error message when API call fails", async () => {
-      httpClient.fetch.mockRejectedValueOnce(
-        new McpError(JsonRpcErrorCode.InvalidRequest, "Invalid payload")
-      );
-
-      const result = await service.testCreateOrUpdate("campaign", { CampaignName: "" }, "create");
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toEqual(["Invalid payload"]);
-    });
   });
 
   describe("bulkCreateEntities", () => {

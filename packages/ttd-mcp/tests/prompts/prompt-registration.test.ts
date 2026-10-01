@@ -40,3 +40,71 @@ describe("MCP Prompt Registration", () => {
     }
   });
 });
+
+/**
+ * Fleet review ttd REST #6/#7 (prompt half): TTD's v3 PUT is partial
+ * (vendored TTD Foundations §8, "Partial Object Updates"), and echoing a GET
+ * payload back re-sends deprecated properties (410 Gone). Two prompts still
+ * told agents PUT was a full replacement and to send the whole entity.
+ */
+describe("prompt update guidance", () => {
+  it("never describes TTD PUT as full replacement", () => {
+    const offending: string[] = [];
+    for (const [name, def] of promptRegistry) {
+      const text = def.generateMessage({ advertiserId: "adv1", entityType: "campaign" });
+      if (
+        /full (entity )?replacement|entire entity is replaced|full payload|full entity with your changes/i.test(
+          text
+        )
+      ) {
+        offending.push(name);
+      }
+    }
+    expect(offending).toEqual([]);
+  });
+});
+
+/**
+ * Fleet review ttd REST #25: two prompts walked agents through
+ * ttd_create_entity / ttd_list_entities with entityType "ad". TTD has no ad
+ * entity (the 2026-04-01 live-test fix removed it), so every such call fails
+ * input validation. Every entityType a prompt names must be one some
+ * registered tool accepts.
+ */
+describe("prompt entityType literals", () => {
+  function enumValues(schema: unknown): string[] {
+    let s = schema as { _def?: { typeName?: string; innerType?: unknown; values?: string[] } };
+    while (s?._def && s._def.innerType) s = s._def.innerType as typeof s;
+    return s?._def?.typeName === "ZodEnum" ? (s._def.values ?? []) : [];
+  }
+
+  it("names only entity types a registered tool accepts", async () => {
+    const { allTools } = await import("../../src/mcp-server/tools/definitions/index.js");
+    const accepted = new Set<string>();
+    for (const tool of allTools) {
+      const shape = (tool.inputSchema as { shape?: Record<string, unknown> }).shape;
+      for (const value of enumValues(shape?.entityType)) accepted.add(value);
+    }
+    expect(accepted.size).toBeGreaterThan(0);
+
+    // Known-wrong, pinned so the list can only shrink: siteList / bidList /
+    // deal are not entity types any tool accepts either (bid lists go through
+    // ttd_manage_bid_list). Found while fixing "ad"; open in
+    // docs/reviews/2026-09-fleet-review/STATUS.md. When a prompt stops naming
+    // one, remove it here — the second assertion fails until you do.
+    const KNOWN_UNSUPPORTED = new Set(["siteList", "bidList", "deal"]);
+
+    const unknown: string[] = [];
+    const knownSeen = new Set<string>();
+    for (const [name, def] of promptRegistry) {
+      const text = def.generateMessage({ advertiserId: "adv1", entityType: "campaign" });
+      for (const match of text.matchAll(/"entityType":\s*"([A-Za-z]+)"/g)) {
+        if (accepted.has(match[1])) continue;
+        if (KNOWN_UNSUPPORTED.has(match[1])) knownSeen.add(match[1]);
+        else unknown.push(`${name}: ${match[1]}`);
+      }
+    }
+    expect(unknown).toEqual([]);
+    expect([...knownSeen].sort()).toEqual([...KNOWN_UNSUPPORTED].sort());
+  });
+});

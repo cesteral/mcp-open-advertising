@@ -199,11 +199,14 @@ Overly narrow targeting is one of the most common causes of underdelivery.
 Tool: dv360_list_assigned_targeting (dv360-mcp)
 Parameters:
 {
+  "parentType": "lineItem",
   "advertiserId": "${advertiserId}",
-  "entityType": "${entityType}",
-  "${entityType}Id": "${entityId}"
+  "lineItemId": "${entityType === "lineItem" ? entityId : "{lineItemId}"}",
+  "targetingType": "TARGETING_TYPE_GEO_REGION"
 }
 \`\`\`
+
+Call it once per targeting type you want to inspect (\`targetingType\` is required; see \`targeting-types://\`). Targeting lives on line items (and advertisers / Demand Gen ad groups): DV360 v4 has no campaign or insertion-order assigned targeting, so for an IO or campaign inspect the targeting of its line items.
 
 **Targeting red flags:**
 - [ ] **Geographic targeting** too narrow (single city vs. national)
@@ -214,7 +217,7 @@ Parameters:
 - [ ] **Keyword targeting** too specific
 - [ ] **Content/channel exclusions** blocking major inventory sources
 
-⚠️ **GOTCHA**: Targeting at the IO level combines (ANDs) with line item targeting. Check both levels for line items.
+⚠️ **GOTCHA**: Advertiser-level targeting (e.g. brand-safety exclusions) also applies to every line item. Check it with \`parentType: "advertiser"\` as well.
 
 ---
 

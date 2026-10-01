@@ -30,6 +30,29 @@ export interface MetaAuthAdapter {
   getAccessToken(): Promise<string>;
   validate(): Promise<void>;
   readonly userId: string;
+  /**
+   * The rate-limit identity of this credential — see {@link metaQuotaUser}.
+   * Never the token.
+   */
+  readonly quotaUser: string;
+}
+
+/**
+ * The rate-limit identity of a Meta session: the Graph user id `GET /me`
+ * returned in `validate()`, which is stable for the user (a long-lived token
+ * rotated by the refresh adapter keeps it) and is not a secret. Keys
+ * `meta:user:{quotaUser}` — see `services/meta/rate-limit-keys.ts`.
+ *
+ * Every session is validated before its services are built (the bearer
+ * strategy, the env-token JWT path and stdio all call `validate()` first), so
+ * the fallback is defensive: before validation, or if `/me` returned no id, it
+ * is a domain-separated one-way hash of the adapter's initial token, prefixed
+ * so it can never collide with a Graph id. Rate-limit errors echo the key, so
+ * the token itself must never appear in it.
+ */
+export function metaQuotaUser(userId: string | undefined, initialToken: string): string {
+  if (userId) return userId;
+  return `token-${fingerprintCredentials("meta-quota-user", initialToken).slice(0, 16)}`;
 }
 
 /**
@@ -71,6 +94,10 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
     return this._userId;
   }
 
+  get quotaUser(): string {
+    return metaQuotaUser(this._userId, this.accessToken);
+  }
+
   async getAccessToken(): Promise<string> {
     return this.accessToken;
   }
@@ -109,6 +136,7 @@ export class MetaRefreshTokenAdapter
   implements MetaAuthAdapter
 {
   private _userId = "";
+  private readonly initialToken: string;
 
   /**
    * 24h buffer is appropriate for Meta's 60-day long-lived tokens.
@@ -188,10 +216,15 @@ export class MetaRefreshTokenAdapter
         };
       },
     });
+    this.initialToken = initialToken;
   }
 
   get userId(): string {
     return this._userId;
+  }
+
+  get quotaUser(): string {
+    return metaQuotaUser(this._userId, this.initialToken);
   }
 
   async validate(): Promise<void> {

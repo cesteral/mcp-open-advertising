@@ -2,7 +2,12 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  resolveDatePreset,
+  DATE_PRESET_VALUES,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 
 export const CM360_REPORT_TYPE_VALUES = [
   "STANDARD",
@@ -10,6 +15,31 @@ export const CM360_REPORT_TYPE_VALUES = [
   "PATH_TO_CONVERSION",
   "FLOODLIGHT",
   "CROSS_MEDIA_REACH",
+] as const;
+
+/**
+ * `DateRange.relativeDateRange` values in dfareporting v5 Discovery (revision
+ * 20260721). Criteria are free-form records on the wire schema, so this is
+ * checked in the refinement rather than published as an enum.
+ */
+export const CM360_RELATIVE_DATE_RANGE_VALUES = [
+  "TODAY",
+  "YESTERDAY",
+  "WEEK_TO_DATE",
+  "MONTH_TO_DATE",
+  "QUARTER_TO_DATE",
+  "YEAR_TO_DATE",
+  "PREVIOUS_WEEK",
+  "PREVIOUS_MONTH",
+  "PREVIOUS_QUARTER",
+  "PREVIOUS_YEAR",
+  "LAST_7_DAYS",
+  "LAST_30_DAYS",
+  "LAST_90_DAYS",
+  "LAST_365_DAYS",
+  "LAST_24_MONTHS",
+  "LAST_14_DAYS",
+  "LAST_60_DAYS",
 ] as const;
 
 export const CM360ReportTypeSchema = z.enum(CM360_REPORT_TYPE_VALUES);
@@ -65,6 +95,19 @@ export function validateTypedCriteriaUsage(
     }
   }
 
+  const relativeDateRange = (input[expectedField]?.dateRange as Record<string, unknown> | undefined)
+    ?.relativeDateRange;
+  if (
+    relativeDateRange !== undefined &&
+    !(CM360_RELATIVE_DATE_RANGE_VALUES as readonly unknown[]).includes(relativeDateRange)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [expectedField, "dateRange", "relativeDateRange"],
+      message: `relativeDateRange ${JSON.stringify(relativeDateRange)} is not a CM360 value; use one of ${CM360_RELATIVE_DATE_RANGE_VALUES.join(", ")}`,
+    });
+  }
+
   if (input.datePreset) {
     const criteria = input[expectedField];
     const dateRange = criteria?.dateRange as Record<string, unknown> | undefined;
@@ -98,6 +141,31 @@ export function buildTypedReportConfig(input: ReportRequestInput): Record<string
     type: input.type,
     ...(mergedCriteria ? { [expectedField]: mergedCriteria } : {}),
   };
+}
+
+/**
+ * `Report` fields that make a report recurring or mailed (dfareporting v5
+ * Discovery: `Report.schedule`, `Report.delivery` with `recipients`). The
+ * ungoverned, read-only get_report tools create a report only to run it once,
+ * so they refuse these; recurring or emailed reports go through the governed
+ * `cm360_create_report_schedule`.
+ */
+const SCHEDULING_REPORT_FIELDS = ["schedule", "delivery"] as const;
+
+export function assertNoSchedulingConfig(
+  toolName: string,
+  additionalConfig: Record<string, unknown> | undefined
+): void {
+  const present = SCHEDULING_REPORT_FIELDS.filter(
+    (field) => additionalConfig?.[field] !== undefined
+  );
+  if (present.length > 0) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `${toolName} runs a report once and does not accept additionalConfig.${present.join(" / additionalConfig.")}. ` +
+        "Use cm360_create_report_schedule for a recurring or emailed report."
+    );
+  }
 }
 
 export function getCriteriaFieldForType(type: CM360ReportType): CriteriaField {

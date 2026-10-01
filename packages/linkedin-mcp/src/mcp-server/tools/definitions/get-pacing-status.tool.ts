@@ -10,7 +10,7 @@ const TOOL_NAME = "linkedin_get_pacing_status";
 const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
   "Client-side pacing calculator — does NOT call the LinkedIn API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
-  "To populate spend, first call \`linkedin_get_analytics\`; to populate budget and flight dates, first call \`linkedin_get_entity\` for the campaign.";
+  "To populate spend, first call `linkedin_get_analytics`; to populate budget and flight dates, first call `linkedin_get_entity` for the campaign.";
 
 /**
  * Input schema

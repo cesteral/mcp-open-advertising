@@ -10,6 +10,7 @@ import { createOperationContext } from "@cesteral/shared";
 import { ErrorHandler, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   createDefinitionHashResolver,
@@ -74,12 +75,11 @@ export async function createMcpServer(
   logger.info({ resourceCount: resourceRegistry.getResourceCount() }, "Registered MCP resources");
 
   const server = new McpServer(
-    {
-      name: "dv360-mcp",
+    buildServerInfo("dv360-mcp", {
       version: packageJson.version,
       description:
         "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

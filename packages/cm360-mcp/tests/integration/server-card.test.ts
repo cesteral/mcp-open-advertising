@@ -63,4 +63,26 @@ describe("/.well-known/mcp/server-card.json (cm360-mcp)", () => {
       await shutdown();
     }
   });
+
+  // Every tool that can write PLACEMENT_STATUS_PERMANENTLY_ARCHIVED is terminal
+  // for that value: update_entity and bulk_update_entities (both PATCH arbitrary
+  // fields) and bulk_update_status (#237 triage).
+  it("declares every tool that can permanently archive a placement terminal", async () => {
+    const { app, shutdown } = createMcpHttpServer(config, logger);
+    try {
+      const body = await (await app.request("/.well-known/mcp/server-card.json")).json();
+      const terminal = body.operational.rollback.terminalOperations.map(
+        (t: { tool: string }) => t.tool
+      );
+      expect(terminal).toEqual(
+        expect.arrayContaining([
+          "cm360_update_entity",
+          "cm360_bulk_update_entities",
+          "cm360_bulk_update_status",
+        ])
+      );
+    } finally {
+      await shutdown();
+    }
+  });
 });

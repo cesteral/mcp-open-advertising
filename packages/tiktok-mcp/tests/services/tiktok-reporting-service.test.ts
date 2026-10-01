@@ -21,9 +21,12 @@ const mockRateLimiter = {
 const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 const mockHttpClient = {
+  // The session's per-token rate-limit identity (rate-limit-keys.ts).
+  quotaClient: "0123456789abcdef",
   post: vi.fn(),
   get: vi.fn(),
 };
+const REPORTING_KEY = "tiktok:token:0123456789abcdef:reporting";
 
 describe("TikTokReportingService", () => {
   let service: TikTokReportingService;
@@ -300,7 +303,7 @@ describe("TikTokReportingService", () => {
         downloadUrl: "https://ads.tiktok.com/wsos_v2/statistics/object/abc?expire=1&sign=2",
         fileName: "report_07_26.csv",
       });
-      expect(mockRateLimiter.consume).toHaveBeenCalledWith("tiktok:reporting");
+      expect(mockRateLimiter.consume).toHaveBeenCalledWith(REPORTING_KEY);
     });
 
     it("refuses an XLSX output, which this server cannot parse", async () => {
@@ -329,7 +332,7 @@ describe("TikTokReportingService", () => {
     await service.checkReportStatus("task-rl");
 
     expect(mockRateLimiter.consume).toHaveBeenCalledTimes(1);
-    expect(mockRateLimiter.consume).toHaveBeenCalledWith("tiktok:reporting");
+    expect(mockRateLimiter.consume).toHaveBeenCalledWith(REPORTING_KEY);
   });
 
   it("getReportBreakdowns appends breakdown dimensions", async () => {

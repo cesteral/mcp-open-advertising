@@ -51,8 +51,8 @@ import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/
 import { adjustBidsLogic } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
 import { bidListBulkLogic } from "../../src/mcp-server/tools/definitions/bulk-manage-bid-lists.tool.js";
 
-const PARTNER = "partner-1";
-const KEY = `ttd:${PARTNER}`;
+const QUOTA_CLIENT = "client-1";
+const KEY = `ttd:client:${QUOTA_CLIENT}`;
 const ctx = { requestId: "req-1" } as any;
 const sdk = { sessionId: "s-1" } as any;
 
@@ -63,7 +63,7 @@ let fetch: ReturnType<typeof vi.fn>;
 let fetchDirect: ReturnType<typeof vi.fn>;
 
 /**
- * Reserve `n` tokens on the partner key the way earlier in-flight calls would
+ * Reserve `n` tokens on the session's key the way earlier in-flight calls would
  * (60 admitted now, the rest queued at +60s / +120s). Not awaited: a queued
  * caller holds its reservation while it sleeps.
  */
@@ -104,7 +104,7 @@ beforeEach(() => {
   const service = new TtdService(
     { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
     limiter,
-    { partnerId: PARTNER, fetch, fetchDirect } as any
+    { quotaClient: QUOTA_CLIENT, fetch, fetchDirect } as any
   );
   mockResolveSessionServices.mockReturnValue({ ttdService: service });
   for (const prompt of Object.values(elicit)) prompt.mockResolvedValue(true);

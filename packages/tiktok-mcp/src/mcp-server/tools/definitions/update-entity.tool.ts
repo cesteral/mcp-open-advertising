@@ -10,7 +10,12 @@ import {
   resolveTiktokDispatchedCapability,
   symbolicValidate,
 } from "../utils/dry-run.js";
-import { captureTiktokSnapshot, snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
+import {
+  captureTiktokEntity,
+  captureTiktokSnapshot,
+  snapshotFromTiktokEntity,
+} from "../utils/capture-snapshot.js";
+import { adUpdateShapeErrors } from "../../../services/tiktok/tiktok-service.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -113,7 +118,10 @@ export async function updateEntityLogic(
       "`data` must contain at least one field to update a TikTok entity."
     );
   }
-  const updateValidationErrors = symbolicValidate(input.data);
+  const updateValidationErrors = [
+    ...symbolicValidate(input.data),
+    ...(input.entityType === "ad" ? adUpdateShapeErrors(input.entityId, input.data) : []),
+  ];
   if (updateValidationErrors.length > 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
@@ -123,18 +131,21 @@ export async function updateEntityLogic(
 
   // R3-U4: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined.
-  const before = await captureTiktokSnapshot(
-    tiktokService,
-    input.entityType,
-    input.entityId,
-    context
-  );
+  const pre = await captureTiktokEntity(tiktokService, input.entityType, input.entityId, context);
+  const before = pre?.snapshot;
 
+  // TikTok's ad/update/ body needs the ad's adgroup_id (AdUpdateBody); the
+  // pre-read already has it, so the service need not read the ad again. When
+  // the pre-read failed, the service reads it itself.
+  const preAdgroupId = pre?.entity.adgroup_id;
   const updated = await tiktokService.updateEntity(
     input.entityType as TikTokEntityType,
     input.entityId,
     input.data,
-    context
+    context,
+    input.entityType === "ad" && preAdgroupId != null && String(preAdgroupId)
+      ? { adgroupId: String(preAdgroupId) }
+      : undefined
   );
 
   // R3-U4: the TikTok update POST returns the updated entity — normalize it

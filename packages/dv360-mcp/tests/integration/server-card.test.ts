@@ -63,4 +63,25 @@ describe("/.well-known/mcp/server-card.json (dv360-mcp)", () => {
       await shutdown();
     }
   });
+
+  // Fleet review dv360 #18: every tool that can set ENTITY_STATUS_ARCHIVED is
+  // terminal for that value, bulk_update_entities included.
+  it("declares every tool that can archive an entity terminal", async () => {
+    const { app, shutdown } = createMcpHttpServer(config, logger);
+    try {
+      const body = await (await app.request("/.well-known/mcp/server-card.json")).json();
+      const terminal = body.operational.rollback.terminalOperations.map(
+        (t: { tool: string }) => t.tool
+      );
+      expect(terminal).toEqual(
+        expect.arrayContaining([
+          "dv360_update_entity",
+          "dv360_bulk_update_status",
+          "dv360_bulk_update_entities",
+        ])
+      );
+    } finally {
+      await shutdown();
+    }
+  });
 });

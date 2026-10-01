@@ -107,7 +107,7 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
-  // One POST per item, one token each on `ttd:${partnerId}`
+  // One POST per item, one token each on `ttd:client:{quotaClient}`
   // (TtdService.bulkCreateEntities → createEntity).
   const { ttdService } = resolveSessionServices(sdkContext);
   const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.items.length, [1]);

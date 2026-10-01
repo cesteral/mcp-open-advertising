@@ -60,7 +60,9 @@ import { deleteEntityLogic } from "../../src/mcp-server/tools/definitions/delete
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 const ACCOUNT = "acct-1";
-const KEY = "snapchat:default";
+/** The session's per-user bucket (`snapchat:user:{me.id}`, rate-limit-keys.ts). */
+const PRINCIPAL = "user:3b8f2c1e-0000-4000-8000-000000000001";
+const KEY = `snapchat:${PRINCIPAL}`;
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `id-${i}`);
 
@@ -92,10 +94,12 @@ function fakeWrite(_path: string, body: Record<string, unknown[]>) {
   };
 }
 
-let http: Record<"get" | "post" | "put" | "delete", ReturnType<typeof vi.fn>>;
+let http: Record<"get" | "post" | "put" | "delete", ReturnType<typeof vi.fn>> & {
+  quotaPrincipal?: string;
+};
 
 function expectNoUpstreamOrPrompt() {
-  for (const m of Object.values(http)) expect(m).not.toHaveBeenCalled();
+  for (const m of [http.get, http.post, http.put, http.delete]) expect(m).not.toHaveBeenCalled();
   for (const m of [mockElicitStatus, mockElicitMutation, mockElicitBid, mockElicitDelete]) {
     expect(m).not.toHaveBeenCalled();
   }
@@ -124,6 +128,7 @@ describe("snapchat bulk capacity pre-check (real default limiter: 10/min, 120s b
     vi.clearAllMocks();
     rateLimiter.clear();
     http = {
+      quotaPrincipal: PRINCIPAL,
       get: vi.fn().mockImplementation(async (path: string) => fakeGet(path)),
       post: vi.fn().mockImplementation(async (p: string, b: any) => fakeWrite(p, b)),
       put: vi.fn().mockImplementation(async (p: string, b: any) => fakeWrite(p, b)),

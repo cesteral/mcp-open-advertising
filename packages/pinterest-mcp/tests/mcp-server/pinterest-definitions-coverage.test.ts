@@ -13,6 +13,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 const pinterestService = {
+  quotaScope: { quotaUser: "u-1" },
   listEntities: vi.fn(async () => ({
     entities: [{ id: "123", name: "Campaign A" }],
     pageInfo: { bookmark: null },
@@ -81,6 +82,15 @@ const pinterestService = {
       status: "succeeded",
     })),
   },
+  // The metered media methods upload_video calls (PinterestService), routed to
+  // the client mocks above.
+  registerMediaUpload: vi.fn(async (_filters: unknown, ctx: unknown) =>
+    pinterestService.client.post("/v5/media", { media_type: "video" }, ctx)
+  ),
+  uploadMediaFile: vi.fn(async () => undefined),
+  getMediaStatus: vi.fn(async (_filters: unknown, mediaId: string) =>
+    pinterestService.client.get(`/v5/media/${mediaId}`)
+  ),
 };
 
 const pinterestReportingService = {

@@ -118,8 +118,30 @@ export interface AmazonDspAdvertiser {
 
 export interface AmazonDspPageInfo {
   startIndex: number;
+  /** The page size that was *requested* — not the number of rows returned. */
   count: number;
-  totalResults: number;
+  /** Amazon's `totalResults`, or `undefined` when the response omitted it. */
+  totalResults: number | undefined;
+}
+
+/**
+ * Offset-pagination cursor for an Amazon DSP list page: the next `startIndex`,
+ * or `null` on the last page.
+ *
+ * Advances by the rows actually returned. When Amazon reports `totalResults`
+ * it decides; when it omits it, a full page means "there may be more" — an
+ * absent total used to be read as 0, which silently ended pagination after
+ * page 1 (fleet review amazon-dsp #13).
+ */
+export function nextAmazonDspStartIndex(
+  pageInfo: AmazonDspPageInfo,
+  returned: number
+): number | null {
+  if (returned === 0) return null;
+  const next = pageInfo.startIndex + returned;
+  const hasMore =
+    pageInfo.totalResults !== undefined ? next < pageInfo.totalResults : returned >= pageInfo.count;
+  return hasMore ? next : null;
 }
 
 export interface AmazonDspListResponse<T> {

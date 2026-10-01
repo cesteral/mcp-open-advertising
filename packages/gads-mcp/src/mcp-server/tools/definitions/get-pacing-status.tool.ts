@@ -131,6 +131,9 @@ export function getPacingStatusResponseFormatter(
         : result.pacing.status === "BEHIND"
           ? "[BEHIND]"
           : "[CRITICAL]";
+  // Amounts are in the caller's `currency`, not always dollars: print the ISO
+  // code rather than a hard-coded "$" (as ttd-mcp does).
+  const money = (amount: string) => `${amount} ${result.budget.currency}`;
 
   return [
     {
@@ -140,9 +143,9 @@ export function getPacingStatusResponseFormatter(
 ${statusEmoji} Status: ${result.pacing.status}
 
 Budget:
-• Total: $${result.budget.total.toLocaleString()}
-• Spent: $${result.budget.spent.toLocaleString()} (${result.pacing.actualSpendPercent.toFixed(1)}%)
-• Remaining: $${result.budget.remaining.toLocaleString()}
+• Total: ${money(result.budget.total.toLocaleString())}
+• Spent: ${money(result.budget.spent.toLocaleString())} (${result.pacing.actualSpendPercent.toFixed(1)}%)
+• Remaining: ${money(result.budget.remaining.toLocaleString())}
 
 Flight:
 • ${result.flight.startDate} to ${result.flight.endDate}
@@ -153,7 +156,7 @@ Pacing Analysis:
 • Expected Spend: ${result.pacing.expectedSpendPercent.toFixed(1)}%
 • Actual Spend: ${result.pacing.actualSpendPercent.toFixed(1)}%
 • Pacing Ratio: ${result.pacing.pacingRatio.toFixed(2)}x
-• Projected End Spend: $${result.pacing.projectedEndSpend.toFixed(2)}`,
+• Projected End Spend: ${money(result.pacing.projectedEndSpend.toFixed(2))}`,
     },
   ];
 }

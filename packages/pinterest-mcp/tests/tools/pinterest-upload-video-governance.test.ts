@@ -54,8 +54,17 @@ describe("pinterest_upload_video governance contract (effect class)", () => {
         status: "succeeded",
       }),
     };
+    // PinterestService's metered media methods (each Pinterest API call draws
+    // its limiter tokens — covered by pinterest-wire-requests.test.ts), routed
+    // to the client mocks so the request shapes stay asserted here.
     mockResolveSessionServices.mockReturnValue({
-      pinterestService: { client },
+      pinterestService: {
+        registerMediaUpload: (_filters: unknown, c: unknown) =>
+          client.post("/v5/media", { media_type: "video" }, c),
+        uploadMediaFile: client.uploadToS3,
+        getMediaStatus: (_filters: unknown, mediaId: string, c: unknown) =>
+          client.get(`/v5/media/${mediaId}`, undefined, c),
+      },
       boundAdAccountId: "1234567890",
     });
   });

@@ -134,7 +134,7 @@ For more granular analysis, compose a custom Bid Manager query:
   "tool": "dbm_run_custom_query",
   "params": {
     "reportType": "STANDARD",
-    "timeRange": "LAST_14_DAYS",
+    "dateRange": { "preset": "LAST_14_DAYS" },
     "metrics": [
       "METRIC_IMPRESSIONS",
       "METRIC_CLICKS",
@@ -142,7 +142,7 @@ For more granular analysis, compose a custom Bid Manager query:
       "METRIC_TOTAL_CONVERSIONS",
       "METRIC_REVENUE_ADVERTISER"
     ],
-    "dimensions": [
+    "groupBys": [
       "FILTER_LINE_ITEM"
     ],
     "filters": [
@@ -151,7 +151,7 @@ For more granular analysis, compose a custom Bid Manager query:
         "value": "${advertiserId}"
       },
       {
-        "type": "FILTER_CAMPAIGN",
+        "type": "FILTER_MEDIA_PLAN",
         "value": "${campaignId}"
       }
     ]

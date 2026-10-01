@@ -26,6 +26,7 @@ export const ReportTypeSchema = z.enum([
   "YOUTUBE_PROGRAMMATIC_GUARANTEED", // YouTube PG reports
   "REACH", // Reach reports
   "UNIQUE_REACH_AUDIENCE", // Unique reach by audience
+  "INVENTORY_AVAILABILITY", // Inventory availability (v2 Discovery, not deprecated)
   "REPORT_TYPE_UNSPECIFIED", // Default/unset
 ]);
 export type ReportType = z.infer<typeof ReportTypeSchema>;

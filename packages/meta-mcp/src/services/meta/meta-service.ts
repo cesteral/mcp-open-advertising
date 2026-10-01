@@ -4,12 +4,23 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import { nextPageCursor } from "./paging.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import {
+  type RequestContext,
+  executeBulkConcurrent,
+  JsonRpcErrorCode,
+  McpError,
+} from "@cesteral/shared";
 import {
   getEntityConfig,
   type MetaEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { Logger } from "pino";
+import {
+  consumeMetaAccountQuota,
+  consumeMetaUserQuota,
+  normalizeMetaAdAccountId,
+  type MetaQuotaScope,
+} from "./rate-limit-keys.js";
 import type {
   MetaCampaign,
   MetaAdSet,
@@ -52,9 +63,13 @@ export class MetaService {
     private readonly logger: Logger
   ) {}
 
-  /** Expose the underlying Graph API client for direct use (e.g., media uploads). */
-  get graphApiClient(): MetaGraphApiClient {
-    return this.httpClient;
+  /**
+   * This session's rate-limit scope — the Graph user its calls are counted
+   * against (see `rate-limit-keys.ts`). The bulk capacity pre-check projects a
+   * batch against exactly the buckets this service's calls consume from.
+   */
+  get quotaScope(): MetaQuotaScope {
+    return { quotaUser: this.httpClient.quotaUser };
   }
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
@@ -70,9 +85,9 @@ export class MetaService {
   ): Promise<{ entities: MetaEntityMap[T][]; nextCursor?: string }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`meta:${adAccountId}`);
+    await consumeMetaAccountQuota(this.rateLimiter, this.httpClient, adAccountId, META_READ_TOKENS);
 
-    const actId = this.normalizeAccountId(adAccountId);
+    const actId = normalizeMetaAdAccountId(adAccountId);
     const params: Record<string, string> = {};
 
     if (fields?.length) {
@@ -121,7 +136,7 @@ export class MetaService {
   ): Promise<MetaEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_READ_TOKENS);
 
     const params: Record<string, string> = {};
 
@@ -143,9 +158,14 @@ export class MetaService {
     const config = getEntityConfig(entityType);
 
     // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`meta:${adAccountId}`, META_WRITE_TOKENS);
+    await consumeMetaAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      adAccountId,
+      META_WRITE_TOKENS
+    );
 
-    const actId = this.normalizeAccountId(adAccountId);
+    const actId = normalizeMetaAdAccountId(adAccountId);
 
     return this.httpClient.post(`/${actId}/${config.edge}`, data, context) as Promise<
       MetaEntityMap[T]
@@ -158,14 +178,14 @@ export class MetaService {
     context?: RequestContext
   ): Promise<unknown> {
     // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`meta:default`, META_WRITE_TOKENS);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_WRITE_TOKENS);
 
     // Meta uses POST with PATCH semantics for updates
     return this.httpClient.post(`/${entityId}`, data, context);
   }
 
   async deleteEntity(entityId: string, context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`, 3);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_WRITE_TOKENS);
 
     return this.httpClient.delete(`/${entityId}`, context);
   }
@@ -254,7 +274,7 @@ export class MetaService {
     options?: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`, 3);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_WRITE_TOKENS);
 
     return this.httpClient.post(`/${entityId}/copies`, options, context);
   }
@@ -270,7 +290,7 @@ export class MetaService {
     after?: string,
     context?: RequestContext
   ): Promise<{ accounts: MetaAdAccount[]; nextCursor?: string }> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_READ_TOKENS);
 
     const defaultFields = [
       "id",
@@ -317,8 +337,20 @@ export class MetaService {
 
   /**
    * Get audience size / delivery estimate.
-   * Tries /reachestimate first (returns estimated_audience_size),
-   * falls back to /delivery_estimate on error (more fields but requires optimization_goal).
+   *
+   * Tries `GET /act_{id}/reachestimate` first (only `targeting_spec` is
+   * required; returns `users_lower_bound` / `users_upper_bound` /
+   * `estimate_ready` — AdAccountReachEstimate), then falls back to
+   * `GET /act_{id}/delivery_estimate`, which REQUIRES `optimization_goal`
+   * (AdAccountDeliveryEstimate: `estimate_mau_lower_bound` /
+   * `estimate_mau_upper_bound` / …). Both per Meta's
+   * facebook-business-sdk-codegen api_specs (AdAccount.json).
+   *
+   * The fallback runs only when it can help: the reachestimate call was
+   * rejected as an invalid request (not an auth, permission, throttle or
+   * upstream failure — those would fail the same way again, and retrying them
+   * would only hide the real reason) AND an `optimizationGoal` was supplied.
+   * Each upstream call draws its own limiter token.
    */
   async getDeliveryEstimate(
     adAccountId: string,
@@ -326,31 +358,34 @@ export class MetaService {
     optimizationGoal?: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:${adAccountId}`);
+    await consumeMetaAccountQuota(this.rateLimiter, this.httpClient, adAccountId, META_READ_TOKENS);
 
-    const actId = this.normalizeAccountId(adAccountId);
+    const actId = normalizeMetaAdAccountId(adAccountId);
 
-    // Try reachestimate first — lighter endpoint, no optimization_goal needed
+    const targeting = JSON.stringify(targetingSpec);
     try {
-      const reachParams: Record<string, string> = {
-        targeting_spec: JSON.stringify(targetingSpec),
-      };
-      const result = await this.httpClient.get(`/${actId}/reachestimate`, reachParams, context);
-      return result;
+      return await this.httpClient.get(
+        `/${actId}/reachestimate`,
+        { targeting_spec: targeting },
+        context
+      );
     } catch (err) {
-      this.logger.debug({ err }, "reachestimate failed, falling back to delivery_estimate");
+      const rejectedAsInvalid =
+        err instanceof McpError && err.code === JsonRpcErrorCode.InvalidRequest;
+      if (optimizationGoal === undefined || !rejectedAsInvalid) throw err;
+      this.logger.debug({ err }, "reachestimate rejected, falling back to delivery_estimate");
+      await consumeMetaAccountQuota(
+        this.rateLimiter,
+        this.httpClient,
+        adAccountId,
+        META_READ_TOKENS
+      );
+      return this.httpClient.get(
+        `/${actId}/delivery_estimate`,
+        { targeting_spec: targeting, optimization_goal: optimizationGoal },
+        context
+      );
     }
-
-    // Fallback to delivery_estimate
-    const params: Record<string, string> = {
-      targeting_spec: JSON.stringify(targetingSpec),
-    };
-
-    if (optimizationGoal) {
-      params.optimization_goal = optimizationGoal;
-    }
-
-    return this.httpClient.get(`/${actId}/delivery_estimate`, params, context);
   }
 
   // ─── Budget Schedules ─────────────────────────────────────────
@@ -360,13 +395,13 @@ export class MetaService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`, 3);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_WRITE_TOKENS);
 
     return this.httpClient.post(`/${campaignId}/budget_schedules`, data, context);
   }
 
   async listBudgetSchedules(campaignId: string, context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_READ_TOKENS);
 
     return this.httpClient.get(`/${campaignId}/budget_schedules`, {}, context);
   }
@@ -374,14 +409,83 @@ export class MetaService {
   // ─── Ad Previews ───────────────────────────────────────────────
 
   async getAdPreviews(adId: string, adFormat: string, context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient, META_READ_TOKENS);
 
     return this.httpClient.get(`/${adId}/previews`, { ad_format: adFormat }, context);
   }
 
-  // ─── Internal Helpers ─────────────────────────────────────────
+  // ─── Media Uploads ─────────────────────────────────────────────
 
-  private normalizeAccountId(adAccountId: string): string {
-    return adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  /**
+   * POST the image bytes to `/act_{id}/adimages` (multipart). One write on the
+   * account's bucket: an upload creates an AdImage, and Meta scores a write
+   * as 3 points (see `rate-limit-keys.ts`).
+   */
+  async uploadAdImage(
+    adAccountId: string,
+    fields: Record<string, string>,
+    buffer: Buffer,
+    filename: string,
+    contentType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeMetaAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      adAccountId,
+      META_WRITE_TOKENS
+    );
+    return this.httpClient.postMultipart(
+      `/${normalizeMetaAdAccountId(adAccountId)}/adimages`,
+      fields,
+      "bytes",
+      buffer,
+      filename,
+      contentType,
+      context
+    );
+  }
+
+  /**
+   * POST the video bytes to `/act_{id}/advideos` (multipart `source`). One
+   * write on the account's bucket.
+   */
+  async uploadAdVideo(
+    adAccountId: string,
+    fields: Record<string, string>,
+    buffer: Buffer,
+    filename: string,
+    contentType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeMetaAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      adAccountId,
+      META_WRITE_TOKENS
+    );
+    return this.httpClient.postMultipart(
+      `/${normalizeMetaAdAccountId(adAccountId)}/advideos`,
+      fields,
+      "source",
+      buffer,
+      filename,
+      contentType,
+      context
+    );
+  }
+
+  /**
+   * One processing-status read of an uploaded video (`GET /{video_id}?fields=status`),
+   * on the bucket of the account it was uploaded to. Each poll is its own
+   * Graph call and draws its own read token.
+   */
+  async getVideoStatus(
+    adAccountId: string,
+    videoId: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeMetaAccountQuota(this.rateLimiter, this.httpClient, adAccountId, META_READ_TOKENS);
+    return this.httpClient.get(`/${videoId}`, { fields: "status" }, context);
   }
 }

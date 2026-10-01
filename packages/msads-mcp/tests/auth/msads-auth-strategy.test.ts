@@ -7,7 +7,8 @@ vi.mock("@cesteral/shared", async () => {
     ...actual,
     fetchWithTimeout: vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ UserId: 12345, UserName: "testuser" }),
+      // basis: MicrosoftDocs/Advertising customer-management-service/getuser.md Response JSON.
+      json: async () => ({ User: { Id: 12345, UserName: "testuser" }, CustomerRoles: [] }),
     }),
   };
 });

@@ -50,30 +50,33 @@ const simplePrompt: PromptDefinitionForFactory = {
 };
 
 // ---------------------------------------------------------------------------
-// Prompt — test_prompt_with_arguments (name required, greeting optional)
+// Prompt — test_prompt_with_arguments (arg1 required, arg2 optional)
+//
+// The argument names are the harness's, not ours: `prompts-get-with-args`
+// calls this prompt with `{ arg1, arg2 }` and fails unless both values appear
+// in the rendered messages. The fixture used to declare `name` / `greeting`,
+// so the SDK rejected the harness's call for a missing required argument and
+// the scenario could not pass.
 // ---------------------------------------------------------------------------
 
 const promptWithArguments: PromptDefinitionForFactory = {
   name: "test_prompt_with_arguments",
   description:
-    "A prompt with arguments for MCP conformance testing. Accepts a name and optional greeting.",
+    "A prompt with arguments for MCP conformance testing. Substitutes arg1 and optional arg2.",
   arguments: [
     {
-      name: "name",
-      description: "The name to greet",
+      name: "arg1",
+      description: "First test argument",
       required: true,
     },
     {
-      name: "greeting",
-      description: "Optional greeting prefix (defaults to 'Hello')",
+      name: "arg2",
+      description: "Second test argument",
       required: false,
     },
   ],
-  generateMessage: (args?: Record<string, string>): string => {
-    const name = args?.name || "World";
-    const greeting = args?.greeting || "Hello";
-    return `${greeting}, ${name}! This is a templated prompt response.`;
-  },
+  generateMessage: (args?: Record<string, string>): string =>
+    `Prompt with arguments: arg1='${args?.arg1 ?? ""}', arg2='${args?.arg2 ?? ""}'`,
 };
 
 export const conformancePrompts: PromptDefinitionForFactory[] = [simplePrompt, promptWithArguments];

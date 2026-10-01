@@ -242,6 +242,13 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
               ],
             },
           },
+          // 5. Legacy titled single-select (`enumNames`). The scenario checks
+          //    for this field by name; without it the fifth variant fails.
+          legacyEnum: {
+            type: "string",
+            enum: ["opt1", "opt2", "opt3"],
+            enumNames: ["Option One", "Option Two", "Option Three"],
+          },
         },
         required: ["untitledSingle", "titledSingle", "untitledMulti", "titledMulti"],
       },

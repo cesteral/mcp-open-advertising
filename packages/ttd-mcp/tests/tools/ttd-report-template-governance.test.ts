@@ -105,6 +105,25 @@ describe("ttd report-template + execution governance contract (effect class)", (
       expect(() => CreateReportTemplateOutputSchema.parse(result)).not.toThrow();
     });
 
+    // Fleet review ttd REST #15: the id comes from "newest template visible to
+    // this user". A template created concurrently by someone else must not be
+    // recorded as this call's template in the governed effect.
+    it("does not claim the newest template's id when its name is not ours", async () => {
+      ttdService.graphqlQuery
+        .mockResolvedValueOnce({ data: { myReportsTemplateCreate: { data: "ok", errors: null } } })
+        .mockResolvedValueOnce({
+          data: {
+            myReportsReportTemplates: { nodes: [{ id: "tpl-other", name: "Another Template" }] },
+          },
+        });
+      const result = await createReportTemplateLogic({ ...input } as any, ctx, sdk);
+      expect(result.templateId).toBeUndefined();
+      expect(result.effect).toEqual({
+        effectKind: "report_template_created",
+        summary: { template_name: "My Template" },
+      });
+    });
+
     it("execute omits the effect when the mutation returned errors", async () => {
       ttdService.graphqlQuery.mockResolvedValueOnce({
         data: { myReportsTemplateCreate: { data: null, errors: [{ message: "denied" }] } },

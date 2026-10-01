@@ -29,6 +29,7 @@ import {
   ENTITY_KIND_MAP,
   type TiktokServiceLike,
 } from "./capture-snapshot.js";
+import { adUpdateShapeErrors } from "../../../services/tiktok/tiktok-service.js";
 
 export type { TiktokServiceLike };
 
@@ -183,7 +184,12 @@ export async function runTiktokUpdateDryRun(
   service: TiktokServiceLike,
   context: RequestContext
 ): Promise<DryRunResult> {
-  const validationErrors = symbolicValidate(input.data);
+  const validationErrors = [
+    ...symbolicValidate(input.data),
+    // An ad update must map onto AdUpdateBody (creatives[0].ad_id = entityId);
+    // the execute path refuses the same payloads (TikTokService.updateEntity).
+    ...(input.entityType === "ad" ? adUpdateShapeErrors(input.entityId, input.data) : []),
+  ];
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";

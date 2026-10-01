@@ -13,7 +13,7 @@ export function getTtdCreativeSetupWorkflowMessage(_args?: Record<string, string
   return `# TTD Creative Setup Workflow
 
 ## Overview
-TTD Creative workflow: Create Creative entity → Attach to Ad Group via Ad
+TTD Creative workflow: Create Creative entity → Attach it to an Ad Group. TTD has no standalone \`ad\` entity: an "ad" is an ad group plus the creatives listed in its \`RTBAttributes.CreativeIds\`.
 
 ---
 
@@ -75,19 +75,25 @@ ttd_get_ad_preview({
 })
 \`\`\`
 
-## Step 5: Create Ad linking Creative to Ad Group
+## Step 5: Attach the Creative to an Ad Group
+
+Set the ad group's \`RTBAttributes.CreativeIds\`. The array **replaces** the current one, so read the ad group first (\`ttd_get_entity\`) and include its existing creative IDs:
 
 \`\`\`json
-ttd_create_entity({
-  "entityType": "ad",
+ttd_update_entity({
+  "entityType": "adGroup",
+  "entityId": "{your_adgroup_id}",
+  "advertiserId": "{your_advertiser_id}",
+  "campaignId": "{your_campaign_id}",
   "data": {
-    "AdGroupId": "{your_adgroup_id}",
-    "CreativeId": "{creativeId_from_step_2}",
-    "AdName": "Your Ad Name",
-    "IsEnabled": false
+    "RTBAttributes": {
+      "CreativeIds": ["{existing_creative_ids}", "{creativeId_from_step_2}"]
+    }
   }
 })
 \`\`\`
+
+Alternatively, TTD's \`creativeAdGroupAssociate\` GraphQL mutation (via \`ttd_graphql_query\`) associates a creative with ad groups without rewriting the array.
 
 ## Common Errors
 
@@ -101,8 +107,8 @@ ttd_create_entity({
 ## Success Criteria
 - [ ] Creative created and ID obtained
 - [ ] Preview URL validated
-- [ ] Ad created linking creative to ad group
-- [ ] Ad enabled when ready to serve
+- [ ] Creative attached to the ad group (\`RTBAttributes.CreativeIds\`)
+- [ ] Ad group enabled when ready to serve
 
 `;
 }

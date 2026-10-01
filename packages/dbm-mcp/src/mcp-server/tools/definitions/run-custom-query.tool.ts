@@ -39,7 +39,7 @@ export const RunCustomQueryInputSchema = z
       .string()
       .default("STANDARD")
       .describe(
-        "Report type: STANDARD (default), FLOODLIGHT, YOUTUBE, GRP, REACH, UNIQUE_REACH_AUDIENCE"
+        "Report type: STANDARD (default), FLOODLIGHT, YOUTUBE, GRP, REACH, UNIQUE_REACH_AUDIENCE, INVENTORY_AVAILABILITY. See report-types://all"
       ),
 
     groupBys: z
@@ -101,6 +101,16 @@ export const RunCustomQueryInputSchema = z
   .merge(ReportViewInputSchema)
   .superRefine((input, ctx) => {
     addQueryValidationIssues(ctx, input);
+    if ("startDate" in input.dateRange) {
+      const { startDate, endDate } = input.dateRange;
+      if (startDate > endDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dateRange", "endDate"],
+          message: `endDate (${endDate}) is before startDate (${startDate})`,
+        });
+      }
+    }
   })
   .describe("Parameters for executing a custom Bid Manager query");
 

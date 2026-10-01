@@ -13,6 +13,7 @@ import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 import type { BulkCapacityCheck } from "@cesteral/shared";
 import { dv360BulkCapacityChecks } from "./bulk-capacity-checks.js";
+import { consumeDv360Quota } from "./rate-limit-keys.js";
 
 // ============================================================================
 // Response Validation
@@ -100,6 +101,41 @@ function deepMerge<T extends Record<string, unknown>>(
  * experiences high latency" (used for `lineItems.duplicate`).
  */
 export const DV360_HIGH_LATENCY_TIMEOUT_MS = 120_000;
+
+/**
+ * The generic create / patch / delete calls that v4 Discovery (revision
+ * 20260928) flags "This method regularly experiences high latency. We
+ * recommend increasing your default timeout": `advertisers.create`,
+ * `advertisers.lineItems.patch` and `advertisers.campaigns.delete`. The 10s
+ * default could abort one of these while it is still committing, and the
+ * caller would then re-issue a write that already landed.
+ */
+const HIGH_LATENCY_WRITES: Readonly<Record<"create" | "patch" | "delete", ReadonlySet<string>>> = {
+  create: new Set(["advertiser"]),
+  patch: new Set(["lineItem"]),
+  delete: new Set(["campaign"]),
+};
+
+/** The trailing `overrides` argument for `DV360HttpClient.fetch`, or none. */
+function writeTimeoutArgs(
+  operation: keyof typeof HIGH_LATENCY_WRITES,
+  entityType: string
+): [] | [{ timeoutMs: number }] {
+  return HIGH_LATENCY_WRITES[operation].has(entityType)
+    ? [{ timeoutMs: DV360_HIGH_LATENCY_TIMEOUT_MS }]
+    : [];
+}
+
+/**
+ * Per-type asset size limits from v4 Discovery `advertisers.assets.upload`:
+ * "no more than 10 MB for images, 200 MB for ZIP files, and 1 GB for videos".
+ */
+const MB = 1024 * 1024;
+function assetUploadLimit(contentType: string): { bytes: number; label: string } {
+  if (contentType.startsWith("image/")) return { bytes: 10 * MB, label: "10 MB for images" };
+  if (contentType.startsWith("video/")) return { bytes: 1024 * MB, label: "1 GB for videos" };
+  return { bytes: 200 * MB, label: "200 MB for ZIP and other files" };
+}
 
 /** Display name for a duplicate: the explicit override, else `Copy of {source}`. */
 function copyDisplayName(override: string | undefined, sourceName: unknown): string | undefined {
@@ -207,6 +243,33 @@ function entityScopeQueryParams(
 }
 
 /**
+ * For a resource whose owner scope travels in the query on writes too
+ * (`EntityConfig.writeScopeInQuery` — inventorySources, inventorySourceGroups),
+ * the scope query string for create / patch / delete. Empty otherwise.
+ */
+function writeScopeQueryParams(
+  config: { queryParamIds: readonly string[]; writeScopeInQuery?: boolean },
+  ids: Record<string, string>
+): string {
+  return config.writeScopeInQuery ? entityScopeQueryParams(ids, config.queryParamIds) : "";
+}
+
+/**
+ * Drop the owner-scope ids from a write body when they belong in the query:
+ * they are not fields of `InventorySource` / `InventorySourceGroup`, and
+ * Google's JSON transcoding rejects unknown field names.
+ */
+function withoutWriteScopeFields(
+  config: { queryParamIds: readonly string[]; writeScopeInQuery?: boolean },
+  body: Record<string, unknown>
+): Record<string, unknown> {
+  if (!config.writeScopeInQuery) return body;
+  const out = { ...body };
+  for (const key of config.queryParamIds) delete out[key];
+  return out;
+}
+
+/**
  * Service for interacting with DV360 API
  * Provides generic entity operations (list, get, create, update, delete)
  */
@@ -296,11 +359,9 @@ export class DV360Service {
       const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
       setSpanAttribute("dv360.apiPath", basePath);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       const response = await this.httpClient.fetch(path, context);
 
@@ -341,11 +402,9 @@ export class DV360Service {
       const scopeQs = entityScopeQueryParams(ids, config.queryParamIds);
       const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       setSpanAttribute("dv360.entityId", entityId);
 
@@ -384,17 +443,21 @@ export class DV360Service {
       const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
       setSpanAttribute("dv360.apiPath", basePath);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
-      const response = await this.httpClient.fetch(basePath, context, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-      });
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const response = await this.httpClient.fetch(
+        `${basePath}${scopeQs ? `?${scopeQs}` : ""}`,
+        context,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+        },
+        ...writeTimeoutArgs("create", entityType)
+      );
 
       return schema.parse(response);
     });
@@ -453,21 +516,29 @@ export class DV360Service {
       }
 
       setSpanAttribute("dv360.entityId", entityId);
-      // Note: queryParamIds (e.g. partnerId/advertiserId for customBiddingAlgorithm)
-      // are list/get-only — DV360's patch endpoint rejects them with 400.
-      const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}`;
+      // Note: for most types queryParamIds (e.g. partnerId/advertiserId for
+      // customBiddingAlgorithm) are list/get-only — `customBiddingAlgorithms.patch`
+      // takes only `updateMask`. inventorySources / inventorySourceGroups take the
+      // owner scope on patch too (`writeScopeInQuery`).
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}${
+        scopeQs ? `&${scopeQs}` : ""
+      }`;
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
-      const response = await this.httpClient.fetch(path, context, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-      });
+      const response = await this.httpClient.fetch(
+        path,
+        context,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+        },
+        ...writeTimeoutArgs("patch", entityType)
+      );
 
       return schema.parse(response);
     });
@@ -528,19 +599,24 @@ export class DV360Service {
         );
       }
 
-      // Note: queryParamIds are list/get-only — DV360's delete (where it exists)
-      // doesn't take scope query params, and customBiddingAlgorithm has no
-      // delete endpoint at all (archive via patch with entityStatus=ARCHIVED).
-      const path = `${basePath}/${entityId}`;
+      // Note: `inventorySourceGroups.delete` takes the owner scope as query
+      // params (`writeScopeInQuery`); the advertiser-scoped deletes take none,
+      // and customBiddingAlgorithm has no delete endpoint at all (archive via
+      // patch with entityStatus=ARCHIVED).
+      const scopeQs = writeScopeQueryParams(config, ids);
+      const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
       setSpanAttribute("dv360.entityId", entityId);
 
-      // Rate limit by advertiser
-      if (ids.advertiserId) {
-        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
-      }
+      // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)
+      await consumeDv360Quota(this.rateLimiter, ids);
+      if (ids.advertiserId) setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
-      await this.httpClient.fetch(path, context, { method: "DELETE" });
+      await this.httpClient.fetch(
+        path,
+        context,
+        { method: "DELETE" },
+        ...writeTimeoutArgs("delete", entityType)
+      );
     });
   }
 
@@ -574,6 +650,7 @@ export class DV360Service {
       // The same resourceName is then handed to `scripts.create`.
       const scopeQs = ownerScopeQueryParams(scope);
       const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript${scopeQs ? `?${scopeQs}` : ""}`;
+      await consumeDv360Quota(this.rateLimiter, scope);
       const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
       if (!ref?.resourceName) {
@@ -590,6 +667,8 @@ export class DV360Service {
         "Uploading custom bidding script bytes"
       );
 
+      // `media.upload` is a DV360 API method of its own and draws its own token.
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
@@ -639,6 +718,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -677,6 +757,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const raw = await this.httpClient.fetch(path, context);
       const response = parsePaginatedList(raw, "customBiddingScripts", `GET ${path}`);
       const scripts = (response.customBiddingScripts ?? []) as CustomBiddingScript[];
@@ -710,6 +791,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       return CustomBiddingScriptSchema.parse(await this.httpClient.fetch(path, context));
     });
   }
@@ -737,6 +819,7 @@ export class DV360Service {
       // `:uploadRules` 404s.
       const scopeQs = ownerScopeQueryParams(scope);
       const refPath = `/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules${scopeQs ? `?${scopeQs}` : ""}`;
+      await consumeDv360Quota(this.rateLimiter, scope);
       const ref = (await this.httpClient.fetch(refPath, context)) as { resourceName?: string };
 
       if (!ref?.resourceName) {
@@ -753,6 +836,8 @@ export class DV360Service {
         "Uploading custom bidding rules bytes"
       );
 
+      // `media.upload` is a DV360 API method of its own and draws its own token.
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
@@ -802,6 +887,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -840,6 +926,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       const raw = await this.httpClient.fetch(path, context);
       const response = parsePaginatedList(raw, "customBiddingAlgorithmRules", `GET ${path}`);
       const rules = (response.customBiddingAlgorithmRules ?? []) as CustomBiddingAlgorithmRules[];
@@ -881,13 +968,14 @@ export class DV360Service {
       setSpanAttribute("dv360.contentType", contentType);
       setSpanAttribute("dv360.fileSize", fileBuffer.length);
 
-      // DV360 rejects uploads over 200 MB — fail fast before buffering the multipart body
-      const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
-      if (fileBuffer.length > MAX_UPLOAD_BYTES) {
+      // Fail fast before buffering the multipart body. The limit depends on
+      // the asset type (images 10 MB, ZIP 200 MB, videos 1 GB).
+      const limit = assetUploadLimit(contentType);
+      if (fileBuffer.length > limit.bytes) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `File size ${(fileBuffer.length / 1024 / 1024).toFixed(1)} MB exceeds the 200 MB upload limit`,
-          { advertiserId, filename, fileSize: fileBuffer.length }
+          `File size ${(fileBuffer.length / MB).toFixed(1)} MB exceeds DV360's asset upload limit (${limit.label})`,
+          { advertiserId, filename, contentType, fileSize: fileBuffer.length }
         );
       }
 
@@ -1136,7 +1224,9 @@ export class DV360Service {
       setSpanAttribute("dv360.advertiserId", advertiserId);
       setSpanAttribute("dv360.lineItemId", lineItemId);
 
-      await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+      // One token per DV360 call: the line item GET and the targeting GET each
+      // draw their own (#236: this used to draw one for both).
+      await consumeDv360Quota(this.rateLimiter, { advertiserId });
 
       // Fetch line item details including budget and targeting info
       const lineItem = (await this.httpClient.fetch(
@@ -1147,6 +1237,7 @@ export class DV360Service {
       // Fetch targeting assigned to this line item.
       // The v4 method is on the lineItems collection, not the resource:
       // GET /advertisers/{advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds={id}
+      await consumeDv360Quota(this.rateLimiter, { advertiserId });
       const targeting = (await this.httpClient.fetch(
         `/advertisers/${advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds=${encodeURIComponent(lineItemId)}`,
         context
@@ -1201,9 +1292,7 @@ export class DV360Service {
         const path = `/customBiddingAlgorithms${params.toString() ? `?${params}` : ""}`;
         setSpanAttribute("dv360.apiPath", "/customBiddingAlgorithms");
 
-        if (advertiserId) {
-          await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
-        }
+        await consumeDv360Quota(this.rateLimiter, { advertiserId, partnerId });
 
         const raw = await this.httpClient.fetch(path, context);
         const response = parsePaginatedList(raw, "customBiddingAlgorithms", `GET ${path}`);
@@ -1238,6 +1327,7 @@ export class DV360Service {
       const scopeQs = ownerScopeQueryParams(scope);
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}${scopeQs ? `?${scopeQs}` : ""}`;
 
+      await consumeDv360Quota(this.rateLimiter, scope);
       return CustomBiddingAlgorithmRulesSchema.parse(await this.httpClient.fetch(path, context));
     });
   }

@@ -24,6 +24,10 @@ const registry = JSON.parse(readFileSync(REGISTRY_PATH, "utf-8"));
 
 const slim = {
   protocol_version: registry.protocol_version,
+  // #241: published as `serverInfo.websiteUrl` by every server. The one URL the
+  // registry states for the implementation itself (the per-server
+  // documentation_url is the ad platform's API docs, not this server's).
+  repository: registry.repository,
   servers: registry.servers.map((s) => ({
     package: s.package,
     title: s.title,
@@ -69,6 +73,7 @@ const body = `export interface RegistryServerEntry {
 
 export interface RegistryData {
   readonly protocol_version: string;
+  readonly repository: string;
   readonly servers: readonly RegistryServerEntry[];
 }
 

@@ -265,14 +265,15 @@ describe("DV360Service", () => {
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:555", 1);
     });
 
-    it("does not rate-limit when advertiserId is absent", async () => {
+    // A partner-scoped call used to draw no token at all (dv360 #24, #236).
+    it("rate-limits a partner-scoped call on the partner's bucket", async () => {
       mockEntityConfig({ parentIds: [] });
       mockEntitySchema();
       httpClient.fetch.mockResolvedValue({ partnerId: "p-1" });
 
       await service.getEntity("partner", { partnerId: "p-1" });
 
-      expect(rateLimiter.consume).not.toHaveBeenCalled();
+      expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:partner:p-1", 1);
     });
   });
 

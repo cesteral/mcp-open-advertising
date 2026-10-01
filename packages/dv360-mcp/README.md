@@ -18,7 +18,7 @@ Management server for DV360 campaign entities. Provides CRUD operations for camp
 ## Features
 
 - **Schema-Driven Architecture**: Auto-generated TypeScript types and Zod schemas from DV360 OpenAPI specification
-- **Dynamic Entity System**: Supports 11 DV360 entity types with minimal configuration
+- **Dynamic Entity System**: Supports 12 DV360 entity types with minimal configuration
 - **Production-Grade**: OpenTelemetry instrumentation, structured logging, rate limiting, JWT authentication
 - **MCP Protocol**: Full Model Context Protocol implementation with Streamable HTTP and stdio transports
 - **Claude Desktop Integration**: Seamless integration with Claude Desktop for AI-powered DV360 management
@@ -54,7 +54,7 @@ The server is built with production-grade architecture and complete functionalit
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
-- ✅ Dynamic entity system supporting 11 entity types
+- ✅ Dynamic entity system supporting 12 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
 ## MCP Tools
@@ -106,14 +106,14 @@ The server is built with production-grade architecture and complete functionalit
 ## Key Gotchas
 
 - Campaigns cannot be in DRAFT status (must be ACTIVE or PAUSED)
-- Insertion Orders default to DRAFT status on creation
+- Insertion orders and line items can only be created in DRAFT (v4 Discovery `entityStatus`); activate them with an update afterwards
 - `updateMask` is required for all update operations — omitting it silently ignores fields
-- Rate limiting is per-advertiser (default 60 req/min)
+- Rate limiting is per-advertiser (`DV360_RATE_LIMIT_PER_MINUTE`, default 6 req/min), and per partner for calls that name only a partner (e.g. partner-owned custom bidding); over-limit calls queue for up to 2 minutes, and bulk batches that cannot clear the limit in that time are refused up front
 - Entity creation requires parent IDs in a specific hierarchy
 
 ## Supported Entity Types
 
-The server supports 11 DV360 entity types through the dynamic entity system:
+The server supports 12 DV360 entity types through the dynamic entity system:
 
 - `Partner` - DV360 partner accounts
 - `Advertiser` - Advertiser accounts
@@ -125,13 +125,14 @@ The server supports 11 DV360 entity types through the dynamic entity system:
 - `Creative` - Creative assets
 - `CustomBiddingAlgorithm` - Custom bidding algorithms
 - `InventorySource` - Inventory sources
+- `InventorySourceGroup` - Inventory source groups
 - `LocationList` - Geographic location lists
 
 ## Authentication Modes
 
 | Mode                       | Header                        | Description                                     |
 | -------------------------- | ----------------------------- | ----------------------------------------------- |
-| `google-headers` (default) | `X-DV360-*`                   | Google OAuth2 credentials via request headers   |
+| `google-headers` (default) | `X-Google-*`                  | Google OAuth2 credentials via request headers   |
 | `jwt`                      | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
 | `none`                     | —                             | No authentication (development only)            |
 
@@ -359,7 +360,7 @@ node dist/index.js
 
 ### API rate limiting
 
-The server implements per-advertiser rate limiting (default: 60 requests/minute).
+The server implements per-advertiser rate limiting (default: 6 requests/minute, `DV360_RATE_LIMIT_PER_MINUTE`). A call that names only a partner draws on a per-partner bucket at the same default; every call, custom-bidding uploads (`:uploadScript`/`:uploadRules`, `media.upload`, `scripts`/`rules.create`) included, draws one token. DV360's own quota could not be confirmed from a primary source; see `dv360.rate_limit_default` in `platform-facts.json` before raising it.
 
 If hitting limits:
 

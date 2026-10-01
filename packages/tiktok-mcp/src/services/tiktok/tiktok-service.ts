@@ -2,7 +2,8 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import { consumeTikTokQuota, tiktokQuotaBucket } from "./rate-limit-keys.js";
+import type { BulkCapacityBucket, DryRunValidationError, RateLimiter } from "@cesteral/shared";
 import {
   type RequestContext,
   executeBulkConcurrent,
@@ -73,6 +74,115 @@ export const TIKTOK_AD_PREVIEW_UNSUPPORTED_MESSAGE =
   "Ad previews are not available: TikTok's official Business API SDK defines no ad-preview " +
   "endpoint for v1.3. Inspect the ad with tiktok_get_entity (entityType 'ad') instead.";
 
+/**
+ * `ad/update/` body fields that sit at the TOP level of `AdUpdateBody`;
+ * every other field of an ad update belongs to the creative.
+ *
+ * basis: official SDK (tiktok/tiktok-business-api-sdk @ f809c39)
+ * `python_sdk/business_api_client/models/ad_update_body.py` `swagger_types`:
+ * `adgroup_id` (required), `advertiser_id` (required), `creatives`
+ * (list[AdupdateCreatives], required), `patch_update` (optional). There is no
+ * top-level `ad_id`; `adupdate_creatives.py` carries `ad_id` per creative.
+ * `ad_api.py` `ad_update`: POST /open_api/v1.3/ad/update/.
+ */
+const AD_UPDATE_BODY_FIELDS = new Set(["adgroup_id", "advertiser_id", "creatives", "patch_update"]);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Why an ad update's `data` cannot be mapped onto `AdUpdateBody` for
+ * `entityId`, or none. Shared by `TikTokService.updateEntity` (which throws)
+ * and the update tool's dry run (which reports), so the two agree.
+ *
+ * The update tools change ONE ad (`entityId`), so the body carries exactly one
+ * creative, whose `ad_id` is `entityId`. Creative fields may be given at the
+ * top level of `data` (`{ ad_name }`) or as `data.creatives[0]`, not both.
+ */
+export function adUpdateShapeErrors(
+  entityId: string,
+  data: Record<string, unknown>
+): DryRunValidationError[] {
+  const errors: DryRunValidationError[] = [];
+  if (data.ad_id !== undefined && String(data.ad_id) !== entityId) {
+    errors.push({
+      code: "AD_ID_CONFLICT",
+      message: `data.ad_id (${String(data.ad_id)}) names a different ad than entityId (${entityId}); an ad update changes the ad named by entityId.`,
+      field: "data.ad_id",
+    });
+  }
+  if (data.creatives !== undefined) {
+    const creatives = data.creatives;
+    if (!Array.isArray(creatives) || creatives.length !== 1 || !isPlainRecord(creatives[0])) {
+      errors.push({
+        code: "INVALID_AD_CREATIVES",
+        message:
+          "data.creatives must be an array of exactly one creative object: this tool updates one ad (entityId), and TikTok's ad/update/ body carries that ad as creatives[0].",
+        field: "data.creatives",
+      });
+    } else {
+      const creativeAdId = creatives[0].ad_id;
+      if (creativeAdId !== undefined && String(creativeAdId) !== entityId) {
+        errors.push({
+          code: "AD_ID_CONFLICT",
+          message: `data.creatives[0].ad_id (${String(creativeAdId)}) names a different ad than entityId (${entityId}).`,
+          field: "data.creatives[0].ad_id",
+        });
+      }
+      const topLevelCreativeFields = Object.keys(data).filter(
+        (k) => !AD_UPDATE_BODY_FIELDS.has(k) && k !== "ad_id"
+      );
+      if (topLevelCreativeFields.length > 0) {
+        errors.push({
+          code: "AMBIGUOUS_AD_CREATIVE_FIELDS",
+          message: `Creative fields were given both in data.creatives[0] and at the top level of data (${topLevelCreativeFields.join(", ")}); put them in one place.`,
+          field: "data",
+        });
+      }
+    }
+  }
+  if (
+    data.adgroup_id !== undefined &&
+    (data.adgroup_id === null || String(data.adgroup_id).length === 0)
+  ) {
+    errors.push({
+      code: "INVALID_ADGROUP_ID",
+      message: "data.adgroup_id must be the ad's ad group id, or omitted to read it from the ad.",
+      field: "data.adgroup_id",
+    });
+  }
+  return errors;
+}
+
+/**
+ * Map an ad update onto TikTok's `AdUpdateBody` (see AD_UPDATE_BODY_FIELDS):
+ * `{ adgroup_id, creatives: [{ ad_id: entityId, ...creative fields }] }`,
+ * plus `patch_update` / `advertiser_id` when the caller set them. The HTTP
+ * client adds the session's `advertiser_id`. `patch_update` is passed through
+ * only when given: the SDK types it (optional bool) without saying what it
+ * does, so this server does not choose a value.
+ */
+export function buildAdUpdateBody(
+  entityId: string,
+  data: Record<string, unknown>,
+  adgroupId: string
+): Record<string, unknown> {
+  const creativeFields: Record<string, unknown> = {};
+  const topLevel: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "ad_id" || key === "adgroup_id" || key === "creatives") continue;
+    if (AD_UPDATE_BODY_FIELDS.has(key)) topLevel[key] = value;
+    else creativeFields[key] = value;
+  }
+  const given = Array.isArray(data.creatives) ? (data.creatives[0] as Record<string, unknown>) : {};
+  return {
+    ...topLevel,
+    adgroup_id: adgroupId,
+    creatives: [{ ...creativeFields, ...given, ad_id: entityId }],
+  };
+}
+
 /** TikTok list response data shape */
 interface TikTokListData<T> {
   list: T[];
@@ -81,6 +191,13 @@ interface TikTokListData<T> {
 
 interface TikTokAdvertiserListData {
   list?: TikTokAdAccount[];
+}
+
+/** A downloaded media file to upload (see `downloadFileToBuffer`). */
+export interface MediaFile {
+  buffer: Buffer;
+  filename: string;
+  contentType: string;
 }
 
 /**
@@ -103,10 +220,24 @@ export class TikTokService {
     private readonly apiVersion: string = "v1.3"
   ) {}
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
-  get client(): TikTokHttpClient {
-    return this.httpClient;
+  /**
+   * The bulk-capacity projection bucket for a batch this service would run.
+   *
+   * Every call in this service draws on the session's per-token key
+   * `tiktok:token:{quotaClient}` (see `rate-limit-keys.ts`), so a batch tool
+   * describes its per-item pattern as `costPerItem` (one entry per `consume`
+   * an item makes, in order) and this fills in the key the calls will actually
+   * hit. The projection is therefore per tenant: another tenant's traffic
+   * neither fills this bucket nor refuses this batch.
+   */
+  bulkCapacityBucket(costPerItem: readonly number[]): BulkCapacityBucket {
+    return tiktokQuotaBucket(this.httpClient, costPerItem);
   }
+
+  // The HTTP client is deliberately not exposed: a call made on it directly
+  // draws no limiter tokens. The upload tools used to reach it through a
+  // `client` getter, and their POSTs and video-info polls bypassed the limiter
+  // (#236); every upstream call now goes through a method here that consumes.
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
@@ -117,7 +248,7 @@ export class TikTokService {
     pageSize = 10,
     context?: RequestContext
   ): Promise<{ entities: TikTokEntityMap[T][]; pageInfo: TikTokPageInfoShape }> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
     const params: Record<string, string> = {
@@ -150,7 +281,7 @@ export class TikTokService {
     entityId: string,
     context?: RequestContext
   ): Promise<TikTokEntityMap[T]> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
     const params: Record<string, string> = {
@@ -183,7 +314,7 @@ export class TikTokService {
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.createPath,
@@ -192,25 +323,66 @@ export class TikTokService {
     ) as Promise<TikTokEntityMap[T]>;
   }
 
+  /**
+   * POST `{entity}/update/`. Campaigns and ad groups carry their id at the top
+   * level of the body (`campaign_id` / `adgroup_id`, CampaignUpdateBody /
+   * AdgroupUpdateBody). Ads do not: `AdUpdateBody` has `adgroup_id` and
+   * `creatives[]`, with `ad_id` inside the creative (see `buildAdUpdateBody`).
+   *
+   * An ad update needs the ad's `adgroup_id`. It is taken from `data`, else
+   * from `options.adgroupId` (a caller that already read the ad), else read
+   * here with one `getEntity` — one extra read token, which the bulk capacity
+   * pre-check models (`tiktokBulkBuckets.bulkUpdate`).
+   */
   async updateEntity<T extends TikTokEntityType>(
     entityType: T,
     entityId: string,
     data: TikTokUpdateEntityInputMap[T],
-    context?: RequestContext
+    context?: RequestContext,
+    options?: { adgroupId?: string }
   ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    let body: Record<string, unknown>;
+    if (entityType === "ad") {
+      body = await this.adUpdateBody(entityId, data, context, options?.adgroupId);
+    } else {
+      // TikTok uses POST for updates, with entity ID in body
+      body = { [config.idField]: entityId, ...data };
+    }
 
-    // TikTok uses POST for updates, with entity ID in body
-    return this.httpClient.post(
-      config.updatePath,
-      {
-        [config.idField]: entityId,
-        ...data,
-      },
-      context
-    ) as Promise<TikTokEntityMap[T]>;
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+
+    return this.httpClient.post(config.updatePath, body, context) as Promise<TikTokEntityMap[T]>;
+  }
+
+  private async adUpdateBody(
+    entityId: string,
+    data: Record<string, unknown>,
+    context: RequestContext | undefined,
+    knownAdgroupId: string | undefined
+  ): Promise<Record<string, unknown>> {
+    const errors = adUpdateShapeErrors(entityId, data);
+    if (errors.length > 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Invalid ad update payload: ${errors.map((e) => e.message).join("; ")}`
+      );
+    }
+    let adgroupId = data.adgroup_id !== undefined ? String(data.adgroup_id) : knownAdgroupId;
+    if (!adgroupId) {
+      const ad = (await this.getEntity("ad", entityId, context)) as { adgroup_id?: unknown };
+      if (ad?.adgroup_id !== undefined && ad.adgroup_id !== null && String(ad.adgroup_id)) {
+        adgroupId = String(ad.adgroup_id);
+      }
+    }
+    if (!adgroupId) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Could not determine the ad group of ad ${entityId}, which TikTok's ad/update/ requires; pass it as data.adgroup_id.`
+      );
+    }
+    return buildAdUpdateBody(entityId, data, adgroupId);
   }
 
   /**
@@ -242,7 +414,7 @@ export class TikTokService {
       );
     }
 
-    await this.rateLimiter.consume(`tiktok:default`, TIKTOK_WRITE_TOKENS);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
 
     return this.httpClient.post(
       config.statusUpdatePath,
@@ -266,7 +438,7 @@ export class TikTokService {
     advertiserIds: string[],
     context?: RequestContext
   ): Promise<TikTokAdvertiserListData> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.get(
       `/open_api/${this.apiVersion}/advertiser/info/`,
@@ -427,7 +599,7 @@ export class TikTokService {
     criteria: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.post(
       `/open_api/${this.apiVersion}/tool/targeting/search/`,
@@ -441,7 +613,7 @@ export class TikTokService {
     params: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     switch (optionType) {
       case "ACTION_CATEGORY":
@@ -500,6 +672,76 @@ export class TikTokService {
     }
   }
 
+  // ─── Media Uploads ──────────────────────────────────────────────
+
+  /**
+   * `POST file/image/ad/upload/` (multipart). One write's worth of tokens
+   * (TIKTOK_WRITE_TOKENS) from the session's bucket, like every other write:
+   * the upload used to go straight to the HTTP client and draw nothing (#236).
+   *
+   * basis: official SDK (tiktok/tiktok-business-api-sdk @ f809c39)
+   * `python_sdk/business_api_client/api/file_api.py` `ad_image_upload` — POST
+   * `/open_api/v1.3/file/image/ad/upload/`, multipart/form-data, file part
+   * `image_file`.
+   */
+  async uploadImage(
+    fields: Record<string, string>,
+    file: MediaFile,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+    return this.httpClient.postMultipart(
+      this.httpClient.versionedPath("file/image/ad/upload/"),
+      fields,
+      "image_file",
+      file.buffer,
+      file.filename,
+      file.contentType,
+      context
+    );
+  }
+
+  /**
+   * `POST file/video/ad/upload/` (multipart), TIKTOK_WRITE_TOKENS.
+   *
+   * basis: `file_api.py` `ad_video_upload` — POST
+   * `/open_api/v1.3/file/video/ad/upload/`, multipart/form-data, file part
+   * `video_file`.
+   */
+  async uploadVideo(
+    fields: Record<string, string>,
+    file: MediaFile,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+    return this.httpClient.postMultipart(
+      this.httpClient.versionedPath("file/video/ad/upload/"),
+      fields,
+      "video_file",
+      file.buffer,
+      file.filename,
+      file.contentType,
+      context
+    );
+  }
+
+  /**
+   * `GET file/video/ad/info/` — one read (TIKTOK_READ_TOKENS) per call, so
+   * every poll of an upload's processing status is counted.
+   *
+   * basis: `file_api.py` `ad_video_info` — GET
+   * `/open_api/v1.3/file/video/ad/info/`, query `advertiser_id`, `video_ids`
+   * (collection 'multi', which `api_client.py` encodes as `json.dumps(list)`).
+   */
+  async getVideoInfo(videoIds: string[], context?: RequestContext): Promise<unknown> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
+    return this.httpClient.get(
+      this.httpClient.versionedPath("file/video/ad/info/"),
+      { video_ids: JSON.stringify(videoIds) },
+      context
+    );
+  }
+
   // ─── Audience Estimate ──────────────────────────────────────────
 
   /**
@@ -515,7 +757,7 @@ export class TikTokService {
     targetingConfig: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`tiktok:default`);
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.post(
       `/open_api/${this.apiVersion}/ad/audience_size/estimate/`,

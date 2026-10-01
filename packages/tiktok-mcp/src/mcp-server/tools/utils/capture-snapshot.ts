@@ -144,6 +144,21 @@ export async function captureTiktokSnapshot(
   entityId: string,
   context: RequestContext
 ): Promise<NormalizedEntitySnapshot | undefined> {
+  return (await captureTiktokEntity(service, entityType, entityId, context))?.snapshot;
+}
+
+/**
+ * {@link captureTiktokSnapshot}, also returning the raw entity it read — so a
+ * caller that needs a field the snapshot drops (an ad's `adgroup_id`, which
+ * TikTok's ad/update/ body requires) does not read the entity twice. Same
+ * best-effort contract: undefined when out of scope or the read fails.
+ */
+export async function captureTiktokEntity(
+  service: TiktokServiceLike,
+  entityType: string,
+  entityId: string,
+  context: RequestContext
+): Promise<{ entity: Record<string, unknown>; snapshot?: NormalizedEntitySnapshot } | undefined> {
   if (!ENTITY_KIND_MAP[entityType] || !service.getEntity) return undefined;
   try {
     const current = (await service.getEntity(entityType, entityId, context)) as
@@ -151,7 +166,7 @@ export async function captureTiktokSnapshot(
       | undefined;
     if (!current || typeof current !== "object") return undefined;
     const snapshot = buildTiktokSnapshot(entityType, entityId, current, {});
-    return snapshot ?? undefined;
+    return { entity: current, ...(snapshot ? { snapshot } : {}) };
   } catch {
     return undefined;
   }

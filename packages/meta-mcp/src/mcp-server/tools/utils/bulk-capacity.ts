@@ -17,8 +17,11 @@
  * transport), so the projection reads the same window the writes will consume.
  *
  * Every bucket below mirrors the `consume` calls the tool's service path makes
- * per item, in order — keys exactly as passed to `consume`, costs from the
- * service's exported token constants.
+ * per item, in order — keys built by the same `rate-limit-keys.ts` helpers the
+ * service consumes through, costs from the service's exported token constants.
+ * The buckets are the SESSION's (its Graph user's), so a tool resolves its
+ * session before projecting — on the dry run too — and another tenant's
+ * traffic neither fills them nor gets this batch refused.
  */
 
 import { assertBulkCapacity, McpError } from "@cesteral/shared";
@@ -29,6 +32,11 @@ import type {
 } from "@cesteral/shared";
 import { rateLimiter } from "../../../utils/platform.js";
 import { META_READ_TOKENS, META_WRITE_TOKENS } from "../../../services/meta/meta-service.js";
+import {
+  metaAccountQuotaBucket,
+  metaUserQuotaBucket,
+  type MetaQuotaScope,
+} from "../../../services/meta/rate-limit-keys.js";
 
 /** Dry-run validation error code for a batch the limiter cannot admit within budget. */
 export const BULK_EXCEEDS_CAPACITY = "BULK_EXCEEDS_CAPACITY";
@@ -37,24 +45,24 @@ export const BULK_EXCEEDS_CAPACITY = "BULK_EXCEEDS_CAPACITY";
 export const metaBulkBuckets = {
   /**
    * `meta_adjust_bids`: sequential per ad set — `getEntity` (meta-service.ts,
-   * `meta:default`, 1) then `updateEntity` (`meta:default`, 3).
+   * user bucket, 1) then `updateEntity` (user bucket, 3).
    */
-  adjustBids: (): BulkCapacityBucket[] => [
-    { key: "meta:default", costPerItem: [META_READ_TOKENS, META_WRITE_TOKENS] },
+  adjustBids: (scope: MetaQuotaScope): BulkCapacityBucket[] => [
+    metaUserQuotaBucket(scope, [META_READ_TOKENS, META_WRITE_TOKENS]),
   ],
   /**
-   * `meta_bulk_create_entities`: one `createEntity` per item, keyed by the
-   * `adAccountId` exactly as the tool passes it (not normalized to `act_`).
+   * `meta_bulk_create_entities`: one `createEntity` per item on the bucket of
+   * `adAccountId`, normalized to `act_{id}` as `createEntity` normalizes it.
    */
-  bulkCreate: (adAccountId: string): BulkCapacityBucket[] => [
-    { key: `meta:${adAccountId}`, costPerItem: [META_WRITE_TOKENS] },
+  bulkCreate: (scope: MetaQuotaScope, adAccountId: string): BulkCapacityBucket[] => [
+    metaAccountQuotaBucket(scope, adAccountId, [META_WRITE_TOKENS]),
   ],
   /**
    * `meta_bulk_update_entities` / `meta_bulk_update_status`: one `updateEntity`
-   * (POST /{id}) per item on `meta:default`.
+   * (POST /{id}) per item on the user bucket.
    */
-  bulkUpdate: (): BulkCapacityBucket[] => [
-    { key: "meta:default", costPerItem: [META_WRITE_TOKENS] },
+  bulkUpdate: (scope: MetaQuotaScope): BulkCapacityBucket[] => [
+    metaUserQuotaBucket(scope, [META_WRITE_TOKENS]),
   ],
 };
 

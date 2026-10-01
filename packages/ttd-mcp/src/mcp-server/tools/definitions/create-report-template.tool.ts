@@ -188,7 +188,12 @@ export async function createReportTemplateLogic(
       const connection =
         (listData.myReportsReportTemplates as Record<string, unknown> | undefined) ?? {};
       const nodes = (connection.nodes as Array<Record<string, unknown>> | undefined) ?? [];
-      if (nodes.length > 0) {
+      // `myReportsTemplateCreate` returns no id, so the new template is looked
+      // up as the newest one visible to this user. Another user or session may
+      // have created one since; only accept it if it carries the name just
+      // created, otherwise report no id rather than a wrong one — the id goes
+      // into the governed effect summary.
+      if (nodes.length > 0 && nodes[0].name === input.name) {
         templateId = nodes[0].id as string | undefined;
         templateName = nodes[0].name as string | undefined;
       }

@@ -116,6 +116,13 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
+  // A status the entity type has no mapping for would fail every item after
+  // its GET; refuse it before prompting or sending anything.
+  const statusError = unsupportedStatusError(input.entityType as CM360EntityType, input.status);
+  if (statusError) {
+    throw new McpError(JsonRpcErrorCode.InvalidParams, statusError);
+  }
+
   // Each entity is a GET + PUT on `cm360:user:{quotaUser}`. Refuse a batch that
   // cannot clear the rate limit within the queue budget before prompting the
   // user or sending anything — otherwise it queues for minutes, past client
@@ -207,6 +214,11 @@ function buildBulkEffectDryRun(
       });
     }
   });
+  // Parity with the execute path's refusal of an unmapped status.
+  const statusError = unsupportedStatusError(input.entityType as CM360EntityType, input.status);
+  if (statusError) {
+    validationErrors.push({ code: "UNSUPPORTED_STATUS", message: statusError, field: "status" });
+  }
   // Parity with the execute path's assertCM360BulkCapacity refusal.
   const capacityError = cm360BulkCapacityDryRunError(
     TOOL_NAME,
@@ -237,6 +249,24 @@ function buildBulkEffectDryRun(
     TOOL_NAME,
     { requiresValidation: true, requiresSimulation: true }
   );
+}
+
+/**
+ * The refusal {@link applyStatusUpdate} would raise for this entity type and
+ * status, or undefined when the pair is mapped. The mapping does not depend on
+ * the entity's current state, so it can be checked before anything is read.
+ */
+function unsupportedStatusError(
+  entityType: CM360EntityType,
+  requestedStatus: string
+): string | undefined {
+  try {
+    applyStatusUpdate(entityType, {}, requestedStatus);
+    return undefined;
+  } catch (error) {
+    if (error instanceof McpError) return error.message;
+    throw error;
+  }
 }
 
 function applyStatusUpdate(

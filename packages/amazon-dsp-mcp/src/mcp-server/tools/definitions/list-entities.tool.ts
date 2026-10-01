@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { nextAmazonDspStartIndex } from "../../../services/amazon-dsp/types.js";
 import {
   PaginationOutputSchema,
   buildPaginationOutput,
@@ -81,13 +82,12 @@ export async function listEntitiesLogic(
   const entities = result.entities as unknown as Record<string, unknown>[];
   // Advance by what Amazon actually returned — `pageInfo.count` is the page
   // size that was *requested*, which overstates a short (e.g. last) page.
-  const nextStartIndex = pageInfo.startIndex + entities.length;
-  const hasMore = entities.length > 0 && nextStartIndex < pageInfo.totalResults;
+  const nextStartIndex = nextAmazonDspStartIndex(pageInfo, entities.length);
 
   return {
     entities,
     pagination: buildPaginationOutput({
-      nextCursor: hasMore ? String(nextStartIndex) : null,
+      nextCursor: nextStartIndex !== null ? String(nextStartIndex) : null,
       pageSize: entities.length,
       totalCount: pageInfo.totalResults,
       nextPageInputKey: "startIndex",

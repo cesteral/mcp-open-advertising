@@ -14,7 +14,10 @@ export interface TtdGraphqlError {
  * TTD GraphQL error codes from the API docs.
  * All errors return HTTP 200 — the code lives in `errors[].extensions.code`.
  */
-const AUTH_ERROR_CODES = new Set(["AUTHENTICATION_FAILURE", "UNAUTHORIZED_FIELD_OR_TYPE"]);
+export const AUTH_ERROR_CODES: ReadonlySet<string> = new Set([
+  "AUTHENTICATION_FAILURE",
+  "UNAUTHORIZED_FIELD_OR_TYPE",
+]);
 
 const RATE_LIMIT_ERROR_CODES = new Set(["RESOURCE_LIMIT_EXCEEDED"]);
 

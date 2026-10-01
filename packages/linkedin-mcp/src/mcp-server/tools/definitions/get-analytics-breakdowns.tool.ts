@@ -17,12 +17,9 @@ const TOOL_NAME = "linkedin_get_analytics_breakdowns";
 const TOOL_TITLE = "Get LinkedIn Ads Analytics with Breakdowns";
 const TOOL_DESCRIPTION = `Get analytics with multiple dimensional breakdowns for a LinkedIn Ads account.
 
-Runs one analytics query per pivot and returns combined results.
+Runs one independent analytics query per pivot and returns each pivot's rows separately, grouped by pivot.
 
-**Useful pivot combinations:**
-- CAMPAIGN + MEMBER_COUNTRY: campaign performance by geography
-- CAMPAIGN + MEMBER_JOB_TITLE: audience composition
-- CREATIVE + CAMPAIGN: creative performance within campaigns`;
+**Results are not cross-tabulated.** \`pivots: ["CAMPAIGN", "CREATIVE"]\` returns one set of rows per campaign and another per creative — not creative-by-campaign rows. Use it to compare several single-dimension breakdowns in one call.`;
 
 export const GetAnalyticsBreakdownsInputSchema = z
   .object({

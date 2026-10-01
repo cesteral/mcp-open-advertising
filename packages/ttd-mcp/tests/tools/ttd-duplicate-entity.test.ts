@@ -111,7 +111,7 @@ describe("TtdService.duplicateEntity create body", () => {
     const service = new TtdService(
       { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
       { consume: vi.fn().mockResolvedValue(undefined) } as any,
-      { partnerId: "p", fetch, fetchDirect: vi.fn() } as any
+      { quotaClient: "c", fetch, fetchDirect: vi.fn() } as any
     );
 
     await service.duplicateEntity("campaign", "src-1", { CampaignName: "Copy of Summer" });

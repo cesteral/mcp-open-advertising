@@ -11,6 +11,7 @@ export const ReportTypeSchema = z.enum([
   "AUDIENCE_COMPOSITION",
   "FLOODLIGHT",
   "GRP",
+  "INVENTORY_AVAILABILITY",
   "REACH",
   "STANDARD",
   "UNIQUE_REACH_AUDIENCE",
@@ -35,6 +36,10 @@ export const REPORT_TYPE_METADATA: Record<ReportType, ReportTypeMetadata> = {
   "STANDARD": {
     displayName: "Standard",
     description: "Standard delivery metrics - most common report type"
+  },
+  "INVENTORY_AVAILABILITY": {
+    displayName: "Inventory Availability",
+    description: "Inventory Availability report (in Bid Manager v2 Discovery rev 20260923, not deprecated)"
   },
   "AUDIENCE_COMPOSITION": {
     displayName: "Audience Composition",

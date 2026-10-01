@@ -107,6 +107,11 @@ export async function bulkUpdateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
@@ -115,7 +120,7 @@ export async function bulkUpdateEntitiesLogic(
       pinterestBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        pinterestBulkBuckets.perItemWrite(pinterestService.quotaScope, input.adAccountId),
         "items"
       )
     );
@@ -136,7 +141,7 @@ export async function bulkUpdateEntitiesLogic(
   assertPinterestBulkCapacity(
     TOOL_NAME,
     input.items.length,
-    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+    pinterestBulkBuckets.perItemWrite(pinterestService.quotaScope, input.adAccountId)
   );
 
   const payloads = input.items.map((it) => it.data ?? {});
@@ -161,7 +166,6 @@ export async function bulkUpdateEntitiesLogic(
     };
   }
 
-  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const bulkResult = await pinterestService.bulkUpdateEntities(

@@ -19,25 +19,31 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Core CRUD
 
-| Tool                  | Description                                              |
-| --------------------- | -------------------------------------------------------- |
-| `ttd_list_entities`   | List TTD entities with optional filtering and pagination |
-| `ttd_get_entity`      | Get a single TTD entity by ID                            |
-| `ttd_create_entity`   | Create a new TTD entity                                  |
-| `ttd_update_entity`   | Update an existing TTD entity (PUT)                      |
-| `ttd_delete_entity`   | Delete a TTD entity by ID                                |
-| `ttd_validate_entity` | Dry-run validate entity payload without persisting       |
+| Tool                    | Description                                                                 |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `ttd_list_entities`     | List TTD entities with optional filtering and pagination                    |
+| `ttd_get_entity`        | Get a single TTD entity by ID                                               |
+| `ttd_create_entity`     | Create a new TTD entity                                                     |
+| `ttd_update_entity`     | Update an existing TTD entity (PUT)                                         |
+| `ttd_delete_entity`     | Delete a TTD entity by ID                                                   |
+| `ttd_validate_entity`   | Dry-run validate entity payload without persisting                          |
+| `ttd_duplicate_entity`  | Copy a campaign's core settings into a new campaign (not live)              |
+| `ttd_get_pacing_status` | Compute campaign pacing from caller-supplied spend and flight (no API call) |
 
 ### Reporting
 
 `ttd_download_report` accepts the shared bounded report-view params: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
 
-| Tool                      | Description                                   |
-| ------------------------- | --------------------------------------------- |
-| `ttd_get_report`          | Generate async report via MyReports V3 API    |
-| `ttd_download_report`     | Download report CSV and return a bounded view |
-| `ttd_submit_report`       | Submit report without waiting (non-blocking)  |
-| `ttd_check_report_status` | Single status check for a submitted report    |
+| Tool                          | Description                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| `ttd_get_report`              | Generate async report via MyReports V3 API                                        |
+| `ttd_download_report`         | Download report CSV and return a bounded view                                     |
+| `ttd_submit_report`           | Submit report without waiting (non-blocking)                                      |
+| `ttd_check_report_status`     | Single status check for a submitted report                                        |
+| `ttd_execute_entity_report`   | Run a dimension-specific report for an advertiser, campaign or ad group (GraphQL) |
+| `ttd_get_entity_report_types` | List the entity report types available for an entity and Kokai tile               |
+| `ttd_list_report_types`       | List MyReports report types (GraphQL)                                             |
+| `ttd_get_report_type_schema`  | Get a report type's fields and metrics (GraphQL)                                  |
 
 ### Bulk Operations
 
@@ -52,9 +58,9 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Bid Lists
 
-| Tool                  | Description                                                        |
-| --------------------- | ------------------------------------------------------------------ |
-| `ttd_manage_bid_list` | Create, get, or update a single bid list (`create`/`get`/`update`) |
+| Tool                  | Description                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `ttd_manage_bid_list` | Create, get, update, set or delete a single bid list via GraphQL (`delete` is terminal) |
 
 ### Audience / Seeds
 
@@ -64,13 +70,21 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Advanced (GraphQL)
 
-| Tool                          | Description                                            |
-| ----------------------------- | ------------------------------------------------------ |
-| `ttd_graphql_query`           | Execute GraphQL query/mutation against TTD GraphQL API |
-| `ttd_graphql_query_bulk`      | Execute bulk GraphQL queries                           |
-| `ttd_graphql_mutation_bulk`   | Execute bulk GraphQL mutations                         |
-| `ttd_graphql_bulk_job`        | Submit a GraphQL bulk job                              |
-| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                      |
+| Tool                          | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `ttd_graphql_query`           | Execute GraphQL query/mutation against TTD GraphQL API  |
+| `ttd_graphql_query_bulk`      | Execute bulk GraphQL queries                            |
+| `ttd_graphql_mutation_bulk`   | Execute bulk GraphQL mutations                          |
+| `ttd_graphql_bulk_job`        | Poll a GraphQL bulk job's status, errors and result URL |
+| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                       |
+
+### Creatives and Discovery
+
+| Tool               | Description                                                   |
+| ------------------ | ------------------------------------------------------------- |
+| `ttd_upload_video` | Upload a video and create a TTD-hosted video creative         |
+| `ttd_get_context`  | List the partners the token can access (cold-start discovery) |
+| `ttd_search_tools` | Search this server's tools by keyword                         |
 
 ### MyReports Templates and Schedules
 

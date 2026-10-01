@@ -138,6 +138,41 @@ describe("amazonDsp_list_entities tool", () => {
       expect(listEntitiesResponseFormatter(result)[0].text).toContain("No entities found");
     });
 
+    // Fleet review amazon-dsp #13: an absent `totalResults` used to be read as
+    // 0, so a full first page reported hasMore=false and pagination silently
+    // stopped. Without a total, a full page means there may be more.
+    it("keeps paginating after a full page when Amazon omits totalResults", async () => {
+      mockListEntities.mockResolvedValueOnce({
+        entities: Array.from({ length: 25 }, (_, i) => ({ orderId: `ord_${i}` })),
+        pageInfo: { startIndex: 0, count: 25, totalResults: undefined },
+      });
+
+      const result = await listEntitiesLogic(
+        { entityType: "order", profileId: "1234567890", startIndex: 0, pageSize: 25 },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("25");
+      expect(result.pagination.totalCount).toBeUndefined();
+    });
+
+    it("stops after a short page when Amazon omits totalResults", async () => {
+      mockListEntities.mockResolvedValueOnce({
+        entities: [{ orderId: "ord_1" }],
+        pageInfo: { startIndex: 25, count: 25, totalResults: undefined },
+      });
+
+      const result = await listEntitiesLogic(
+        { entityType: "order", profileId: "1234567890", startIndex: 25, pageSize: 25 },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(result.pagination.hasMore).toBe(false);
+    });
+
     it("passes filters to service when provided", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [],

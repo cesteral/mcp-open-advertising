@@ -66,7 +66,16 @@ interface Harness {
   shutdown: () => Promise<void>;
 }
 
-function makeHarness(opts: { maxSessions?: number; authMode?: string } = {}): Harness {
+function makeHarness(
+  opts: {
+    maxSessions?: number;
+    authMode?: string;
+    host?: string;
+    nodeEnv?: string;
+    mcpAllowedHosts?: string;
+    mcpAllowedOrigins?: string;
+  } = {}
+): Harness {
   const logger = pino({ level: "silent" });
   const store = new SessionServiceStore<{ svc: string }>(opts.maxSessions ?? 1000);
 
@@ -90,11 +99,13 @@ function makeHarness(opts: { maxSessions?: number; authMode?: string } = {}): Ha
 
   const config: TransportFactoryAppConfig = {
     serviceName: "test-mcp",
-    nodeEnv: "test",
+    nodeEnv: opts.nodeEnv ?? "test",
     port: 0,
-    host: "127.0.0.1",
+    host: opts.host ?? "127.0.0.1",
     mcpAuthMode: opts.authMode ?? "fake",
     mcpStatefulSessionTimeoutMs: 60_000,
+    mcpAllowedHosts: opts.mcpAllowedHosts,
+    mcpAllowedOrigins: opts.mcpAllowedOrigins,
   };
 
   const { app, shutdown } = createMcpHttpTransport(config, logger, platformConfig);
@@ -354,6 +365,114 @@ describe("createMcpHttpTransport — auth & session binding", () => {
       });
 
       expect(res.status).not.toBe(503);
+    });
+  });
+});
+
+describe("createMcpHttpTransport — DNS-rebinding protection (#241)", () => {
+  let active: Harness | undefined;
+  afterEach(async () => {
+    await active?.shutdown();
+    active = undefined;
+  });
+
+  const CRED = { "x-fake-cred": "alice" };
+  const rebinding = { host: "evil.example.com", origin: "http://evil.example.com", ...CRED };
+
+  describe("loopback bind (self-host default: 127.0.0.1)", () => {
+    it("rejects a rebinding request (Host and Origin evil.example.com) with 403", async () => {
+      active = makeHarness({ host: "127.0.0.1" });
+      const res = await post(active.app, rebinding);
+      expect(res.status).toBe(403);
+      expect(active.createSessionForAuth).not.toHaveBeenCalled();
+    });
+
+    it("rejects a foreign Host even with no Origin (non-browser rebinding)", async () => {
+      active = makeHarness({ host: "127.0.0.1" });
+      const res = await post(active.app, { host: "evil.example.com:3001", ...CRED });
+      expect(res.status).toBe(403);
+      expect((await res.json()).error).toMatch(/Invalid host/);
+    });
+
+    it("rejects a foreign Origin behind a loopback Host", async () => {
+      active = makeHarness({ host: "localhost" });
+      const res = await post(active.app, {
+        host: "localhost:3001",
+        origin: "http://evil.example.com",
+        ...CRED,
+      });
+      expect(res.status).toBe(403);
+      expect((await res.json()).error).toMatch(/Invalid origin/);
+    });
+
+    it.each(["localhost:3001", "127.0.0.1:3001", "[::1]:3001"])(
+      "accepts Host %s with a matching loopback Origin",
+      async (host) => {
+        active = makeHarness({ host: "127.0.0.1" });
+        const res = await post(active.app, { host, origin: `http://${host}`, ...CRED });
+        expect(res.status).not.toBe(403);
+        expect(active.createSessionForAuth).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it("does not guard /health", async () => {
+      active = makeHarness({ host: "127.0.0.1" });
+      const res = await active.app.request("/health", { headers: { host: "evil.example.com" } });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe("MCP_ALLOWED_HOSTS", () => {
+    it("rejects an unlisted Host on a non-loopback bind", async () => {
+      active = makeHarness({ host: "0.0.0.0", mcpAllowedHosts: "mcp.example.com" });
+      const res = await post(active.app, { host: "evil.example.com", ...CRED });
+      expect(res.status).toBe(403);
+    });
+
+    it("accepts a listed Host on a non-loopback bind", async () => {
+      active = makeHarness({ host: "0.0.0.0", mcpAllowedHosts: "mcp.example.com" });
+      const res = await post(active.app, { host: "mcp.example.com", ...CRED });
+      expect(res.status).not.toBe(403);
+      expect(active.createSessionForAuth).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("non-loopback bind with no allow-lists (hosted default) — unchanged", () => {
+    it("accepts any Host with no Origin, as before", async () => {
+      active = makeHarness({ host: "0.0.0.0", nodeEnv: "production" });
+      const res = await post(active.app, { host: "svc-abc-ew.a.run.app", ...CRED });
+      expect(res.status).not.toBe(403);
+      expect(active.createSessionForAuth).toHaveBeenCalledTimes(1);
+    });
+
+    it("accepts a rebinding-shaped request in development, as before", async () => {
+      active = makeHarness({ host: "0.0.0.0", nodeEnv: "development" });
+      const res = await post(active.app, rebinding);
+      expect(res.status).not.toBe(403);
+    });
+
+    it("keeps production's Origin rule: no MCP_ALLOWED_ORIGINS rejects any Origin", async () => {
+      active = makeHarness({ host: "0.0.0.0", nodeEnv: "production" });
+      const res = await post(active.app, {
+        host: "svc-abc-ew.a.run.app",
+        origin: "https://app.example.com",
+        ...CRED,
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("keeps an explicit MCP_ALLOWED_ORIGINS list", async () => {
+      active = makeHarness({
+        host: "0.0.0.0",
+        nodeEnv: "production",
+        mcpAllowedOrigins: "https://app.example.com",
+      });
+      const ok = await post(active.app, {
+        host: "svc-abc-ew.a.run.app",
+        origin: "https://app.example.com",
+        ...CRED,
+      });
+      expect(ok.status).not.toBe(403);
     });
   });
 });

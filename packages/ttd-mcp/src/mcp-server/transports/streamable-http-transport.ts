@@ -86,7 +86,6 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       ) {
         const envAdapter = new TtdDirectTokenAuthAdapter(
           ttdConfig.ttdApiToken,
-          "env-direct-token",
           ttdConfig.ttdGraphqlUrl
         );
         await envAdapter.validate();

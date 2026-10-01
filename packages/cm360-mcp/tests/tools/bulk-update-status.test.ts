@@ -217,17 +217,29 @@ describe("bulkUpdateStatusLogic", () => {
     expect(result.failed).toBe(2);
   });
 
-  it("fails fast per entity for unsupported entity types", async () => {
+  // The status mapping does not depend on the entity, so an unmapped pair is
+  // refused once, before any GET, instead of failing every item after its read.
+  it("refuses an entity type with no status mapping before reading anything", async () => {
     mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Site" });
 
-    const result = await bulkUpdateStatusLogic(
-      { profileId: "p1", entityType: "site", entityIds: ["1"], status: "ARCHIVED" },
-      mockContext
-    );
+    await expect(
+      bulkUpdateStatusLogic(
+        { profileId: "p1", entityType: "site", entityIds: ["1"], status: "ARCHIVED" },
+        mockContext
+      )
+    ).rejects.toThrow(/Status updates are not supported for entity type: site/);
+    expect(mockState.cm360Service.getEntity).not.toHaveBeenCalled();
+    expect(mockState.cm360Service.bulkUpdateStatus).not.toHaveBeenCalled();
+  });
 
-    expect(result.updated).toBe(0);
-    expect(result.failed).toBe(1);
-    expect(result.results[0].error).toContain("not supported");
+  it("refuses a status the entity type has no mapping for (PAUSED on a campaign)", async () => {
+    await expect(
+      bulkUpdateStatusLogic(
+        { profileId: "p1", entityType: "campaign", entityIds: ["1"], status: "PAUSED" },
+        mockContext
+      )
+    ).rejects.toThrow(/Unsupported status "PAUSED" for entity type campaign/);
+    expect(mockState.cm360Service.bulkUpdateStatus).not.toHaveBeenCalled();
   });
 });
 

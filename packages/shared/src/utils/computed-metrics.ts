@@ -87,10 +87,15 @@ export type ColumnAliases = Partial<Record<RequiredInputKey, string[]>>;
  * - Missing required columns produce empty computed values and a comma-separated
  *   `_computedMetricsWarnings` column listing the missing canonical keys.
  * - A no-op on an empty input array.
+ * - `options.moneyDivisor` converts the money columns (`cost`,
+ *   `conversionValue`) into currency units before computing, for platforms
+ *   whose reports carry micro-currency (e.g. Snapchat: 1_000_000). The row's
+ *   own values are left as the platform sent them.
  */
 export function appendComputedMetricsToRows(
   rows: ComputedMetricRow[],
-  aliases: ColumnAliases = {}
+  aliases: ColumnAliases = {},
+  options: { moneyDivisor?: number } = {}
 ): ComputedMetricRow[] {
   if (rows.length === 0) return rows;
   const firstRow = rows[0]!;
@@ -113,12 +118,13 @@ export function appendComputedMetricsToRows(
       const value = Number(row[col]);
       return Number.isFinite(value) ? value : 0;
     };
+    const moneyDivisor = options.moneyDivisor ?? 1;
     const m = computeMetrics({
-      cost: num("cost"),
+      cost: num("cost") / moneyDivisor,
       impressions: num("impressions"),
       clicks: num("clicks"),
       conversions: num("conversions"),
-      conversionValue: num("conversionValue"),
+      conversionValue: num("conversionValue") / moneyDivisor,
     });
     const out: ComputedMetricRow = { ...row };
     out.cpa = m.cpa?.toString() ?? "";

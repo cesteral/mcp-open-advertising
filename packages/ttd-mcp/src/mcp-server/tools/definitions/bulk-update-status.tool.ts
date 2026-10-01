@@ -104,7 +104,7 @@ export async function bulkUpdateStatusLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
-  // One partial PUT per id, one token each on `ttd:${partnerId}`
+  // One partial PUT per id, one token each on `ttd:client:{quotaClient}`
   // (TtdService.bulkUpdateStatus → updateAvailability).
   const { ttdService } = resolveSessionServices(sdkContext);
   const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.entityIds.length, [1]);

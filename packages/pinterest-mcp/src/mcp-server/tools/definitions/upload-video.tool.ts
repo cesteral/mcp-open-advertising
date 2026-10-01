@@ -121,10 +121,11 @@ export async function uploadVideoLogic(
     context
   );
 
-  // Step 1: Register the upload with Pinterest to get a pre-signed S3 URL
-  const registration = (await pinterestService.client.post(
-    "/v5/media",
-    { media_type: "video" },
+  // Step 1: Register the upload with Pinterest to get a pre-signed S3 URL.
+  // The registration draws one write, and every status poll below one read,
+  // from the session's account bucket (PinterestService).
+  const registration = (await pinterestService.registerMediaUpload(
+    { adAccountId: input.adAccountId },
     context
   )) as PinterestMediaRegisterResponse;
 
@@ -137,7 +138,7 @@ export async function uploadVideoLogic(
   }
 
   // Step 2: Upload the file to S3 using the pre-signed URL and parameters
-  await pinterestService.client.uploadToS3(
+  await pinterestService.uploadMediaFile(
     registration.upload_url,
     registration.upload_parameters ?? {},
     buffer,
@@ -150,9 +151,9 @@ export async function uploadVideoLogic(
   try {
     const finalStatus = await pollUntilComplete<string>({
       fetchStatus: async () => {
-        const statusResult = (await pinterestService.client.get(
-          `/v5/media/${mediaId}`,
-          undefined,
+        const statusResult = (await pinterestService.getMediaStatus(
+          { adAccountId: input.adAccountId },
+          mediaId,
           context
         )) as PinterestMediaStatusResponse;
         // v5 `Media.status` (registered | processing | succeeded | failed) is a

@@ -213,7 +213,7 @@ function adGroupSchemaMarkdown(): string {
 - \`RTBAttributes\` is required and must include at minimum \`BudgetSettings\` and \`BaseBidCPM\`.
 - Ad groups inherit campaign flight dates; ad group budget cannot exceed campaign budget.
 - Targeting (geo, audience, device, site) is applied at the ad group level in TTD (not at ad level).
-- Use \`ttd_adjust_bids\` tool for safe read-modify-write bid changes.
+- Use \`ttd_adjust_bids\` for bid changes (one partial PUT per ad group; only the bid fields are sent).
 - Use \`Channel\` to specify ad format: Display, Video, Audio, CTV, DOOH.
 - Use \`FunnelLocation\` to align with campaign objectives: Awareness, Consideration, Conversion.
 `;

@@ -244,6 +244,24 @@ describe("ttd advanced tools", () => {
     expect(mockTtdService.graphqlQuery).toHaveBeenCalledOnce();
   });
 
+  // Fleet review 2026-09, ttd GraphQL #12: a fully failed operation answers
+  // { data: null, errors }. `result.data ?? result` turned the null into the
+  // whole envelope, so `data` carried the errors and the text printed them twice.
+  it("graphqlQueryLogic keeps data null when TTD returns { data: null, errors }", async () => {
+    mockTtdService.graphqlQuery.mockResolvedValueOnce({
+      data: null,
+      errors: [{ message: "boom", extensions: { code: "VALIDATION_FAILURE" } }],
+    });
+    const result = await graphqlQueryLogic(
+      { query: "query { x }" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.errors).toHaveLength(1);
+  });
+
   it("graphqlQueryResponseFormatter includes GraphQL errors", () => {
     const text = graphqlQueryResponseFormatter({
       data: {},

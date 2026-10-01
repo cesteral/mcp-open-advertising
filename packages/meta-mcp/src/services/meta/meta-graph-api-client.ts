@@ -148,6 +148,15 @@ export class MetaGraphApiClient {
   ) {}
 
   /**
+   * Rate-limit identity of this session's Graph user (the `/me` id, never the
+   * token). Read by `consumeMeta*Quota` / `meta*QuotaBucket` in
+   * `rate-limit-keys.ts`.
+   */
+  get quotaUser(): string {
+    return this.authAdapter.quotaUser;
+  }
+
+  /**
    * Make an authenticated GET request to the Meta Graph API.
    */
   async get(

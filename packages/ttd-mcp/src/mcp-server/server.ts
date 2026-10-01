@@ -10,6 +10,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -29,16 +30,26 @@ import packageJson from "../../package.json" with { type: "json" };
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
 
-const ttdWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every registered tool except the
+ * generated `ttd_search_tools` must appear here (tests/tool-consistency.test.ts);
+ * a missing entry logs the tool's calls with no workflowId.
+ */
+export const ttdWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   ttd_get_context: "mcp.execute.ttd_entity_read",
   ttd_list_entities: "mcp.execute.ttd_entity_read",
   ttd_get_entity: "mcp.execute.ttd_entity_read",
+  ttd_get_pacing_status: "mcp.execute.ttd_entity_read",
   // Write operations
   ttd_create_entity: "mcp.execute.ttd_entity_update",
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
   ttd_validate_entity: "mcp.execute.ttd_entity_update",
+  ttd_duplicate_entity: "mcp.execute.ttd_entity_update",
+  ttd_upload_video: "mcp.execute.ttd_entity_update",
+  ttd_manage_bid_list: "mcp.execute.ttd_entity_update",
+  ttd_manage_seed: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
   ttd_submit_report: "mcp.execute.ttd_reporting",
@@ -50,6 +61,7 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_bulk_update_status: "mcp.execute.ttd_bulk_operations",
   ttd_archive_entities: "mcp.execute.ttd_bulk_operations",
   ttd_adjust_bids: "mcp.execute.ttd_bulk_operations",
+  ttd_bulk_manage_bid_lists: "mcp.execute.ttd_bulk_operations",
   // GraphQL
   ttd_graphql_query: "mcp.execute.ttd_graphql",
   ttd_graphql_query_bulk: "mcp.execute.ttd_graphql",
@@ -72,6 +84,8 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_get_report_executions: "mcp.execute.ttd_reporting",
   ttd_execute_entity_report: "mcp.execute.ttd_reporting",
   ttd_get_entity_report_types: "mcp.execute.ttd_reporting",
+  ttd_list_report_types: "mcp.execute.ttd_reporting",
+  ttd_get_report_type_schema: "mcp.execute.ttd_reporting",
   // Preview
   ttd_get_ad_preview: "mcp.execute.ttd_entity_read",
 };
@@ -85,12 +99,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "ttd-mcp",
+    buildServerInfo("ttd-mcp", {
       version: packageJson.version,
       description:
         "The Trade Desk campaign management, reporting, and optimization via TTD's documented Platform API (REST v3 + GraphQL). Supports first-class CRUD entities, GraphQL bulk operations for >100-record writes, and async report generation.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

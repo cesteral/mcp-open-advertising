@@ -123,7 +123,7 @@ export async function bidListBulkLogic(
     input.operation === "batch_get" ? (input.bidListIds?.length ?? 0) : (input.items?.length ?? 0);
 
   // One GraphQL request per bid list (batch_get → getBidList, batch_update →
-  // updateBidList; both via bidListGraphql), one token each on `ttd:${partnerId}`.
+  // updateBidList; both via bidListGraphql), one token each on `ttd:client:{quotaClient}`.
   const { ttdService } = resolveSessionServices(sdkContext);
   const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, requested, [1]);
 

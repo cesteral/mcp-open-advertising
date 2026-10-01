@@ -105,6 +105,11 @@ export async function bulkUpdateStatusLogic(
     canonicalEntityKind: null,
   };
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
   if (input.dry_run === true) {
@@ -113,7 +118,7 @@ export async function bulkUpdateStatusLogic(
       pinterestBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.entityIds.length,
-        pinterestBulkBuckets.perItemWrite(input.adAccountId),
+        pinterestBulkBuckets.perItemWrite(pinterestService.quotaScope, input.adAccountId),
         "entityIds"
       )
     );
@@ -129,12 +134,17 @@ export async function bulkUpdateStatusLogic(
     };
   }
 
+  // Scope-check BEFORE the capacity check and the confirmation prompt, so a
+  // user is never asked to confirm a call that then fails on an account
+  // mismatch (fleet review 2026-09, pinterest #24).
+  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
+
   // Refuse a batch the rate limiter cannot admit within its queue budget
   // BEFORE the confirmation prompt and the first write.
   assertPinterestBulkCapacity(
     TOOL_NAME,
     input.entityIds.length,
-    pinterestBulkBuckets.perItemWrite(input.adAccountId)
+    pinterestBulkBuckets.perItemWrite(pinterestService.quotaScope, input.adAccountId)
   );
 
   const confirmed = await elicitBulkStatusChangeConfirmation({
@@ -156,9 +166,6 @@ export async function bulkUpdateStatusLogic(
       dispatchedCapability,
     };
   }
-
-  const { pinterestService, boundAdAccountId } = resolveSessionServices(sdkContext);
-  assertAccountScope(input.adAccountId, boundAdAccountId, "adAccountId");
 
   const result = await pinterestService.bulkUpdateStatus(
     input.entityType as PinterestEntityType,

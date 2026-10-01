@@ -138,7 +138,7 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 
 ---
 
-## MCP Tools Reference (16 Tools)
+## MCP Tools Reference (22 Tools)
 
 ### Bootstrap
 
@@ -182,7 +182,7 @@ CM360 reports are asynchronous. Two workflows available:
 | `cm360_check_report_status` | Single status check            | `profileId`, `reportId`, `fileId`                                                                        |
 | `cm360_download_report`     | Download and parse CSV results | `downloadUrl`, `mode?`, `columns?`, `offset?`, `maxRows?` (bounded report-view; `maxRows` capped at 200) |
 
-**Report types**: `STANDARD`, `REACH`, `PATH_TO_CONVERSION`, `CROSS_DIMENSION_REACH`, `FLOODLIGHT`
+**Report types**: `STANDARD`, `REACH`, `PATH_TO_CONVERSION`, `CROSS_MEDIA_REACH`, `FLOODLIGHT`
 
 **Report statuses**: `PROCESSING` -> `REPORT_AVAILABLE` | `FAILED` | `CANCELLED`
 
@@ -202,8 +202,19 @@ No native batch API: bulk tools make one call per item (two per entity for statu
 | ------------------------------ | -------------------------------------------------- | ---------------------------- |
 | `cm360_get_ad_preview`         | Get ad details and click-through configuration     | `profileId`, `adId`          |
 | `cm360_list_targeting_options` | Browse targeting options (browsers, OS, geo, etc.) | `profileId`, `targetingType` |
+| `cm360_get_pacing_status`      | Client-side pacing calculator (no API call)        | budget, spend, flight dates  |
+| `cm360_search_tools`           | Search this server's tools                         | `query`                      |
 
-**Targeting types**: `browsers`, `connectionTypes`, `contentCategories`, `countries`, `languages`, `metros`, `mobileCarriers`, `operatingSystemVersions`, `operatingSystems`, `platformTypes`, `postalCodes`, `regions`, `cities`
+**Targeting types**: `browsers`, `connectionTypes`, `contentCategories`, `countries`, `languages`, `metros`, `mobileCarriers`, `operatingSystemVersions`, `operatingSystems`, `platformTypes`, `postalCodes`, `regions`, `cities`. Only `contentCategories` paginates and only `cities` takes filters (`countryDartIds`, `dartIds`, `namePrefix`, `regionDartIds`); the rest take `profileId` alone and return the whole list.
+
+### Scheduling and breakdowns
+
+| Tool                           | Description                                                         | Key Parameters                                     |
+| ------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------- |
+| `cm360_get_report_breakdowns`  | `cm360_get_report` with extra breakdown dimensions (blocking)       | `profileId`, `name`, `type`, `breakdownDimensions` |
+| `cm360_create_report_schedule` | Create a report with a recurring schedule                           | `profileId`, `name`, `type`, `schedule`            |
+| `cm360_list_report_schedules`  | One page of the account's reports, filtered to the scheduled ones   | `profileId`, `maxResults?`, `pageToken?`           |
+| `cm360_delete_report_schedule` | Delete a scheduled report (the whole report, not only its schedule) | `profileId`, `reportId`                            |
 
 ---
 
@@ -305,8 +316,8 @@ packages/cm360-mcp/
 │   ├── index.ts                          # Entry point (bootstrap)
 │   ├── config/
 │   │   └── index.ts                      # Zod-validated config from env
-│   ├── types-global/
-│   │   └── mcp.ts                        # Re-exported shared types
+│   ├── generated/
+│   │   └── types.ts                      # Types generated from the dfareporting v5 schema
 │   ├── services/
 │   │   ├── session-services.ts           # Per-session service store
 │   │   └── cm360/
@@ -321,37 +332,16 @@ packages/cm360-mcp/
 │   │   │   ├── index.ts                  # Barrel export
 │   │   │   ├── utils/
 │   │   │   │   ├── entity-mapping.ts     # Entity type -> API collection mapping
+│   │   │   │   ├── report-config.ts      # Report criteria / schedule validation
+│   │   │   │   ├── dry-run.ts, capture-snapshot.ts, bulk-capacity.ts
 │   │   │   │   └── resolve-session.ts    # Session service resolution
 │   │   │   └── definitions/
-│   │   │       ├── index.ts              # allTools array
-│   │   │       ├── list-user-profiles.tool.ts
-│   │   │       ├── list-entities.tool.ts
-│   │   │       ├── get-entity.tool.ts
-│   │   │       ├── create-entity.tool.ts
-│   │   │       ├── update-entity.tool.ts
-│   │   │       ├── delete-entity.tool.ts
-│   │   │       ├── validate-entity.tool.ts
-│   │   │       ├── get-report.tool.ts
-│   │   │       ├── submit-report.tool.ts
-│   │   │       ├── check-report-status.tool.ts
-│   │   │       ├── download-report.tool.ts
-│   │   │       ├── bulk-update-status.tool.ts
-│   │   │       ├── bulk-create-entities.tool.ts
-│   │   │       ├── bulk-update-entities.tool.ts
-│   │   │       ├── get-ad-preview.tool.ts
-│   │   │       └── list-targeting-options.tool.ts
-│   │   ├── prompts/
-│   │   │   └── index.ts                  # Empty registry (extensible)
-│   │   └── resources/
-│   │       └── index.ts                  # Empty registry (extensible)
+│   │   │       ├── index.ts              # allTools array (21 tools + cm360_search_tools)
+│   │   │       └── *.tool.ts             # One file per tool
+│   │   ├── prompts/                      # 8 workflow prompts + the shared cross-platform ones
+│   │   └── resources/                    # Entity, reporting and targeting references
 │   └── utils/
-│       ├── errors/
-│       │   └── index.ts                  # Re-exported shared error types
-│       ├── security/
-│       │   └── rate-limiter.ts           # Pre-configured CM360 rate limiter
-│       └── telemetry/
-│           ├── tracing.ts                # OTEL + withCM360ApiSpan helper
-│           └── index.ts                  # Barrel export
+│       └── platform.ts                   # Rate limiter + OTEL span helper
 ├── .env.example
 ├── package.json
 └── tsconfig.json

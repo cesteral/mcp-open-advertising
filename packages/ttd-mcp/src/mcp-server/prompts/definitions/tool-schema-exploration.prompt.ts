@@ -207,6 +207,6 @@ This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foun
 - For debugging: invoke \`ttd_troubleshoot_entity\` prompt
 - For bulk operations: use \`ttd_bulk_create_entities\` or \`ttd_bulk_update_entities\`
 - For rich entity queries: use \`ttd_graphql_query\` for nested data
-- For bid optimization: use \`ttd_adjust_bids\` for safe read-modify-write
+- For bid optimization: use \`ttd_adjust_bids\` (one partial PUT per ad group)
 `;
 }

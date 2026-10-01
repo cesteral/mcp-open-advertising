@@ -171,6 +171,49 @@ describe("runTiktokUpdateDryRun", () => {
     expect(result.expectedPostState!.budget).toEqual({ daily: null, lifetime: null });
   });
 
+  // AdUpdateBody (official SDK ad_update_body.py) carries the ad as
+  // creatives[0] with its ad_id there; the dry run reports the payloads the
+  // execute path refuses (TikTokService.updateEntity → adUpdateShapeErrors).
+  it("reports an ad update whose data names another ad", async () => {
+    const result = await runTiktokUpdateDryRun(
+      { entityType: "ad", entityId: "ad_1", data: { ad_id: "ad_2", ad_name: "x" } },
+      fakeService(adEntity()),
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(false);
+    expect(result.validationErrors.map((e) => e.code)).toEqual(["AD_ID_CONFLICT"]);
+  });
+
+  it("reports an ad update with more than one creative or creative fields in two places", async () => {
+    const many = await runTiktokUpdateDryRun(
+      { entityType: "ad", entityId: "ad_1", data: { creatives: [{}, {}] } },
+      fakeService(adEntity()),
+      ctx
+    );
+    expect(many.validationErrors.map((e) => e.code)).toEqual(["INVALID_AD_CREATIVES"]);
+    const both = await runTiktokUpdateDryRun(
+      { entityType: "ad", entityId: "ad_1", data: { ad_name: "x", creatives: [{ ad_text: "y" }] } },
+      fakeService(adEntity()),
+      ctx
+    );
+    expect(both.validationErrors.map((e) => e.code)).toEqual(["AMBIGUOUS_AD_CREATIVE_FIELDS"]);
+  });
+
+  it("accepts an ad update the body can carry, and does not apply the checks to other types", async () => {
+    const ad = await runTiktokUpdateDryRun(
+      { entityType: "ad", entityId: "ad_1", data: { ad_name: "x" } },
+      fakeService(adEntity()),
+      ctx
+    );
+    expect(ad.wouldSucceed).toBe(true);
+    const campaign = await runTiktokUpdateDryRun(
+      { entityType: "campaign", entityId: "camp_1", data: { ad_id: "whatever" } },
+      fakeService(campaignEntity()),
+      ctx
+    );
+    expect(campaign.wouldSucceed).toBe(true);
+  });
+
   it("fails the call when the read partner cannot resolve the entity", async () => {
     // The tool declares requiresSimulation:true — a dry-run that cannot
     // produce an expected post-state must fail the call, not return an

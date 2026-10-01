@@ -17,6 +17,16 @@ export interface CM360EntityConfig {
   apiCollection: string;
   idField: string;
   supportsDelete: boolean;
+  /**
+   * `false` when dfareporting v5 has no `{collection}.insert` method, so a POST
+   * to the collection cannot create anything. Omitted = insert exists.
+   */
+  supportsCreate?: false;
+  /**
+   * `false` when the collection's v5 `list` method takes no `pageToken` /
+   * `maxResults` (it returns everything in one response). Omitted = paginated.
+   */
+  supportsPagination?: false;
 }
 
 const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
@@ -59,8 +69,20 @@ const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
     apiCollection: "floodlightConfigurations",
     idField: "id",
     supportsDelete: false,
+    // v5 Discovery (rev 20260721) `resources.floodlightConfigurations.methods`
+    // is { get, list, patch, update } — there is no `insert`.
+    supportsCreate: false,
+    // v5 Discovery `floodlightConfigurations.list` parameters are only
+    // `profileId` and `ids`: no `pageToken` / `maxResults`.
+    supportsPagination: false,
   },
 };
+
+/** Whether dfareporting v5 exposes an `insert` for this entity type's collection. */
+export function supportsCreate(entityType: string): boolean {
+  const config = ENTITY_CONFIGS[entityType as CM360EntityType];
+  return Boolean(config) && config.supportsCreate !== false;
+}
 
 export function getEntityConfig(entityType: CM360EntityType): CM360EntityConfig {
   const config = ENTITY_CONFIGS[entityType];

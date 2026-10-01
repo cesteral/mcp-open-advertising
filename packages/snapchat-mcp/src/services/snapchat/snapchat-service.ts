@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
+import { consumeSnapchatQuota, snapchatQuotaKey } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
@@ -268,6 +269,16 @@ export class SnapchatService {
     this.rateLimiter = rateLimiter;
   }
 
+  /**
+   * The limiter key every call in this service draws on — the session's
+   * per-user bucket (`snapchat:{principal}`, see `rate-limit-keys.ts`). The
+   * bulk capacity pre-check projects against it, so another tenant's traffic
+   * neither fills this bucket nor refuses this session's batch.
+   */
+  get quotaKey(): string {
+    return snapchatQuotaKey(this.httpClient);
+  }
+
   private resolveUpdatePathParams<T extends SnapchatEntityType>(
     entityType: T,
     entity: SnapchatEntityMap[T],
@@ -457,7 +468,7 @@ export class SnapchatService {
     cursor?: string,
     context?: RequestContext
   ): Promise<{ entities: SnapchatEntityMap[T][]; nextCursor?: string }> {
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
 
@@ -509,7 +520,7 @@ export class SnapchatService {
     entityId: string,
     context?: RequestContext
   ): Promise<SnapchatEntityMap[T]> {
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
 
     const config = getEntityConfig(entityType);
     const interpolatedPath = interpolatePath(config.getPath, { entityId });
@@ -537,7 +548,7 @@ export class SnapchatService {
     const { pathParams, items } = this.resolveCreateTarget(entityType, filters, [data]);
     await this.assertParentInBoundAccount(entityType, pathParams, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.createPath, pathParams);
 
@@ -608,7 +619,7 @@ export class SnapchatService {
   ): Promise<SnapchatEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
     const { mergedItem, pathParams } = await this.buildMergedUpdateItem(
       entityType,
@@ -641,7 +652,7 @@ export class SnapchatService {
     // token can reach would be deletable from a session bound to another account.
     await this.getEntity(entityType, entityId, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.deletePath, { entityId });
     return this.httpClient.delete(interpolatedPath, undefined, context);
@@ -663,7 +674,7 @@ export class SnapchatService {
     params: { cursor?: string; limit?: number } = {},
     context?: RequestContext
   ): Promise<{ entities: SnapchatAdAccount[]; nextCursor?: string }> {
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
 
     // Snapchat returns an absolute `next_link` URL as its cursor; follow it verbatim
     // when supplied, otherwise hit the base endpoint with an optional `limit`.
@@ -748,7 +759,7 @@ export class SnapchatService {
     const { pathParams, items: bodyItems } = this.resolveCreateTarget(entityType, filters, items);
     await this.assertParentInBoundAccount(entityType, pathParams, context);
 
-    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
     const interpolatedPath = interpolatePath(config.createPath, pathParams);
 
@@ -771,7 +782,7 @@ export class SnapchatService {
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`snapchat:default`, SNAPCHAT_WRITE_TOKENS);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
     const mergedItems = await Promise.all(
       items.map(async (item) => {
@@ -895,7 +906,7 @@ export class SnapchatService {
     cursor?: string,
     context?: RequestContext
   ): Promise<{ results: Record<string, unknown>[]; nextCursor?: string }> {
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
 
     const config = TARGETING_ENDPOINTS[targetingType];
     if (!config) {
@@ -951,7 +962,7 @@ export class SnapchatService {
     adAccountId?: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
 
     const effectiveAdAccountId = adAccountId ?? this.adAccountId;
     return this.httpClient.post(
@@ -966,7 +977,7 @@ export class SnapchatService {
   async getCreativePreview(creativeId: string, context?: RequestContext): Promise<unknown> {
     // Ownership check first — the preview path is keyed by creative ID alone.
     await this.getEntity("creative", creativeId, context);
-    await this.rateLimiter.consume(`snapchat:default`);
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
     return this.httpClient.get(`/v1/creatives/${creativeId}/creative_preview`, undefined, context);
   }
 }

@@ -1146,6 +1146,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
@@ -1176,11 +1177,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "{platform}-mcp",
+    // title and websiteUrl come from registry.json (scripts/lib/server-info.test.mjs)
+    buildServerInfo("{platform}-mcp", {
       version: packageJson.version,
       description: "{Platform} Ads campaign management and reporting via {Platform} API.",
-    },
+    }),
     {
       capabilities: { logging: {} },
       instructions: "{Platform} Ads management server. Use {prefix}_list_accounts to discover accounts...",

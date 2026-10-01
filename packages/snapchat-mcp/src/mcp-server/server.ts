@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -62,12 +63,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "snapchat-mcp",
+    buildServerInfo("snapchat-mcp", {
       version: packageJson.version,
       description:
         "Snapchat Ads campaign management and reporting via the Snap Marketing API. Supports campaign, ad squad, ad, creative, and audience workflows with reporting, targeting, bid adjustments, and previews.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

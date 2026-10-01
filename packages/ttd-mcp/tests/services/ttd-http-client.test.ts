@@ -36,7 +36,7 @@ function createMockLogger() {
 function createMockAuthAdapter(token = "test-token") {
   return {
     getAccessToken: vi.fn().mockResolvedValue(token),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   };
 }
 

@@ -35,9 +35,11 @@ get_port() {
   esac
 }
 
-# Scenarios applicable to all Cesteral servers.
-# We skip scenarios requiring specific tool behaviors our servers don't expose
-# (e.g., tools-call-image, tools-call-audio, tools-call-embedded-resource).
+# Scenarios applicable to all Cesteral servers. Everything else in the active
+# suite runs only with --full, against conformance/expected-failures.yaml.
+# Caveat: tools-call-simple-text calls test_simple_text with no `arguments`,
+# which the servers reject as invalid input; the 0.1.16 check accepts that
+# error result as "simple text", so its PASS does not show a successful call.
 CORE_SCENARIOS=(
   "server-initialize"
   "ping"
@@ -79,9 +81,16 @@ for SERVER in "${SERVERS[@]}"; do
   echo "  Conformance: $SERVER (port $PORT)"
   echo "========================================"
 
-  # Start server in background with no auth
+  # Start server in background with no auth. The two fixture flags register the
+  # harness's own test tools (MCP_INCLUDE_CONFORMANCE_TOOLS: test_simple_text,
+  # test_tool_with_logging, test_elicitation*) and test resources/prompts
+  # (MCP_CONFORMANCE_FIXTURES: test://static-text, test://template/{id}/data,
+  # test_simple_prompt, test_prompt_with_arguments). Scenarios call those names;
+  # without them every scenario fails on "not found" before exercising anything,
+  # and tools-call-simple-text / tools-call-error "pass" on the not-found error.
   cd "$ROOT_DIR"
-  MCP_AUTH_MODE=none MCP_TRANSPORT_MODE=http PORT="$PORT" \
+  MCP_INCLUDE_CONFORMANCE_TOOLS=true MCP_CONFORMANCE_FIXTURES=true \
+    MCP_AUTH_MODE=none MCP_TRANSPORT_MODE=http PORT="$PORT" \
     LINKEDIN_MCP_PORT="$PORT" TIKTOK_MCP_PORT="$PORT" \
     CM360_MCP_PORT="$PORT" SNAPCHAT_MCP_PORT="$PORT" \
     SA360_MCP_PORT="$PORT" PINTEREST_MCP_PORT="$PORT" \
@@ -137,16 +146,26 @@ for SERVER in "${SERVERS[@]}"; do
   done
 
   # Optionally run the full active suite with expected-failures baseline.
-  # Not run by default because elicitation scenarios block for ~60s each.
+  # Not run by default because the full active suite takes minutes per server.
   # Run with: ./scripts/conformance-test.sh --full
+  # The harness exits non-zero on an unexpected failure AND on a stale baseline
+  # entry (a listed scenario that now passes); with --ci either fails the run.
   EXPECTED_FAILURES="$ROOT_DIR/conformance/expected-failures.yaml"
   if $FULL_SUITE && [ -f "$EXPECTED_FAILURES" ]; then
     echo "  Running active suite with expected-failures baseline..."
+    SUITE_EXIT=0
     npx @modelcontextprotocol/conformance server \
       --url "$SERVER_URL" \
       --suite active \
       --expected-failures "$EXPECTED_FAILURES" \
-      -o "$SERVER_RESULTS_DIR/suite" 2>&1 | tail -5 || true
+      -o "$SERVER_RESULTS_DIR/suite" > "$SERVER_RESULTS_DIR/suite.log" 2>&1 || SUITE_EXIT=$?
+    sed -n '/Expected failures/,$p' "$SERVER_RESULTS_DIR/suite.log" | sed 's/^/    /'
+    if [ "$SUITE_EXIT" -ne 0 ]; then
+      echo "    BASELINE MISMATCH (exit $SUITE_EXIT) — full log: $SERVER_RESULTS_DIR/suite.log"
+      if $CI_MODE; then
+        OVERALL_EXIT=1
+      fi
+    fi
   fi
 
   echo "  Results: $SERVER_PASS passed, $SERVER_FAIL failed"

@@ -86,7 +86,7 @@ Start with the simplest useful call:
 |--------|------|---------------|
 | Check an entity | \`dv360_get_entity\` | \`entityType\` + IDs |
 | List entities | \`dv360_list_entities\` | \`entityType\` + \`advertiserId\` |
-| Check targeting | \`dv360_list_assigned_targeting\` | \`entityType\` + IDs |
+| Check targeting | \`dv360_list_assigned_targeting\` | \`parentType\` + \`targetingType\` + IDs |
 | Adjust bids | \`dv360_adjust_line_item_bids\` | \`advertiserId\` + \`adjustments\` |
 
 Inspect the output, then iterate with more specific calls.
@@ -119,7 +119,7 @@ Inspect the output, then iterate with more specific calls.
 ### Targeting (5 tools)
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| \`dv360_list_assigned_targeting\` | List targeting assignments | For any entity type |
+| \`dv360_list_assigned_targeting\` | List targeting assignments | advertiser, lineItem or adGroup parents |
 | \`dv360_get_assigned_targeting\` | Get specific assignment | By targeting type |
 | \`dv360_create_assigned_targeting\` | Create targeting | Assign to entity |
 | \`dv360_delete_assigned_targeting\` | Remove targeting | By targeting type |

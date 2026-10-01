@@ -59,7 +59,6 @@ The shared abstraction already exists: `@cesteral/shared` exposes `async-task-to
 Today only `dbm_run_custom_query_async` consumes the helper. Adoption targets, in priority order:
 
 - every `*_submit_report` / `*_check_report_status` / `*_download_report` trio (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS, SA360) — these are the largest concentration of polling boilerplate in the repo
-- TTD Workflows API batch jobs (`ttd_create_campaigns` / `ttd_update_campaigns` / `ttd_create_ad_groups` / `ttd_update_ad_groups` in `mode: "batch"`) plus `ttd_get_job_status`
 - TTD GraphQL bulk jobs (`ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job`)
 - any blocking `*_get_report` tool that currently polls inside the server
 
@@ -86,7 +85,7 @@ All four run in `.github/workflows/ci.yml` before the build step, so a PR that d
 
 Remaining work is small and depends on external SEPs:
 
-- align the runtime server-card schema with SEP-2127 when it goes Final
+- align the runtime server card with SEP-2127 once it is merged. Status as of 2026-09-30: [PR #2127](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2127) has not been merged. `main` (`046fa30`, 2026-09-28) has no `seps/2127-*.md`, even though the SEP file on the PR branch (`5c8483d`, 2026-08-24) reads "Status: Final" (Extensions Track, `io.modelcontextprotocol/server-card`). Neither the 2026-07-28 spec nor `draft` mentions server cards. The SEP defers the wire format to [experimental-ext-server-card](https://github.com/modelcontextprotocol/experimental-ext-server-card) (`526201b`, 2026-08-12), which describes itself as "not an accepted or official MCP extension". That draft differs from our card in three ways. It has no `schema_version`: documents declare `"$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json"`, and date-versioned schema URLs are listed as invalid. Its fields are `name`/`version`/`description`/`title`/`websiteUrl`/`icons`/`remotes[].supportedProtocolVersions`, not our `mcp_protocol_versions`/`transports`/`auth`. And the card is served at `GET <streamable-http-url>/server-card`, found through `/.well-known/ai-catalog.json`, where the draft explicitly argues against a `.well-known/mcp/server-card` path. Our card (`schema_version: "2026-04-27-draft"` at `/.well-known/mcp/server-card.json`) stays as it is until the SEP merges. Aligning it then means moving the card and changing its shape, not bumping a version string.
 
 ### 4. Progressive discovery: ship grouped capabilities next ✅ for tool search, ⬜ for capability groups
 
@@ -127,7 +126,7 @@ Cloudflare's Code Mode pattern is relevant, but constrained. Do not replace high
 - APIs with too many endpoints to expose cleanly
 - power-user workflows where typed composition beats dozens of narrow tools
 
-TTD is the natural place to evaluate — it already has `ttd_rest_request`, GraphQL tools, and Workflows-specific tools. The repo's existing structured output coverage (every tool definition ships an `outputSchema`) gives the model the type information Cloudflare argues makes code-mode work.
+TTD is the natural place to evaluate — it already has a GraphQL passthrough (`ttd_graphql_query`) and the GraphQL bulk-job tools. The repo's existing structured output coverage (every tool definition ships an `outputSchema`) gives the model the type information Cloudflare argues makes code-mode work.
 
 ### 8. Get ready for Cross App Access (XAA) ⬜
 

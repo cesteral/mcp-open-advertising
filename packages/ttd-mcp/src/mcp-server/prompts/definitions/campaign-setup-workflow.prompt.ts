@@ -144,29 +144,30 @@ Input: {
 
 ---
 
-## Step 5: Create Ad(s)
+## Step 5: Attach Creatives to the Ad Group
 
-Ads associate creatives with the ad group.
+TTD has no standalone \`ad\` entity — an "ad" is an ad group plus the creatives in its \`RTBAttributes.CreativeIds\`.
 
 \`\`\`
-Tool: ttd_create_entity
+Tool: ttd_update_entity
 Input: {
-  "entityType": "ad",
+  "entityType": "adGroup",
+  "entityId": "{AdGroupId from Step 3}",
   "advertiserId": "${advertiserId}",
+  "campaignId": "{CampaignId from Step 2}",
   "data": {
-    "AdName": "Your Ad Name",
-    "AdGroupId": "{AdGroupId from Step 3}",
-    "AdvertiserId": "${advertiserId}",
-    "CreativeIds": ["{CreativeId from Step 4}"],
-    "LandingPageUrl": "https://www.example.com/landing"
+    "RTBAttributes": {
+      "CreativeIds": ["{CreativeId from Step 4}"]
+    }
   }
 }
 \`\`\`
 
 ### Common Gotchas
 - \`CreativeIds\` must reference **existing** creatives (created in Step 4)
-- Multiple creatives in one ad enables TTD auto-optimization (A/B testing)
-- Ads inherit targeting from their parent ad group
+- The array **replaces** the ad group's current creatives — include any existing IDs you want to keep
+- Several creatives on one ad group let TTD rotate and optimize between them
+- TTD's \`creativeAdGroupAssociate\` GraphQL mutation (via \`ttd_graphql_query\`) associates a creative without rewriting the ad group's \`RTBAttributes\`
 
 ---
 
@@ -229,7 +230,7 @@ Confirm everything was created correctly:
 
 1. List campaigns: \`ttd_list_entities\` with \`{ "entityType": "campaign", "advertiserId": "${advertiserId}" }\`
 2. List ad groups: \`ttd_list_entities\` with \`{ "entityType": "adGroup", "campaignId": "{CampaignId}" }\`
-3. List ads: \`ttd_list_entities\` with \`{ "entityType": "ad", "filter": { "AdGroupId": "{AdGroupId}" } }\`
+3. Check creatives on an ad group: \`ttd_get_entity\` with \`{ "entityType": "adGroup", "entityId": "{AdGroupId}" }\` and read \`RTBAttributes.CreativeIds\`
 
 ---
 

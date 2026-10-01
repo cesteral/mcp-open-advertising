@@ -93,7 +93,7 @@ Use when analyzing conversion data from Floodlight tags.
 {
   "reportType": "FLOODLIGHT",
   "groupBys": ["FILTER_DATE", "FILTER_FLOODLIGHT_ACTIVITY"],
-  "metrics": ["METRIC_TOTAL_CONVERSIONS", "METRIC_POST_CLICK_CONVERSIONS", "METRIC_POST_VIEW_CONVERSIONS"]
+  "metrics": ["METRIC_TOTAL_CONVERSIONS", "METRIC_LAST_CLICKS", "METRIC_LAST_IMPRESSIONS"]
 }
 \`\`\`
 

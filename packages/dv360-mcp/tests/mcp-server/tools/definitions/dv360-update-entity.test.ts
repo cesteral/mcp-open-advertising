@@ -137,6 +137,7 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-examples.js", () => ({
 }));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
+import { getEntityExamples } from "../../../../src/mcp-server/tools/utils/entity-examples.js";
 import {
   updateEntityLogic,
   updateEntityResponseFormatter,
@@ -320,6 +321,30 @@ describe("dv360_update_entity", () => {
           createMockSdkContext()
         )
       ).rejects.toThrow("Permission denied");
+    });
+
+    it("rethrows the real error when its message cannot be rewritten (ZodError)", async () => {
+      // ZodError's `message` is a getter-only accessor, so appending the
+      // example tips by assignment threw a TypeError that hid the real error.
+      vi.mocked(getEntityExamples).mockReturnValueOnce([
+        { operation: "Rename", updateMask: "displayName" } as any,
+      ]);
+      const zodError = z.object({ displayName: z.string() }).safeParse({}).error!;
+      mockDv360Service.updateEntity.mockRejectedValueOnce(zodError);
+
+      await expect(
+        updateEntityLogic(
+          {
+            entityType: "lineItem",
+            advertiserId: "adv-1",
+            lineItemId: "li-1",
+            data: { displayName: "X" },
+            updateMask: "displayName",
+          } as any,
+          createMockContext(),
+          createMockSdkContext()
+        )
+      ).rejects.toBe(zodError);
     });
   });
 

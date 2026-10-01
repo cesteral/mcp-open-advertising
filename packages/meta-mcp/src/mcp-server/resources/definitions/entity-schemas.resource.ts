@@ -19,7 +19,7 @@ const ENTITY_SCHEMAS: Record<MetaEntityType, string> = {
 ## Required Fields
 - \`name\` (string) — Campaign name
 - \`objective\` (string) — OUTCOME_AWARENESS, OUTCOME_TRAFFIC, OUTCOME_ENGAGEMENT, OUTCOME_LEADS, OUTCOME_SALES, OUTCOME_APP_PROMOTION
-- \`special_ad_categories\` (array) — Empty array [] if none, or ["EMPLOYMENT", "HOUSING", "CREDIT", "ISSUES_ELECTIONS_POLITICS"]
+- \`special_ad_categories\` (array, required) — Empty array [] (or ["NONE"]) if none; otherwise any of "CREDIT", "EMPLOYMENT", "FINANCIAL_PRODUCTS_SERVICES", "HOUSING", "ISSUES_ELECTIONS_POLITICS", "ONLINE_GAMBLING_AND_GAMING"
 
 ## Optional Fields
 - \`status\` (string) — ACTIVE, PAUSED (default: PAUSED)

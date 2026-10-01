@@ -13,7 +13,7 @@ import {
 } from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 
 let svc: {
-  getEntity: ReturnType<typeof vi.fn>;
+  getCampaignForDuplicate: ReturnType<typeof vi.fn>;
   createEntity: ReturnType<typeof vi.fn>;
   validateEntity: ReturnType<typeof vi.fn>;
 };
@@ -24,7 +24,7 @@ const sdk = { sessionId: "s" } as any;
 beforeEach(() => {
   vi.clearAllMocks();
   svc = {
-    getEntity: vi.fn().mockResolvedValue({
+    getCampaignForDuplicate: vi.fn().mockResolvedValue({
       campaign: {
         id: "111",
         resourceName: "customers/1/campaigns/111",
@@ -32,6 +32,8 @@ beforeEach(() => {
         status: "PAUSED",
         advertisingChannelType: "SEARCH",
         campaignBudget: "customers/1/campaignBudgets/9",
+        biddingStrategyType: "MANUAL_CPC",
+        manualCpc: { enhancedCpcEnabled: false },
       },
     }),
     createEntity: vi
@@ -50,7 +52,7 @@ describe("gads_duplicate_entity", () => {
       sdk
     );
 
-    expect(svc.getEntity).toHaveBeenCalledWith("campaign", "1", "111", ctx);
+    expect(svc.getCampaignForDuplicate).toHaveBeenCalledWith("1", "111", ctx);
     const createPayload = svc.createEntity.mock.calls[0][2];
     expect(createPayload).not.toHaveProperty("id");
     expect(createPayload).not.toHaveProperty("resourceName");
@@ -70,6 +72,68 @@ describe("gads_duplicate_entity", () => {
       sdk
     );
     expect(svc.createEntity.mock.calls[0][2].name).toBe("New");
+  });
+
+  it("creates the copy PAUSED when the source is ENABLED", async () => {
+    svc.getCampaignForDuplicate.mockResolvedValueOnce({
+      campaign: {
+        id: "111",
+        name: "Live",
+        status: "ENABLED",
+        advertisingChannelType: "SEARCH",
+        biddingStrategyType: "MANUAL_CPC",
+      },
+    });
+    await duplicateEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "111" } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.createEntity.mock.calls[0][2].status).toBe("PAUSED");
+  });
+
+  it("ignores a status in options: the copy is always PAUSED", async () => {
+    svc.getCampaignForDuplicate.mockResolvedValueOnce({
+      campaign: {
+        id: "111",
+        name: "Live",
+        status: "ENABLED",
+        advertisingChannelType: "SEARCH",
+        biddingStrategyType: "MANUAL_CPC",
+      },
+    });
+    await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        customerId: "1",
+        entityId: "111",
+        options: { name: "Copy", status: "ENABLED" },
+      } as any,
+      ctx,
+      sdk
+    );
+    const payload = svc.createEntity.mock.calls[0][2];
+    expect(payload.status).toBe("PAUSED");
+    expect(payload.name).toBe("Copy");
+  });
+
+  it("dry_run validates and projects the PAUSED copy that execute would send", async () => {
+    svc.getCampaignForDuplicate.mockResolvedValueOnce({
+      campaign: {
+        id: "111",
+        name: "Live",
+        status: "ENABLED",
+        advertisingChannelType: "SEARCH",
+        biddingStrategyType: "MANUAL_CPC",
+      },
+    });
+    await duplicateEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "111", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.createEntity).not.toHaveBeenCalled();
+    expect(svc.validateEntity.mock.calls[0][2].status).toBe("PAUSED");
   });
 
   it("dry_run validates via native validateOnly and does not create", async () => {

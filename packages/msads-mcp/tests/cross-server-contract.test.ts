@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  CROSS_PLATFORM_PROMPTS,
   isBoundedReportViewInputSchema,
   getBoundedReportViewOutputMissingKeys,
 } from "@cesteral/shared";
@@ -19,9 +20,19 @@ describe("msads-mcp cross-server contract", () => {
     }
   });
 
-  it("all prompt names follow msads_ prefix convention", () => {
+  it("all prompt names follow msads_ prefix convention, except the fleet-wide shared ones", () => {
+    // The cross-platform prompts come from @cesteral/shared and are registered
+    // under the same name on every server (#235).
+    const shared = new Set(CROSS_PLATFORM_PROMPTS.map((p) => p.prompt.name));
     for (const [name] of promptRegistry) {
+      if (shared.has(name)) continue;
       expect(name).toMatch(/^msads_/);
+    }
+  });
+
+  it("registers both fleet-wide cross-platform prompts", () => {
+    for (const { prompt } of CROSS_PLATFORM_PROMPTS) {
+      expect(promptRegistry.get(prompt.name)?.prompt).toBe(prompt);
     }
   });
 

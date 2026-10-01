@@ -18,10 +18,11 @@ server exposes SA360 reporting, conversion upload, audit, and query workflows:
 - **3 async reporting tools** for the submit → poll → download report workflow via the v2 API
 - **2 write tools** for offline conversion upload and modification via the legacy v2 API
 - **1 validation tool** for pre-flight conversion payload checks
-- **1 audit tool** for entity change history tracking
+- **1 audit tool** for entity change history, which refuses on v0 (the Reporting API v0 has no `change_event` resource) and points at `last_modified_time` queries
 - **1 query tool** for flexible cross-engine search
+- **1 pacing calculator** (client-side, no API call)
 
-The SA360 API is **read-only for campaign entities** — there are no mutate/CRUD operations for campaigns, ad groups, or ads. Write capabilities are limited to offline conversion management and async reporting.
+The pinned SA360 Reporting API **v0 is read-only for campaign entities** — it has no mutate operations for campaigns, ad groups, or ads (Google's discovery directory now marks `searchads360` v23, which does have mutates, as the preferred version; this server does not use it). Write capabilities are limited to offline conversion management and async reporting.
 
 ### APIs Used
 
@@ -350,14 +351,14 @@ Validate a conversion payload before uploading (no API call).
 
 ## Key Gotchas
 
-| Issue                               | Details                                                                                              |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **SA360 is read-only for entities** | No create/update/delete for campaigns, ad groups, or ads. Only conversions and reports are writable. |
-| **cost_micros convention**          | All monetary values are in micros (1,000,000 = 1 currency unit). Divide by 1M for display.           |
-| **Dual API**                        | Reporting API v0 for reads, legacy v2 API for conversions and async reports. Different auth headers. |
-| **login-customer-id**               | Required for MCC (manager) accounts to access sub-accounts. Set via `SA360_LOGIN_CUSTOMER_ID`.       |
-| **No developer token**              | Unlike Google Ads, SA360 does not require a developer token — just OAuth2 credentials.               |
-| **90-day conversion window**        | Conversions older than 90 days are rejected by the v2 API.                                           |
+| Issue                            | Details                                                                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **v0 is read-only for entities** | No create/update/delete for campaigns, ad groups, or ads. Only conversions and reports are writable.                                             |
+| **cost_micros convention**       | All monetary values are in micros (1,000,000 = 1 currency unit). Divide by 1M for display.                                                       |
+| **Dual API**                     | Reporting API v0 for reads, legacy v2 API for conversions and async reports. Both take the same Bearer token; only v0 sends `login-customer-id`. |
+| **login-customer-id**            | Required for MCC (manager) accounts to access sub-accounts. Set via `SA360_LOGIN_CUSTOMER_ID`.                                                   |
+| **No developer token**           | Unlike Google Ads, SA360 does not require a developer token — just OAuth2 credentials.                                                           |
+| **90-day conversion window**     | Conversions older than 90 days are rejected by the v2 API.                                                                                       |
 
 ## Rate Limiting
 
@@ -528,7 +529,7 @@ packages/sa360-mcp/
 ### Key Design Decisions
 
 - **Dual HTTP clients**: Separate clients for Reporting API v0 and legacy v2, since they have different base URLs, error formats, and auth requirements
-- **No mutate operations**: SA360 is read-only for entities — the server intentionally omits create/update/delete entity tools
+- **No mutate operations**: the pinned Reporting API v0 has none, so the server omits create/update/delete entity tools (v23 has mutates; moving to it is a separate decision)
 - **GAQL-compatible query language**: SA360 uses the same query syntax as Google Ads (GAQL), making it familiar for users of gads-mcp
 - **Session services pattern**: Per-session `SessionServices` with 5 service instances (httpClient, v2HttpClient, sa360Service, conversionService, reportingService)
 

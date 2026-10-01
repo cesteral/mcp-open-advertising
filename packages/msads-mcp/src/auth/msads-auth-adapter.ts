@@ -26,9 +26,13 @@ export interface MsAdsAuthAdapter {
   readonly userId: string;
 }
 
+/**
+ * GetUser response (Customer Management v13 `getuser.md`, Response JSON): the
+ * user is nested as `User` (a `User` object whose `Id` is the user id) beside
+ * `CustomerRoles`. There is no top-level `UserId` element.
+ */
 interface GetUserResponse {
-  UserId?: number;
-  UserName?: string;
+  User?: { Id?: number | string | null; UserName?: string };
 }
 
 /**
@@ -84,7 +88,7 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
     }
 
     const data = (await response.json()) as GetUserResponse;
-    this._userId = String(data.UserId ?? "unknown");
+    this._userId = String(data.User?.Id ?? "unknown");
     this.validated = true;
   }
 }

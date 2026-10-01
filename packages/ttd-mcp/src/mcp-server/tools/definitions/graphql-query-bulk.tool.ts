@@ -299,7 +299,6 @@ export const graphqlQueryBulkTool = {
         query:
           "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status totalCampaignChannelCount } }",
         variables: [{ id: "adv123abc" }, { id: "adv456def" }, { id: "adv789ghi" }],
-        betaFeatures: "my-beta-flag",
       },
     },
     {

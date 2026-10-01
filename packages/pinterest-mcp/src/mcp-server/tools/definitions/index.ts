@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 23 tools total:
+ * 24 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -17,6 +17,7 @@
  *   1 media: upload video (image upload not supported — Pinterest's /v5/media
  *           endpoint only accepts media_type="video"; images are referenced by
  *           URL in creative payloads)
+ *   1 discovery: search tools
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";

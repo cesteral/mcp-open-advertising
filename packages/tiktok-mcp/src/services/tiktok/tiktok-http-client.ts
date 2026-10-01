@@ -158,6 +158,14 @@ export class TikTokHttpClient {
   ) {}
 
   /**
+   * Rate-limit identity of this session's TikTok token (a one-way hash of the
+   * token). Read by `consumeTikTokQuota` / `tiktokQuotaBucket`.
+   */
+  get quotaClient(): string {
+    return this.authAdapter.quotaClient;
+  }
+
+  /**
    * Build a versioned API path: `/open_api/{version}/{suffix}`.
    * Use this instead of hardcoding the version in tool handlers.
    */

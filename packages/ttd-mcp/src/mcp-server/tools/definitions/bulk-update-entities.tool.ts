@@ -119,7 +119,7 @@ export async function bulkUpdateEntitiesLogic(
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No
   // confirmation prompt, no API call.
-  // One partial PUT per item, one token each on `ttd:${partnerId}`
+  // One partial PUT per item, one token each on `ttd:client:{quotaClient}`
   // (TtdService.bulkUpdateEntities → updateEntity).
   const { ttdService } = resolveSessionServices(sdkContext);
   const capacityCheck = ttdService.bulkCapacityCheck(TOOL_NAME, input.items.length, [1]);
@@ -147,7 +147,8 @@ export async function bulkUpdateEntitiesLogic(
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
-    summary: "Applying field updates across multiple entities (TTD uses PUT semantics).",
+    summary:
+      "Applying field updates across multiple entities (partial PUT: only the sent fields change).",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
     sdkContext,

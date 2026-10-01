@@ -146,7 +146,7 @@ pinterest_update_entity({
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| \"video processing failed\" error | Unsupported file or codec | Re-encode to H.264 MP4 and upload again |
+| "video processing failed" error | Unsupported file or codec | Re-encode to H.264 MP4 and upload again |
 | \`mediaId\` returned with no \`mediaStatus\` | Polling timed out while the video was still processing | Wait, then create the Pin with that \`media_id\`. Pin creation fails until processing has succeeded. |
 | Pin create rejected | Missing \`board_id\` or wrong \`media_source\` shape | \`source_type\` must be \`video_id\` (with \`media_id\`) or \`image_url\` (with \`url\`) |
 | Ad create rejected | \`creative_type\` does not match the Pin's media | Use \`VIDEO\` for a video Pin and \`REGULAR\` for an image Pin |

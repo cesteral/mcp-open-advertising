@@ -21,6 +21,11 @@ import {
 import { buildPinterestDuplicateCopy } from "../../mcp-server/tools/utils/duplicate-copy.js";
 import type { Logger } from "pino";
 import type { components } from "../../generated/types.js";
+import {
+  consumePinterestAccountQuota,
+  consumePinterestUserQuota,
+  type PinterestQuotaScope,
+} from "./rate-limit-keys.js";
 
 // The schemas the v5 GET endpoints return (`GET /ad_accounts/{id}/campaigns/{campaign_id}`
 // → `Campaign`, `…/ad_groups/{ad_group_id}` → `AdGroup`, `…/ads/{ad_id}` → `Ad`,
@@ -86,9 +91,13 @@ export class PinterestService {
     private readonly logger: Logger
   ) {}
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
-  get client(): PinterestHttpClient {
-    return this.httpClient;
+  /**
+   * This session's rate-limit scope — the Pinterest user its calls are counted
+   * against (see `rate-limit-keys.ts`). The bulk capacity pre-check projects a
+   * batch against exactly the buckets this service's calls consume from.
+   */
+  get quotaScope(): PinterestQuotaScope {
+    return { quotaUser: this.httpClient.quotaUser };
   }
 
   // ─── Standard CRUD ──────────────────────────────────────────────
@@ -110,13 +119,20 @@ export class PinterestService {
     if (filters.campaignId) params.campaign_ids = filters.campaignId;
     if (filters.adGroupId) params.ad_group_ids = filters.adGroupId;
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_READ_TOKENS
+    );
 
     const data = (await this.httpClient.get(path, params, context)) as PinterestListResponse;
 
     return {
       entities: (data?.items ?? []) as PinterestEntityMap[T][],
-      pageInfo: { bookmark: data?.bookmark ?? null },
+      // `bookmark` is a nullable string; Pinterest also answers the last page
+      // with "", which is not a cursor (listAdAccounts already treats it so).
+      pageInfo: { bookmark: data?.bookmark ? data.bookmark : null },
     };
   }
 
@@ -128,7 +144,12 @@ export class PinterestService {
   ): Promise<PinterestEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_READ_TOKENS
+    );
 
     // Direct GET by ID. Pinterest v5's list endpoints have no `id` filter (only
     // `campaign_ids` / `ad_group_ids` / `ad_ids`), so listing with `?id=` and
@@ -165,7 +186,12 @@ export class PinterestService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.createPath, { adAccountId: filters.adAccountId });
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_WRITE_TOKENS
+    );
 
     if (!config.batchWrite) {
       // `POST /v5/pins` takes a single `PinCreate` object and returns the Pin.
@@ -186,7 +212,12 @@ export class PinterestService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { adAccountId: filters.adAccountId, entityId });
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_WRITE_TOKENS
+    );
 
     // Single-entity endpoints (e.g. /v5/pins/{entityId}) expect a flat body
     const isSingleEntity = config.updatePath.includes("{entityId}");
@@ -218,7 +249,9 @@ export class PinterestService {
    *   removal is a PATCH setting `status: "ARCHIVED"` — one request per id so
    *   each id's `exceptions` are attributed to it (batch responses carry no id
    *   on a rejected item). The entity still exists afterwards, archived.
-   * - creative (Pin): `DELETE /v5/pins/{pin_id}`, one request per id.
+   * - creative (Pin): `DELETE /v5/pins/{pin_id}`, one request per id, each
+   *   drawing its own write tokens (#236: the batch used to draw one write's
+   *   worth for N DELETEs).
    *
    * Per-id outcomes are reported; a failure after an earlier success never
    * discards the work already done.
@@ -259,14 +292,18 @@ export class PinterestService {
       );
     }
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, PINTEREST_WRITE_TOKENS);
-
     const settled = await Promise.allSettled(
-      entityIds.map((id) => {
+      entityIds.map(async (id) => {
         const path = interpolatePath(deletePath, {
           adAccountId: filters.adAccountId,
           entityId: encodeURIComponent(id),
         });
+        await consumePinterestAccountQuota(
+          this.rateLimiter,
+          this.httpClient,
+          filters.adAccountId,
+          PINTEREST_WRITE_TOKENS
+        );
         return this.httpClient.delete(path, {}, context);
       })
     );
@@ -303,7 +340,7 @@ export class PinterestService {
     params: { bookmark?: string; pageSize?: number } = {},
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextCursor?: string }> {
-    await this.rateLimiter.consume("pinterest:default");
+    await consumePinterestUserQuota(this.rateLimiter, this.httpClient, PINTEREST_READ_TOKENS);
     const query: Record<string, string> = {};
     if (params.bookmark) query.bookmark = params.bookmark;
     if (params.pageSize !== undefined) query.page_size = String(params.pageSize);
@@ -552,7 +589,7 @@ export class PinterestService {
     filters: { adAccountId: string },
     context?: RequestContext
   ): Promise<unknown[]> {
-    await this.rateLimiter.consume("pinterest:default");
+    await consumePinterestUserQuota(this.rateLimiter, this.httpClient, PINTEREST_READ_TOKENS);
     const data = await this.httpClient.get(
       `/v5/resources/targeting/${encodeURIComponent(targetingType)}`,
       { ad_account_id: filters.adAccountId },
@@ -575,7 +612,12 @@ export class PinterestService {
     targetingSpec: unknown,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_READ_TOKENS
+    );
 
     const path = `/v5/ad_accounts/${encodeURIComponent(filters.adAccountId)}/ad_groups/audience_sizing`;
     return this.httpClient.post(path, { targeting_spec: targetingSpec }, context);
@@ -606,7 +648,12 @@ export class PinterestService {
       );
     }
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_READ_TOKENS
+    );
 
     const path = `/v5/ad_accounts/${encodeURIComponent(filters.adAccountId)}/ad_previews`;
     const preview = await this.httpClient.post(
@@ -615,6 +662,72 @@ export class PinterestService {
       context
     );
     return { pinId: String(pinId), preview };
+  }
+
+  // ─── Media (video upload) ───────────────────────────────────────
+
+  /**
+   * Register a video upload: `POST /v5/media` (`media/create`, body
+   * `{ media_type: "video" }`) returns the `media_id` and a presigned
+   * `upload_url` + `upload_parameters`. One write on the account's bucket
+   * (#236: this used to bypass the limiter).
+   *
+   * basis: `media/create` and `media/get` are `org_write` / `org_read`
+   * operations (openapi.json 5.28.0 `x-ratelimit-category`) — Pinterest counts
+   * them, so they draw tokens like the Pin writes that share the account bucket.
+   */
+  async registerMediaUpload(
+    filters: { adAccountId: string },
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_WRITE_TOKENS
+    );
+    return this.httpClient.post("/v5/media", { media_type: "video" }, context);
+  }
+
+  /**
+   * POST the file to the presigned `upload_url` from {@link registerMediaUpload}.
+   * No limiter token: the upload host is the storage provider named in the
+   * registration (presigned S3), not Pinterest's rate-limited API.
+   */
+  async uploadMediaFile(
+    uploadUrl: string,
+    uploadParameters: Record<string, string>,
+    fileBuffer: Buffer,
+    filename: string,
+    fileContentType: string,
+    context?: RequestContext
+  ): Promise<void> {
+    return this.httpClient.uploadToS3(
+      uploadUrl,
+      uploadParameters,
+      fileBuffer,
+      filename,
+      fileContentType,
+      context
+    );
+  }
+
+  /**
+   * One processing-status read of a registered upload (`GET /v5/media/{media_id}`).
+   * Each poll is its own API call and draws its own read token.
+   */
+  async getMediaStatus(
+    filters: { adAccountId: string },
+    mediaId: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await consumePinterestAccountQuota(
+      this.rateLimiter,
+      this.httpClient,
+      filters.adAccountId,
+      PINTEREST_READ_TOKENS
+    );
+    return this.httpClient.get(`/v5/media/${encodeURIComponent(mediaId)}`, undefined, context);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────

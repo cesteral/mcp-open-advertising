@@ -22,11 +22,13 @@ export interface RegistryServerEntry {
 
 export interface RegistryData {
   readonly protocol_version: string;
+  readonly repository: string;
   readonly servers: readonly RegistryServerEntry[];
 }
 
 export const REGISTRY_DATA: RegistryData = {
   "protocol_version": "2025-11-25",
+  "repository": "https://github.com/cesteral/mcp-open-advertising",
   "servers": [
     {
       "package": "dbm-mcp",
@@ -89,9 +91,16 @@ export const REGISTRY_DATA: RegistryData = {
           {
             "tool": "dv360_bulk_update_status",
             "operations": [
-              "bulk_update_status"
+              "bulk_job"
             ],
             "note": "Setting ENTITY_STATUS_ARCHIVED is irreversible. This is also the required precondition for deleting a line item, so it is on the delete path too."
+          },
+          {
+            "tool": "dv360_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is an update_entity PATCH, so a batch can set entityStatus=ENTITY_STATUS_ARCHIVED, the same irreversible value dv360_update_entity is declared for. Terminal only for that status value."
           }
         ]
       },
@@ -101,10 +110,10 @@ export const REGISTRY_DATA: RegistryData = {
       "package": "ttd-mcp",
       "title": "The Trade Desk MCP Server",
       "description": "The Trade Desk management — CRUD, GraphQL, bulk ops, and async reports",
-      "runtime_description": "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
+      "runtime_description": "The Trade Desk Platform API (REST v3 + GraphQL): campaigns, ad groups, creatives, bid lists, seeds, reporting.",
       "platform": "The Trade Desk",
       "platform_display_name": "TTD",
-      "documentation_url": "https://api.thetradedesk.com/v3/portal/api/doc/Welcome",
+      "documentation_url": "https://partner.thetradedesk.com/v3/portal/api/doc/ApiReference",
       "auth": {
         "modes": [
           "ttd-token",
@@ -157,6 +166,13 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Runs up to 100 arbitrary GraphQL mutations as one job, including delete/archive mutations. Treat the job as not cancellable. No tool on this server reverses them, so treat every run as potentially terminal. Refused against production unless the operator opts in (TTD_ALLOW_UNVERIFIED_MUTATION_BULK)."
           },
           {
+            "tool": "ttd_graphql_query",
+            "operations": [
+              "manage"
+            ],
+            "note": "Passes any GraphQL document to TTD, including delete/archive mutations such as bidListDelete. No tool on this server reverses them. Terminal only when the document is such a mutation; queries change nothing."
+          },
+          {
             "tool": "ttd_manage_bid_list",
             "operations": [
               "manage"
@@ -204,6 +220,13 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts REMOVED, which Google Ads cannot reverse. Terminal only when the batch sets REMOVED; ENABLED/PAUSED batches are reversible."
+          },
+          {
+            "tool": "gads_bulk_mutate",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Sends caller-built :mutate operations, which may include `remove` (the same irreversible removal gads_remove_entity is declared for) or an update to status REMOVED. Terminal for those operations; create and other updates are not."
           }
         ]
       },
@@ -379,6 +402,13 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts PERMANENTLY_ARCHIVED for placements, which cannot be undone. Terminal only for that value; ARCHIVED/ACTIVE/INACTIVE are reversible."
+          },
+          {
+            "tool": "cm360_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "PATCHes arbitrary fields per item, so a batch can set a placement's activeStatus to PLACEMENT_STATUS_PERMANENTLY_ARCHIVED, the same irreversible value cm360_update_entity is declared for. Terminal only for that value."
           }
         ]
       },
@@ -419,7 +449,7 @@ export const REGISTRY_DATA: RegistryData = {
       "runtime_description": "Search Ads 360 reporting and offline conversion uploads.",
       "platform": "Google Search Ads 360",
       "platform_display_name": "Search Ads 360",
-      "documentation_url": "https://developers.google.com/search-ads/v0/reference",
+      "documentation_url": "https://developers.google.com/search-ads/reporting",
       "auth": {
         "modes": [
           "sa360-headers",
@@ -477,7 +507,7 @@ export const REGISTRY_DATA: RegistryData = {
     {
       "package": "amazon-dsp-mcp",
       "title": "Amazon DSP MCP Server",
-      "description": "Amazon DSP management — CRUD, async reports, targeting, and audience management",
+      "description": "Amazon DSP management — CRUD, async reports, video upload, and Ads API v1 commitments and forecasts",
       "runtime_description": "Amazon DSP: orders, line items, creatives, reporting.",
       "platform": "Amazon DSP",
       "platform_display_name": "Amazon DSP",

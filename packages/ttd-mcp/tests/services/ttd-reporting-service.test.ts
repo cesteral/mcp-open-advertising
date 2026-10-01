@@ -24,7 +24,7 @@ function createMockLogger() {
 function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
-    partnerId: "test-partner",
+    quotaClient: "test-client",
   } as any;
 }
 
@@ -179,6 +179,24 @@ describe("TtdReportingService", () => {
       expect((error as Error).message).toContain("Report execution failed");
     });
 
+    // Fleet review ttd REST #19: a cancelled execution never completes, so it
+    // must end polling at once instead of running on to maxPollAttempts.
+    it("stops polling and throws when the execution was Cancelled", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-1" });
+      httpClient.fetch.mockResolvedValue({ Result: [{ ReportExecutionState: "Cancelled" }] });
+
+      const resultPromise = service.runReport(sampleReportConfig());
+      const errorPromise = resultPromise.catch((e: unknown) => e);
+      await vi.runAllTimersAsync();
+
+      const error = await errorPromise;
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain("Report execution failed");
+      expect((error as Error).message).toContain("Cancelled");
+      // 1 schedule create + 1 status poll: no further polls after Cancelled.
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+    });
+
     it("throws when polling times out (MAX_POLL_ATTEMPTS = 60)", async () => {
       httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-1" });
 
@@ -214,7 +232,7 @@ describe("TtdReportingService", () => {
 
       // 1 for runReport (schedule creation) + 2 for polls = 3 total
       expect(rateLimiter.consume).toHaveBeenCalledTimes(3);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("polls multiple times with delays between attempts", async () => {
@@ -261,7 +279,7 @@ describe("TtdReportingService", () => {
       await service.createReportSchedule(sampleReportConfig());
 
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("does not poll or sleep", async () => {
@@ -301,7 +319,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [] });
       await service.listReportSchedules({});
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -323,7 +341,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "x" });
       await service.getReportSchedule("x");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -344,37 +362,7 @@ describe("TtdReportingService", () => {
       httpClient.fetch.mockResolvedValueOnce({});
       await service.deleteReportSchedule("x");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
-    });
-  });
-
-  // ==========================================================================
-  // listReportTemplates
-  // ==========================================================================
-
-  describe("listReportTemplates", () => {
-    it("calls POST /myreports/reporttemplateheader/query", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalFilteredCount: 0 });
-      const result = await service.listReportTemplates({});
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/myreports/reporttemplateheader/query");
-      expect(options.method).toBe("POST");
-      expect(result).toEqual({ Result: [], TotalFilteredCount: 0 });
-    });
-
-    it("passes query body through", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
-      const query = { PageSize: 20 };
-      await service.listReportTemplates(query);
-      const [, , options] = httpClient.fetch.mock.calls[0];
-      expect(JSON.parse(options.body)).toEqual(query);
-    });
-
-    it("consumes rate limiter once", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
-      await service.listReportTemplates({});
-      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
   });
 
@@ -453,7 +441,7 @@ describe("TtdReportingService", () => {
 
       // Two rate-limiter hits: one for schedule lookup, one for execution query.
       expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
-      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:client:test-client", 1);
     });
 
     it("makes two HTTP calls: schedule lookup + execution query", async () => {

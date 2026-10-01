@@ -10,7 +10,8 @@ const TOOL_NAME = "meta_get_pacing_status";
 const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
   "Client-side pacing calculator — does NOT call the Meta API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
-  "To populate spend, first call `meta_get_insights`; to populate budget and flight dates, first call `meta_get_entity` for the campaign.";
+  "To populate spend, first call `meta_get_insights`; to populate budget and flight dates, first call `meta_get_entity` for the campaign. " +
+  "Pass both amounts in the same unit: `meta_get_entity` returns `lifetime_budget` in the account currency's minor unit (cents for USD; the base unit for zero-decimal currencies such as JPY), while insights `spend` is in the major unit — so divide a USD budget by 100 before passing it as `budgetTotal`.";
 
 /**
  * Input schema
@@ -116,6 +117,9 @@ export function getPacingStatusResponseFormatter(
   result: GetPacingStatusOutput,
   _input: GetPacingStatusInput
 ): McpTextContent[] {
+  // Amounts are in the caller's `currency`, not always dollars (fleet review
+  // 2026-09, as ttd REST #31): print the ISO code rather than a hard-coded "$".
+  const money = (amount: number) => `${amount.toLocaleString()} ${result.budget.currency}`;
   const statusEmoji =
     result.pacing.status === "ON_PACE"
       ? "[OK]"
@@ -133,9 +137,9 @@ export function getPacingStatusResponseFormatter(
 ${statusEmoji} Status: ${result.pacing.status}
 
 Budget:
-• Total: $${result.budget.total.toLocaleString()}
-• Spent: $${result.budget.spent.toLocaleString()} (${result.pacing.actualSpendPercent.toFixed(1)}%)
-• Remaining: $${result.budget.remaining.toLocaleString()}
+• Total: ${money(result.budget.total)}
+• Spent: ${money(result.budget.spent)} (${result.pacing.actualSpendPercent.toFixed(1)}%)
+• Remaining: ${money(result.budget.remaining)}
 
 Flight:
 • ${result.flight.startDate} to ${result.flight.endDate}
@@ -146,7 +150,7 @@ Pacing Analysis:
 • Expected Spend: ${result.pacing.expectedSpendPercent.toFixed(1)}%
 • Actual Spend: ${result.pacing.actualSpendPercent.toFixed(1)}%
 • Pacing Ratio: ${result.pacing.pacingRatio.toFixed(2)}x
-• Projected End Spend: $${result.pacing.projectedEndSpend.toFixed(2)}`,
+• Projected End Spend: ${money(Number(result.pacing.projectedEndSpend.toFixed(2)))}`,
     },
   ];
 }

@@ -63,6 +63,32 @@ describe("cm360_bulk_update_status governance contract (effect class)", () => {
     expect(() => EffectDryRunResultSchema.parse(result.dryRun)).not.toThrow();
   });
 
+  // Parity with the execute path: an unmapped (entityType, status) pair would
+  // fail every item, so the dry run must not predict success for it.
+  it.each([
+    ["campaign", "PAUSED"],
+    ["site", "ARCHIVED"],
+    ["advertiser", "ACTIVE"],
+  ])("dry_run flags an unmapped status (%s -> %s)", async (entityType, status) => {
+    const result = await bulkUpdateStatusLogic(
+      { ...baseInput, entityType, status, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain("UNSUPPORTED_STATUS");
+    expect(svc.bulkUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it("dry_run still predicts success for a mapped status (placement PAUSED)", async () => {
+    const result = await bulkUpdateStatusLogic(
+      { ...baseInput, entityType: "placement", status: "PAUSED", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(true);
+  });
+
   it("dry_run flags an empty entity ID", async () => {
     const result = await bulkUpdateStatusLogic(
       { ...baseInput, entityIds: [" "], dry_run: true } as any,

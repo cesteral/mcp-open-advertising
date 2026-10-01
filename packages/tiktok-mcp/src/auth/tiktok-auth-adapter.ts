@@ -45,6 +45,34 @@ export interface TikTokAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly advertiserId: string;
+  /**
+   * The rate-limit identity of this credential — see {@link tiktokQuotaClient}.
+   * A one-way hash, never the token.
+   */
+  readonly quotaClient: string;
+}
+
+/**
+ * The rate-limit identity of a TikTok access token. Keys
+ * `tiktok:token:{quotaClient}` — see `services/tiktok/rate-limit-keys.ts`.
+ *
+ * The token is the only stable principal this server learns: `validate()`
+ * reads `user/info/`, which is not among the official SDK's specs
+ * (tiktok/tiktok-business-api-sdk @ f809c39) and whose fields here are
+ * `display_name` / `email` — neither a stable id nor safe to put in a key.
+ * The advertiser id is a caller-supplied header, so keying on it would let a
+ * caller pick its own bucket.
+ *
+ * Rate-limit errors echo the key, so it must not carry the secret. This is a
+ * domain-separated SHA-256 of the token, truncated to 64 bits: one-way, stable
+ * for the token's lifetime, and distinct from the session-binding fingerprint
+ * (`getTikTokCredentialFingerprint`), so neither value can be read off the
+ * other. It is derived from the token actually sent upstream, not from the MCP
+ * caller's credential, so JWT users sharing the server's env token share one
+ * bucket — as they share one TikTok authorization.
+ */
+export function tiktokQuotaClient(token: string): string {
+  return fingerprintCredentials("tiktok-quota-client", token).slice(0, 16);
 }
 
 /**
@@ -94,13 +122,16 @@ async function fetchTikTokUserId(
 export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
   private validated = false;
   private _userId = "";
+  readonly quotaClient: string;
 
   constructor(
     private readonly accessToken: string,
     private readonly _advertiserId: string,
     private readonly baseUrl: string = "https://business-api.tiktok.com",
     private readonly apiVersion: string = "v1.3"
-  ) {}
+  ) {
+    this.quotaClient = tiktokQuotaClient(accessToken);
+  }
 
   get userId(): string {
     return this._userId;
@@ -160,12 +191,21 @@ export const TIKTOK_REFRESH_UNSUPPORTED_MESSAGE =
  * network calls; see TIKTOK_REFRESH_UNSUPPORTED_MESSAGE.
  */
 export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
+  /**
+   * Never keys a call: `validate()` and `getAccessToken()` always throw, so no
+   * session is built on this adapter. Derived from the refresh credential only
+   * so the interface holds.
+   */
+  readonly quotaClient: string;
+
   constructor(
-    _credentials: TikTokRefreshCredentials,
+    credentials: TikTokRefreshCredentials,
     private readonly _advertiserId: string,
     _baseUrl: string = "https://business-api.tiktok.com",
     _apiVersion: string = "v1.3"
-  ) {}
+  ) {
+    this.quotaClient = tiktokQuotaClient(`${credentials.appId}:${credentials.refreshToken}`);
+  }
 
   get userId(): string {
     return "";

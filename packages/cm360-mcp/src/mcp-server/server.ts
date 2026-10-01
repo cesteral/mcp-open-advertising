@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   createDefinitionHashResolver,
@@ -58,12 +59,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "cm360-mcp",
+    buildServerInfo("cm360-mcp", {
       version: packageJson.version,
       description:
         "Campaign Manager 360 ad serving and trafficking management via CM360 API v5. Supports CRUD operations on campaigns, placements, ads, creatives, floodlight activities, and async reporting.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

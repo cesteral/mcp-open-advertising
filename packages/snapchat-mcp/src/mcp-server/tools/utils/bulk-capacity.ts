@@ -14,8 +14,10 @@
  *
  * The limiter is the process singleton from `utils/platform.ts` — the one
  * `createSessionServices` hands every `SnapchatService` (index.ts, the HTTP
- * transport), so the projection reads the same window the calls will consume.
- * Every Snapchat entity call consumes `snapchat:default`.
+ * transport) — and each model carries the session's own key
+ * (`SnapchatService.quotaKey`, `snapchat:{principal}` — see
+ * `services/snapchat/rate-limit-keys.ts`), so the projection reads the same
+ * window the calls will consume, and only that tenant's.
  *
  * Per-item cost includes the ownership reads: every `getEntity` walks the
  * parent chain to check the bound ad account (see `getEntityWorstCaseConsumes`).
@@ -43,15 +45,20 @@ import type { SnapchatEntityType } from "./entity-mapping.js";
 /** Dry-run validation error code for a batch the limiter cannot admit within budget. */
 export const BULK_EXCEEDS_CAPACITY = "BULK_EXCEEDS_CAPACITY";
 
-const KEY = "snapchat:default";
-
 /**
- * A batch's consume pattern on `snapchat:default`: `leading` is paid once per
- * batch before any per-item consume; `perItem` is paid by every item, in order.
+ * A batch's consume pattern on the session's bucket `key`: `leading` is paid
+ * once per batch before any per-item consume; `perItem` is paid by every item,
+ * in order.
  */
 export interface SnapchatBulkCostModel {
+  key: string;
   leading: readonly number[];
   perItem: readonly number[];
+}
+
+/** The session a batch runs in: its calls draw on `quotaKey` (`SnapchatService.quotaKey`). */
+export interface SnapchatBulkScope {
+  readonly quotaKey: string;
 }
 
 /** Consume pattern of each Snapchat bulk tool (`SnapchatService`, snapchat-service.ts). */
@@ -62,7 +69,8 @@ export const snapchatBulkCost = {
    * taken FIRST, then a `getEntity` per item (`buildMergedUpdateItem`, run
    * concurrently) including its ownership walk.
    */
-  bulkUpdate: (entityType: string): SnapchatBulkCostModel => ({
+  bulkUpdate: (scope: SnapchatBulkScope, entityType: string): SnapchatBulkCostModel => ({
+    key: scope.quotaKey,
     leading: [SNAPCHAT_WRITE_TOKENS],
     perItem: getEntityWorstCaseConsumes(entityType as SnapchatEntityType),
   }),
@@ -70,7 +78,8 @@ export const snapchatBulkCost = {
    * `snapchat_delete_entity` (`deleteEntity` per id, concurrently): the
    * ownership pre-read `getEntity` then the 3-token DELETE.
    */
-  delete: (entityType: string): SnapchatBulkCostModel => ({
+  delete: (scope: SnapchatBulkScope, entityType: string): SnapchatBulkCostModel => ({
+    key: scope.quotaKey,
     leading: [],
     perItem: [
       ...getEntityWorstCaseConsumes(entityType as SnapchatEntityType),
@@ -83,7 +92,8 @@ export const snapchatBulkCost = {
    * 3-token consume, then `buildMergedUpdateItem` re-reads the ad squad, whose
    * campaign is now memoized, so that read is its own GET only.
    */
-  adjustBids: (): SnapchatBulkCostModel => ({
+  adjustBids: (scope: SnapchatBulkScope): SnapchatBulkCostModel => ({
+    key: scope.quotaKey,
     leading: [],
     perItem: [
       ...getEntityWorstCaseConsumes("adGroup"),
@@ -115,7 +125,7 @@ function project(
       rateLimiter,
       toolName,
       itemCount,
-      buckets: [{ key: KEY, costPerItem: model.perItem }],
+      buckets: [{ key: model.key, costPerItem: model.perItem }],
     });
   }
   const chunk = (items: number) =>
@@ -123,7 +133,7 @@ function project(
       rateLimiter,
       toolName,
       itemCount: 1,
-      buckets: [{ key: KEY, costPerItem: sequenceFor(model, items) }],
+      buckets: [{ key: model.key, costPerItem: sequenceFor(model, items) }],
     });
   const full = chunk(itemCount);
   let itemsThatFit = itemCount;
@@ -155,7 +165,7 @@ export function assertSnapchatBulkCapacity(
       rateLimiter,
       toolName,
       itemCount,
-      buckets: [{ key: KEY, costPerItem: model.perItem }],
+      buckets: [{ key: model.key, costPerItem: model.perItem }],
     });
   }
 

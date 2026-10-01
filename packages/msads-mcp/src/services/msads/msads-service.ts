@@ -49,6 +49,9 @@ export type {
  */
 export const MSADS_DUPLICATE_COPY_STATUS = "Paused";
 
+/** GetAdsByIds `AdIds`: "A maximum of 20 identifiers" (campaign-management-service/getadsbyids.md). */
+export const MSADS_GET_ADS_BY_IDS_MAX = 20;
+
 /**
  * Batch description for `executeOperation` writes whose response reports
  * per-item failures in `PartialErrors` / `NestedPartialErrors` (ad extension
@@ -250,6 +253,14 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<{ entities: MsAdsEntityMap[T][] }> {
     const config = getEntityConfig(entityType);
+    // GetAdsByIds takes "A maximum of 20 identifiers" (getadsbyids.md); refuse
+    // before spending quota rather than send a request the service rejects.
+    if (entityType === "ad" && entityIds.length > MSADS_GET_ADS_BY_IDS_MAX) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `GetAdsByIds accepts at most ${MSADS_GET_ADS_BY_IDS_MAX} ad IDs per call (got ${entityIds.length})`
+      );
+    }
 
     await this.consumeQuota("read");
 

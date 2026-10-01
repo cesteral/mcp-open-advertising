@@ -5,6 +5,11 @@ import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { Logger } from "pino";
+import {
+  consumeMetaAccountQuota,
+  consumeMetaUserQuota,
+  normalizeMetaAdAccountId,
+} from "./rate-limit-keys.js";
 
 /**
  * Meta Targeting Service — Targeting search and browse operations.
@@ -30,7 +35,7 @@ export class MetaTargetingService {
     after?: string,
     targetingClass?: string
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaUserQuota(this.rateLimiter, this.httpClient);
 
     // Normalize type to lowercase, matching facebook-python-business-sdk's
     // TargetingSearchTypes (e.g. "adinterest", "adtargetingcategory").
@@ -77,14 +82,22 @@ export class MetaTargetingService {
     type?: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`meta:default`);
+    await consumeMetaAccountQuota(this.rateLimiter, this.httpClient, adAccountId);
 
-    const actId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+    const actId = normalizeMetaAdAccountId(adAccountId);
 
     const params: Record<string, string> = {};
     if (type) {
-      // Normalize to lowercase — Meta API targeting types are case-sensitive
-      params.type = type.toLowerCase();
+      // `targetingbrowse` filters by `limit_type`, not `type`: Meta's
+      // facebook-business-sdk-codegen spec (api_specs/specs/AdAccount.json,
+      // GET targetingbrowse) lists excluded_category, include_nodes,
+      // is_exclusion, is_reserved, limit_type, optimization_goal,
+      // regulated_categories, regulated_countries and whitelisted_types — no
+      // `type` — so a `type=` filter was silently ignored and every category
+      // came back. The `limit_type` enum values are lowercase
+      // (`adaccounttargetingbrowse_limit_type_enum_param`: behaviors,
+      // interests, life_events, …).
+      params.limit_type = type.toLowerCase();
     }
 
     return this.httpClient.get(`/${actId}/targetingbrowse`, params, context);

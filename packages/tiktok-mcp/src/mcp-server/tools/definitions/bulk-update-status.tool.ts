@@ -111,7 +111,8 @@ export async function bulkUpdateStatusLogic(
     const dryRun = buildBulkEffectDryRun(input);
     return {
       confirmed: true,
-      totalRequested: 0,
+      // The batch size, as on every other path (fleet review 2026-09, tiktok #28).
+      totalRequested: input.entityIds.length,
       successCount: 0,
       failureCount: 0,
       results: [],

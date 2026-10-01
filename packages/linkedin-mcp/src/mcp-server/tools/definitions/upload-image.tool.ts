@@ -107,7 +107,20 @@ export async function uploadImageLogic(
 
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  // Step 1: Register upload
+  // Step 1: Download and size-check the file BEFORE registering, so a bad
+  // mediaUrl or an oversized file fails without leaving an orphaned registered
+  // asset upstream. The size limit is the caller's input, so InvalidParams.
+  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 120_000, context);
+
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+  if (buffer.length > MAX_IMAGE_SIZE) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Image file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 5MB limit`
+    );
+  }
+
+  // Step 2: Register upload
   const registerPayload = {
     registerUploadRequest: {
       owner: input.adAccountUrn,
@@ -141,17 +154,7 @@ export async function uploadImageLogic(
     );
   }
 
-  // Step 2: Download file and PUT binary
-  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 120_000, context);
-
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-  if (buffer.length > MAX_IMAGE_SIZE) {
-    throw new McpError(
-      JsonRpcErrorCode.InternalError,
-      `Image file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 5MB limit`
-    );
-  }
-
+  // Step 3: PUT the binary to the registered upload URL
   await linkedInService.client.putBinary(uploadUrl, buffer, contentType, context);
 
   const effect: EffectResult = {

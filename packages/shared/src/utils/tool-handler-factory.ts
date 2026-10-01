@@ -416,6 +416,77 @@ interface ToolRegistrationConfig {
 interface ToolCallExtra {
   /** The request's `params._meta` (trace context lives here, #247). */
   _meta?: unknown;
+  /** JSON-RPC id of the `tools/call` being handled. */
+  requestId?: string | number;
+  /** Transport session id (undefined on stdio, and on the Hono transport after initialize). */
+  sessionId?: string;
+  /** Request headers, where the SDK's `logging/setLevel` handler reads the session id from. */
+  requestInfo?: { headers?: Record<string, string | string[] | undefined> };
+  /**
+   * Sends a notification tied to this request (the SDK sets
+   * `relatedRequestId: request.id`), so the streamable-HTTP transport writes it
+   * on this request's POST response stream (#241).
+   */
+  sendNotification?: (notification: {
+    method: "notifications/message";
+    params: { level: string; logger?: string; data?: unknown };
+  }) => Promise<void>;
+}
+
+type LoggingMessageParams = { level: string; logger?: string; data?: unknown };
+
+/**
+ * Whether the SDK's per-session `logging/setLevel` filter drops `level`.
+ *
+ * `Server.isMessageIgnored` is a runtime property the SDK's own
+ * `sendLoggingMessage` consults; it is `private` in the typings, so it is
+ * feature-detected rather than declared on `McpServerLike` (which would make
+ * every concrete `McpServer` fail assignability). Absent → nothing is filtered.
+ * `tool-handler-factory-related-request.test.ts` pins that it still works.
+ */
+function isLogLevelIgnored(
+  server: McpServerLike,
+  level: string,
+  sessionId: string | undefined
+): boolean {
+  const probe = (server.server as unknown as { isMessageIgnored?: unknown }).isMessageIgnored;
+  if (typeof probe !== "function") return false;
+  return Boolean(
+    (probe as (l: string, s?: string) => boolean).call(server.server, level, sessionId)
+  );
+}
+
+/**
+ * Send a `notifications/message` tied to the `tools/call` being handled (#241).
+ *
+ * `McpServer.sendLoggingMessage` takes no `relatedRequestId`, so the SDK routes
+ * it to the standalone GET SSE stream. This fleet answers GET /mcp with 405, and
+ * a client that never opens that optional stream receives nothing at all. The
+ * request's own `extra.sendNotification` carries the request id, so the
+ * transport writes the notification on the POST response stream the client is
+ * already reading. The SDK's level filter is re-applied here (with the real
+ * session id, which `sendLoggingMessage` was never given over HTTP), and the
+ * capability check still runs inside `Protocol.notification`.
+ *
+ * Without `extra` (unit-test fakes that invoke the handler directly) it falls
+ * back to `server.sendLoggingMessage`.
+ */
+async function sendRelatedLoggingMessage(
+  server: McpServerLike,
+  extra: ToolCallExtra | undefined,
+  params: LoggingMessageParams
+): Promise<void> {
+  if (typeof extra?.sendNotification !== "function") {
+    return server.sendLoggingMessage(params);
+  }
+  // Same key the SDK's `logging/setLevel` handler stores the level under
+  // (server/index.js: `extra.sessionId || requestInfo.headers['mcp-session-id']`).
+  // `@hono/mcp` clears `transport.sessionId` on initialize, so over HTTP the
+  // header is what actually matches.
+  const header = extra.requestInfo?.headers?.["mcp-session-id"];
+  const levelKey = extra.sessionId || (Array.isArray(header) ? header[0] : header) || undefined;
+  if (isLogLevelIgnored(server, params.level, levelKey)) return;
+  return extra.sendNotification({ method: "notifications/message", params });
 }
 
 /**
@@ -424,7 +495,7 @@ interface ToolCallExtra {
  */
 interface McpServerLike {
   server: {
-    elicitInput: (params: any) => Promise<any>;
+    elicitInput: (params: any, options?: { relatedRequestId?: string | number }) => Promise<any>;
     getClientCapabilities?: () => { elicitation?: unknown } | undefined;
     // NOTE: the SDK's `_requestHandlers` is deliberately NOT declared here.
     // It is `private` on the real `Server`, so naming it in this structural type
@@ -741,15 +812,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
       // Send MCP logging notification for tool invocation
-      server
-        .sendLoggingMessage({
-          level: "info",
-          logger: tool.name,
-          data: `Invoking tool: ${tool.name}`,
-        })
-        .catch(() => {
-          /* ignore if no client connected */
-        });
+      sendRelatedLoggingMessage(server, extra, {
+        level: "info",
+        logger: tool.name,
+        data: `Invoking tool: ${tool.name}`,
+      }).catch(() => {
+        /* ignore if no client connected */
+      });
 
       const startTime = Date.now();
 
@@ -762,7 +831,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       return inToolSpan(async () => {
         let requestId: string | undefined;
         let resolvedAuthContext: SessionAuthContext | undefined;
-        let auditedIdentifiers: Record<string, string | string[]> = {};
+        const auditedIdentifiers: Record<string, string | string[]> = {};
 
         // ALS ownership boundary:
         //   - Transport layer MAY install a request-scoped context
@@ -991,13 +1060,24 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,
               sessionId,
+              // Both carry this tools/call's request id (#241), so the
+              // streamable-HTTP transport sends them on the POST response
+              // stream the client is reading, not the optional standalone GET
+              // stream — which this fleet does not serve (GET /mcp is 405).
+              // Without it, a destructive-op confirmation never reached the
+              // client and the elicitation timed out.
               elicitInput: clientSupportsElicitation
                 ? async (params) => {
-                    return server.server.elicitInput(params);
+                    return server.server.elicitInput(
+                      params,
+                      extra?.requestId !== undefined
+                        ? { relatedRequestId: extra.requestId }
+                        : undefined
+                    );
                   }
                 : undefined,
               sendLoggingMessage: async (params) => {
-                return server.sendLoggingMessage(params);
+                return sendRelatedLoggingMessage(server, extra, params);
               },
               idempotencyKey,
             };
@@ -1103,15 +1183,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             );
 
             // Send MCP logging notification for successful completion
-            server
-              .sendLoggingMessage({
-                level: "info",
-                logger: tool.name,
-                data: `Tool ${tool.name} completed successfully`,
-              })
-              .catch(() => {
-                /* ignore if no client connected */
-              });
+            sendRelatedLoggingMessage(server, extra, {
+              level: "info",
+              logger: tool.name,
+              data: `Tool ${tool.name} completed successfully`,
+            }).catch(() => {
+              /* ignore if no client connected */
+            });
 
             if (resolvedAuthContext) {
               auditLogger.info(
@@ -1213,22 +1291,20 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             // Send MCP logging notification for tool failure
-            server
-              .sendLoggingMessage({
-                level: "error",
-                logger: tool.name,
-                // `mcpError.message`, not `(error as Error).message` (#741 H-2).
-                // The raw error is whatever was thrown — for an upstream failure
-                // its message embeds the platform's response body — and this
-                // notification goes to the connected client. `mcpError` has been
-                // through the McpError constructor's redaction; the original has
-                // not. The error payload below already used `mcpError`; this was
-                // the one sink still reading around it.
-                data: `Tool ${tool.name} failed: ${mcpError.message}`,
-              })
-              .catch(() => {
-                /* ignore if no client connected */
-              });
+            sendRelatedLoggingMessage(server, extra, {
+              level: "error",
+              logger: tool.name,
+              // `mcpError.message`, not `(error as Error).message` (#741 H-2).
+              // The raw error is whatever was thrown — for an upstream failure
+              // its message embeds the platform's response body — and this
+              // notification goes to the connected client. `mcpError` has been
+              // through the McpError constructor's redaction; the original has
+              // not. The error payload below already used `mcpError`; this was
+              // the one sink still reading around it.
+              data: `Tool ${tool.name} failed: ${mcpError.message}`,
+            }).catch(() => {
+              /* ignore if no client connected */
+            });
 
             const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
 

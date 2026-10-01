@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
+import { refineDateOrder } from "../../../utils/date.js";
 
 const TOOL_NAME = "dbm_get_performance_metrics";
 const TOOL_TITLE = "Get Performance Metrics";
@@ -28,6 +29,7 @@ export const GetPerformanceMetricsInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .describe("End date in YYYY-MM-DD format"),
   })
+  .superRefine(refineDateOrder("startDate", "endDate"))
   .describe("Parameters for calculating performance metrics");
 
 /**
@@ -118,19 +120,19 @@ export function getPerformanceMetricsResponseFormatter(
       type: "text" as const,
       text: `Campaign ${input.campaignId} Performance (${input.startDate} to ${input.endDate}):
 
-Performance Metrics:
-• CPM: $${result.performance.cpm.toFixed(2)}
+Performance Metrics (money in the advertiser currency):
+• CPM: ${result.performance.cpm.toFixed(2)}
 • CTR: ${result.performance.ctr.toFixed(2)}%
-• CPC: $${result.performance.cpc.toFixed(2)}
-• CPA: $${result.performance.cpa.toFixed(2)}
+• CPC: ${result.performance.cpc.toFixed(2)}
+• CPA: ${result.performance.cpa.toFixed(2)}
 • ROAS: ${result.performance.roas.toFixed(2)}x
 
 Base Delivery:
 • Impressions: ${result.delivery.impressions.toLocaleString()}
 • Clicks: ${result.delivery.clicks.toLocaleString()}
-• Spend: $${result.delivery.spend.toFixed(2)}
+• Spend: ${result.delivery.spend.toFixed(2)}
 • Conversions: ${result.delivery.conversions}
-• Revenue: $${result.delivery.revenue.toFixed(2)}`,
+• Revenue: ${result.delivery.revenue.toFixed(2)}`,
     },
   ];
 }

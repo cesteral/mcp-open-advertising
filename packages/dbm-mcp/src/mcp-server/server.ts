@@ -11,6 +11,7 @@ import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import { registerRunCustomQueryAsyncTool } from "./tools/definitions/run-custom-query-async.tool.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
@@ -55,12 +56,11 @@ export async function createMcpServer(
   const taskStore = new InMemoryTaskStore();
 
   const server = new McpServer(
-    {
-      name: "dbm-mcp",
+    buildServerInfo("dbm-mcp", {
       version: packageJson.version,
       description:
         "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

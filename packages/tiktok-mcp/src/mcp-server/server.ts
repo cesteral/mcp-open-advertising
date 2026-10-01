@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
@@ -63,12 +64,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "tiktok-mcp",
+    buildServerInfo("tiktok-mcp", {
       version: packageJson.version,
       description:
         "TikTok Ads campaign management and reporting via TikTok Marketing API v1.3. Supports 3 entity types (campaign, adGroup, ad), async reporting with breakdowns, bulk operations, targeting search, and audience estimation.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

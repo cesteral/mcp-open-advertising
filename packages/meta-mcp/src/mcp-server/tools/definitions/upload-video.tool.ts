@@ -171,17 +171,15 @@ export async function uploadVideoLogic(
     );
   }
 
-  const actId = input.adAccountId.startsWith("act_")
-    ? input.adAccountId
-    : `act_${input.adAccountId}`;
   const fields: Record<string, string> = {};
   if (input.title) fields.title = input.title;
   if (input.description) fields.description = input.description;
 
-  const uploadResult = (await metaService.graphApiClient.postMultipart(
-    `/${actId}/advideos`,
+  // The upload draws one write, and every status poll below one read, from the
+  // account's limiter bucket (MetaService).
+  const uploadResult = (await metaService.uploadAdVideo(
+    input.adAccountId,
     fields,
-    "source",
     buffer,
     filename,
     contentType,
@@ -201,9 +199,9 @@ export async function uploadVideoLogic(
   try {
     await pollUntilComplete<{ progress: number; videoStatus: string }>({
       fetchStatus: async () => {
-        const statusResult = (await metaService.graphApiClient.get(
-          `/${videoId}`,
-          { fields: "status" },
+        const statusResult = (await metaService.getVideoStatus(
+          input.adAccountId,
+          videoId,
           context
         )) as MetaVideoStatusResponse;
         return {

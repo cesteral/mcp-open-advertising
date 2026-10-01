@@ -51,6 +51,7 @@ describe("bulkCreateEntitiesLogic", () => {
     vi.clearAllMocks();
 
     mockMetaService = {
+      quotaScope: { quotaUser: "u-1" },
       bulkCreateEntities: vi.fn().mockResolvedValue({
         results: [
           { success: true, entity: { id: "1", name: "Ad Set 1" } },

@@ -135,7 +135,11 @@ const ENTITY_CONFIGS: Record<MetaEntityType, MetaEntityConfig> = {
       "id",
       "name",
       "description",
-      "approximate_count",
+      // Audience size is reported as a range. `approximate_count` left the
+      // CustomAudience spec at v13.0 and is not a v26.0 field, so naming it
+      // fails the whole default-fields read with (#100) (#229).
+      "approximate_count_lower_bound",
+      "approximate_count_upper_bound",
       "subtype",
       "time_created",
       "time_updated",

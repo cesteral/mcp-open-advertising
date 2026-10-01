@@ -219,10 +219,14 @@ export async function createCustomBiddingAlgorithmLogic(
     }
   }
 
-  // Create the algorithm using generic entity service
+  // Create the algorithm using generic entity service. The owner travels in
+  // the body (`CustomBiddingAlgorithm.advertiserId` / `.partnerId`), not the
+  // path; it is passed as the ids too so the call draws its limiter token from
+  // the owner's bucket (#236: with `{}` it drew none). customBiddingAlgorithm
+  // has no `writeScopeInQuery`, so the ids add nothing to the request.
   const createdAlgorithm = (await dv360Service.createEntity(
     "customBiddingAlgorithm",
-    {}, // No path IDs needed for top-level entity
+    ownerType === "advertiser" ? { advertiserId: ownerId } : { partnerId: ownerId },
     algorithmData,
     context
   )) as Record<string, any>;

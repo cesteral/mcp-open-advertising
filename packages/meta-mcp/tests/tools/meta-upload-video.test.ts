@@ -73,9 +73,12 @@ describe("uploadVideoLogic", () => {
         .mockResolvedValue({ status: { processing_progress: 100, video_status: "ready" } }),
     };
 
+    // MetaService's metered upload methods (each draws its limiter tokens
+    // before the Graph call — covered by meta-wire-requests.test.ts).
     mockResolveSessionServices.mockReturnValue({
       metaService: {
-        graphApiClient: mockGraphApiClient,
+        uploadAdVideo: mockGraphApiClient.postMultipart,
+        getVideoStatus: mockGraphApiClient.get,
       },
     });
   });
@@ -144,9 +147,8 @@ describe("uploadVideoLogic", () => {
       status: "ready",
     });
     expect(mockGraphApiClient.postMultipart).toHaveBeenCalledWith(
-      "/act_123/advideos",
+      "123",
       { title: "Launch Video" },
-      "source",
       expect.any(Buffer),
       "video.mp4",
       "video/mp4",

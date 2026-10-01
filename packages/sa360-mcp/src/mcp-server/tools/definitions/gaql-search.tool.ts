@@ -21,7 +21,10 @@ SA360 is read-only — queries return data across Google Ads, Microsoft Ads, Yah
 
 export const SA360SearchInputSchema = z
   .object({
-    customerId: z.string().min(1).describe("SA360 customer ID (no dashes, e.g., '1234567890')"),
+    customerId: z
+      .string()
+      .regex(/^\d+$/, "customerId must be numeric")
+      .describe("SA360 customer ID (no dashes, e.g., '1234567890')"),
     query: z.string().min(1).describe("SA360 query string (must include SELECT and FROM clauses)"),
     pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })

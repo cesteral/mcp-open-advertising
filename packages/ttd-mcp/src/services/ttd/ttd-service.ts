@@ -11,6 +11,7 @@ import {
   type TtdEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { throwIfGraphqlErrors } from "../../mcp-server/tools/utils/graphql-errors.js";
+import { consumeTtdQuota, ttdQuotaBucket } from "./rate-limit-keys.js";
 import type {
   TtdAdvertiser,
   TtdCampaign,
@@ -56,11 +57,13 @@ export class TtdService {
   /**
    * The bulk-capacity projection input for a batch this service would run.
    *
-   * Every call in this service consumes ONE token from the single per-partner
-   * key `ttd:${partnerId}`, so a batch tool describes its per-item pattern as
-   * `costPerItem` (one entry per `consume` an item makes, in order) and this
-   * fills in the limiter and key the calls will actually hit. Pass the result to
-   * `assertBulkCapacity` (execute) or `projectBulkCapacity` (dry run).
+   * Every call in this service consumes ONE token from the session's
+   * per-credential key `ttd:client:{quotaClient}` (see `rate-limit-keys.ts`), so
+   * a batch tool describes its per-item pattern as `costPerItem` (one entry per
+   * `consume` an item makes, in order) and this fills in the limiter and key the
+   * calls will actually hit. Pass the result to `assertBulkCapacity` (execute)
+   * or `projectBulkCapacity` (dry run). The projection is therefore per tenant:
+   * another tenant's traffic neither fills this bucket nor refuses this batch.
    */
   bulkCapacityCheck(
     toolName: string,
@@ -71,7 +74,7 @@ export class TtdService {
       rateLimiter: this.rateLimiter,
       toolName,
       itemCount,
-      buckets: [{ key: `ttd:${this.httpClient.partnerId}`, costPerItem }],
+      buckets: [ttdQuotaBucket(this.httpClient, costPerItem)],
     };
   }
 
@@ -85,11 +88,9 @@ export class TtdService {
     context?: RequestContext
   ): Promise<{ entities: TtdEntityMap[T][]; nextPageToken?: string }> {
     const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    this.logger.debug({ entityType, partnerId }, "Listing TTD entities");
+    this.logger.debug({ entityType }, "Listing TTD entities");
 
     // TTD v3 uses POST for queries/list operations
     const body: Record<string, unknown> = {
@@ -133,9 +134,7 @@ export class TtdService {
     context?: RequestContext
   ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, {
       method: "GET",
@@ -149,9 +148,7 @@ export class TtdService {
     options?: { strictMode?: boolean }
   ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     return this.httpClient.fetch(config.apiPath, context, {
       method: "POST",
@@ -196,8 +193,13 @@ export class TtdService {
     creativeFields: Record<string, unknown>,
     context?: RequestContext
   ): Promise<TtdCreative> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    // One token per TTD API call: step 1 and step 3 each draw their own (#236:
+    // this used to draw one token for both). Step 2 goes to the presigned
+    // storage URL, not TTD's API, and draws none.
+    // basis: TTD Foundations §12 (vendored docs/api/TTD_Foundations.md) limits
+    // the calls a client makes to each platform endpoint — the generate-URL
+    // POST and the /creative POST are two such calls.
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // Step 1 — presigned upload URL + attributes to echo back on create.
     const genResponse = (await this.httpClient.fetch(
@@ -234,6 +236,7 @@ export class TtdService {
       AdvertiserId: advertiserId,
       CreativeType: "Video",
     };
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     return this.httpClient.fetch("/creative", context, {
       method: "POST",
       body: JSON.stringify(body),
@@ -289,9 +292,7 @@ export class TtdService {
     options?: { strictMode?: boolean }
   ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // TTD PUT endpoints take no ID in URL; ID must be in the request body
     const payload = { ...data, [config.idField]: entityId };
@@ -314,60 +315,6 @@ export class TtdService {
     // this is TTD's documented end-state for retired entities. We delegate to
     // updateAvailability so callers get the semantic they expect without a 405.
     await this.updateAvailability(entityType, entityId, "Archived", context);
-  }
-
-  // ─── Validate-Only (Dry Run) ──────────────────────────────────────
-
-  /**
-   * Test an entity payload against the TTD API.
-   *
-   * WARNING: TTD has no dry-run mode. A successful create-mode call
-   * CREATES a real entity; a successful update-mode call UPDATES it.
-   * Use this primarily to diagnose validation failures (400 errors).
-   */
-  async testCreateOrUpdate(
-    entityType: TtdEntityType,
-    data: Record<string, unknown>,
-    mode: "create" | "update",
-    entityId?: string,
-    context?: RequestContext
-  ): Promise<{ valid: boolean; errors?: string[] }> {
-    const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    try {
-      if (mode === "update" && entityId) {
-        // TTD PUT endpoints take no ID in URL; ID must be in the request body
-        const payload = { ...data, [config.idField]: entityId };
-        await this.httpClient.fetch(config.apiPath, context, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await this.httpClient.fetch(config.apiPath, context, {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
-      }
-      return { valid: true };
-    } catch (error: unknown) {
-      // Only treat client-error McpErrors as validation results.
-      // Re-throw network, auth, rate-limit, and 5xx errors.
-      const CLIENT_ERROR_CODES = new Set([
-        JsonRpcErrorCode.InvalidRequest,
-        JsonRpcErrorCode.InvalidParams,
-        JsonRpcErrorCode.NotFound,
-      ]);
-      if (error instanceof McpError && CLIENT_ERROR_CODES.has(error.code)) {
-        const errorMessage = error.message ?? String(error);
-        const errorBody =
-          (error.data as { errorBody?: string } | undefined)?.errorBody ?? errorMessage;
-        return { valid: false, errors: [errorBody] };
-      }
-      throw error;
-    }
   }
 
   // ─── Bulk Operations ──────────────────────────────────────────────
@@ -480,9 +427,7 @@ export class TtdService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // Partial PUT — only the ID + Availability field. Per TTD Foundations §8
     // best practices: "avoid copying GET payloads to PUT requests" — round-tripping
@@ -511,7 +456,6 @@ export class TtdService {
   ): Promise<{
     results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }>;
   }> {
-    const partnerId = this.httpClient.partnerId;
     const adGroupConfig = getEntityConfig("adGroup");
     // One advertiser lookup per batch, shared by every ad group under it.
     const advertiserCurrency = new Map<string, Promise<string | undefined>>();
@@ -534,7 +478,7 @@ export class TtdService {
         if (adj.maxBidCpm !== undefined)
           rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
 
-        await this.rateLimiter.consume(`ttd:${partnerId}`);
+        await consumeTtdQuota(this.rateLimiter, this.httpClient);
         return this.httpClient.fetch(adGroupConfig.apiPath, context, {
           method: "PUT",
           body: JSON.stringify({ AdGroupId: adj.adGroupId, RTBAttributes: rtb }),
@@ -611,8 +555,7 @@ export class TtdService {
     context?: RequestContext,
     options?: GraphqlQueryOptions
   ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     // GraphQL lives on a different host (desk.thetradedesk.com) from the REST API
     return this.httpClient.fetchDirect(this.graphqlUrl, context, {
@@ -632,8 +575,7 @@ export class TtdService {
     reportType: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     const mutationMap = {
       adGroup: { name: "adGroupReportExecute", typeEnum: "AdGroupReportType" },
@@ -672,8 +614,7 @@ export class TtdService {
     tile: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     const variables: Record<string, string> = { tile };
     if (entityType === "adGroup") variables.adGroupId = entityId;
@@ -726,8 +667,7 @@ export class TtdService {
     body: { query: string; variables: Record<string, unknown> },
     context?: RequestContext
   ): Promise<Record<string, unknown>> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
     return (await this.httpClient.fetchDirect(this.graphqlUrl, context, {
       method: "POST",
       body: JSON.stringify(body),

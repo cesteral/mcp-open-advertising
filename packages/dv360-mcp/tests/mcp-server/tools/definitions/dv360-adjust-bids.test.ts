@@ -132,7 +132,7 @@ describe("dv360_adjust_line_item_bids", () => {
       expect(result.successful[0].previousBidMicros).toBe(3000000);
     });
 
-    it("reports previous bid from maximizeSpendAutoBid strategy", async () => {
+    it("fails an item on maximizeSpendAutoBid instead of switching it to a fixed bid", async () => {
       mockDv360Service.getEntity.mockResolvedValueOnce({
         displayName: "Auto Bid LI",
         lineItemId: "li-2",
@@ -152,10 +152,16 @@ describe("dv360_adjust_line_item_bids", () => {
         createMockSdkContext()
       );
 
-      expect(result.successful[0].previousBidMicros).toBe(7000000);
+      // Fleet review dv360 #11: merging fixedBid next to maximizeSpendAutoBid
+      // would send two BiddingStrategy members in one PATCH. The item fails
+      // instead, and nothing is written.
+      expect(result.successful).toEqual([]);
+      expect(result.failed[0].error).toContain("does not use a fixed bid");
+      expect(result.failed[0].error).toContain("maximizeSpendAutoBid");
+      expect(mockDv360Service.updateEntity).not.toHaveBeenCalled();
     });
 
-    it("reports previousBidMicros as 0 when no bid strategy is set", async () => {
+    it("fails an item whose line item has no fixed bid to adjust", async () => {
       mockDv360Service.getEntity.mockResolvedValueOnce({
         displayName: "No Bid LI",
         lineItemId: "li-3",
@@ -171,7 +177,9 @@ describe("dv360_adjust_line_item_bids", () => {
         createMockSdkContext()
       );
 
-      expect(result.successful[0].previousBidMicros).toBe(0);
+      expect(result.successful).toEqual([]);
+      expect(result.failed[0].error).toContain("bidStrategy: none");
+      expect(mockDv360Service.updateEntity).not.toHaveBeenCalled();
     });
 
     it("updates the bid via updateEntity with correct data", async () => {

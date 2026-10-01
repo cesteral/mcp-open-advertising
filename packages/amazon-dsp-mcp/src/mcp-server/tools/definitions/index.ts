@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 26 business tools total (27 once the auto-generated tool-search tool joins via
+ * 27 business tools total (28 once the auto-generated tool-search tool joins via
  * createToolSearchTool below):
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
@@ -14,6 +14,7 @@
  *   1 specialized: get ad preview
  *   1 duplication: duplicate entity (manual read-strip-create)
  *   1 validation: validate entity (client-side)
+ *   1 assets: upload video
  *   1 pacing: get pacing status (client-side, no API call)
  *   7 v1 commitments: list, get-batch, get-singular, create, update (governed),
  *                     get-campaign-forecast, get-commitment-spend

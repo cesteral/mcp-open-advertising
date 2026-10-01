@@ -37,6 +37,7 @@ import {
   UploadVideoOutputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-video.tool.js";
 import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
+import { TikTokService } from "../../src/services/tiktok/tiktok-service.js";
 import { createHash } from "node:crypto";
 
 // md5("x") — the mocked downloadFileToBuffer returns Buffer.from("x").
@@ -47,6 +48,7 @@ const sdk = { sessionId: "s" } as any;
 
 describe("tiktok uploads governance contract (effect class)", () => {
   let client: {
+    quotaClient: string;
     versionedPath: ReturnType<typeof vi.fn>;
     postMultipart: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
@@ -55,14 +57,19 @@ describe("tiktok uploads governance contract (effect class)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client = {
+      quotaClient: "0123456789abcdef",
       versionedPath: vi.fn((p: string) => p),
       postMultipart: vi.fn(),
       get: vi
         .fn()
         .mockResolvedValue({ list: [{ video_id: "vid-1", video_status: "bind_success" }] }),
     };
+    // A real TikTokService over the fake HTTP client, so the upload calls go
+    // through the service methods that draw limiter tokens.
+    const limiter = { consume: vi.fn().mockResolvedValue(undefined) };
+    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     mockResolveSessionServices.mockReturnValue({
-      tiktokService: { client },
+      tiktokService: new TikTokService(limiter as any, client as any, logger as any),
       boundAdvertiserId: "1",
     });
   });

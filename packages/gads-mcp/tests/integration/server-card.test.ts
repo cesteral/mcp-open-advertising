@@ -63,4 +63,26 @@ describe("/.well-known/mcp/server-card.json (gads-mcp)", () => {
       await shutdown();
     }
   });
+
+  // Fleet review gads #8: every tool that can remove an entity (a REMOVED
+  // status or a `remove` operation) is declared terminal, bulk_mutate included.
+  it("declares every tool that can remove an entity terminal", async () => {
+    const { app, shutdown } = createMcpHttpServer(config, logger);
+    try {
+      const body = await (await app.request("/.well-known/mcp/server-card.json")).json();
+      const terminal = body.operational.rollback.terminalOperations.map(
+        (t: { tool: string }) => t.tool
+      );
+      expect(terminal).toEqual(
+        expect.arrayContaining([
+          "gads_remove_entity",
+          "gads_update_entity",
+          "gads_bulk_update_status",
+          "gads_bulk_mutate",
+        ])
+      );
+    } finally {
+      await shutdown();
+    }
+  });
 });

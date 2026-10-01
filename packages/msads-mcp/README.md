@@ -24,14 +24,14 @@ through the Model Context Protocol.
 
 ### Core CRUD
 
-| Tool                  | Description                                             |
-| --------------------- | ------------------------------------------------------- |
-| `msads_list_entities` | List Microsoft Ads entities with filters and pagination |
-| `msads_get_entity`    | Get a single entity by ID                               |
-| `msads_create_entity` | Create a new entity                                     |
-| `msads_update_entity` | Update an existing entity                               |
-| `msads_delete_entity` | Delete an entity                                        |
-| `msads_list_accounts` | List accessible ad accounts                             |
+| Tool                  | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| `msads_list_entities` | List entities by account or parent (no pagination) |
+| `msads_get_entity`    | Get a single entity by ID                          |
+| `msads_create_entity` | Create a new entity                                |
+| `msads_update_entity` | Update an existing entity                          |
+| `msads_delete_entity` | Delete an entity                                   |
+| `msads_list_accounts` | List accessible ad accounts                        |
 
 ### Reporting
 
@@ -56,35 +56,49 @@ All reporting tools below accept the shared bounded report-view params: `mode` (
 
 ### Specialized
 
-| Tool                         | Description                                      |
-| ---------------------------- | ------------------------------------------------ |
-| `msads_manage_ad_extensions` | Manage ad extensions (sitelinks, callouts, etc.) |
-| `msads_manage_criterions`    | Manage targeting criterions                      |
-| `msads_search_targeting`     | Search available targeting options               |
-| `msads_get_ad_details`       | Get stored ad details (copy, URLs, status)       |
-| `msads_validate_entity`      | Validate entity payload                          |
-| `msads_import_from_google`   | Import campaigns from Google Ads                 |
+| Tool                          | Description                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `msads_manage_ad_extensions`  | Manage ad extensions (sitelinks, callouts, etc.) |
+| `msads_manage_criterions`     | Manage targeting criterions                      |
+| `msads_search_targeting`      | Search available targeting options               |
+| `msads_get_ad_details`        | Get stored ad details (copy, URLs, status)       |
+| `msads_validate_entity`       | Validate entity payload                          |
+| `msads_import_from_google`    | Import campaigns from Google Ads                 |
+| `msads_duplicate_entity`      | Copy a campaign (always created `Paused`)        |
+| `msads_get_targeting_options` | Static criterion values for `manage_criterions`  |
+| `msads_get_pacing_status`     | Client-side pacing calculator (no API call)      |
+| `msads_search_tools`          | Rank this server's tools against a query         |
+
+### Report Schedules (not supported by the platform)
+
+The Reporting API v13 exposes only `GenerateReport/Submit` and `GenerateReport/Poll`; `ReportRequest` has no `Schedule` element. These tools stay registered so tool lists do not churn, but none of them schedules, lists or deletes anything.
+
+| Tool                           | Behaviour                                          |
+| ------------------------------ | -------------------------------------------------- |
+| `msads_create_report_schedule` | Always fails without calling Microsoft Advertising |
+| `msads_list_report_schedules`  | Returns guidance only                              |
+| `msads_delete_report_schedule` | Always fails without calling Microsoft Advertising |
 
 ## Supported Entity Types
 
-| Entity Type   | API Service Path  | Parent Entity | Batch Limit | Notes                                          |
-| ------------- | ----------------- | ------------- | ----------- | ---------------------------------------------- |
-| `campaign`    | `/Campaigns/*`    | Account       | 100         | Top-level entity; requires budget reference    |
-| `adGroup`     | `/AdGroups/*`     | Campaign      | 1000        | Requires parent `CampaignId`                   |
-| `ad`          | `/Ads/*`          | Ad Group      | 50          | Requires parent `AdGroupId`                    |
-| `keyword`     | `/Keywords/*`     | Ad Group      | 1000        | Requires parent `AdGroupId`                    |
-| `budget`      | `/Budgets/*`      | Account       | 100         | Shared budgets; create before campaigns        |
-| `adExtension` | `/AdExtensions/*` | Account       | 100         | Sitelinks, callouts, structured snippets, etc. |
-| `audience`    | `/Audiences/*`    | Account       | 100         | Remarketing lists, custom audiences            |
-| `label`       | `/Labels/*`       | Account       | 100         | For organizing and filtering entities          |
+| Entity Type   | API Service Path  | Parent Entity | Batch Limit | Notes                                                     |
+| ------------- | ----------------- | ------------- | ----------- | --------------------------------------------------------- |
+| `campaign`    | `/Campaigns/*`    | Account       | 100         | Top-level entity; inline `DailyBudget` or a shared budget |
+| `adGroup`     | `/AdGroups/*`     | Campaign      | 1000        | Requires parent `CampaignId`                              |
+| `ad`          | `/Ads/*`          | Ad Group      | 50          | Requires parent `AdGroupId`                               |
+| `keyword`     | `/Keywords/*`     | Ad Group      | 1000        | Requires parent `AdGroupId`                               |
+| `budget`      | `/Budgets/*`      | Account       | 100         | Shared budgets; create before campaigns                   |
+| `adExtension` | `/AdExtensions/*` | Account       | 100         | Sitelinks, callouts, structured snippets, etc.            |
+| `audience`    | `/Audiences/*`    | Account       | 100         | Remarketing lists, custom audiences                       |
+| `label`       | `/Labels/*`       | Account       | 100         | For organizing and filtering entities                     |
 
 **Entity Hierarchy:** Account > Budget > Campaign > Ad Group > Ad / Keyword
 
 ## Current Status
 
-**Phase: Production-Ready**
+The tools call the Microsoft Advertising API v13 JSON endpoints. Request shapes are checked against the MicrosoftDocs/Advertising reference (see `tests/tools/msads-wire-requests.test.ts`), but no tool has been exercised against a live account, so every governed tool is at `declared` verification.
 
-All listed tools are implemented against the Microsoft Advertising API v13 JSON endpoints.
+- The stdio transport takes a static `MSADS_ACCESS_TOKEN` and has no refresh-token flow; an access token expires after the `expires_in` seconds returned with it (MicrosoftDocs `authentication-oauth-get-tokens.md`), so long stdio sessions need a fresh token. Mint it with the `https://ads.microsoft.com/msads.manage` scope.
 
 ## Development
 

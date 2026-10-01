@@ -9,6 +9,7 @@ import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
+  buildServerInfo,
   extractZodShape,
   registerToolsFromDefinitions,
   createDefinitionHashResolver,
@@ -64,12 +65,11 @@ export async function createMcpServer(
   gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer(
-    {
-      name: "linkedin-mcp",
+    buildServerInfo("linkedin-mcp", {
       version: packageJson.version,
       description:
         "LinkedIn Ads campaign management, analytics, and optimization via LinkedIn Marketing API v2. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics with pivot breakdowns, bulk operations, targeting search, delivery forecasts, and ad previews.",
-    },
+    }),
     {
       capabilities: {
         logging: {},

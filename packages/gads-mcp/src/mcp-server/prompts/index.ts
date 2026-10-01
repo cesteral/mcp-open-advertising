@@ -25,17 +25,15 @@ import {
   getGaqlReportingWorkflowMessage,
 } from "./definitions/gaql-reporting-workflow.prompt.js";
 import {
+  crossPlatformCampaignSetupPrompt,
   crossPlatformPerformancePrompt,
+  getCrossPlatformCampaignSetupMessage,
   getCrossPlatformPerformanceMessage,
-} from "./definitions/cross-platform-performance.prompt.js";
+} from "@cesteral/shared";
 import {
   bulkOperationsWorkflowPrompt,
   getBulkOperationsWorkflowMessage,
 } from "./definitions/bulk-operations-workflow.prompt.js";
-import {
-  crossPlatformCampaignSetupPrompt,
-  getCrossPlatformCampaignSetupMessage,
-} from "./definitions/cross-platform-campaign-setup.prompt.js";
 import {
   entityUpdateWorkflowPrompt,
   getEntityUpdateWorkflowMessage,

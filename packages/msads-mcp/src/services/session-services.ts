@@ -72,7 +72,11 @@ export function createSessionServices(
     reportingClient,
     logger,
     authAdapter,
-    config.reportMaxPollAttempts
+    config.reportMaxPollAttempts,
+    // MSADS_REPORT_POLL_INTERVAL_MS was parsed and threaded through every
+    // transport but never reached the service, which always polled at its 3 s
+    // default (fleet review 2026-09, msads #22).
+    config.reportPollIntervalMs
   );
 
   return { msadsService, msadsCustomerService, msadsReportingService };

@@ -10,7 +10,8 @@ const TOOL_NAME = "cm360_get_pacing_status";
 const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
   "Client-side pacing calculator — does NOT call the Campaign Manager 360 API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
-  "To populate spend, first call \`cm360_get_report\`; to populate budget and flight dates, first call \`cm360_get_entity\` for the campaign.";
+  "To populate spend, first call `cm360_get_report`; to populate flight dates, first call `cm360_get_entity` for the campaign (startDate / endDate). " +
+  "A CM360 campaign has no budget field: take the budget from your media plan, or from the placements' pricingSchedule.";
 
 /**
  * Input schema

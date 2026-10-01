@@ -95,6 +95,11 @@ export async function bulkCreateEntitiesLogic(
     canonicalEntityKind: null,
   };
 
+  // The capacity projection (dry run and execute) reads this session's own
+  // limiter buckets, so the session is resolved first; with no session a dry
+  // run fails as the real call would.
+  const { metaService } = resolveSessionServices(sdkContext);
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
     const dryRun = buildBulkEffectDryRun(
@@ -102,7 +107,7 @@ export async function bulkCreateEntitiesLogic(
       metaBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        metaBulkBuckets.bulkCreate(input.adAccountId),
+        metaBulkBuckets.bulkCreate(metaService.quotaScope, input.adAccountId),
         "items"
       )
     );
@@ -132,10 +137,8 @@ export async function bulkCreateEntitiesLogic(
   assertMetaBulkCapacity(
     TOOL_NAME,
     input.items.length,
-    metaBulkBuckets.bulkCreate(input.adAccountId)
+    metaBulkBuckets.bulkCreate(metaService.quotaScope, input.adAccountId)
   );
-
-  const { metaService } = resolveSessionServices(sdkContext);
 
   const result = await metaService.bulkCreateEntities(
     input.entityType as MetaEntityType,

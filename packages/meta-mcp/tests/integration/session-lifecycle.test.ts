@@ -206,6 +206,14 @@ async function postMcp(
   });
 }
 
+/** JSON-RPC messages carried in an SSE response body. */
+function sseMessages(text: string): any[] {
+  return text
+    .split("\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => JSON.parse(line.slice(5).trim()));
+}
+
 function extractSessionId(response: any, bodyText: string): string | undefined {
   let body: any = undefined;
   try {
@@ -259,7 +267,12 @@ describe("meta-mcp transport session lifecycle", () => {
       expect(existingResponse.status).toBe(200);
       const responseText = await existingResponse.text();
       expect(responseText.length).toBeGreaterThan(0);
-      expect(responseText).not.toContain('"error"');
+      // The POST stream also carries the tool's notifications/message frames
+      // (#241), so assert on the tools/call response itself, not the raw text.
+      const response = sseMessages(responseText).find((m) => m.id === 2);
+      expect(response).toBeDefined();
+      expect(response).not.toHaveProperty("error");
+      expect(response?.result?.isError).not.toBe(true);
       expect(
         logger.error.mock.calls.some((call: unknown[]) =>
           JSON.stringify(call).includes("Already connected to a transport")
