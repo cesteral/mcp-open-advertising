@@ -362,6 +362,32 @@ describe("cm360_delete_entity → floodlightActivities.delete", () => {
 });
 
 describe("cm360_bulk_update_status → <collection>.get then <collection>.update (PUT)", () => {
+  // cm360 #11: only campaign, ad, creative and placement have a status
+  // mapping; the schema used to offer every entity type, which the logic then
+  // refused.
+  it("offers only the four entity types with a status mapping", () => {
+    for (const entityType of ["advertiser", "site", "floodlightActivity"]) {
+      expect(
+        BulkUpdateStatusInputSchema.safeParse({
+          profileId: PID,
+          entityType,
+          entityIds: ["1"],
+          status: "ARCHIVED",
+        }).success
+      ).toBe(false);
+    }
+    for (const entityType of ["campaign", "ad", "creative", "placement"]) {
+      expect(
+        BulkUpdateStatusInputSchema.safeParse({
+          profileId: PID,
+          entityType,
+          entityIds: ["1"],
+          status: "ARCHIVED",
+        }).success
+      ).toBe(true);
+    }
+  });
+
   it("campaign ARCHIVED → PUT the whole entity just read, with archived: true", async () => {
     const current = {
       id: "1",

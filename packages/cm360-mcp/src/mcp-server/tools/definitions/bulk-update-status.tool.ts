@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import type { CM360EntityType } from "../utils/entity-mapping.js";
 import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   McpError,
@@ -37,10 +37,19 @@ Supported mappings:
 - ad, creative: ACTIVE, ARCHIVED
 - placement: ACTIVE, INACTIVE (or PAUSED), ARCHIVED, PERMANENTLY_ARCHIVED (irreversible)`;
 
+/**
+ * The entity types `applyStatusUpdate` maps a status for. Every other type
+ * (advertiser, site, floodlight…) is refused before anything is read, so the
+ * schema does not offer it (cm360 #11).
+ */
+const STATUS_ENTITY_TYPES = ["campaign", "ad", "creative", "placement"] as const;
+
 export const BulkUpdateStatusInputSchema = z
   .object({
     profileId: z.string().min(1).describe("CM360 User Profile ID"),
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityType: z
+      .enum(STATUS_ENTITY_TYPES)
+      .describe("Type of entities to update (the four types with a status mapping)"),
     entityIds: z.array(z.string().min(1)).min(1).max(50).describe("Entity IDs to update (max 50)"),
     status: z.string().min(1).describe("New status value (e.g., ARCHIVED, ACTIVE, PAUSED)"),
     dry_run: z
