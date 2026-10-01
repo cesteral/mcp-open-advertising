@@ -55,9 +55,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 vi.hoisted(() => {
-  // The upload tools wait this long before each media status poll (default 20s).
+  // The upload tools wait this long before each media status poll (defaults:
+  // video 20s, image 2s).
   // Timing only: one poll, no wait.
   process.env.SNAPCHAT_VIDEO_UPLOAD_POLL_INTERVAL_MS = "1";
+  process.env.SNAPCHAT_IMAGE_UPLOAD_POLL_INTERVAL_MS = "1";
 });
 
 import { mcpConfig } from "../../src/config/index.js";
