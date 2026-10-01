@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema, cm360EntityIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import {
@@ -30,9 +31,9 @@ Partial update (CM360 PATCH semantics) — send only the fields you want to chan
 
 export const UpdateEntityInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
-    entityId: z.string().min(1).describe("The entity ID to update"),
+    entityId: cm360EntityIdSchema("The entity ID to update"),
     data: z
       .record(z.any())
       .describe(

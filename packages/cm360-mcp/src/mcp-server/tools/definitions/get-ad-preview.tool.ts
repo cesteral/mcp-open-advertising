@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -14,7 +15,7 @@ Fetches the full ad entity. CM360 does not provide a native ad preview URL — u
 
 export const GetAdPreviewInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     adId: z.string().min(1).describe("Ad ID to preview"),
   })
   .describe("Parameters for getting an ad preview");

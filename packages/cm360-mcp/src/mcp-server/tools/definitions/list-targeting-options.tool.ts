@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   PaginationOutputSchema,
@@ -37,7 +38,7 @@ const TARGETING_TYPES = [
 
 export const ListTargetingOptionsInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     targetingType: z.enum(TARGETING_TYPES).describe("Type of targeting options to list"),
     filters: z
       .record(z.unknown())

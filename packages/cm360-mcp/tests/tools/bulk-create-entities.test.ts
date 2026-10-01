@@ -213,7 +213,7 @@ describe("bulkCreateEntitiesResponseFormatter", () => {
 describe("BulkCreateEntitiesInputSchema", () => {
   it("requires profileId, entityType, items", () => {
     const result = BulkCreateEntitiesInputSchema.safeParse({
-      profileId: "p1",
+      profileId: "123",
       entityType: "campaign",
       items: [{ name: "Test" }],
     });

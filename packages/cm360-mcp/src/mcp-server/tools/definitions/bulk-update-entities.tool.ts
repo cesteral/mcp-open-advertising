@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema, cm360EntityIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
@@ -34,12 +35,12 @@ const EFFECT_KIND = "entities_updated";
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     items: z
       .array(
         z.object({
-          entityId: z.string().min(1).describe("Entity ID to update"),
+          entityId: cm360EntityIdSchema("Entity ID to update"),
           data: z
             .record(z.any())
             .describe("Fields to change (PATCH semantics — omitted fields are preserved)"),

@@ -25,6 +25,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { GetEntityInputSchema } from "../../src/mcp-server/tools/definitions/get-entity.tool.js";
 import { mcpConfig } from "../../src/config/index.js";
 import {
   createEntityLogic,
@@ -358,6 +359,27 @@ describe("cm360_delete_entity → floodlightActivities.delete", () => {
     );
     expect(sdk.elicitInput).not.toHaveBeenCalled();
     expect(apiRequests()).toHaveLength(0);
+  });
+});
+
+// cm360 #19. basis: dfareporting v5 Discovery (rev 20260721) — every
+// `profileId` and `id` path parameter of the entity collections is
+// `type: string, format: int64`. Ids are interpolated into the path, so a
+// non-numeric one is refused at validation.
+describe("cm360 ids are numeric before they reach a path", () => {
+  it("profileId and entityId refuse anything but digits", () => {
+    const ok = { profileId: PID, entityType: "campaign", entityId: "1" };
+    expect(GetEntityInputSchema.safeParse(ok).success).toBe(true);
+    expect(GetEntityInputSchema.safeParse({ ...ok, profileId: "../123" }).success).toBe(false);
+    expect(GetEntityInputSchema.safeParse({ ...ok, entityId: "1/../2" }).success).toBe(false);
+    expect(
+      BulkUpdateStatusInputSchema.safeParse({
+        profileId: PID,
+        entityType: "campaign",
+        entityIds: ["1", "x"],
+        status: "ARCHIVED",
+      }).success
+    ).toBe(false);
   });
 });
 

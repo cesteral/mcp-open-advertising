@@ -153,7 +153,7 @@ describe("mcp transport CRUD integration (CM360)", () => {
 
     mockState.cm360Service.createEntity.mockImplementation(
       async (_entityType: string, _profileId: string, data: Record<string, unknown>) => {
-        const id = "campaign-001";
+        const id = "1001";
         const entity = { ...data, id };
         mockState.entities.set(id, entity);
         return entity;
@@ -226,7 +226,7 @@ describe("mcp transport CRUD integration (CM360)", () => {
         arguments: {
           profileId: "12345",
           entityType: "campaign",
-          entityId: "campaign-001",
+          entityId: "1001",
         },
       },
     });
@@ -243,7 +243,7 @@ describe("mcp transport CRUD integration (CM360)", () => {
         arguments: {
           profileId: "12345",
           entityType: "campaign",
-          entityId: "campaign-001",
+          entityId: "1001",
           data: { name: "Updated Campaign" },
         },
       },
@@ -262,7 +262,7 @@ describe("mcp transport CRUD integration (CM360)", () => {
         arguments: {
           profileId: "12345",
           entityType: "floodlightActivity",
-          entityId: "fl-001",
+          entityId: "2001",
         },
       },
     });
@@ -278,13 +278,13 @@ describe("mcp transport CRUD integration (CM360)", () => {
     expect(mockState.cm360Service.patchEntity).toHaveBeenCalledWith(
       "campaign",
       "12345",
-      "campaign-001",
+      "1001",
       { name: "Updated Campaign" },
       expect.anything()
     );
     expect(mockState.cm360Service.updateEntity).not.toHaveBeenCalled();
     // PATCH preserved the field the update did not send.
-    expect(mockState.entities.get("campaign-001")).toMatchObject({
+    expect(mockState.entities.get("1001")).toMatchObject({
       name: "Updated Campaign",
       advertiserId: "999",
     });

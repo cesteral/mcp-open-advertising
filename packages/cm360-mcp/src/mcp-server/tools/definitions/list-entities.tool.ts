@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import {
@@ -26,7 +27,7 @@ All operations require a profileId (use cm360_list_user_profiles to discover you
 
 export const ListEntitiesInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     filters: z
       .record(z.unknown())
