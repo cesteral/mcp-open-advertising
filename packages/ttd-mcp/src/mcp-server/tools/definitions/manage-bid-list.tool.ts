@@ -243,7 +243,9 @@ export const manageBidListTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
-    destructiveHint: false,
+    // `operation: "delete"` runs bidListDelete, which removes the bid list and
+    // nothing on this server restores it (declared terminal in registry.json).
+    destructiveHint: true,
     idempotentHint: false,
     cesteral: {
       kind: "write",
