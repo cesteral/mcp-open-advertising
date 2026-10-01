@@ -2,8 +2,12 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Wire-request assertions for every amazon-dsp-mcp tool that issues a non-GET
- * upstream request (#236). Each test calls the REAL tool logic over REAL
+ * Wire-request assertions for the amazon-dsp-mcp tools OUTSIDE entity
+ * management (#236): the LwA token exchange, the Creative Asset Library
+ * upload, DSP reports v3 and the Ads API v1 commitments / forecasts. Entity
+ * reads and writes moved to the Unified API in #234 and are asserted in
+ * `amazon-dsp-unified-wire.test.ts`, including the declined-confirmation and
+ * dry-run cases this file used to carry for the `/dsp/*` surface. Each test calls the REAL tool logic over REAL
  * session services (AmazonDspService, AmazonDspV1Service,
  * AmazonDspReportingService, AmazonDspHttpClient, the LwA refresh-token
  * adapter and the package's real module-level `RateLimiter`), with only
@@ -22,19 +26,8 @@
  *   - `postman/Amazon_Ads_API.postman_collection.json` — cited as `Postman
  *     "<folder>/<request name>"` (DSP reports, Creative asset library, Auth).
  *
- * The legacy entity surface (`/dsp/orders`, `/dsp/lineItems`, `/dsp/targets`,
- * `/dsp/creativeAssociations`, and their PUT updates / `{state}` archives) is
- * absent from every one of those sources, and Amazon's reference site is
- * egress-blocked here: those expectations are `basis: unverified (code-only)`.
- * The vendor media types they send come from AMAZON_DSP_ENTITY_CONTRACT; the
- * 2026-05-15 live run (docs/plans/2026-05-15-amazon-dsp-live-test-findings.md
- * #4) saw POST /dsp/orders rejected with 403 under every media type tried, so
- * no write on this surface has ever been observed to succeed.
- *
- * Rate limiting: `/dsp/*` reads draw 1 from `amazon_dsp:read`, creates /
- * updates / status PUTs / archives and the asset upload draw 3 from
- * `amazon_dsp:write`; each report submit and status poll draws 1 from
- * `amazon_dsp:reporting`.
+ * Rate limiting: the asset upload draws 3 from `amazon_dsp:write`; each
+ * report submit and status poll draws 1 from `amazon_dsp:reporting`.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -47,38 +40,6 @@ vi.hoisted(() => {
 });
 
 import { mcpConfig } from "../../src/config/index.js";
-import {
-  createEntityLogic,
-  CreateEntityInputSchema,
-} from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
-import {
-  updateEntityLogic,
-  UpdateEntityInputSchema,
-} from "../../src/mcp-server/tools/definitions/update-entity.tool.js";
-import {
-  deleteEntityLogic,
-  DeleteEntityInputSchema,
-} from "../../src/mcp-server/tools/definitions/delete-entity.tool.js";
-import {
-  bulkUpdateStatusLogic,
-  BulkUpdateStatusInputSchema,
-} from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
-import {
-  bulkCreateEntitiesLogic,
-  BulkCreateEntitiesInputSchema,
-} from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
-import {
-  bulkUpdateEntitiesLogic,
-  BulkUpdateEntitiesInputSchema,
-} from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
-import {
-  adjustBidsLogic,
-  AdjustBidsInputSchema,
-} from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
-import {
-  duplicateEntityLogic,
-  DuplicateEntityInputSchema,
-} from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 import {
   uploadVideoLogic,
   UploadVideoInputSchema,
@@ -139,9 +100,6 @@ const PROFILE = TEST_PROFILE_ID;
 const LIMIT = mcpConfig.amazonDspRateLimitPerMinute;
 const ctx = { requestId: "wire-req" } as any;
 
-const ORDERS = "application/vnd.dsporders.v2.2+json";
-const LINE_ITEMS = "application/vnd.dsplineitems.v3.1+json";
-
 let stub: FetchStub;
 let session: WireSession;
 let sdk: ReturnType<typeof acceptingSdkContext>;
@@ -179,7 +137,7 @@ function remaining(bucket: "read" | "write" | "reporting"): number {
  * basis: Bearer token + `Amazon-Advertising-API-Scope` (profile) +
  * `Amazon-Advertising-API-ClientId` — the header set of every request in
  * Postman "Creative asset library/*" (and "Reporting/DSP report/*", which
- * omits Scope). For `/dsp/*` itself: unverified (code-only).
+ * omits Scope).
  */
 function expectLegacyHeaders(req: WireRequest) {
   expect(req.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
@@ -203,36 +161,20 @@ function expectV1Headers(req: WireRequest) {
   expect(req.headers["content-type"]).toBe("application/json");
 }
 
-/** Route GET /dsp/{collection}/{id} to an entity with that id. */
-function routeEntityReads(collection: string, idField: string, extra: Record<string, unknown>) {
-  stub.route({
-    method: "GET",
-    path: new RegExp(`^/dsp/${collection}/[^/]+$`),
-    response: (req: WireRequest) => ({ [idField]: req.path.split("/").pop(), ...extra }),
-  });
-}
-
 describe("LwA refresh-token exchange", () => {
   it("POSTs the refresh grant form to api.amazon.com/auth/o2/token, once per session", async () => {
-    stub.route({ method: "POST", path: "/dsp/orders", response: { orderId: "o1" } });
-    await createEntityLogic(
-      CreateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        data: { name: "A", advertiserId: "adv1" },
-      }),
-      ctx,
-      sdk
-    );
-    await createEntityLogic(
-      CreateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        data: { name: "B", advertiserId: "adv1" },
-      }),
-      ctx,
-      sdk
-    );
+    stub.route({
+      method: "POST",
+      path: "/adsApi/v1/retrieve/commitments/dsp",
+      response: { success: [] },
+    });
+    for (const commitmentId of ["C1", "C2"]) {
+      await getCommitmentLogic(
+        GetCommitmentInputSchema.parse({ profileId: PROFILE, commitmentId }),
+        ctx,
+        sdk
+      ).catch(() => undefined);
+    }
     const token = stub.to(LWA_TOKEN_HOST);
     // basis: unified-api-dsp.json components.securitySchemes.OAuth2 tokenUrl
     // https://api.amazon.com/auth/o2/token; Postman "Auth/Access token from
@@ -248,477 +190,6 @@ describe("LwA refresh-token exchange", () => {
       client_secret: TEST_CREDENTIALS.appSecret,
       refresh_token: TEST_CREDENTIALS.refreshToken,
     });
-  });
-});
-
-describe("amazon_dsp_create_entity → POST /dsp/{collection}", () => {
-  it("order → POST /dsp/orders with the vendor media type and the caller's object", async () => {
-    stub.route({
-      method: "POST",
-      path: "/dsp/orders",
-      response: { orderId: "581234", name: "Autumn", state: "PAUSED" },
-    });
-    const data = {
-      name: "Autumn",
-      advertiserId: "adv-1",
-      startDateTime: "2026-10-01T00:00:00Z",
-      endDateTime: "2026-10-31T23:59:59Z",
-      budget: 5000,
-    };
-    const out = await createEntityLogic(
-      CreateEntityInputSchema.parse({ entityType: "order", profileId: PROFILE, data }),
-      ctx,
-      sdk
-    );
-    const req = onlyWrite();
-    // basis: unverified (code-only) — see the file header. Body = the caller's
-    // object, unwrapped; Content-Type / Accept = contract createMediaType.
-    expect(req.method).toBe("POST");
-    expect(req.url).toBe(`${API}/dsp/orders`);
-    expectLegacyHeaders(req);
-    expect(req.headers["content-type"]).toBe(ORDERS);
-    expect(req.headers["accept"]).toBe(ORDERS);
-    expect(req.body).toEqual(data);
-    expect(out.entity.orderId).toBe("581234");
-    expect(apiRequests()).toHaveLength(1);
-    expect(remaining("write")).toBe(LIMIT - 3);
-    expect(remaining("read")).toBe(LIMIT);
-  });
-
-  it("lineItem → POST /dsp/lineItems with its own media type", async () => {
-    stub.route({ method: "POST", path: "/dsp/lineItems", response: { lineItemId: "li1" } });
-    const data = {
-      name: "LI",
-      orderId: "581234",
-      advertiserId: "adv-1",
-      budget: { budgetType: "DAILY", budget: 100 },
-    };
-    await createEntityLogic(
-      CreateEntityInputSchema.parse({ entityType: "lineItem", profileId: PROFILE, data }),
-      ctx,
-      sdk
-    );
-    const req = onlyWrite();
-    // basis: unverified (code-only).
-    expect(req.url).toBe(`${API}/dsp/lineItems`);
-    expect(req.headers["content-type"]).toBe(LINE_ITEMS);
-    expect(req.headers["accept"]).toBe(LINE_ITEMS);
-    expect(req.body).toEqual(data);
-  });
-
-  it("creativeAssociation → POST /dsp/creativeAssociations as plain JSON (no media type declared)", async () => {
-    const data = { lineItemId: "li1", creativeId: "cr1" };
-    await createEntityLogic(
-      CreateEntityInputSchema.parse({
-        entityType: "creativeAssociation",
-        profileId: PROFILE,
-        data,
-      }),
-      ctx,
-      sdk
-    );
-    const req = onlyWrite();
-    // basis: unverified (code-only).
-    expect(req.url).toBe(`${API}/dsp/creativeAssociations`);
-    expect(req.headers["content-type"]).toBe("application/json");
-    expect(req.headers["accept"]).toBeUndefined();
-    expect(req.body).toEqual(data);
-  });
-
-  it("dry_run sends nothing", async () => {
-    await createEntityLogic(
-      CreateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        data: { name: "Autumn", advertiserId: "adv-1" },
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(apiRequests()).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_update_entity → PUT /dsp/{collection}/{id}", () => {
-  it("pre-state GET, then PUT the patch with the vendor media type", async () => {
-    routeEntityReads("lineItems", "lineItemId", { name: "LI", state: "ENABLED" });
-    stub.route({
-      method: "PUT",
-      path: "/dsp/lineItems/li%2F1",
-      response: { lineItemId: "li/1", name: "LI v2", state: "ENABLED" },
-    });
-    await updateEntityLogic(
-      UpdateEntityInputSchema.parse({
-        entityType: "lineItem",
-        profileId: PROFILE,
-        entityId: "li/1",
-        data: { name: "LI v2" },
-      }),
-      ctx,
-      sdk
-    );
-    const req = onlyWrite();
-    // basis: unverified (code-only). The id is one encoded path segment.
-    expect(req.method).toBe("PUT");
-    expect(req.url).toBe(`${API}/dsp/lineItems/li%2F1`);
-    expectLegacyHeaders(req);
-    expect(req.headers["content-type"]).toBe(LINE_ITEMS);
-    expect(req.headers["accept"]).toBe(LINE_ITEMS);
-    expect(req.body).toEqual({ name: "LI v2" });
-    expect(apiRequests().map((r) => r.method)).toEqual(["GET", "PUT"]);
-    expect(remaining("read")).toBe(LIMIT - 1);
-    expect(remaining("write")).toBe(LIMIT - 3);
-  });
-
-  it("dry_run sends no PUT", async () => {
-    routeEntityReads("orders", "orderId", { name: "Autumn", state: "ENABLED" });
-    await updateEntityLogic(
-      UpdateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityId: "581234",
-        data: { name: "x" },
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(writes()).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_delete_entity → PUT /dsp/{collection}/{id} {state: ARCHIVED}", () => {
-  it("one archive PUT per id after one confirmation", async () => {
-    await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityIds: ["581234", "581235"],
-      }),
-      ctx,
-      sdk
-    );
-    // basis: unverified (code-only) — no DELETE endpoint on this surface; the
-    // `state` enum is itself unverified (fleet review amazon-dsp #9).
-    const w = writes();
-    expect(w.map((r) => `${r.method} ${r.url}`)).toEqual([
-      `PUT ${API}/dsp/orders/581234`,
-      `PUT ${API}/dsp/orders/581235`,
-    ]);
-    for (const req of w) {
-      expectLegacyHeaders(req);
-      expect(req.headers["content-type"]).toBe(ORDERS);
-      expect(req.body).toEqual({ state: "ARCHIVED" });
-    }
-    expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("write")).toBe(LIMIT - 6);
-  });
-
-  it("sends nothing when the confirmation is declined", async () => {
-    sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
-    await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityIds: ["581234"],
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-
-  it("dry_run sends nothing and does not prompt", async () => {
-    await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityIds: ["581234"],
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(sdk.elicitInput).not.toHaveBeenCalled();
-    expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_bulk_update_status → PUT /dsp/{collection}/{id} {state}", () => {
-  it("one PUT per id carrying only the target state", async () => {
-    await bulkUpdateStatusLogic(
-      BulkUpdateStatusInputSchema.parse({
-        entityType: "lineItem",
-        profileId: PROFILE,
-        entityIds: ["li1", "li2"],
-        operationStatus: "PAUSED",
-      }),
-      ctx,
-      sdk
-    );
-    // basis: unverified (code-only).
-    const w = writes();
-    expect(w.map((r) => `${r.method} ${r.url}`).sort()).toEqual([
-      `PUT ${API}/dsp/lineItems/li1`,
-      `PUT ${API}/dsp/lineItems/li2`,
-    ]);
-    for (const req of w) {
-      expect(req.headers["content-type"]).toBe(LINE_ITEMS);
-      expect(req.body).toEqual({ state: "PAUSED" });
-    }
-    expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("write")).toBe(LIMIT - 6);
-  });
-
-  it("sends nothing when the confirmation is declined", async () => {
-    sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
-    await bulkUpdateStatusLogic(
-      BulkUpdateStatusInputSchema.parse({
-        entityType: "lineItem",
-        profileId: PROFILE,
-        entityIds: ["li1"],
-        operationStatus: "PAUSED",
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-
-  it("dry_run sends nothing", async () => {
-    await bulkUpdateStatusLogic(
-      BulkUpdateStatusInputSchema.parse({
-        entityType: "lineItem",
-        profileId: PROFILE,
-        entityIds: ["li1"],
-        operationStatus: "PAUSED",
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_bulk_create_entities → one POST /dsp/{collection} per item", () => {
-  it("POSTs each item as its own body", async () => {
-    stub.route({ method: "POST", path: "/dsp/orders", response: { orderId: "o" } });
-    const items = [
-      { name: "A", advertiserId: "adv-1" },
-      { name: "B", advertiserId: "adv-1" },
-    ];
-    const out = await bulkCreateEntitiesLogic(
-      BulkCreateEntitiesInputSchema.parse({ entityType: "order", profileId: PROFILE, items }),
-      ctx,
-      sdk
-    );
-    // basis: unverified (code-only) — no batch create on this surface.
-    const w = writes();
-    expect(w).toHaveLength(2);
-    for (const req of w) {
-      expect(req.method).toBe("POST");
-      expect(req.url).toBe(`${API}/dsp/orders`);
-      expect(req.headers["content-type"]).toBe(ORDERS);
-    }
-    expect(w.map((r) => r.body)).toEqual(expect.arrayContaining(items));
-    expect(out.successCount).toBe(2);
-    expect(remaining("write")).toBe(LIMIT - 6);
-  });
-
-  it("dry_run sends nothing", async () => {
-    await bulkCreateEntitiesLogic(
-      BulkCreateEntitiesInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        items: [{ name: "A", advertiserId: "adv-1" }],
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_bulk_update_entities → one PUT /dsp/{collection}/{id} per item", () => {
-  it("PUTs each item's patch after one confirmation", async () => {
-    await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        items: [
-          { entityId: "581234", data: { budget: 7000 } },
-          { entityId: "581235", data: { name: "Renamed" } },
-        ],
-      }),
-      ctx,
-      sdk
-    );
-    // basis: unverified (code-only).
-    const w = writes();
-    expect(w.map((r) => `${r.method} ${r.url} ${JSON.stringify(r.body)}`).sort()).toEqual([
-      `PUT ${API}/dsp/orders/581234 {"budget":7000}`,
-      `PUT ${API}/dsp/orders/581235 {"name":"Renamed"}`,
-    ]);
-    // A budget change is a sensitive field: one confirmation for the batch.
-    expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("write")).toBe(LIMIT - 6);
-  });
-
-  it("sends nothing when the confirmation is declined", async () => {
-    sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
-    await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        items: [{ entityId: "581234", data: { budget: 7000 } }],
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-
-  it("dry_run sends nothing", async () => {
-    await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        items: [{ entityId: "581234", data: { budget: 7000 } }],
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_adjust_bids → GET then PUT /dsp/lineItems/{id} {bidding}", () => {
-  it("keeps the current bidding fields and replaces bidAmount", async () => {
-    routeEntityReads("lineItems", "lineItemId", {
-      bidding: { bidOptimization: "AUTO", bidAmount: 1.1 },
-    });
-    const out = await adjustBidsLogic(
-      AdjustBidsInputSchema.parse({
-        profileId: PROFILE,
-        adjustments: [
-          { lineItemId: "li1", bidAmount: 1.5 },
-          { lineItemId: "li2", bidAmount: 0.9 },
-        ],
-      }),
-      ctx,
-      sdk
-    );
-    // basis: unverified (code-only).
-    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
-      "GET /dsp/lineItems/li1",
-      "PUT /dsp/lineItems/li1",
-      "GET /dsp/lineItems/li2",
-      "PUT /dsp/lineItems/li2",
-    ]);
-    const w = writes();
-    for (const req of w) {
-      expectLegacyHeaders(req);
-      expect(req.headers["content-type"]).toBe(LINE_ITEMS);
-    }
-    expect(w.map((r) => r.body)).toEqual([
-      { bidding: { bidOptimization: "AUTO", bidAmount: 1.5 } },
-      { bidding: { bidOptimization: "AUTO", bidAmount: 0.9 } },
-    ]);
-    expect(out.results.map((r) => r.previousBid)).toEqual([1.1, 1.1]);
-    expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(remaining("read")).toBe(LIMIT - 2);
-    expect(remaining("write")).toBe(LIMIT - 6);
-  });
-
-  it("sends nothing when the confirmation is declined", async () => {
-    sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
-    await adjustBidsLogic(
-      AdjustBidsInputSchema.parse({
-        profileId: PROFILE,
-        adjustments: [{ lineItemId: "li1", bidAmount: 1.5 }],
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-
-  it("dry_run sends nothing", async () => {
-    await adjustBidsLogic(
-      AdjustBidsInputSchema.parse({
-        profileId: PROFILE,
-        adjustments: [{ lineItemId: "li1", bidAmount: 1.5 }],
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("amazon_dsp_duplicate_entity → GET the source, POST /dsp/{collection} the stripped copy", () => {
-  it("strips the id and timestamps, forces state PAUSED, applies options", async () => {
-    stub.route({
-      method: "GET",
-      path: "/dsp/orders/581234",
-      response: {
-        orderId: "581234",
-        name: "Autumn",
-        advertiserId: "adv-1",
-        state: "ENABLED",
-        budget: 5000,
-        creationDate: "2026-09-01T00:00:00Z",
-        lastUpdatedDate: "2026-09-02T00:00:00Z",
-      },
-    });
-    stub.route({
-      method: "POST",
-      path: "/dsp/orders",
-      response: { orderId: "581299", name: "Autumn (copy)", state: "PAUSED" },
-    });
-    await duplicateEntityLogic(
-      DuplicateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityId: "581234",
-        options: { name: "Autumn (copy)" },
-      }),
-      ctx,
-      sdk
-    );
-    const req = onlyWrite();
-    // basis: unverified (code-only) — no copy endpoint on this surface.
-    expect(req.method).toBe("POST");
-    expect(req.url).toBe(`${API}/dsp/orders`);
-    expect(req.headers["content-type"]).toBe(ORDERS);
-    expect(req.body).toEqual({
-      name: "Autumn (copy)",
-      advertiserId: "adv-1",
-      state: "PAUSED",
-      budget: 5000,
-    });
-    expect(remaining("read")).toBe(LIMIT - 1);
-    expect(remaining("write")).toBe(LIMIT - 3);
-  });
-
-  it("dry_run sends no POST", async () => {
-    routeEntityReads("orders", "orderId", { name: "Autumn", state: "ENABLED" });
-    await duplicateEntityLogic(
-      DuplicateEntityInputSchema.parse({
-        entityType: "order",
-        profileId: PROFILE,
-        entityId: "581234",
-        dry_run: true,
-      }),
-      ctx,
-      sdk
-    );
-    expect(writes()).toHaveLength(0);
   });
 });
 

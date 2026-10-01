@@ -42,6 +42,34 @@ import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 const PROFILE = "1234567890";
+const ACCOUNT = "5550001112223";
+
+const ITEM_KEY: Record<string, [string, string]> = {
+  campaigns: ["campaign", "campaignId"],
+  adGroups: ["adGroup", "adGroupId"],
+  ads: ["ad", "adId"],
+  targets: ["target", "targetId"],
+  adAssociations: ["adAssociation", "adAssociationId"],
+};
+
+/**
+ * Stand-in for the HTTP client's POST that answers like the Unified API
+ * (unified-api-dsp.json): `query/*` → 200 `{ <resource>: [...] }` echoing the
+ * id filter; writes → 207 `{ success: [{ index: 0, <item> }] }`.
+ */
+function unifiedPost(path: string, body: any): unknown {
+  const [, , , action, resource] = path.split("/");
+  const [itemKey, idField] = ITEM_KEY[resource] ?? ["item", "id"];
+  if (action === "query") {
+    const filter = Object.entries(body ?? {}).find(
+      ([k]) => k.endsWith("IdFilter") && k !== "adProductFilter"
+    );
+    const ids = ((filter?.[1] as any)?.include ?? []) as string[];
+    return { [resource]: ids.map((id) => ({ [idField]: id, bid: { baseBid: 1 } })) };
+  }
+  const item = (body?.[resource] ?? [])[0] ?? {};
+  return { success: [{ index: 0, [itemKey]: { [idField]: "new-id", ...item } }], error: [] };
+}
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `id-${i}`);
 
@@ -57,6 +85,7 @@ const cases: Case[] = [
       adjustBidsLogic(
         {
           profileId: PROFILE,
+          accountId: ACCOUNT,
           adjustments: ids(n).map((lineItemId) => ({ lineItemId, bidAmount: 1.5 })),
           dry_run,
         } as any,
@@ -71,6 +100,7 @@ const cases: Case[] = [
         {
           entityType: "order",
           profileId: PROFILE,
+          accountId: ACCOUNT,
           entityIds: ids(n),
           operationStatus: "PAUSED",
           dry_run,
@@ -83,7 +113,13 @@ const cases: Case[] = [
     tool: "amazon_dsp_delete_entity",
     run: (n, dry_run = false) =>
       deleteEntityLogic(
-        { entityType: "order", profileId: PROFILE, entityIds: ids(n), dry_run } as any,
+        {
+          entityType: "target",
+          profileId: PROFILE,
+          accountId: ACCOUNT,
+          entityIds: ids(n),
+          dry_run,
+        } as any,
         ctx,
         sdk
       ),
@@ -95,6 +131,7 @@ const cases: Case[] = [
         {
           entityType: "order",
           profileId: PROFILE,
+          accountId: ACCOUNT,
           items: ids(n).map((entityId) => ({ entityId, data: { name: "x" } })),
           dry_run,
         } as any,
@@ -109,6 +146,7 @@ const cases: Case[] = [
         {
           entityType: "order",
           profileId: PROFILE,
+          accountId: ACCOUNT,
           items: ids(n).map((name) => ({ name })),
           dry_run,
         } as any,
@@ -131,8 +169,8 @@ describe("Amazon DSP bulk capacity pre-check", () => {
     vi.clearAllMocks();
     rateLimiter.clear();
     http = {
-      get: vi.fn().mockResolvedValue({ bidding: { bidAmount: 1 } }),
-      post: vi.fn().mockResolvedValue({}),
+      get: vi.fn().mockResolvedValue({}),
+      post: vi.fn().mockImplementation(unifiedPost),
       put: vi.fn().mockResolvedValue({}),
     };
     mockResolveSessionServices.mockReturnValue({
@@ -181,9 +219,9 @@ describe("Amazon DSP bulk capacity pre-check", () => {
     it("refuses against the live window, not an empty one", async () => {
       await run(3); // 9 write tokens now held in the current window
       vi.clearAllMocks();
-      http.get.mockResolvedValue({ bidding: { bidAmount: 1 } });
+      http.get.mockResolvedValue({});
       http.put.mockResolvedValue({});
-      http.post.mockResolvedValue({});
+      http.post.mockImplementation(unifiedPost);
       mockElicit.mockResolvedValue(true);
 
       const err = (await run(7).catch((e: unknown) => e)) as McpError;

@@ -4,17 +4,27 @@ Amazon DSP MCP server for campaign management and reporting through the Amazon A
 
 ## Current Scope
 
-The server currently exposes generic CRUD-style MCP tools for these Amazon DSP entities, addressed by Amazon's legacy object names (`entityType` accepts exactly these values — `campaign` / `adGroup` are **not** accepted):
+Entity management runs on the Amazon Ads **Unified API** (`POST /adsApi/v1/{create,update,query,delete}/{resource}`, #234), per Amazon's machine-readable Unified DSP spec and DSP migration guide ([amzn/ads-advanced-tools-docs](https://github.com/amzn/ads-advanced-tools-docs) @ `e25aace0`, `unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json` and `skills/unified-dsp-cm-migration`). **None of it has been exercised against Amazon yet.**
 
-- `order` — the campaign-level object
-- `lineItem` — the ad-group-level object
-- `creative` (read-only here: create is rejected, because Amazon routes creative writes to subtype-specific endpoints this server does not implement)
-- `target`
-- `creativeAssociation`
+The entity tools keep the pre-Unified entity-type names (`entityType` accepts exactly these values — `campaign` / `adGroup` are **not** accepted); each maps onto one Unified resource:
 
-Entity management uses the legacy `/dsp/orders`, `/dsp/lineItems`, `/dsp/creatives`, `/dsp/targets` and `/dsp/creativeAssociations` endpoints. Amazon's DSP migration guide ([amzn/ads-advanced-tools-docs](https://github.com/amzn/ads-advanced-tools-docs), `unified-dsp-cm-migration`) directs integrations to the Unified `/adsApi/v1/{create,update,query,delete}/*` API; that migration is not done yet.
+| `entityType`          | Unified resource | ID field          | get | create | update | remove                                     |
+| --------------------- | ---------------- | ----------------- | --- | ------ | ------ | ------------------------------------------ |
+| `order`               | `campaigns`      | `campaignId`      | ✅  | ✅     | ✅     | LEGACY archive (`PUT /dsp/orders/{id}`)    |
+| `lineItem`            | `adGroups`       | `adGroupId`       | ✅  | ✅     | ✅     | LEGACY archive (`PUT /dsp/lineItems/{id}`) |
+| `creative`            | `ads`            | `adId`            | ✅  | ✅     | ✅     | — (no Unified delete)                      |
+| `target`              | `targets`        | `targetId`        | —   | ✅     | —      | ✅ `delete/targets`                        |
+| `creativeAssociation` | `adAssociations` | `adAssociationId` | ✅  | ✅     | ✅     | ✅ `delete/adAssociations`                 |
 
-Commitments, commitment spend and campaign forecasts use the Amazon Ads API v1 (`/adsApi/v1/*`).
+- Every entity tool takes `accountId` — the DSP advertiser ID (`advertiserId` from `amazon_dsp_list_advertisers`), sent as the `Amazon-Ads-AccountId` header. The advertiser is no longer a body field.
+- Payloads use Unified field names (`flights[]`, `budgets[]`, `optimizations`, `bid.baseBid`, `targetDetails`, `adType` + `creative`, …). `adProduct: "AMAZON_DSP"` is added for you. A few legacy names are mapped mechanically: `orderId` → `campaignId`, `lineItemId` → `adGroupId`, `creativeId` → `adId`, `country` → `countries[]`, a DAILY/LIFETIME `budget` → `budgets[]`; other legacy fields (`bidding`, order `startDateTime`, `creativeType`, `expression`, …) are refused with the Unified field to use.
+- Orders and line items can only be **created PAUSED** (the only create state Amazon accepts for DSP campaigns and ad groups); enable them with `amazon_dsp_bulk_update_status`.
+- `state` on update is `ENABLED` or `PAUSED` only — the Unified API has no ARCHIVED update state. Orders and line items are removed through the one legacy call this server still makes (`PUT /dsp/orders|lineItems/{id} { state: "ARCHIVED" }`, never verified live); creatives (ads) cannot be removed.
+- Targets have no Unified read-by-ID and no update: list them with `filters.adGroupId`, delete and recreate to change them.
+- Lists paginate with `nextToken`.
+- `amazon_dsp_list_advertisers` (`GET /dsp/advertisers`) and `amazon_dsp_get_ad_preview` (`GET /dsp/creatives/{id}/preview`) stay on legacy endpoints: the Unified DSP spec has no equivalent.
+
+Commitments, commitment spend and campaign forecasts use the same Unified API family (`/adsApi/v1/*`).
 
 ## Reporting
 
@@ -33,15 +43,10 @@ The `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`, and `amazon_dsp
 
 ## Auth And Headers
 
-All upstream requests carry:
+All upstream requests carry `Authorization: Bearer <access token>`. The rest depends on the API family:
 
-- `Authorization: Bearer <access token>`
-- `Amazon-Advertising-API-Scope: <profile id>`
-- the client ID, under the header name each API family requires:
-  - `Amazon-Advertising-API-ClientId` on the legacy `/dsp/*` endpoints and DSP reporting
-  - `Amazon-Ads-ClientId` on Ads API v1 (`/adsApi/v1/*`), per Amazon's spec (`unified-api-dsp.json` `ClientIdHeader`)
-
-`amazon_dsp_get_campaign_forecast` additionally sends `Amazon-Ads-AccountId: <DSP advertiser id>`, which the spec requires on `retrieve/campaignForecasts/dsp`.
+- **Unified API** (`/adsApi/v1/*` — entities, commitments, forecasts): `Amazon-Ads-ClientId` (spec `ClientIdHeader`) and, on every entity operation and the forecast, `Amazon-Ads-AccountId: <DSP advertiser id>` (spec `AccountIdHeader`). No `Amazon-Advertising-API-Scope`: the spec declares none and the DSP migration guide lists it as "Not used" (Amazon's generic Unified Postman collection does still send it).
+- **Legacy** (`/dsp/*`, `/assets/*`, DSP reporting): `Amazon-Advertising-API-Scope: <profile id>` and `Amazon-Advertising-API-ClientId`.
 
 The MCP server does not inject profile IDs into request bodies — scope is conveyed through Amazon's required headers.
 
@@ -76,7 +81,7 @@ Tracking is opt-in and only covers the env token — in HTTP mode each session s
 
 ## Notes
 
-- Amazon DSP campaign management is modeled through the order object.
-- Amazon DSP ad group management is modeled through the line item object.
-- Performance+ support is represented through optional order fields such as `automatedAdGroupCreation`.
-- Guidance, Quick Actions, and some newer DSP APIs are not yet implemented in this package.
+- An `order` is a Unified DSP campaign; a `lineItem` is a Unified DSP ad group; a `creative` is a Unified DSP ad.
+- Writes answer a 207 multi-status; an `error[]` entry is surfaced as a tool error with Amazon's `code` and `fieldLocation`.
+- Bulk tools send one Unified request per item (the Unified batch limits are 5 campaigns / 20 ad groups / 10 ads / 1000 targets / 20 ad associations per request; native batching is not used yet).
+- Guidance, Quick Actions, and the Unified-only DSP APIs (geo locations, location indexes, deals) are not implemented in this package.

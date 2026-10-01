@@ -3,19 +3,20 @@
 
 /**
  * Canonical state-transition fixtures for the `amazon_dsp_duplicate_entity`
- * write surface (order + lineItem).
+ * write surface (order + lineItem), in Unified API shapes (#234).
  *
  * The copy does not exist yet, so `entityId` is the empty placeholder and
- * `data` is the landing-status overlay (the copy lands in a non-running
- * `PAUSED` state) the dry-run applies to the SOURCE (`preState`).
- * `applyAmazonDspPatch(entityType, "", source, overlay)` must yield the copy's
- * canonical projection — exactly what the tool's dry-run `expectedPostState`
- * produces.
+ * `data` is the landing-status overlay (the copy lands PAUSED — the only
+ * create state Amazon accepts for DSP campaigns / ad groups) the dry-run
+ * applies to the SOURCE (`preState`). `applyAmazonDspPatch(entityType, "",
+ * source, overlay, accountId)` yields the copy's canonical projection. The
+ * tool's dry-run additionally strips the source's read-only fields before
+ * snapshotting; none of them change the canonical projection here (the
+ * currency is USD either way, and a campaign's schedule comes from flights).
  */
 
 import type { AmazonDspWriteFixture } from "../types.js";
-
-const advertiserId = "advertiser-REDACTED-001";
+import { campaign, adGroup, advertiserId, profileId } from "./unified-shapes.js";
 
 /** duplicate: order copy lands PAUSED (projected from source). */
 export const duplicateOrder: AmazonDspWriteFixture = {
@@ -24,21 +25,12 @@ export const duplicateOrder: AmazonDspWriteFixture = {
   entityKind: "order",
   args: {
     entityType: "order",
-    profileId: advertiserId,
+    profileId,
+    accountId: advertiserId,
     entityId: "",
     data: { state: "PAUSED" },
   },
-  preState: {
-    orderId: "ord-REDACTED-1",
-    name: "Source Order",
-    state: "ENABLED",
-    advertiserId,
-    budget: 40000,
-    budgetType: "LIFETIME",
-    currencyCode: "USD",
-    startDateTime: "2026-01-01T00:00:00Z",
-    endDateTime: "2026-12-31T00:00:00Z",
-  },
+  preState: campaign("cmp-REDACTED-1", "Source Order", "ENABLED", 40000),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
@@ -63,18 +55,12 @@ export const duplicateLineItem: AmazonDspWriteFixture = {
   entityKind: "lineItem",
   args: {
     entityType: "lineItem",
-    profileId: advertiserId,
+    profileId,
+    accountId: advertiserId,
     entityId: "",
     data: { state: "PAUSED" },
   },
-  preState: {
-    lineItemId: "li-REDACTED-1",
-    name: "Source Line Item",
-    state: "ENABLED",
-    orderId: "ord-REDACTED-1",
-    advertiserId,
-    budget: { budgetType: "DAILY", budget: 2000 },
-  },
+  preState: adGroup("adg-REDACTED-1", "Source Line Item", "ENABLED", 20),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
@@ -84,10 +70,10 @@ export const duplicateLineItem: AmazonDspWriteFixture = {
     accountId: advertiserId,
     status: { canonical: "paused", platformRaw: "PAUSED" },
     budget: {
-      daily: { amountMinor: 200_000, currency: "USD" },
+      daily: { amountMinor: 2_000, currency: "USD" },
       lifetime: null,
     },
-    schedule: { startAt: null, endAt: null },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-06-30T00:00:00Z" },
   },
   description: "duplicate: line-item copy lands PAUSED, budget preserved (projected from source)",
 };

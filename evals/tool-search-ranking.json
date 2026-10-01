@@ -19,6 +19,14 @@
       "outranks": ["amazon_dsp_submit_report", "amazon_dsp_get_report"]
     },
     {
+      "server": "amazon-dsp-mcp",
+      "platform": "amazon_dsp",
+      "query": "delete a campaign",
+      "expectTop": "amazon_dsp_delete_entity",
+      "outranks": ["amazon_dsp_get_campaign_forecast"],
+      "note": "Promoted from gaps in #234. amazon_dsp_get_campaign_forecast used to win on 'campaign' in its name; the Unified-API rewrite of amazon_dsp_delete_entity's description names the campaign-level entity, so it now scores 13 to the forecast tool's 10. A thin margin, like the cm360 pair."
+    },
+    {
       "server": "cm360-mcp",
       "platform": "cm360",
       "query": "download a finished report",
@@ -248,15 +256,6 @@
       "actualTop": "dv360_adjust_line_item_bids",
       "wantedNotInTopN": 1,
       "note": "The safety case #205 asks about. Narrowed but still open: 'remove' now reaches delete, so dv360_delete_entity went from outside the top 6 to #2 (12). dv360_adjust_line_item_bids still wins at 22, because 'line' and 'item' each match a word in its name for +5. Both of dv360's irreversible paths (delete, and archive via bulk_update_status) are terminal per #201. Beating an object noun that appears in a tool's name needs the query's operation to outweigh it, and rarity (IDF) weighting was tried and rejected: it broke 3 protected cases by amplifying repeated description words."
-    },
-    {
-      "server": "amazon-dsp-mcp",
-      "platform": "amazon_dsp",
-      "query": "delete a campaign",
-      "wanted": "amazon_dsp_delete_entity",
-      "actualTop": "amazon_dsp_get_campaign_forecast",
-      "wantedNotInTopN": 1,
-      "note": "A read-only forecasting tool outranks the delete tool for an explicit delete query, on the strength of 'campaign' appearing in its name. amazon_dsp_delete_entity is #2."
     }
   ]
 }

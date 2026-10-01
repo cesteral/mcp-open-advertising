@@ -10,6 +10,7 @@ import {
   READ_THEN_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
+import { AccountIdSchema } from "../utils/account-id.js";
 import {
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -30,25 +31,28 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_adjust_bids";
 const TOOL_TITLE = "Amazon DSP Line Item Bid Adjustment";
-const TOOL_DESCRIPTION = `Batch adjust line item bid prices with safe read-modify-write.
+const TOOL_DESCRIPTION = `Batch adjust line item (ad group) base bids with safe read-modify-write via the Amazon Ads Unified API.
 
-Reads current bid prices, applies new values, and reports previous/new amounts.
-Bid prices are in the advertiser's account currency.
+For each line item: reads the ad group (\`POST /adsApi/v1/query/adGroups\`), then sets \`bid.baseBid\` to \`bidAmount\` (\`POST /adsApi/v1/update/adGroups\`, keeping \`bid.maxAverageBid\`), and reports previous/new amounts.
+Bids are in the advertiser's account currency.
 
 **Gotchas:**
-- Only applies to line items with manual bidding (bidding.bidOptimization.bidAmount field).
-- Line items using automated bidding strategies may ignore the bid amount.
+- \`baseBid\` is the lower bound bid for the ad group's ads; the ad group's \`optimization.bidStrategy\` decides how it is used.
 - Each read + write pair consumes API quota.
 - Max 50 adjustments per call.`;
 
 export const AdjustBidsInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     adjustments: z
       .array(
         z.object({
-          lineItemId: z.string().min(1).describe("The line item ID to adjust"),
-          bidAmount: z.number().positive().describe("New bid amount in the advertiser's currency"),
+          lineItemId: z.string().min(1).describe("The line item (Unified ad group) ID to adjust"),
+          bidAmount: z
+            .number()
+            .positive()
+            .describe("New `bid.baseBid` in the advertiser's currency"),
         })
       )
       .min(1)
@@ -141,7 +145,7 @@ export async function adjustBidsLogic(
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "line item",
-    summary: input.reason ?? "Applying bidAmount changes.",
+    summary: input.reason ?? "Applying bid.baseBid changes.",
     impactPreview: input.adjustments.map((a) => a.lineItemId),
     sdkContext,
   });
@@ -163,6 +167,7 @@ export async function adjustBidsLogic(
   assertAccountScope(input.profileId, boundProfileId, "profileId");
 
   const result = await amazonDspService.adjustBids(
+    input.accountId,
     input.adjustments.map((a) => ({
       lineItemId: a.lineItemId,
       bidAmount: a.bidAmount,
@@ -316,16 +321,18 @@ export const adjustBidsTool = {
       label: "Single bid adjustment",
       input: {
         profileId: "1234567890",
-        adjustments: [{ lineItemId: "1700123456789", bidAmount: 1.5 }],
+        accountId: "5550001112223",
+        adjustments: [{ lineItemId: "592345678901234", bidAmount: 1.5 }],
       },
     },
     {
       label: "Multiple bid adjustments with reason",
       input: {
         profileId: "1234567890",
+        accountId: "5550001112223",
         adjustments: [
-          { lineItemId: "1700111111111", bidAmount: 2.0 },
-          { lineItemId: "1700222222222", bidAmount: 1.2 },
+          { lineItemId: "592345678901234", bidAmount: 2.0 },
+          { lineItemId: "592345678901235", bidAmount: 1.2 },
         ],
         reason: "Increase bids to improve delivery pacing",
       },

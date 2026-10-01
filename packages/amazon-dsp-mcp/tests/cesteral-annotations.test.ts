@@ -39,6 +39,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral.readPartner.argMap).toEqual({
       entityType: "entityType",
       profileId: "profileId",
+      accountId: "accountId",
       entityId: "entityId",
     });
     // R2-U4: symbolic-apply dry-run + before/after capture.

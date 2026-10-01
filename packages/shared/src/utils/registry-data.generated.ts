@@ -526,21 +526,7 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "bulk_job"
             ],
-            "note": "Bulk removal of orders / line items. No tool on this server restores it."
-          },
-          {
-            "tool": "amazon_dsp_update_entity",
-            "operations": [
-              "update_status"
-            ],
-            "note": "Setting state=ARCHIVED is Amazon DSP's only removal path (no hard delete) and no tool on this server restores an archived order or line item. Terminal only for that value."
-          },
-          {
-            "tool": "amazon_dsp_bulk_update_status",
-            "operations": [
-              "bulk_job"
-            ],
-            "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
+            "note": "Bulk removal: Unified API delete of targets / ad associations (POST /adsApi/v1/delete/targets|adAssociations), and the legacy PUT state=ARCHIVED of orders / line items (the Unified API has no campaign or ad group delete and no ARCHIVED update state). No tool on this server restores either."
           }
         ]
       },

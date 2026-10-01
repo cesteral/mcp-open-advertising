@@ -12,7 +12,7 @@ const TOOL_TITLE = "Get AmazonDsp Ad Preview";
 const TOOL_DESCRIPTION = `Get a preview of how an Amazon DSP creative will appear to users.
 
 Returns preview data for the creative as served via the Amazon DSP platform.
-Uses the \`GET /dsp/creatives/{creativeId}/preview\` endpoint.`;
+Uses the legacy \`GET /dsp/creatives/{creativeId}/preview\` endpoint — the Unified API has no preview operation, and whether it accepts a Unified \`adId\` is unverified.`;
 
 export const GetAdPreviewInputSchema = z
   .object({

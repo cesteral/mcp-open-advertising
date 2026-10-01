@@ -17,15 +17,15 @@
     },
     "amazon_dsp_validate_entity": {
       "status": "declared",
-      "note": "Exercised live 2026-05-15. Unbound: no definitionHash recorded."
+      "note": "Exercised live 2026-05-15. Unbound: no definitionHash recorded. Its rules moved to the Unified API payload translation in #234, so that run says nothing about the current definition."
     },
     "amazon_dsp_bulk_create_entities": {
       "status": "declared",
-      "note": "The 2026-05-15 report records this PASS and then contradicts it: the inner item POST failed with a 403, and the envelope was 200 only because the bulk wrapper did not crash. Explicitly NOT evidence of a working write."
+      "note": "The 2026-05-15 report records this PASS and then contradicts it: the inner item POST failed with a 403, and the envelope was 200 only because the bulk wrapper did not crash. Explicitly NOT evidence of a working write. That run called the pre-#234 /dsp/orders surface; the tool now writes to POST /adsApi/v1/create/* and has never been exercised live."
     },
     "amazon_dsp_create_entity": {
       "status": "declared",
-      "note": "FAIL on 2026-05-15 (#4, Amazon LwA enrollment). Governed write, not verified."
+      "note": "FAIL on 2026-05-15 (#4, Amazon LwA enrollment) against the pre-#234 /dsp/orders surface. Governed write, not verified; since #234 it writes to POST /adsApi/v1/create/* and has never been exercised live."
     }
   }
 }

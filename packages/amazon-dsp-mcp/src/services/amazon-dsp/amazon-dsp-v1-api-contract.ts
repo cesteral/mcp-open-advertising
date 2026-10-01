@@ -22,9 +22,12 @@ export const AMAZON_ADS_V1_PATH_PREFIX = "/adsApi/v1/";
  *
  * Source: amzn/ads-advanced-tools-docs `unified-api-dsp.json` —
  * `components.parameters.ClientIdHeader` (`Amazon-Ads-ClientId`, required on
- * every commitments / forecast / commitmentSpends operation) and
- * `AccountIdHeader` (`Amazon-Ads-AccountId`, required on
- * `DSPRetrieveCampaignForecast`); mirrored in `src/generated/v1/types.ts`.
+ * every operation) and `AccountIdHeader` (`Amazon-Ads-AccountId`, required on
+ * `DSPRetrieveCampaignForecast` and on every campaign / adGroup / ad / target
+ * / adAssociation operation — #234); mirrored in `src/generated/v1/types.ts`.
+ * No operation declares `Amazon-Advertising-API-Scope`, and the DSP migration
+ * guide (skills/unified-dsp-cm-migration/SKILL.md §2, commit e25aace0) lists
+ * it as "Not used", so the HTTP client omits it on this path family.
  */
 export const AMAZON_ADS_V1_HEADERS = {
   clientId: "Amazon-Ads-ClientId",

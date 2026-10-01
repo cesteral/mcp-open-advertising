@@ -34,7 +34,8 @@ Library. This tool runs Amazon's documented three-step upload flow for you:
 
 The video must be reachable at a public \`mediaUrl\` — the server downloads it,
 then uploads the bytes to Amazon. Returns the registered \`assetId\`, which a DSP
-video creative (\`/dsp/creatives/video\`) references.`;
+video ad references (\`amazon_dsp_create_entity\`, entityType \`creative\`, adType \`VIDEO\`:
+\`creative.videoCreative.onlineVideoSettings.videos: { assetId, assetVersion }\`).`;
 
 const ASSET_TYPE = "video";
 

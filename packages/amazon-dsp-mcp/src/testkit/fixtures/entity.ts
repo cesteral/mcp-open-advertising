@@ -3,25 +3,26 @@
 
 /**
  * Canonical state-transition fixtures for the `amazon_dsp_update_entity`
- * write surface (order + lineItem).
+ * write surface (order + lineItem), in Unified API shapes (#234).
  *
- * Every fixture is hand-authored against scrubbed advertiser/entity IDs. A
- * live capture + scrub script is deferred — this surface covers one fixture
- * per governed (operation, entityKind) pair within order + lineItem.
+ * Every fixture is hand-authored against scrubbed advertiser/entity IDs. The
+ * entity shapes follow unified-api-dsp.json `DSPCampaign` / `DSPAdGroup`
+ * (amzn/ads-advanced-tools-docs @ e25aace0); they are not live captures.
  *
  * `expectedPostState` is the canonical snapshot that
- * `applyAmazonDspPatch(entityType, entityId, preState, data)` must produce.
- * The conformance test in
+ * `applyAmazonDspPatch(entityType, entityId, preState, data, accountId)` must
+ * produce. The conformance test in
  * `packages/amazon-dsp-mcp/tests/testkit/conformance.test.ts` enforces this.
  *
- * Amazon DSP budget amounts are in the advertiser-currency major units; the
- * canonical snapshot stores minor units, so amounts are ×100. `order` carries
- * a flat `budget` number; `lineItem` carries a nested `{ budgetType, budget }`.
+ * Budgets are `budgets[]` of `DSPBudget` (`recurrenceTimePeriod` DAILY →
+ * canonical daily, LIFETIME → canonical lifetime), in advertiser-currency
+ * major units; the canonical snapshot stores minor units (×100). An update
+ * patch's budget carries only `value` (`DSPCreateMonetaryBudget`), so the
+ * currency comes from the entity being updated.
  */
 
 import type { AmazonDspWriteFixture } from "../types.js";
-
-const advertiserId = "advertiser-REDACTED-001";
+import { campaign, adGroup, monetaryBudget, advertiserId, profileId } from "./unified-shapes.js";
 
 /** update_budget: order lifetime budget increase ($50,000 → $75,000). */
 export const updateBudgetOrder: AmazonDspWriteFixture = {
@@ -30,26 +31,17 @@ export const updateBudgetOrder: AmazonDspWriteFixture = {
   entityKind: "order",
   args: {
     entityType: "order",
-    profileId: advertiserId,
-    entityId: "ord-REDACTED-1",
-    data: { budget: 75000 },
+    profileId,
+    accountId: advertiserId,
+    entityId: "cmp-REDACTED-1",
+    data: { budgets: [monetaryBudget(75000, "LIFETIME")] },
   },
-  preState: {
-    orderId: "ord-REDACTED-1",
-    name: "Sample Order",
-    state: "ENABLED",
-    advertiserId,
-    budget: 50000,
-    budgetType: "LIFETIME",
-    currencyCode: "USD",
-    startDateTime: "2026-01-01T00:00:00Z",
-    endDateTime: "2026-12-31T00:00:00Z",
-  },
+  preState: campaign("cmp-REDACTED-1", "Sample Order", "ENABLED", 50000),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "order",
-    platformEntityId: "ord-REDACTED-1",
+    platformEntityId: "cmp-REDACTED-1",
     displayName: "Sample Order",
     accountId: advertiserId,
     status: { canonical: "active", platformRaw: "ENABLED" },
@@ -69,31 +61,25 @@ export const updateBudgetLineItem: AmazonDspWriteFixture = {
   entityKind: "lineItem",
   args: {
     entityType: "lineItem",
-    profileId: advertiserId,
-    entityId: "li-REDACTED-1",
-    data: { budget: { budgetType: "DAILY", budget: 1000 } },
+    profileId,
+    accountId: advertiserId,
+    entityId: "adg-REDACTED-1",
+    data: { budgets: [monetaryBudget(10, "DAILY")] },
   },
-  preState: {
-    lineItemId: "li-REDACTED-1",
-    name: "Sample Line Item",
-    state: "ENABLED",
-    orderId: "ord-REDACTED-1",
-    advertiserId,
-    budget: { budgetType: "DAILY", budget: 500 },
-  },
+  preState: adGroup("adg-REDACTED-1", "Sample Line Item", "ENABLED", 5),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "line_item",
-    platformEntityId: "li-REDACTED-1",
+    platformEntityId: "adg-REDACTED-1",
     displayName: "Sample Line Item",
     accountId: advertiserId,
     status: { canonical: "active", platformRaw: "ENABLED" },
     budget: {
-      daily: { amountMinor: 100_000, currency: "USD" },
+      daily: { amountMinor: 1_000, currency: "USD" },
       lifetime: null,
     },
-    schedule: { startAt: null, endAt: null },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-06-30T00:00:00Z" },
   },
   description: "update_budget: line-item daily budget increase $5 → $10",
 };
@@ -105,26 +91,17 @@ export const pauseOrder: AmazonDspWriteFixture = {
   entityKind: "order",
   args: {
     entityType: "order",
-    profileId: advertiserId,
-    entityId: "ord-REDACTED-2",
+    profileId,
+    accountId: advertiserId,
+    entityId: "cmp-REDACTED-2",
     data: { state: "PAUSED" },
   },
-  preState: {
-    orderId: "ord-REDACTED-2",
-    name: "Sample Order 2",
-    state: "ENABLED",
-    advertiserId,
-    budget: 50000,
-    budgetType: "LIFETIME",
-    currencyCode: "USD",
-    startDateTime: "2026-01-01T00:00:00Z",
-    endDateTime: "2026-12-31T00:00:00Z",
-  },
+  preState: campaign("cmp-REDACTED-2", "Sample Order 2", "ENABLED", 50000),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "order",
-    platformEntityId: "ord-REDACTED-2",
+    platformEntityId: "cmp-REDACTED-2",
     displayName: "Sample Order 2",
     accountId: advertiserId,
     status: { canonical: "paused", platformRaw: "PAUSED" },
@@ -144,23 +121,17 @@ export const pauseLineItem: AmazonDspWriteFixture = {
   entityKind: "lineItem",
   args: {
     entityType: "lineItem",
-    profileId: advertiserId,
-    entityId: "li-REDACTED-2",
+    profileId,
+    accountId: advertiserId,
+    entityId: "adg-REDACTED-2",
     data: { state: "PAUSED" },
   },
-  preState: {
-    lineItemId: "li-REDACTED-2",
-    name: "Sample Line Item 2",
-    state: "ENABLED",
-    orderId: "ord-REDACTED-2",
-    advertiserId,
-    budget: { budgetType: "DAILY", budget: 500 },
-  },
+  preState: adGroup("adg-REDACTED-2", "Sample Line Item 2", "ENABLED", 500),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "line_item",
-    platformEntityId: "li-REDACTED-2",
+    platformEntityId: "adg-REDACTED-2",
     displayName: "Sample Line Item 2",
     accountId: advertiserId,
     status: { canonical: "paused", platformRaw: "PAUSED" },
@@ -168,7 +139,7 @@ export const pauseLineItem: AmazonDspWriteFixture = {
       daily: { amountMinor: 50_000, currency: "USD" },
       lifetime: null,
     },
-    schedule: { startAt: null, endAt: null },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-06-30T00:00:00Z" },
   },
   description: "pause: line-item transition ENABLED → PAUSED (budget preserved)",
 };
@@ -180,26 +151,17 @@ export const resumeOrder: AmazonDspWriteFixture = {
   entityKind: "order",
   args: {
     entityType: "order",
-    profileId: advertiserId,
-    entityId: "ord-REDACTED-3",
+    profileId,
+    accountId: advertiserId,
+    entityId: "cmp-REDACTED-3",
     data: { state: "ENABLED" },
   },
-  preState: {
-    orderId: "ord-REDACTED-3",
-    name: "Sample Order 3",
-    state: "PAUSED",
-    advertiserId,
-    budget: 50000,
-    budgetType: "LIFETIME",
-    currencyCode: "USD",
-    startDateTime: "2026-01-01T00:00:00Z",
-    endDateTime: "2026-12-31T00:00:00Z",
-  },
+  preState: campaign("cmp-REDACTED-3", "Sample Order 3", "PAUSED", 50000),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "order",
-    platformEntityId: "ord-REDACTED-3",
+    platformEntityId: "cmp-REDACTED-3",
     displayName: "Sample Order 3",
     accountId: advertiserId,
     status: { canonical: "active", platformRaw: "ENABLED" },
@@ -219,23 +181,17 @@ export const resumeLineItem: AmazonDspWriteFixture = {
   entityKind: "lineItem",
   args: {
     entityType: "lineItem",
-    profileId: advertiserId,
-    entityId: "li-REDACTED-3",
+    profileId,
+    accountId: advertiserId,
+    entityId: "adg-REDACTED-3",
     data: { state: "ENABLED" },
   },
-  preState: {
-    lineItemId: "li-REDACTED-3",
-    name: "Sample Line Item 3",
-    state: "PAUSED",
-    orderId: "ord-REDACTED-3",
-    advertiserId,
-    budget: { budgetType: "DAILY", budget: 500 },
-  },
+  preState: adGroup("adg-REDACTED-3", "Sample Line Item 3", "PAUSED", 500),
   expectedPostState: {
     schemaVersion: 1,
     platform: "amazon_dsp",
     entityKind: "line_item",
-    platformEntityId: "li-REDACTED-3",
+    platformEntityId: "adg-REDACTED-3",
     displayName: "Sample Line Item 3",
     accountId: advertiserId,
     status: { canonical: "active", platformRaw: "ENABLED" },
@@ -243,7 +199,7 @@ export const resumeLineItem: AmazonDspWriteFixture = {
       daily: { amountMinor: 50_000, currency: "USD" },
       lifetime: null,
     },
-    schedule: { startAt: null, endAt: null },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-06-30T00:00:00Z" },
   },
   description: "resume: line-item transition PAUSED → ENABLED (budget preserved)",
 };

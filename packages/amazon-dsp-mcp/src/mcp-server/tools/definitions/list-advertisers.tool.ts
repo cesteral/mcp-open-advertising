@@ -17,7 +17,8 @@ const TOOL_TITLE = "List AmazonDsp Advertisers";
 const TOOL_DESCRIPTION = `List AmazonDsp advertiser accounts accessible to the authenticated user.
 
 Returns advertiser IDs, names, and account status information.
-Use the profile_id from results with other amazon_dsp_* tools.
+Pass an \`advertiserId\` from the results as \`accountId\` to the entity tools (the Unified API's \`Amazon-Ads-AccountId\` header) and to the reporting tools.
+Uses the legacy \`GET /dsp/advertisers\` endpoint — the Unified DSP API has no advertiser listing.
 
 Amazon DSP paginates by offset. When the response's \`pagination.nextCursor\` is non-null,
 call again with \`startIndex\` set to it to fetch the next page.`;

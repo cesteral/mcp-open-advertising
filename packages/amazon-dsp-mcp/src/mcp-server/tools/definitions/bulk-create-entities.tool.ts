@@ -12,6 +12,8 @@ import {
 } from "../utils/bulk-capacity.js";
 import { assertAccountScope } from "@cesteral/shared";
 import { getCreatableEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { AccountIdSchema } from "../utils/account-id.js";
+import { symbolicValidateCreate } from "../utils/dry-run.js";
 import {
   BulkOperationResultSchema,
   assertGovernedEffectDryRun,
@@ -32,21 +34,22 @@ import type {
 
 const TOOL_NAME = "amazon_dsp_bulk_create_entities";
 const TOOL_TITLE = "AmazonDsp Bulk Create Entities";
-const TOOL_DESCRIPTION = `Batch create multiple AmazonDsp Ads entities of the same type.
+const TOOL_DESCRIPTION = `Batch create multiple Amazon DSP entities of the same type via the Amazon Ads Unified API (\`POST /adsApi/v1/create/{resource}\`, one item per request).
 
-**Supported entity types:** ${getCreatableEntityTypeEnum().join(", ")} (creatives cannot be created here — see \`amazon_dsp_create_entity\`).
+**Supported entity types:** ${getCreatableEntityTypeEnum().join(", ")}
 
-Creates entities sequentially (with concurrency). Each item follows the same
-schema as \`amazon_dsp_create_entity\`.
+Each item follows the same schema (Unified field names, legacy names mapped) as
+\`amazon_dsp_create_entity\`; \`adProduct\` is added, orders and line items are created PAUSED.
 
-Max 50 items per call. The session profile is sent as the Amazon-Advertising-API-Scope header on every request.`;
+Max 50 items per call. Every request carries \`accountId\` as the \`Amazon-Ads-AccountId\` header.`;
 
 const EFFECT_KIND = "entities_created";
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getCreatableEntityTypeEnum()).describe("Type of entities to create"),
-    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
+    accountId: AccountIdSchema,
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -138,6 +141,7 @@ export async function bulkCreateEntitiesLogic(
 
   const bulkResult = await amazonDspService.bulkCreateEntities(
     input.entityType as AmazonDspEntityType,
+    input.accountId,
     input.items,
     context
   );
@@ -145,7 +149,7 @@ export async function bulkCreateEntitiesLogic(
   const results = bulkResult.results.map((r, i) => ({
     index: i,
     success: r.success,
-    entity: r.entity as Record<string, unknown> | undefined,
+    entity: r.entity,
     error: r.error,
   }));
 
@@ -177,9 +181,10 @@ export async function bulkCreateEntitiesLogic(
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
  * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
- * admits `{}`) and projects the would-be effect (an N-item create of one
- * entity kind). Amazon DSP has no native bulk validate, so both axes are
- * symbolic. Pure (no I/O).
+ * admits `{}` — and must pass the same Unified create translation execute
+ * runs) and projects the would-be effect (an N-item create of one entity
+ * kind). The Unified create operations declare no validate-only mode, so both
+ * axes are symbolic. Pure (no I/O).
  */
 function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -189,6 +194,14 @@ function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResu
         code: "EMPTY_ITEM",
         message: `items[${i}] must be a non-empty entity object`,
         field: `items.${i}`,
+      });
+      return;
+    }
+    for (const e of symbolicValidateCreate(input.entityType, item, input.accountId)) {
+      validationErrors.push({
+        ...e,
+        message: `items[${i}]: ${e.message}`,
+        field: `items.${i}.${(e.field ?? "").replace(/^data\./, "")}`,
       });
     }
   });
@@ -282,25 +295,14 @@ export const bulkCreateEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "Bulk create orders (campaigns)",
+      label: "Bulk create creative associations (link ads to an ad group)",
       input: {
-        entityType: "order",
+        entityType: "creativeAssociation",
         profileId: "1234567890",
+        accountId: "5550001112223",
         items: [
-          {
-            name: "Order A",
-            advertiserId: "adv_123",
-            budget: 10000,
-            startDateTime: "2026-07-01T00:00:00Z",
-            endDateTime: "2026-07-31T23:59:59Z",
-          },
-          {
-            name: "Order B",
-            advertiserId: "adv_123",
-            budget: 20000,
-            startDateTime: "2026-08-01T00:00:00Z",
-            endDateTime: "2026-08-31T23:59:59Z",
-          },
+          { adGroupId: "592345678901234", adId: "614567890123456", state: "ENABLED" },
+          { adGroupId: "592345678901234", adId: "614567890123457", state: "ENABLED" },
         ],
       },
     },

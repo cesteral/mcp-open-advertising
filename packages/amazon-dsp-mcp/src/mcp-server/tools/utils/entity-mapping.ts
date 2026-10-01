@@ -8,68 +8,19 @@ import {
   getAmazonDspEntityContract,
   normalizeAmazonDspEntityType,
   type AmazonDspCanonicalEntityType,
+  type AmazonDspEntityContract,
 } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
 /**
  * Amazon DSP Entity Mapping
  *
- * Entity types use Amazon's native object names — `order`, `lineItem`,
- * `creative`, `target`, `creativeAssociation`.
+ * Entity types keep the pre-#234 names — `order`, `lineItem`, `creative`,
+ * `target`, `creativeAssociation` — and map onto the Unified API resources
+ * `campaigns`, `adGroups`, `ads`, `targets`, `adAssociations` (see
+ * amazon-dsp-api-contract.ts).
  */
 
 export type AmazonDspEntityType = AmazonDspCanonicalEntityType;
-
-export interface AmazonDspEntityConfig {
-  /** API path for list (GET with query params) */
-  listPath: string;
-  /** API path for get single entity */
-  getPath: string;
-  /** API path for create (POST) */
-  createPath: string;
-  /** API path for update (PUT) */
-  updatePath: string;
-  /** Vendor Content-Type for POST {createPath}. See contract notes. */
-  createMediaType?: string;
-  /** Vendor Content-Type for PUT {updatePath}. See contract notes. */
-  updateMediaType?: string;
-  /** Primary ID field name in the response */
-  idField: string;
-  /** Response array key (e.g., "orders") */
-  responseKey: string;
-  /** Query param name for parent filter on list (e.g., "advertiserId", "orderId") */
-  listFilterParam: string;
-  /** Display name */
-  displayName: string;
-  /** Default fields to return */
-  defaultFields: string[];
-}
-
-const ENTITY_CONFIGS: Record<AmazonDspCanonicalEntityType, AmazonDspEntityConfig> =
-  Object.fromEntries(
-    AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => {
-      const contract = AMAZON_DSP_ENTITY_CONTRACT[entityType];
-      return [
-        entityType,
-        {
-          listPath: contract.listPath,
-          getPath: contract.getPath,
-          createPath: contract.createPath,
-          updatePath: contract.updatePath,
-          createMediaType: contract.createMediaType,
-          updateMediaType: contract.updateMediaType,
-          idField: contract.idField,
-          responseKey: contract.responseKey,
-          listFilterParam: contract.listFilterParam,
-          displayName: contract.displayName,
-          defaultFields: [contract.idField, contract.listFilterParam, "name", "state"],
-        } satisfies AmazonDspEntityConfig,
-      ];
-    })
-  ) as Record<AmazonDspCanonicalEntityType, AmazonDspEntityConfig>;
-
-export function getEntityConfig(entityType: AmazonDspEntityType): AmazonDspEntityConfig {
-  return ENTITY_CONFIGS[normalizeAmazonDspEntityType(entityType)];
-}
 
 export function getSupportedEntityTypes(): AmazonDspEntityType[] {
   return [...AMAZON_DSP_CANONICAL_ENTITY_TYPES];
@@ -79,11 +30,38 @@ export function getEntityTypeEnum(): [string, ...string[]] {
   return getSupportedEntityTypes() as [string, ...string[]];
 }
 
+function supportedWhere(
+  unsupported: (c: AmazonDspEntityContract) => string | undefined
+): [string, ...string[]] {
+  return getSupportedEntityTypes().filter((t) => !unsupported(AMAZON_DSP_ENTITY_CONTRACT[t])) as [
+    string,
+    ...string[],
+  ];
+}
+
 /** Entity types this server can create (excludes types with `createUnsupportedReason`). */
 export function getCreatableEntityTypeEnum(): [string, ...string[]] {
-  return getSupportedEntityTypes().filter(
-    (t) => !AMAZON_DSP_ENTITY_CONTRACT[t].createUnsupportedReason
-  ) as [string, ...string[]];
+  return supportedWhere((c) => c.createUnsupportedReason);
+}
+
+/** Entity types this server can read by ID (excludes `target`: no targetId query filter). */
+export function getGettableEntityTypeEnum(): [string, ...string[]] {
+  return supportedWhere((c) => c.getUnsupportedReason);
+}
+
+/** Entity types this server can update (excludes `target`: no Unified update/targets). */
+export function getUpdatableEntityTypeEnum(): [string, ...string[]] {
+  return supportedWhere((c) => c.updateUnsupportedReason);
+}
+
+/** Entity types this server can remove (excludes `creative`: no Unified delete/ads, no ARCHIVED update). */
+export function getDeletableEntityTypeEnum(): [string, ...string[]] {
+  return supportedWhere((c) => c.deleteUnsupportedReason);
+}
+
+/** Entity types this server can duplicate: must be readable by ID and creatable. */
+export function getDuplicableEntityTypeEnum(): [string, ...string[]] {
+  return supportedWhere((c) => c.getUnsupportedReason ?? c.createUnsupportedReason);
 }
 
 export function getCanonicalEntityType(
@@ -92,7 +70,7 @@ export function getCanonicalEntityType(
   return normalizeAmazonDspEntityType(entityType);
 }
 
-export function getEntityContract(entityType: AmazonDspEntityType) {
+export function getEntityContract(entityType: AmazonDspEntityType): AmazonDspEntityContract {
   return getAmazonDspEntityContract(entityType);
 }
 

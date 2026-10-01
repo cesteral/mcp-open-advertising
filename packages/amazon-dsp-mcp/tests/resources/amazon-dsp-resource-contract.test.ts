@@ -14,13 +14,22 @@ describe("Amazon DSP resource contract", () => {
     expect(content).toContain("Canonical MCP type: `creativeAssociation`");
   });
 
-  it("entity hierarchy reflects the expanded management surface", () => {
+  it("entity hierarchy documents the Unified API surface (#234)", () => {
     const content = entityHierarchyResource.getContent();
 
-    expect(content).toContain("Campaign / Order");
-    expect(content).toContain("Ad Group / Line Item");
+    expect(content).toContain("campaign / order");
+    expect(content).toContain("ad group / line item");
     expect(content).toContain("Creative Association");
-    expect(content).toContain("/dsp/targets");
+    // basis: unified-api-dsp.json DSPQueryTarget / DSPCreateAdAssociation /
+    // DSPDeleteTarget, amzn/ads-advanced-tools-docs@e25aace0
+    expect(content).toContain("/adsApi/v1/query/targets");
+    expect(content).toContain("/adsApi/v1/create/adAssociations");
+    expect(content).toContain("/adsApi/v1/delete/targets");
+    expect(content).toContain("Amazon-Ads-AccountId");
+    // The retired entity endpoints appear only as the labelled legacy archive fallback.
+    expect(content).not.toContain("/dsp/targets");
+    expect(content).not.toContain("/dsp/creativeAssociations");
+    expect(content).toContain("LEGACY archive");
     // Reporting is DSP reports v3, not the Sponsored Ads /reporting/reports API.
     expect(content).toContain("/accounts/{accountId}/dsp/reports");
     expect(content).not.toContain("/reporting/reports");

@@ -3,7 +3,12 @@
 
 /**
  * R2-U4 unit coverage: the Amazon DSP dry-run path (symbolic validate +
- * symbolic apply) and the before/after snapshot normalizer.
+ * symbolic apply) and the before/after snapshot normalizer, over Unified API
+ * entity shapes (#234).
+ *
+ * basis: unified-api-dsp.json `DSPCampaign`, `DSPAdGroup`, `DSPBudget`,
+ * `DSPUpdateState` (ENABLED | PAUSED) — amzn/ads-advanced-tools-docs @
+ * e25aace0ec07997c113dac48f333298472243558.
  */
 
 import { describe, expect, it } from "vitest";
@@ -12,6 +17,7 @@ import {
   runAmazonDspUpdateDryRun,
   applyAmazonDspPatch,
   resolveAmazonDspDispatchedCapability,
+  symbolicValidateUpdate,
   type AmazonDspServiceLike,
 } from "../../src/mcp-server/tools/utils/dry-run.js";
 import {
@@ -21,30 +27,54 @@ import {
 } from "../../src/mcp-server/tools/utils/capture-snapshot.js";
 
 const ctx = {} as RequestContext;
+const ACCOUNT = "adv_1";
 
-function orderEntity(overrides: Record<string, unknown> = {}) {
+function budget(value: number, recurrenceTimePeriod: string, currencyCode?: string) {
   return {
-    orderId: "ord_1",
+    budgetType: "MONETARY",
+    budgetValue: {
+      monetaryBudgetValue: {
+        monetaryBudget: currencyCode ? { value, currencyCode } : { value },
+      },
+    },
+    recurrenceTimePeriod,
+  };
+}
+
+function campaignEntity(overrides: Record<string, unknown> = {}) {
+  return {
+    campaignId: "cmp_1",
+    adProduct: "AMAZON_DSP",
     name: "Sample Order",
     state: "ENABLED",
-    advertiserId: "adv_1",
-    budget: 50000,
-    budgetType: "LIFETIME",
-    currencyCode: "USD",
+    budgets: [budget(50000, "LIFETIME", "EUR")],
+    flights: [
+      {
+        flightId: "fl_1",
+        startDateTime: "2026-01-01T00:00:00Z",
+        endDateTime: "2026-12-31T00:00:00Z",
+        budget: {
+          budgetType: "MONETARY",
+          budgetValue: { monetaryBudgetValue: { monetaryBudget: { value: 50000 } } },
+        },
+      },
+    ],
     startDateTime: "2026-01-01T00:00:00Z",
     endDateTime: "2026-12-31T00:00:00Z",
     ...overrides,
   };
 }
 
-function lineItemEntity(overrides: Record<string, unknown> = {}) {
+function adGroupEntity(overrides: Record<string, unknown> = {}) {
   return {
-    lineItemId: "li_1",
+    adGroupId: "adg_1",
+    campaignId: "cmp_1",
     name: "Sample Line Item",
     state: "ENABLED",
-    orderId: "ord_1",
-    advertiserId: "adv_1",
-    budget: { budgetType: "DAILY", budget: 500 },
+    bid: { baseBid: 1.5, currencyCode: "USD" },
+    budgets: [budget(500, "DAILY", "USD")],
+    startDateTime: "2026-01-01T00:00:00Z",
+    endDateTime: "2026-06-30T00:00:00Z",
     ...overrides,
   };
 }
@@ -56,72 +86,109 @@ function fakeService(entity: Record<string, unknown>): AmazonDspServiceLike {
 describe("runAmazonDspUpdateDryRun", () => {
   it("symbolically validates + applies a valid pause on an order", async () => {
     const result = await runAmazonDspUpdateDryRun(
-      { entityType: "order", entityId: "ord_1", data: { state: "PAUSED" } },
-      fakeService(orderEntity()),
+      { entityType: "order", accountId: ACCOUNT, entityId: "cmp_1", data: { state: "PAUSED" } },
+      fakeService(campaignEntity()),
       ctx
     );
 
     expect(result.wouldSucceed).toBe(true);
     expect(result.validationErrors).toEqual([]);
-    // No native validate/preview on Amazon DSP — symbolic, but non-"none".
     expect(result.validationSource).toBe("symbolic");
     expect(result.expectedStateSource).toBe("server_symbolic_apply");
-    expect(result.expectedPostState).toBeDefined();
     expect(result.expectedPostState!.platform).toBe("amazon_dsp");
     expect(result.expectedPostState!.entityKind).toBe("order");
-    expect(result.expectedPostState!.platformEntityId).toBe("ord_1");
-    expect(result.expectedPostState!.accountId).toBe("adv_1");
+    expect(result.expectedPostState!.platformEntityId).toBe("cmp_1");
+    // Unified entities carry no advertiser field — the snapshot's account is the header value.
+    expect(result.expectedPostState!.accountId).toBe(ACCOUNT);
     expect(result.expectedPostState!.status).toEqual({
       canonical: "paused",
       platformRaw: "PAUSED",
     });
   });
 
+  it("rejects ARCHIVED — not a DSPUpdateState — and points at delete_entity", async () => {
+    const result = await runAmazonDspUpdateDryRun(
+      {
+        entityType: "order",
+        accountId: ACCOUNT,
+        entityId: "cmp_1",
+        data: { state: "ARCHIVED" },
+      },
+      fakeService(campaignEntity()),
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(false);
+    expect(result.validationErrors[0].code).toBe("INVALID_STATE");
+    expect(result.validationErrors[0].message).toContain("amazon_dsp_delete_entity");
+  });
+
   it("rejects an invalid state value", async () => {
     const result = await runAmazonDspUpdateDryRun(
-      { entityType: "order", entityId: "ord_1", data: { state: "BOGUS" } },
-      fakeService(orderEntity()),
+      { entityType: "order", accountId: ACCOUNT, entityId: "cmp_1", data: { state: "BOGUS" } },
+      fakeService(campaignEntity()),
       ctx
     );
     expect(result.wouldSucceed).toBe(false);
     expect(result.validationErrors[0].code).toBe("INVALID_STATE");
   });
 
-  it("rejects a negative budget", async () => {
+  it("rejects a negative Unified budget value", async () => {
     const result = await runAmazonDspUpdateDryRun(
-      { entityType: "order", entityId: "ord_1", data: { budget: -10 } },
-      fakeService(orderEntity()),
+      {
+        entityType: "order",
+        accountId: ACCOUNT,
+        entityId: "cmp_1",
+        data: { budgets: [budget(-10, "DAILY")] },
+      },
+      fakeService(campaignEntity()),
       ctx
     );
     expect(result.wouldSucceed).toBe(false);
     expect(result.validationErrors[0].code).toBe("INVALID_BUDGET");
   });
 
-  it("symbolically applies an order budget change (major → minor units)", async () => {
+  it("refuses a legacy budget it cannot map (no DAILY/LIFETIME type)", async () => {
     const result = await runAmazonDspUpdateDryRun(
-      { entityType: "order", entityId: "ord_1", data: { budget: 75000 } },
-      fakeService(orderEntity()),
+      { entityType: "order", accountId: ACCOUNT, entityId: "cmp_1", data: { budget: 75000 } },
+      fakeService(campaignEntity()),
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(false);
+    expect(result.validationErrors[0].code).toBe("LEGACY_BUDGET_UNMAPPABLE");
+  });
+
+  it("symbolically applies a Unified lifetime budget (major → minor, entity currency)", async () => {
+    const result = await runAmazonDspUpdateDryRun(
+      {
+        entityType: "order",
+        accountId: ACCOUNT,
+        entityId: "cmp_1",
+        data: { budgets: [budget(75000, "LIFETIME")] },
+      },
+      fakeService(campaignEntity()),
       ctx
     );
     expect(result.wouldSucceed).toBe(true);
-    // 75,000 major units × 100 = 7,500,000 minor units; budgetType LIFETIME.
+    // The patch carries value only (DSPCreateMonetaryBudget); currency comes from the entity.
     expect(result.expectedPostState!.budget.lifetime).toEqual({
       amountMinor: 7_500_000,
-      currency: "USD",
+      currency: "EUR",
     });
     expect(result.expectedPostState!.budget.daily).toBeNull();
   });
 
-  it("normalizes a line item's nested daily budget", async () => {
+  it("maps a legacy line-item budget { budgetType: DAILY, budget } onto budgets[]", async () => {
     const result = await runAmazonDspUpdateDryRun(
       {
         entityType: "lineItem",
-        entityId: "li_1",
+        accountId: ACCOUNT,
+        entityId: "adg_1",
         data: { budget: { budgetType: "DAILY", budget: 1000 } },
       },
-      fakeService(lineItemEntity()),
+      fakeService(adGroupEntity()),
       ctx
     );
+    expect(result.wouldSucceed).toBe(true);
     expect(result.expectedPostState!.entityKind).toBe("line_item");
     expect(result.expectedPostState!.budget.daily).toEqual({
       amountMinor: 100_000,
@@ -135,7 +202,7 @@ describe("runAmazonDspUpdateDryRun", () => {
     // expectedStateSource:"none" payload the governance layer would reject.
     await expect(
       runAmazonDspUpdateDryRun(
-        { entityType: "order", entityId: "ord_1", data: { state: "PAUSED" } },
+        { entityType: "order", accountId: ACCOUNT, entityId: "cmp_1", data: { state: "PAUSED" } },
         {
           getEntity: async () => {
             throw new Error("order not found");
@@ -144,6 +211,24 @@ describe("runAmazonDspUpdateDryRun", () => {
         ctx
       )
     ).rejects.toThrow(/order not found/);
+  });
+});
+
+describe("symbolicValidateUpdate", () => {
+  it("refuses an advertiserId naming another account", () => {
+    const errors = symbolicValidateUpdate("order", "cmp_1", { advertiserId: "other" }, ACCOUNT);
+    expect(errors.map((e) => e.code)).toContain("ACCOUNT_MISMATCH");
+  });
+
+  it("refuses legacy fields with no mechanical mapping", () => {
+    const errors = symbolicValidateUpdate(
+      "lineItem",
+      "adg_1",
+      { bidding: { bidAmount: 2 } },
+      ACCOUNT
+    );
+    expect(errors[0].code).toBe("LEGACY_FIELD");
+    expect(errors[0].message).toContain("bid");
   });
 });
 
@@ -163,11 +248,10 @@ describe("resolveAmazonDspDispatchedCapability", () => {
     });
   });
 
-  it("maps a budget change to update_budget", () => {
-    expect(resolveAmazonDspDispatchedCapability("order", { budget: 50000 })).toEqual({
-      operation: "update_budget",
-      canonicalEntityKind: "order",
-    });
+  it("maps a budget change (Unified or legacy key) to update_budget", () => {
+    expect(
+      resolveAmazonDspDispatchedCapability("order", { budgets: [budget(1, "DAILY")] })
+    ).toEqual({ operation: "update_budget", canonicalEntityKind: "order" });
     expect(
       resolveAmazonDspDispatchedCapability("lineItem", {
         budget: { budgetType: "DAILY", budget: 100 },
@@ -185,45 +269,72 @@ describe("resolveAmazonDspDispatchedCapability", () => {
 
 describe("applyAmazonDspPatch", () => {
   it("shallow-merges the patch over pre-state", () => {
-    const snapshot = applyAmazonDspPatch("order", "ord_1", orderEntity(), { state: "PAUSED" });
+    const snapshot = applyAmazonDspPatch(
+      "order",
+      "cmp_1",
+      campaignEntity(),
+      { state: "PAUSED" },
+      ACCOUNT
+    );
     expect(snapshot!.status.canonical).toBe("paused");
     expect(snapshot!.displayName).toBe("Sample Order");
+    expect(snapshot!.accountId).toBe(ACCOUNT);
   });
 });
 
 describe("buildAmazonDspSnapshot / snapshotFromAmazonDspEntity", () => {
   it("returns null for an out-of-scope entity type", () => {
-    expect(buildAmazonDspSnapshot("creative", "cr_1", {}, {})).toBeNull();
+    expect(buildAmazonDspSnapshot("creative", "ad_1", {}, {})).toBeNull();
   });
 
   it("snapshotFromAmazonDspEntity returns undefined for an empty entity", () => {
-    expect(snapshotFromAmazonDspEntity("order", "ord_1", {})).toBeUndefined();
+    expect(snapshotFromAmazonDspEntity("order", "cmp_1", {})).toBeUndefined();
   });
 
-  it("snapshotFromAmazonDspEntity normalizes the entity a PUT returns", () => {
+  it("takes a campaign's schedule from its flights", () => {
     const snapshot = snapshotFromAmazonDspEntity(
       "order",
-      "ord_1",
-      orderEntity({ state: "PAUSED" })
+      "cmp_1",
+      campaignEntity({
+        state: "PAUSED",
+        startDateTime: undefined,
+        endDateTime: undefined,
+        flights: [
+          { startDateTime: "2026-03-01T00:00:00Z", endDateTime: "2026-03-31T00:00:00Z" },
+          { startDateTime: "2026-02-01T00:00:00Z", endDateTime: "2026-02-28T00:00:00Z" },
+        ],
+      }),
+      ACCOUNT
     );
     expect(snapshot!.status.canonical).toBe("paused");
     expect(snapshot!.schedule).toEqual({
-      startAt: "2026-01-01T00:00:00Z",
-      endAt: "2026-12-31T00:00:00Z",
+      startAt: "2026-02-01T00:00:00Z",
+      endAt: "2026-03-31T00:00:00Z",
     });
+  });
+
+  it("ignores MONTHLY budgets (no canonical slot)", () => {
+    const snapshot = snapshotFromAmazonDspEntity(
+      "lineItem",
+      "adg_1",
+      adGroupEntity({ budgets: [budget(9, "MONTHLY", "USD")] })
+    );
+    expect(snapshot!.budget).toEqual({ daily: null, lifetime: null });
   });
 });
 
 describe("captureAmazonDspSnapshot", () => {
   it("normalizes a captured entity", async () => {
     const snapshot = await captureAmazonDspSnapshot(
-      fakeService(lineItemEntity()),
+      fakeService(adGroupEntity()),
       "lineItem",
-      "li_1",
+      ACCOUNT,
+      "adg_1",
       ctx
     );
     expect(snapshot!.entityKind).toBe("line_item");
     expect(snapshot!.status.canonical).toBe("active");
+    expect(snapshot!.budget.daily).toEqual({ amountMinor: 50_000, currency: "USD" });
   });
 
   it("returns undefined (best-effort) when the read throws", async () => {
@@ -234,7 +345,8 @@ describe("captureAmazonDspSnapshot", () => {
         },
       },
       "order",
-      "ord_1",
+      ACCOUNT,
+      "cmp_1",
       ctx
     );
     expect(snapshot).toBeUndefined();

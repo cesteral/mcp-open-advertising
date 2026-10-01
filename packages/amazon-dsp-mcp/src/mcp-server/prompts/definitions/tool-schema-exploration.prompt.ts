@@ -36,11 +36,12 @@ Fetch these resources for detailed schema information:
 
 | Resource URI | Content |
 |-------------|---------|
-| \`entity-hierarchy://amazonDsp/all\` | Entity relationships, API patterns, creation order |
-| \`entity-schema://amazonDsp/campaign\` | Campaign fields |
-| \`entity-schema://amazonDsp/adGroup\` | Ad Group fields + targeting |
-| \`entity-schema://amazonDsp/ad\` | Ad fields |
-| \`entity-schema://amazonDsp/creative\` | Creative fields |
+| \`entity-hierarchy://amazonDsp/all\` | Entity relationships, Unified API paths, creation order |
+| \`entity-schema://amazonDsp/order\` | Order (Unified campaign) fields |
+| \`entity-schema://amazonDsp/lineItem\` | Line item (Unified ad group) fields + targeting settings |
+| \`entity-schema://amazonDsp/creative\` | Creative (Unified ad) fields |
+| \`entity-schema://amazonDsp/target\` | Target fields |
+| \`entity-schema://amazonDsp/creativeAssociation\` | Creative association (Unified ad association) fields |
 | \`entity-examples://amazonDsp/all\` | All entity examples |
 | \`entity-examples://amazonDsp/{type}\` | Examples for specific type |
 | \`reporting-reference://amazonDsp\` | Metrics, dimensions, and breakdown options |
@@ -49,28 +50,28 @@ Fetch these resources for detailed schema information:
 
 ### Read Operations
 - \`amazon_dsp_list_advertisers\` — List accessible advertiser accounts
-- \`amazon_dsp_list_entities\` — List entities with page pagination
+- \`amazon_dsp_list_entities\` — List entities (Unified query, \`nextToken\` pagination)
 - \`amazon_dsp_get_entity\` — Get single entity by ID
 
 ### Write Operations
 - \`amazon_dsp_create_entity\` — Create entity
 - \`amazon_dsp_update_entity\` — Update entity fields
-- \`amazon_dsp_delete_entity\` — Delete entities
+- \`amazon_dsp_delete_entity\` — Delete targets / creative associations; archive orders / line items (legacy call)
 
 ### Reporting (Async)
 - \`amazon_dsp_get_report\` — Submit async report and download results
 - \`amazon_dsp_get_report_breakdowns\` — Report with breakdown dimensions
 
 ### Bulk Operations
-- \`amazon_dsp_bulk_update_status\` — Batch enable/disable/delete entities
+- \`amazon_dsp_bulk_update_status\` — Batch enable/pause entities
 - \`amazon_dsp_bulk_create_entities\` — Batch creation (up to 50)
 - \`amazon_dsp_bulk_update_entities\` — Batch updates (up to 50)
-- \`amazon_dsp_adjust_bids\` — Batch adjust ad group bid prices
+- \`amazon_dsp_adjust_bids\` — Batch adjust line item (ad group) base bids
 
 ### Specialized
-- \`amazon_dsp_duplicate_entity\` — Copy campaigns, ad groups, ads
+- \`amazon_dsp_duplicate_entity\` — Copy orders, line items, creatives, creative associations
 - \`amazon_dsp_get_campaign_forecast\` — Delivery forecast for one campaign, with forecast warnings
-- \`amazon_dsp_get_ad_preview\` — Ad preview for video/image ads
+- \`amazon_dsp_get_ad_preview\` — Creative preview (legacy endpoint)
 - \`amazon_dsp_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation
@@ -92,7 +93,7 @@ Fetch these resources for detailed schema information:
 
 ## Recommended Exploration Order
 
-1. Start with \`amazon_dsp_list_advertisers\` to find your account
+1. Start with \`amazon_dsp_list_advertisers\` to find the \`advertiserId\` you pass as \`accountId\`
 2. Fetch \`entity-hierarchy://amazonDsp/all\` for API patterns
 3. Fetch \`entity-schema://amazonDsp/{type}\` for field details
 4. Fetch \`entity-examples://amazonDsp/{type}\` for payload templates

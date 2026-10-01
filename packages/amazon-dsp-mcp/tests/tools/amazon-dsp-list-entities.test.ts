@@ -1,3 +1,15 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
+/**
+ * amazon_dsp_list_entities over the Unified API (#234): `nextToken` cursor
+ * pagination (DSPQuery<Entity>Request.nextToken / DSP<Entity>SuccessResponse
+ * .nextToken — unified-api-dsp.json, amzn/ads-advanced-tools-docs @ e25aace0).
+ * The service is mocked here; the request body is asserted in
+ * amazon-dsp-unified-wire.test.ts. The legacy offset cursor survives only on
+ * amazon_dsp_list_advertisers (see amazon-dsp-list-advertisers.test.ts).
+ */
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock session services
@@ -28,6 +40,7 @@ import {
 } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
 
 const mockListEntities = vi.fn();
+const ACCOUNT = "5550001112223";
 
 beforeEach(() => {
   mockListEntities.mockReset();
@@ -44,91 +57,75 @@ describe("amazonDsp_list_entities tool", () => {
   const baseSdkContext = { sessionId: "test-session" } as any;
 
   describe("listEntitiesLogic()", () => {
-    it("returns formatted entity list with pagination info", async () => {
-      const mockEntities = [
-        { orderId: "ord_001", name: "Order A", state: "ENABLED" },
-        { orderId: "ord_002", name: "Order B", state: "PAUSED" },
-      ];
-
+    it("returns the page and a null cursor when Amazon sends no nextToken", async () => {
       mockListEntities.mockResolvedValueOnce({
-        entities: mockEntities,
-        pageInfo: {
-          startIndex: 0,
-          count: 25,
-          totalResults: 2,
-        },
+        entities: [
+          { campaignId: "cmp_001", name: "Order A", state: "ENABLED" },
+          { campaignId: "cmp_002", name: "Order B", state: "PAUSED" },
+        ],
+        nextToken: undefined,
       });
 
       const result = await listEntitiesLogic(
-        {
-          entityType: "order",
-          profileId: "1234567890",
-          startIndex: 0,
-          pageSize: 25,
-        },
+        { entityType: "order", profileId: "1234567890", accountId: ACCOUNT, pageSize: 25 },
         baseContext,
         baseSdkContext
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.pagination.totalCount).toBe(2);
+      expect(result.pagination.pageSize).toBe(2);
+      expect(result.pagination.totalCount).toBeUndefined();
       expect(result.pagination.hasMore).toBe(false);
       expect(result.pagination.nextCursor).toBeNull();
-      expect(result.pagination.nextPageInputKey).toBe("startIndex");
-      expect(result.timestamp).toBeDefined();
+      expect(result.pagination.nextPageInputKey).toBe("nextToken");
     });
 
-    it("indicates hasMore when more pages available", async () => {
+    it("surfaces Amazon's nextToken as the cursor", async () => {
       mockListEntities.mockResolvedValueOnce({
-        entities: [{ orderId: "ord_001" }],
-        pageInfo: {
-          startIndex: 0,
-          count: 1,
-          totalResults: 5,
-        },
+        entities: [{ campaignId: "cmp_001" }],
+        nextToken: "tok-2",
       });
 
       const result = await listEntitiesLogic(
+        { entityType: "order", profileId: "1234567890", accountId: ACCOUNT, pageSize: 1 },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("tok-2");
+      expect(listEntitiesResponseFormatter(result)[0].text).toContain('nextToken: "tok-2"');
+    });
+
+    it("passes accountId, filters, pageSize and nextToken to the service", async () => {
+      mockListEntities.mockResolvedValueOnce({ entities: [], nextToken: undefined });
+
+      await listEntitiesLogic(
         {
-          entityType: "order",
+          entityType: "lineItem",
           profileId: "1234567890",
-          startIndex: 0,
-          pageSize: 1,
+          accountId: ACCOUNT,
+          filters: { orderId: "cmp_123" },
+          nextToken: "tok-1",
+          pageSize: 50,
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.pagination.hasMore).toBe(true);
-      expect(result.pagination.nextCursor).toBe("1");
-    });
-
-    it("reports the returned count, not the requested page size, and advances by it", async () => {
-      mockListEntities.mockResolvedValueOnce({
-        entities: [{ orderId: "a" }, { orderId: "b" }, { orderId: "c" }],
-        pageInfo: { startIndex: 10, count: 25, totalResults: 30 },
-      });
-
-      const result = await listEntitiesLogic(
-        { entityType: "order", profileId: "1234567890", startIndex: 10, pageSize: 25 },
-        baseContext,
-        baseSdkContext
+      expect(mockListEntities).toHaveBeenCalledWith(
+        "lineItem",
+        ACCOUNT,
+        { filters: { orderId: "cmp_123" }, maxResults: 50, nextToken: "tok-1" },
+        baseContext
       );
-
-      expect(result.pagination.pageSize).toBe(3);
-      expect(result.pagination.nextCursor).toBe("13");
-      expect(result.pagination.hasMore).toBe(true);
-      expect(listEntitiesResponseFormatter(result)[0].text).toContain("Found 3 entities");
     });
 
-    it("reports an empty page as empty and stops paginating", async () => {
-      mockListEntities.mockResolvedValueOnce({
-        entities: [],
-        pageInfo: { startIndex: 0, count: 25, totalResults: 7 },
-      });
+    it("reports an empty page as empty", async () => {
+      mockListEntities.mockResolvedValueOnce({ entities: [], nextToken: undefined });
 
       const result = await listEntitiesLogic(
-        { entityType: "order", profileId: "1234567890", startIndex: 0, pageSize: 25 },
+        { entityType: "order", profileId: "1234567890", accountId: ACCOUNT, pageSize: 25 },
         baseContext,
         baseSdkContext
       );
@@ -138,114 +135,15 @@ describe("amazonDsp_list_entities tool", () => {
       expect(listEntitiesResponseFormatter(result)[0].text).toContain("No entities found");
     });
 
-    // Fleet review amazon-dsp #13: an absent `totalResults` used to be read as
-    // 0, so a full first page reported hasMore=false and pagination silently
-    // stopped. Without a total, a full page means there may be more.
-    it("keeps paginating after a full page when Amazon omits totalResults", async () => {
-      mockListEntities.mockResolvedValueOnce({
-        entities: Array.from({ length: 25 }, (_, i) => ({ orderId: `ord_${i}` })),
-        pageInfo: { startIndex: 0, count: 25, totalResults: undefined },
-      });
-
-      const result = await listEntitiesLogic(
-        { entityType: "order", profileId: "1234567890", startIndex: 0, pageSize: 25 },
-        baseContext,
-        baseSdkContext
-      );
-
-      expect(result.pagination.hasMore).toBe(true);
-      expect(result.pagination.nextCursor).toBe("25");
-      expect(result.pagination.totalCount).toBeUndefined();
-    });
-
-    it("stops after a short page when Amazon omits totalResults", async () => {
-      mockListEntities.mockResolvedValueOnce({
-        entities: [{ orderId: "ord_1" }],
-        pageInfo: { startIndex: 25, count: 25, totalResults: undefined },
-      });
-
-      const result = await listEntitiesLogic(
-        { entityType: "order", profileId: "1234567890", startIndex: 25, pageSize: 25 },
-        baseContext,
-        baseSdkContext
-      );
-
-      expect(result.pagination.hasMore).toBe(false);
-    });
-
-    it("passes filters to service when provided", async () => {
-      mockListEntities.mockResolvedValueOnce({
-        entities: [],
-        pageInfo: { startIndex: 25, count: 25, totalResults: 50 },
-      });
-
-      await listEntitiesLogic(
-        {
-          entityType: "lineItem",
-          profileId: "1234567890",
-          filters: { orderId: "ord_123" },
-          startIndex: 25,
-          pageSize: 25,
-        },
-        baseContext,
-        baseSdkContext
-      );
-
-      expect(mockListEntities).toHaveBeenCalledWith(
-        "lineItem",
-        { orderId: "ord_123" },
-        25,
-        25,
-        baseContext
-      );
-    });
-  });
-
-  describe("listEntitiesResponseFormatter()", () => {
-    function pagination(nextCursor: string | null, pageSize: number, totalCount?: number) {
-      return {
-        nextCursor,
-        hasMore: nextCursor !== null,
-        pageSize,
-        ...(totalCount !== undefined ? { totalCount } : {}),
-        nextPageInputKey: "startIndex",
-      };
-    }
-
-    it("formats results with entity count and pagination", () => {
-      const result = {
-        entities: [{ orderId: "ord_001" }],
-        pagination: pagination(null, 1, 1),
-        timestamp: "2026-03-04T00:00:00.000Z",
-      };
-
-      const formatted = listEntitiesResponseFormatter(result);
-      expect(formatted).toHaveLength(1);
-      expect((formatted[0] as any).type).toBe("text");
-      expect((formatted[0] as any).text).toContain("Found 1 entities");
-    });
-
-    it("indicates no entities found", () => {
-      const result = {
-        entities: [],
-        pagination: pagination(null, 0, 0),
-        timestamp: "2026-03-04T00:00:00.000Z",
-      };
-
-      const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("No entities found");
-    });
-
-    it("shows pagination hint when hasMore is true", () => {
-      const result = {
-        entities: [{ orderId: "ord_001" }],
-        pagination: pagination("25", 25, 50),
-        timestamp: "2026-03-04T00:00:00.000Z",
-      };
-
-      const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("startIndex");
-      expect((formatted[0] as any).text).toContain('"25"');
+    it("rejects a profileId other than the session's before calling Amazon", async () => {
+      await expect(
+        listEntitiesLogic(
+          { entityType: "order", profileId: "999", accountId: ACCOUNT, pageSize: 25 },
+          baseContext,
+          baseSdkContext
+        )
+      ).rejects.toThrow();
+      expect(mockListEntities).not.toHaveBeenCalled();
     });
   });
 
@@ -254,41 +152,53 @@ describe("amazonDsp_list_entities tool", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "order",
         profileId: "1234567890",
+        accountId: ACCOUNT,
       });
       expect(result.success).toBe(true);
+    });
+
+    it("requires accountId", () => {
+      const result = ListEntitiesInputSchema.safeParse({
+        entityType: "order",
+        profileId: "1234567890",
+      });
+      expect(result.success).toBe(false);
     });
 
     it("rejects unknown entity types", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "unknownType",
         profileId: "1234567890",
+        accountId: ACCOUNT,
       });
       expect(result.success).toBe(false);
     });
 
-    it("rejects empty advertiser ID", () => {
+    it("rejects an empty profile ID", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "order",
         profileId: "",
+        accountId: ACCOUNT,
       });
       expect(result.success).toBe(false);
     });
 
-    it("rejects page size over 100", () => {
+    it("rejects page size over 100 (Unified maxResults maximum for campaigns/adGroups/ads)", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "order",
         profileId: "1234567890",
+        accountId: ACCOUNT,
         pageSize: 101,
       });
       expect(result.success).toBe(false);
     });
 
     it("accepts all supported entity types", () => {
-      const types = ["order", "lineItem", "creative"];
-      for (const entityType of types) {
+      for (const entityType of ["order", "lineItem", "creative", "target", "creativeAssociation"]) {
         const result = ListEntitiesInputSchema.safeParse({
           entityType,
           profileId: "1234567890",
+          accountId: ACCOUNT,
         });
         expect(result.success).toBe(true);
       }

@@ -5,22 +5,27 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const amazonDspTroubleshootEntityPrompt: Prompt = {
   name: "amazon_dsp_troubleshoot_entity",
-  description: "Diagnostic workflow for troubleshooting AmazonDsp Ads entity issues",
+  description: "Diagnostic workflow for troubleshooting Amazon DSP entity issues (Unified API)",
   arguments: [
     {
       name: "entityType",
-      description: "Entity type (order, lineItem, creative)",
+      description: "Entity type (order, lineItem, creative, creativeAssociation)",
       required: true,
     },
     {
       name: "entityId",
-      description: "Numeric entity ID to troubleshoot",
+      description: "Entity ID to troubleshoot",
       required: true,
     },
     {
       name: "profileId",
-      description: "AmazonDsp Advertiser ID",
+      description: "Amazon Ads profile ID bound to the session",
       required: true,
+    },
+    {
+      name: "accountId",
+      description: "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers)",
+      required: false,
     },
   ],
 };
@@ -29,10 +34,11 @@ export function getAmazonDspTroubleshootEntityMessage(args?: Record<string, stri
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const profileId = args?.profileId || "{profileId}";
+  const accountId = args?.accountId || "{accountId}";
 
-  return `# AmazonDsp Entity Troubleshoot Workflow
+  return `# Amazon DSP Entity Troubleshoot Workflow
 
-## Target: ${entityType} ${entityId} (Advertiser: ${profileId})
+## Target: ${entityType} ${entityId} (Advertiser: ${accountId})
 
 ## Step 1: Fetch Entity Details
 
@@ -40,17 +46,18 @@ export function getAmazonDspTroubleshootEntityMessage(args?: Record<string, stri
 amazon_dsp_get_entity({
   "entityType": "${entityType}",
   "profileId": "${profileId}",
+  "accountId": "${accountId}",
   "entityId": "${entityId}"
 })
 \`\`\`
 
-Check: operation_status, primary_status, secondary_status, and any rejection reasons.
+Check \`state\` (ENABLED / PAUSED / ARCHIVED) and \`status.deliveryStatus\` with its \`status.deliveryReasons[]\` — Amazon's own explanation of why the entity is or is not delivering.
 
 ## Step 2: Check Recent Performance
 
 \`\`\`json
 amazon_dsp_get_report({
-  "accountId": "{dspAdvertiserId}",
+  "accountId": "${accountId}",
   "type": "CAMPAIGN",
   "dimensions": ["ORDER", "LINE_ITEM"],
   "metrics": ["impressions", "clickThroughs", "totalCost"],
@@ -60,52 +67,43 @@ amazon_dsp_get_report({
 })
 \`\`\`
 
-\`accountId\` is the entity's DSP advertiser ID (from \`amazon_dsp_list_advertisers\`), not the profile ID.
+## Step 3: Check Parent and Children
 
-## Step 3: Check Parent Entity
-
-If ad group or ad, check parent entity status:
-\`\`\`json
-amazon_dsp_get_entity({
-  "entityType": "order",
-  "profileId": "${profileId}",
-  "entityId": "{parentOrderId}"
-})
-\`\`\`
+- A line item's parent is \`campaignId\` → \`amazon_dsp_get_entity\` with \`entityType: "order"\`
+- A line item's ads: \`amazon_dsp_list_entities\` with \`entityType: "creativeAssociation"\`, \`filters: { adGroupId: "<id>" }\`
+- A line item's targets: \`amazon_dsp_list_entities\` with \`entityType: "target"\`, \`filters: { adGroupId: "<id>" }\`
 
 ## Common Issues
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| No delivery | Entity paused | Use \`amazon_dsp_bulk_update_status\` with state: "delivering" |
-| No delivery, delivering | Parent paused | Set parent order or line item to "delivering" |
-| No delivery, all ENABLE | Budget exhausted | Increase budget |
+| No delivery | Entity PAUSED (new orders and line items start PAUSED) | \`amazon_dsp_bulk_update_status\` with \`operationStatus: "ENABLED"\` |
+| No delivery, entity ENABLED | Parent order PAUSED | Enable the order too |
+| No delivery, all ENABLED | Budget exhausted, or flights ended | Check \`budgets[]\` and \`flights[]\` |
 | No delivery, budget OK | Targeting too narrow | Check the forecast and its warnings with \`amazon_dsp_get_campaign_forecast\` |
-| Ad under review | AmazonDsp ad review in progress | Allow 24-48h for review |
-| Ad rejected | Policy violation | Review AmazonDsp creative guidelines |
-| Video not playing | Video upload incomplete | Check video status in Creative Library |
-| Low reach | Targeting too narrow | Broaden age, interests, or geos |
+| Ad has no association | Ad created but never linked | Create a \`creativeAssociation\` |
+| 207 error on update | Amazon rejected a field | The tool error lists Amazon's \`code\` and \`fieldLocation\` |
 
-## Step 4: Validate Entity Payload
+## Step 4: Validate a Payload
 
 \`\`\`json
 amazon_dsp_validate_entity({
   "entityType": "${entityType}",
   "mode": "update",
-  "data": { ... current entity data ... }
+  "accountId": "${accountId}",
+  "data": { "...": "fields you intend to send" }
 })
 \`\`\`
 
 ## Status Update Tool
 
-Amazon DSP uses a \`state\` field to change delivery status — use \`amazon_dsp_bulk_update_status\`:
-
 \`\`\`json
 amazon_dsp_bulk_update_status({
   "entityType": "${entityType}",
-  "advertiserId": "${profileId}",
+  "profileId": "${profileId}",
+  "accountId": "${accountId}",
   "entityIds": ["${entityId}"],
-  "state": "delivering"
+  "operationStatus": "ENABLED"
 })
 \`\`\`
 `;

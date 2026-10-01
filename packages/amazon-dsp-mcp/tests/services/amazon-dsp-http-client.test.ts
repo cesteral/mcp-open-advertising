@@ -96,6 +96,24 @@ describe("AmazonDspHttpClient", () => {
     expect(headers["Amazon-Advertising-API-ClientId"]).toBeUndefined();
   });
 
+  it("omits Amazon-Advertising-API-Scope on the Unified API (/adsApi/v1/*), keeps it on /dsp/*", async () => {
+    // basis: unified-api-dsp.json declares only AccountIdHeader + ClientIdHeader on every
+    // operation, and skills/unified-dsp-cm-migration/SKILL.md §2 lists
+    // Amazon-Advertising-API-Scope as "Not used" (amzn/ads-advanced-tools-docs@e25aace0).
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({}),
+    });
+    await client.post("/adsApi/v1/query/campaigns", {
+      adProductFilter: { include: ["AMAZON_DSP"] },
+    });
+    await client.get("/dsp/advertisers");
+    expect(mockFetch.mock.calls[0][3].headers["Amazon-Advertising-API-Scope"]).toBeUndefined();
+    expect(mockFetch.mock.calls[1][3].headers["Amazon-Advertising-API-Scope"]).toBe("profile_123");
+  });
+
   it("keeps the legacy Amazon-Advertising-API-ClientId header on /dsp/* and reporting paths", async () => {
     mockFetch.mockResolvedValue({
       ok: true,

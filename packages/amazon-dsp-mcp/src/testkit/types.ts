@@ -38,11 +38,16 @@ export type AmazonDspEntityKindKey = "order" | "lineItem" | "commitment";
 export interface AmazonDspUpdateEntityFixtureArgs {
   /** Mirrors the `entityType` input on `amazon_dsp_update_entity`. */
   entityType: Exclude<AmazonDspEntityKindKey, "commitment">;
-  /** Mirrors the `profileId` input — the Amazon DSP advertiser ID (scrubbed). */
+  /** Mirrors the `profileId` input — the session's Amazon Ads profile ID (scrubbed). */
   profileId: string;
+  /**
+   * Mirrors the `accountId` input — the DSP advertiser ID sent as
+   * `Amazon-Ads-AccountId` (scrubbed). Becomes the snapshot's `accountId`.
+   */
+  accountId: string;
   /** Mirrors the `entityId` input (scrubbed). */
   entityId: string;
-  /** Mirrors the `data` input — the partial fields to write. */
+  /** Mirrors the `data` input — the partial fields to write, in Unified API shape. */
   data: Record<string, unknown>;
 }
 
