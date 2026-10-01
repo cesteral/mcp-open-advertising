@@ -6,7 +6,7 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
 import {
-  getSupportedEntityTypesDynamic,
+  getCreatableEntityTypesDynamic,
   getEntitySchemaForOperation,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
@@ -47,7 +47,7 @@ const EFFECT_KIND = "entities_created";
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z
-      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
+      .enum(getCreatableEntityTypesDynamic() as [string, ...string[]])
       .describe(
         "Type of entities to create. Fetch entity-schema://{entityType} for required fields."
       ),

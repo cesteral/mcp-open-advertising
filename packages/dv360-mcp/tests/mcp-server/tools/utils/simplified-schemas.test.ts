@@ -11,6 +11,8 @@ import {
   createSimplifiedCreateEntityInputSchema,
   createSimplifiedUpdateEntityInputSchema,
 } from "../../../../src/mcp-server/tools/utils/simplified-schemas.js";
+import { BulkCreateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
+import { BulkUpdateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
 
 // `partner` and `adGroupAd` are `isReadOnly` in STATIC_ENTITY_API_METADATA —
 // DV360 refuses to create/update them. They must not appear in the create/update
@@ -64,5 +66,25 @@ describe("read-only entity types are excluded from create/update schemas", () =>
         updateMask: "displayName",
       }).success
     ).toBe(true);
+  });
+});
+
+// dv360 #18: the bulk tools used getSupportedEntityTypesDynamic(), so they
+// offered the read-only types the single create/update tools filter out.
+describe("read-only entity types are excluded from the bulk create/update schemas", () => {
+  const enumOf = (schema: unknown): string[] => {
+    let s = schema as { _def: { schema?: unknown; innerType?: unknown }; shape?: unknown };
+    while (!s.shape) s = (s._def.schema ?? s._def.innerType) as typeof s;
+    return (s.shape as { entityType: { options: string[] } }).entityType.options;
+  };
+
+  it("bulk create offers exactly the creatable types", () => {
+    expect(enumOf(BulkCreateEntitiesInputSchema)).toEqual(getCreatableEntityTypesDynamic());
+    for (const t of READ_ONLY_TYPES) expect(enumOf(BulkCreateEntitiesInputSchema)).not.toContain(t);
+  });
+
+  it("bulk update offers exactly the updatable types", () => {
+    expect(enumOf(BulkUpdateEntitiesInputSchema)).toEqual(getUpdatableEntityTypesDynamic());
+    for (const t of READ_ONLY_TYPES) expect(enumOf(BulkUpdateEntitiesInputSchema)).not.toContain(t);
   });
 });
