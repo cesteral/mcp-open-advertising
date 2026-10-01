@@ -76,14 +76,26 @@ linkedin_get_entity({
 | No impressions | Missing targeting criteria | Add targeting to the campaign |
 | Low reach | Audience too restrictive | Expand facets or remove exclusions |
 
-## Step 4: Delivery Forecast (for campaigns)
+## Step 4: Check the Audience and Forecast (for campaigns)
+
+Take the \`targetingCriteria\` from the campaign you fetched above and count the audience. A \`total\` of 0 means fewer than 300 members, which is too small to run:
 
 \`\`\`json
-linkedin_get_delivery_forecast({
-  "adAccountUrn": "urn:li:sponsoredAccount:{accountId}",
-  "targetingCriteria": { ... targeting from campaign ... }
-})
+{
+  "tool": "linkedin_get_audience_count",
+  "params": {
+    "targetingCriteria": {
+      "include": {
+        "and": [
+          { "or": { "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"] } }
+        ]
+      }
+    }
+  }
+}
 \`\`\`
+
+\`linkedin_get_delivery_forecast\` forecasts impressions, clicks and spend for a future date range (it needs \`campaignType\`, \`startTime\`, \`endTime\`, a budget and the targeting); it does not return an audience size.
 
 ## Step 5: Validate Payload
 

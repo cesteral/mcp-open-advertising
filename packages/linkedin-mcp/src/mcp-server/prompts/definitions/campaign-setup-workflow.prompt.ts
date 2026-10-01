@@ -95,14 +95,14 @@ linkedin_update_entity({
         "and": [
           {
             "or": {
-              "urn:li:adTargetingFacet:geos": ["urn:li:geo:103644278"]
+              "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"]
             }
           },
           {
             "or": {
-              "urn:li:adTargetingFacet:memberSeniorities": [
-                "urn:li:adSeniority:5",
-                "urn:li:adSeniority:6"
+              "urn:li:adTargetingFacet:seniorities": [
+                "urn:li:seniority:3",
+                "urn:li:seniority:4"
               ]
             }
           }
@@ -113,14 +113,44 @@ linkedin_update_entity({
 })
 \`\`\`
 
-To find targeting URNs, use: \`linkedin_search_targeting({ facetType: "MEMBER_SENIORITY" })\`
+To find targeting values, use: \`linkedin_search_targeting({ "facet": "seniorities" })\` (list the facets with \`linkedin_get_targeting_options\`).
 
-**Get audience size forecast:**
+**Count the audience** (\`total\` is 0 below 300 members, the minimum to run a campaign):
 \`\`\`json
-linkedin_get_delivery_forecast({
-  "adAccountUrn": "${adAccountUrn}",
-  "targetingCriteria": { ... }
-})
+{
+  "tool": "linkedin_get_audience_count",
+  "params": {
+    "targetingCriteria": {
+      "include": {
+        "and": [
+          { "or": { "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"] } }
+        ]
+      }
+    }
+  }
+}
+\`\`\`
+
+**Forecast delivery** (impressions, clicks and spend over a future date range — not an audience size):
+\`\`\`json
+{
+  "tool": "linkedin_get_delivery_forecast",
+  "params": {
+    "adAccountUrn": "${adAccountUrn}",
+    "campaignType": "SPONSORED_UPDATES",
+    "startTime": "2030-01-01T00:00:00.000Z",
+    "endTime": "2030-01-31T00:00:00.000Z",
+    "dailyBudget": { "amount": "100", "currencyCode": "USD" },
+    "competingBid": { "bidType": "CPM", "bidPrice": { "amount": "12", "currencyCode": "USD" } },
+    "targetingCriteria": {
+      "include": {
+        "and": [
+          { "or": { "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"] } }
+        ]
+      }
+    }
+  }
+}
 \`\`\`
 `
     : ""
@@ -147,7 +177,7 @@ linkedin_create_entity({
 ## Step 5: Verify & Activate
 
 1. Validate payloads: \`linkedin_validate_entity\`
-2. Preview creative: \`linkedin_get_ad_preview({ creativeUrn: "..." })\`
+2. Preview creative: \`linkedin_get_ad_preview({ creativeUrn: "...", adAccountUrn: "..." })\`
 3. Review all entities:
    - Campaign group: \`linkedin_get_entity({ entityType: "campaignGroup", entityUrn: "..." })\`
    - Campaign: \`linkedin_get_entity({ entityType: "campaign", entityUrn: "..." })\`

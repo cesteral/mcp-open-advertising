@@ -3,6 +3,12 @@
 
 import { LinkedInHttpClient } from "./linkedin-http-client.js";
 import type { RestliQueryValue } from "./restli-query.js";
+import {
+  FACET_URN_PREFIX,
+  supportedFinders,
+  toFacetUrn,
+  type TargetingFinder,
+} from "./targeting-facets.js";
 import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
@@ -33,6 +39,78 @@ export type {
   CreateLinkedInCampaignRequest,
   CreateLinkedInCreativeRequest,
 };
+
+/** `targetingCriteria`: `{ include: { and: [{ or: { facetUrn: [values] } }] }, exclude?: { or: { facetUrn: [values] } } }`. */
+export type LinkedInTargetingCriteria = {
+  include: { and: Array<{ or: Record<string, string[]> }> };
+  exclude?: { or: Record<string, string[]> };
+};
+
+interface TargetingEntitiesLocale {
+  language: string;
+  country: string;
+}
+
+/** One `/rest/adTargetingEntities` request; the finder decides which other fields apply. */
+export type LinkedInTargetingEntitiesQuery =
+  | { finder: "adTargetingFacet"; facet: string; locale?: TargetingEntitiesLocale }
+  | {
+      finder: "typeahead";
+      facet: string;
+      query: string;
+      entityType?: string;
+      locale?: TargetingEntitiesLocale;
+    }
+  | {
+      finder: "similarEntities";
+      facet: string;
+      entities: readonly string[];
+      entityType?: string;
+      locale?: TargetingEntitiesLocale;
+    }
+  | { finder: "urns"; urns: readonly string[]; locale?: TargetingEntitiesLocale };
+
+type LinkedInMoney = { amount: string; currencyCode: string };
+
+/** A `/rest/adSupplyForecasts?q=criteriaV2` request. */
+export interface LinkedInAdSupplyForecastQuery {
+  account: string;
+  campaignType: string;
+  /** Epoch milliseconds; `start` must be in the future. */
+  timeRange: { start: number; end: number };
+  targetingCriteria: LinkedInTargetingCriteria;
+  dailyBudget?: LinkedInMoney;
+  totalBudget?: LinkedInMoney;
+  competingBid?: { bidType: string; bidPrice: LinkedInMoney };
+  optimizationTarget?: string;
+  campaign?: string;
+  creativeType?: string;
+  objectiveType?: string;
+  enableAudienceNetwork?: boolean;
+  enableAudienceExpansion?: boolean;
+  connectedTelevisionOnly?: boolean;
+  targetCost?: string;
+  costCap?: string;
+}
+
+const FINDER_ADVICE: Record<TargetingFinder, string> = {
+  adTargetingFacet: "browse it (no `query`)",
+  typeahead: "search it with a `query`",
+  similarEntities: "find similar entities from seed `entities`",
+};
+
+function assertFinderSupported(finder: TargetingFinder, facetName: string): void {
+  const supported = supportedFinders(facetName);
+  if (supported === undefined || supported.includes(finder)) return;
+  const advice =
+    supported.length === 0
+      ? "LinkedIn lists no entity discovery for it"
+      : `LinkedIn lists these finders for it: ${supported.map((f) => `${f} (${FINDER_ADVICE[f]})`).join("; ")}`;
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `The ${facetName} facet does not support the ${finder} finder. ${advice}.`
+  );
+}
 
 interface LinkedInEntityMap {
   adAccount: LinkedInAdAccount;
@@ -322,66 +400,85 @@ export class LinkedInService {
     return { results };
   }
 
-  // ─── Targeting Search ────────────────────────────────────────────
+  // ─── Targeting ───────────────────────────────────────────────────
 
   /**
-   * Search targeting facets (interests, locations, etc.).
+   * The facet descriptors LinkedIn offers for targeting.
    *
-   * `/rest/adTargetingFacets` is a Rest.li collection finder and supports
-   * offset-based pagination via `start`/`count`, returning a `paging` block.
+   * `GET /rest/adTargetingFacets` is a plain GET: no finder, no parameters, no
+   * account. Each element carries `facetName`, `availableEntityFinders`,
+   * `entityTypes` and `adTargetingFacetUrn` (Ad Targeting page, read 2026-10-01).
+   * The `q=type` and `q=account` finders this used to send do not exist.
    */
-  async searchTargeting(
-    facetType: string,
-    query?: string,
-    limit?: number,
-    start?: number,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async listTargetingFacets(context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
-
-    const params: Record<string, string> = {
-      q: "type",
-      facetType,
-      start: String(start ?? 0),
-      count: String(Math.min(limit ?? 20, 100)),
-    };
-
-    if (query) {
-      params.query = query;
-    }
-
-    return this.httpClient.get("/rest/adTargetingFacets", params, context);
+    return this.httpClient.get("/rest/adTargetingFacets", undefined, context);
   }
 
   /**
-   * Browse targeting categories / facets for an ad account.
+   * The values inside a facet, or the names behind a list of value URNs.
    *
-   * Like `searchTargeting`, this hits the `/rest/adTargetingFacets` Rest.li
-   * collection finder, which supports offset-based pagination via `start`/
-   * `count` and returns a `paging` block. Large accounts can expose more
-   * facets than fit in one page, so the offset is threaded through.
+   * `GET /rest/adTargetingEntities` has four finders: `adTargetingFacet` (every
+   * entity of a facet), `typeahead` (search within a facet), `similarEntities`
+   * (entities like the given ones) and `urns` (resolve URNs). None documents
+   * `start`/`count`, so none is sent. `QUERY_USES_URNS` is sent on all four: the
+   * page's samples do, though its `adTargetingFacet` parameter table says
+   * `QUERY_USES_VALUES`.
+   *
+   * A facet that LinkedIn lists as typeahead-only (`locations`, `schools`,
+   * `employers`, …) is refused for the other finders, and the reverse, before any
+   * request is made.
    */
-  async getTargetingOptions(
-    adAccountUrn: string,
-    facetType?: string,
-    start?: number,
-    limit?: number,
+  async getTargetingEntities(
+    query: LinkedInTargetingEntitiesQuery,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
 
-    const params: Record<string, string> = {
-      q: "account",
-      account: adAccountUrn,
-      start: String(start ?? 0),
-      count: String(Math.min(limit ?? 20, 100)),
+    const params: Record<string, RestliQueryValue | undefined> = {
+      q: query.finder,
+      queryVersion: "QUERY_USES_URNS",
     };
 
-    if (facetType) {
-      params.facetType = facetType;
+    if (query.finder === "urns") {
+      params.urns = [...query.urns];
+    } else {
+      const facetUrn = toFacetUrn(query.facet);
+      assertFinderSupported(query.finder, facetUrn.slice(FACET_URN_PREFIX.length));
+      params.facet = facetUrn;
+      if (query.finder === "typeahead") {
+        params.query = query.query;
+        if (query.entityType) params.entityType = query.entityType;
+      } else if (query.finder === "similarEntities") {
+        params.entities = [...query.entities];
+        if (query.entityType) params.entityType = query.entityType;
+      }
     }
 
-    return this.httpClient.get("/rest/adTargetingFacets", params, context);
+    if (query.locale) {
+      params.locale = { language: query.locale.language, country: query.locale.country };
+    }
+
+    return this.httpClient.get("/rest/adTargetingEntities", params, context);
+  }
+
+  /**
+   * How many members match `targetingCriteria`.
+   *
+   * `GET /rest/audienceCounts?q=targetingCriteriaV2` returns `{ active, total }`.
+   * `total` is 0 below 300 members, to protect member privacy (Audience Counts
+   * page, read 2026-10-01).
+   */
+  async getAudienceCount(
+    targetingCriteria: LinkedInTargetingCriteria,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`linkedin:default`);
+    return this.httpClient.get(
+      "/rest/audienceCounts",
+      { q: "targetingCriteriaV2", targetingCriteria },
+      context
+    );
   }
 
   // ─── Duplicate Entity ────────────────────────────────────────────
@@ -425,55 +522,66 @@ export class LinkedInService {
   // ─── Delivery Forecast ────────────────────────────────────────────
 
   /**
-   * Get delivery forecast for targeting criteria.
+   * Forecast impressions, clicks, spend and the rest for a campaign setup.
+   *
+   * `GET /rest/adSupplyForecasts?q=criteriaV2`, replacing the legacy
+   * `POST /v2/adForecastsV2`. `account`, `campaignType`, `timeRange` (epoch
+   * milliseconds, start in the future), `targetingCriteria`, and `dailyBudget`
+   * or `totalBudget` are required. The answer is `elements[{ metricType,
+   * granularity, timeSeries[{ timestamp, value, adForecastRange }] }]` — it
+   * carries no audience size (Ad Supply Forecasts page, read 2026-10-01).
    */
-  async getDeliveryForecast(
-    adAccountUrn: string,
-    targetingCriteria: Record<string, unknown>,
-    optimizationTargetType?: string,
+  async getAdSupplyForecast(
+    query: LinkedInAdSupplyForecastQuery,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
 
-    const requestBody: Record<string, unknown> = {
-      account: adAccountUrn,
-      targetingCriteria,
+    const params: Record<string, RestliQueryValue | undefined> = {
+      q: "criteriaV2",
+      account: query.account,
+      campaignType: query.campaignType,
+      timeRange: { start: query.timeRange.start, end: query.timeRange.end },
+      targetingCriteria: query.targetingCriteria,
+      dailyBudget: query.dailyBudget,
+      totalBudget: query.totalBudget,
+      competingBid: query.competingBid,
+      optimizationTarget: query.optimizationTarget,
+      campaign: query.campaign,
+      creativeType: query.creativeType,
+      objectiveType: query.objectiveType,
+      enableAudienceNetwork: query.enableAudienceNetwork,
+      enableAudienceExpansion: query.enableAudienceExpansion,
+      connectedTelevisionOnly: query.connectedTelevisionOnly,
+      targetCost: query.targetCost,
+      costCap: query.costCap,
     };
 
-    if (optimizationTargetType) {
-      requestBody.optimizationTargetType = optimizationTargetType;
-    }
-
-    // NOT migrated. #210 guesses /rest/adForecasts, but the versioned surface is
-    // the Media Planning API and neither the resource name nor the request shape
-    // is corroborated. A renamed guess that 404s is worse than a known-legacy path.
-    return this.httpClient.post("/v2/adForecastsV2", requestBody, context);
+    return this.httpClient.get("/rest/adSupplyForecasts", params, context);
   }
 
   // ─── Ad Previews ─────────────────────────────────────────────────
 
   /**
-   * Get ad preview for a creative.
+   * Preview an existing creative.
+   *
+   * `GET /rest/adPreviews?q=creative&creative={urn}&account={urn}` returns
+   * `elements[{ preview, creative, placement }]`; `preview` is an iframe, valid
+   * for about three hours (Ad Preview page, read 2026-10-01). There is no
+   * `adFormat` parameter. The live previews (`action=livePreviewForCreative`) are
+   * POST actions for a creative that does not exist yet and are not wrapped here.
    */
   async getAdPreviews(
     creativeUrn: string,
-    adFormat?: string,
+    adAccountUrn: string,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`linkedin:default`);
-
-    const encodedUrn = LinkedInHttpClient.encodeUrn(creativeUrn);
-    const params: Record<string, string> = {};
-
-    if (adFormat) {
-      params.adFormat = adFormat;
-    }
-
-    // NOT migrated, and #210's guess is wrong: the versioned equivalent is
-    // /rest/adPreviews with `action=livePreviewForCreative`/accurate-preview
-    // semantics — an action POST, not a GET on a URN, so it is a call-shape
-    // change rather than a re-path. Held for the same reason as creatives.
-    return this.httpClient.get(`/v2/adCreativePreviews/${encodedUrn}`, params, context);
+    return this.httpClient.get(
+      "/rest/adPreviews",
+      { q: "creative", creative: creativeUrn, account: adAccountUrn },
+      context
+    );
   }
 
   // ─── Internal Helpers ────────────────────────────────────────────

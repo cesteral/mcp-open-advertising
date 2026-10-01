@@ -69,13 +69,14 @@ Fetch these resources for detailed schema information:
 - \`linkedin_adjust_bids\` — Batch adjust campaign bids
 
 ### Targeting
-- \`linkedin_search_targeting\` — Search audience facets (skills, companies, locations)
-- \`linkedin_get_targeting_options\` — Browse targeting categories
+- \`linkedin_get_targeting_options\` — List the targeting facets and which finders each supports
+- \`linkedin_search_targeting\` — Get the values inside a facet (browse, search, find similar, resolve URNs)
 
 ### Specialized
 - \`linkedin_duplicate_entity\` — Copy campaign groups, campaigns, creatives
-- \`linkedin_get_delivery_forecast\` — Audience/delivery forecast
-- \`linkedin_get_ad_preview\` — Ad preview rendering
+- \`linkedin_get_audience_count\` — Count the members matching a targeting criteria
+- \`linkedin_get_delivery_forecast\` — Forecast impressions, clicks and spend for a campaign setup
+- \`linkedin_get_ad_preview\` — Preview an existing creative
 - \`linkedin_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates (client-side, no API call)
 
 ### Validation

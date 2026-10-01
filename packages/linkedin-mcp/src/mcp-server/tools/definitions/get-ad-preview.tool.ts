@@ -8,12 +8,11 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_get_ad_preview";
 const TOOL_TITLE = "Get LinkedIn Ads Ad Preview";
-const TOOL_DESCRIPTION = `Get a preview of a LinkedIn Ads creative.
+const TOOL_DESCRIPTION = `Get the preview of an existing LinkedIn Ads creative.
 
-Returns preview rendering data for a creative URN.
+Returns one preview per placement (e.g. FEED on DESKTOP_WEBSITE and MOBILE_WEBSITE), each an \`<iframe>\` HTML string to embed. The iframes are valid for about 3 hours; call again for a fresh one. LinkedIn supports previews of single image, carousel, video, single job and event ads.
 
-**adFormat values:** SINGLE_IMAGE_AD, VIDEO_AD, CAROUSEL_AD, TEXT_AD,
-SPOTLIGHT_AD, FOLLOWER_AD, MESSAGE_AD, CONVERSATION_AD`;
+This previews a creative that already exists. Previewing content before a creative is created is a separate LinkedIn call (livePreviewForCreative) that this tool does not make.`;
 
 export const GetAdPreviewInputSchema = z
   .object({
@@ -21,7 +20,10 @@ export const GetAdPreviewInputSchema = z
       .string()
       .min(1)
       .describe("The creative URN to preview (e.g., urn:li:sponsoredCreative:123)"),
-    adFormat: z.string().optional().describe("Ad format for the preview (e.g., SINGLE_IMAGE_AD)"),
+    adAccountUrn: z
+      .string()
+      .min(1)
+      .describe("The ad account URN the creative belongs to (e.g., urn:li:sponsoredAccount:123)"),
   })
   .describe("Parameters for getting a LinkedIn ad preview");
 
@@ -43,7 +45,11 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const preview = await linkedInService.getAdPreviews(input.creativeUrn, input.adFormat, context);
+  const preview = await linkedInService.getAdPreviews(
+    input.creativeUrn,
+    input.adAccountUrn,
+    context
+  );
 
   return {
     preview: preview as Record<string, unknown>,
@@ -56,7 +62,7 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `Ad preview for ${result.creativeUrn}\n\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Ad preview for ${result.creativeUrn} (preview iframes are valid for about 3 hours)\n\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -75,10 +81,10 @@ export const getAdPreviewTool = {
   },
   inputExamples: [
     {
-      label: "Get preview for a creative",
+      label: "Get previews for a creative",
       input: {
         creativeUrn: "urn:li:sponsoredCreative:123456789",
-        adFormat: "SINGLE_IMAGE_AD",
+        adAccountUrn: "urn:li:sponsoredAccount:123456789",
       },
     },
   ],

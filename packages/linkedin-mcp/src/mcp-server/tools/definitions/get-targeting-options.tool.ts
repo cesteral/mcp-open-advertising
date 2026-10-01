@@ -3,97 +3,47 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  PaginationOutputSchema,
-  buildPaginationOutput,
-  formatPaginationHint,
-} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_get_targeting_options";
-const TOOL_TITLE = "Get LinkedIn Ads Targeting Options";
-const TOOL_DESCRIPTION = `Browse available targeting categories and facets for a LinkedIn Ads account.
+const TOOL_TITLE = "List LinkedIn Ads Targeting Facets";
+const TOOL_DESCRIPTION = `List the targeting facets LinkedIn offers (industries, seniorities, locations, skills, …).
 
-Returns targeting facet metadata available for the given ad account.
-Use linkedin_search_targeting to search within a specific facet.
+Each facet has a \`facetName\`, an \`adTargetingFacetUrn\` (urn:li:adTargetingFacet:<facetName>, the key used in targetingCriteria), the \`entityTypes\` it holds, and the \`availableEntityFinders\` (AD_TARGETING_FACET = browse all values, TYPEAHEAD = search, SIMILAR_ENTITIES).
 
-Accounts can expose more facets than fit in one page — use the \`start\` offset returned in \`pagination.nextCursor\` for subsequent pages.`;
+This is LinkedIn's plain facet list: it takes no parameters and does not depend on the ad account. Use linkedin_search_targeting to get the values inside a facet.`;
 
 export const GetTargetingOptionsInputSchema = z
-  .object({
-    adAccountUrn: z
-      .string()
-      .min(1)
-      .describe("The ad account URN (e.g., urn:li:sponsoredAccount:123)"),
-    facetType: z
-      .string()
-      .optional()
-      .describe("Filter to a specific facet type (optional, returns all if omitted)"),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(100)
-      .optional()
-      .describe("Maximum number of results per page (default 20, max 100)"),
-    start: z.number().int().min(0).optional().describe("Offset for pagination (default 0)"),
-  })
-  .describe("Parameters for getting LinkedIn targeting options");
+  .object({})
+  .describe("No parameters: LinkedIn's facet list is the same for every account");
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
-    options: z.array(z.record(z.any())).describe("Available targeting options"),
+    facets: z.array(z.record(z.any())).describe("Targeting facet descriptors"),
     count: z.number(),
-    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
-  .describe("Targeting options result");
+  .describe("Targeting facets result");
 
 type GetTargetingOptionsInput = z.infer<typeof GetTargetingOptionsInputSchema>;
 type GetTargetingOptionsOutput = z.infer<typeof GetTargetingOptionsOutputSchema>;
 
-interface LinkedInPagingLike {
-  start?: number;
-  count?: number;
-  total?: number;
-}
-
 export async function getTargetingOptionsLogic(
-  input: GetTargetingOptionsInput,
+  _input: GetTargetingOptionsInput,
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetTargetingOptionsOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const result = (await linkedInService.getTargetingOptions(
-    input.adAccountUrn,
-    input.facetType,
-    input.start,
-    input.limit,
-    context
-  )) as Record<string, unknown>;
-
-  const elements = (result.elements as unknown[]) ?? [];
-  const paging = (result.paging as LinkedInPagingLike | undefined) ?? undefined;
-
-  const pageSize = elements.length;
-  const total = paging?.total;
-  const currentStart = paging?.start ?? input.start ?? 0;
-  const requestedLimit = input.limit ?? 20;
-  const hasMore =
-    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedLimit;
-  const nextStart = currentStart + pageSize;
+  const result = (await linkedInService.listTargetingFacets(context)) as {
+    elements?: unknown[];
+  };
+  const facets = (result.elements ?? []) as Record<string, unknown>[];
 
   return {
-    options: elements as Record<string, unknown>[],
-    count: pageSize,
-    pagination: buildPaginationOutput({
-      nextCursor: hasMore ? String(nextStart) : null,
-      pageSize,
-      totalCount: total,
-      nextPageInputKey: "start",
-    }),
+    facets,
+    count: facets.length,
     timestamp: new Date().toISOString(),
   };
 }
@@ -101,12 +51,10 @@ export async function getTargetingOptionsLogic(
 export function getTargetingOptionsResponseFormatter(
   result: GetTargetingOptionsOutput
 ): McpTextContent[] {
-  const { totalCount } = result.pagination;
-  const totalInfo = totalCount !== undefined ? ` of ${totalCount}` : "";
   return [
     {
       type: "text" as const,
-      text: `Found ${result.count}${totalInfo} targeting options\n\n${JSON.stringify(result.options, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Found ${result.count} targeting facets\n\n${JSON.stringify(result.facets, null, 2)}\n\nUse linkedin_search_targeting with a facet name to get its values.\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -125,31 +73,14 @@ export const getTargetingOptionsTool = {
   },
   inputExamples: [
     {
-      label: "Get all targeting options for an account",
-      input: {
-        adAccountUrn: "urn:li:sponsoredAccount:123456789",
-      },
-    },
-    {
-      label: "Get interest targeting options",
-      input: {
-        adAccountUrn: "urn:li:sponsoredAccount:123456789",
-        facetType: "MEMBER_INTERESTS",
-      },
-    },
-    {
-      label: "Paginate through facets (second page)",
-      input: {
-        adAccountUrn: "urn:li:sponsoredAccount:123456789",
-        limit: 50,
-        start: 50,
-      },
+      label: "List every targeting facet",
+      input: {},
     },
   ],
   logic: getTargetingOptionsLogic,
   responseFormatter: getTargetingOptionsResponseFormatter,
   untrustedContent: {
-    structuredPaths: ["$.options"],
+    structuredPaths: ["$.facets"],
     contentBlocks: [0],
   },
 };

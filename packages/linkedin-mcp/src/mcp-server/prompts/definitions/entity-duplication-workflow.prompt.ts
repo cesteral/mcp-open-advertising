@@ -122,7 +122,7 @@ Use the returned URN to modify the copy:
           "and": [
             {
               "or": {
-                "urn:li:adTargetingFacet:geos": ["urn:li:geo:101282230"]
+                "urn:li:adTargetingFacet:locations": ["urn:li:geo:101174742"]
               }
             }
           ]

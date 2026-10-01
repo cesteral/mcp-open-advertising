@@ -107,10 +107,11 @@ Campaigns and campaign groups no longer use a scoping parameter: the account is 
 | \`linkedin_bulk_create_entities\` | Batch entity creation | ✓ |
 | \`linkedin_bulk_update_entities\` | Batch entity updates | ✓ |
 | \`linkedin_adjust_bids\` | Batch adjust campaign bids | ✓ |
-| \`linkedin_search_targeting\` | Search targeting facets | |
-| \`linkedin_get_targeting_options\` | Browse targeting categories | |
+| \`linkedin_search_targeting\` | Targeting values inside a facet | |
+| \`linkedin_get_targeting_options\` | List targeting facets | |
 | \`linkedin_duplicate_entity\` | Copy entity (read + create) | |
-| \`linkedin_get_delivery_forecast\` | Audience size estimation | |
+| \`linkedin_get_audience_count\` | Audience size (members matching targeting) | |
+| \`linkedin_get_delivery_forecast\` | Impressions/clicks/spend forecast | |
 | \`linkedin_get_ad_preview\` | Ad creative preview | |
 | \`linkedin_validate_entity\` | Client-side payload validation | |
 

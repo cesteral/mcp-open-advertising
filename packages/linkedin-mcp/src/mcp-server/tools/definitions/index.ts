@@ -4,13 +4,13 @@
 /**
  * Tool definitions barrel export
  *
- * 22 tools total (21 business tools plus the auto-generated linkedin_search_tools):
+ * 23 tools total (22 business tools plus the auto-generated linkedin_search_tools):
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list ad accounts
  *   2 analytics: get analytics, get analytics breakdowns
  *   4 bulk: bulk update status, bulk create entities, bulk update entities, adjust bids
  *   2 targeting: search targeting, get targeting options
- *   5 specialized: duplicate entity, get delivery forecast, get ad preview, upload image, upload video
+ *   6 specialized: duplicate entity, get delivery forecast, get audience count, get ad preview, upload image, upload video
  *   1 validation: validate entity (client-side)
  *   1 pacing: get pacing status (client-side, no API call)
  *   1 discovery: search tools (createToolSearchTool)
@@ -33,6 +33,7 @@ export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryForecastTool } from "./get-delivery-forecast.tool.js";
+export { getAudienceCountTool } from "./get-audience-count.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { uploadImageTool } from "./upload-image.tool.js";
@@ -55,6 +56,7 @@ import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryForecastTool } from "./get-delivery-forecast.tool.js";
+import { getAudienceCountTool } from "./get-audience-count.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
@@ -89,6 +91,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Specialized ──
   duplicateEntityTool,
   getDeliveryForecastTool,
+  getAudienceCountTool,
   getAdPreviewTool,
   uploadImageTool,
   uploadVideoTool,
