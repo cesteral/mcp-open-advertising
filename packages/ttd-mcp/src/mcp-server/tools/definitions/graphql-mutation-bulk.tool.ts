@@ -28,6 +28,7 @@ import {
   MUTATION_ERROR_SELECTION,
   countGraphqlLexicalTokens,
   describePayloadErrors,
+  inspectBulkMutation,
   mutationBulkProductionRefusal,
 } from "../utils/graphql-bulk-job.js";
 
@@ -35,37 +36,45 @@ const TOOL_NAME = "ttd_graphql_mutation_bulk";
 const TOOL_TITLE = "TTD GraphQL Mutation Bulk";
 const TOOL_DESCRIPTION = `Submit a bulk GraphQL mutation job to The Trade Desk (\`createMutationBulk\`).
 
-Applies one mutation across many input sets as an async bulk job and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`.
+Runs one mutation once per entry of \`inputs\` as an async bulk job, and returns a job ID. Poll the job with \`ttd_graphql_bulk_job\` until it reports \`terminal: true\`.
 
-### ⚠️ Unverified operation, sandbox only by default
-No TTD source this server can check shows \`createMutationBulk\`: not its name, its input type, or how an \`inputs\` entry binds to the mutation's variables. TTD's published bulk-write sample uses a different flow (\`bulkCreateCampaigns\` from an uploaded file). So this tool **runs against the TTD sandbox only** (\`TTD_USE_SANDBOX=true\`). Against production it refuses, and its dry run reports \`wouldSucceed: false\`, unless the operator sets \`${MUTATION_BULK_PRODUCTION_OPT_IN}=true\`.
+### How inputs bind (TTD's documented shape)
+\`mutation\` must be **one** mutation operation that declares **exactly one variable**, for example \`$input\`. Each \`inputs\` entry is that variable's value: the tool sends it to TTD as one element of \`mutationVariables\`, a JSON string of \`{ "<variable name>": <entry> }\`. Pass the input object itself, not the wrapper.
+
+### ⚠️ Sandbox only by default
+TTD documents \`createMutationBulk\`, but this server has never submitted one to TTD, and a submitted job cannot be cancelled. So this tool **runs against the TTD sandbox only** (\`TTD_USE_SANDBOX=true\`). Against production it refuses, and its dry run reports \`wouldSucceed: false\`, unless the operator sets \`${MUTATION_BULK_PRODUCTION_OPT_IN}=true\`. It is capped at ${MAX_MUTATION_BULK_INPUTS} inputs (TTD allows 1000) for the same reason.
 
 ### ⚠️ Not cancellable, no rollback
-Treat a submitted job as not cancellable. A job can end **PARTIAL_SUCCESS**: some inputs were applied and some failed, and applied writes are not rolled back, so re-submitting the full input set applies them again. Before retrying, read \`gqlErrors\` and the result file from \`ttd_graphql_bulk_job\`, then re-submit only the failed inputs.
+A mutation job cannot be cancelled once it starts (\`cancelBulkJob\` is for query jobs). A job can end **PARTIAL_SUCCESS**: some inputs were applied and some failed, and applied writes are not rolled back, so re-submitting the full input set applies them again. Before retrying, read \`mutationGqlErrors\` from \`ttd_graphql_bulk_job\`: each entry names the failed input by \`index\`. Re-submit only those.
 
 ### Constraints
-- **Max ${MAX_MUTATION_BULK_INPUTS} inputs** per job (this server's cap while the operation is unverified)
-- **Max ${MAX_BULK_MUTATION_TOKENS.toLocaleString("en-US")} GraphQL lexical tokens** in the mutation string, counted as the GraphQL spec defines them
-- **Result:** a JSON GraphQL response file (not CSV). Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET. Do not use \`ttd_download_report\`, which only parses CSV.
+- **One mutation operation** per job, and only advertiser, campaign and ad group mutations
+- **Max ${MAX_MUTATION_BULK_INPUTS} inputs** per job (this server's cap; TTD's is 1000)
+- **Fewer than ${MAX_BULK_MUTATION_TOKENS.toLocaleString("en-US")} GraphQL lexical tokens** in the mutation string, counted as the GraphQL spec defines them
+- At most 10 active and 20 queued bulk jobs at a time
+- **Result:** a JSON GraphQL response file (not CSV), merging results and errors. Fetch its URL from \`ttd_graphql_bulk_job\` with a plain HTTP GET within an hour of completion. Do not use \`ttd_download_report\`, which only parses CSV.
 
 ### Mutation names
-TTD names mutations entity first, then verb: \`campaignUpdate\`, \`adGroupUpdate\`, \`bidListUpdate\`, \`seedCreate\`. Take input types and payload fields from the TTD GraphQL schema explorer. They are not validated here.
+TTD names mutations entity first, then verb: \`campaignUpdate\`, \`adGroupCreate\`, \`bidListUpdate\`, \`seedCreate\`. Take input types and payload fields from the TTD GraphQL schema explorer. They are not validated here.
 
-### Example
+### Example (TTD's own)
 \`\`\`graphql
-mutation UpdateBidList($input: BidListUpdateInput!) {
-  bidListUpdate(input: $input) {
+mutation ($input: AdGroupCreateInput!) {
+  adGroupCreate(input: $input) {
     data { id }
     userErrors { field message }
   }
 }
 \`\`\`
-With inputs: \`[{ "id": "bl1", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }, { "id": "bl2", "bidLinesToRemove": [{ "domainFragment": "example.com" }] }]\`
+With inputs: \`[{ "campaignId": "abc123", "name": "AdGroup1", "channel": "TV", "funnelLocation": "CONVERSION" }, { "campaignId": "def456", "name": "AdGroup2", "channel": "TV", "funnelLocation": "CONVERSION" }]\``;
 
-Each \`inputs\` entry is sent as one JSON-encoded element of \`mutationVariables\`. Whether TTD binds an entry to \`$input\` (as this example assumes) or reads it as the full variables map (\`{ "input": { … } }\`) is part of what a sandbox run has to confirm.`;
-
-const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: CreateMutationBulkInput!) {
-  createMutationBulk(input: $input) {
+// Written as TTD's page writes it: createMutationBulk(input: { mutation,
+// mutationVariables }). The page never shows the input type's name, so none is
+// guessed; `mutation` is a String and `mutationVariables` an array of
+// JSON-encoded strings. (The declared type of the $mutationVariables variable is
+// the one thing here a sandbox run still has to confirm.)
+const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($mutation: String!, $mutationVariables: [String!]!) {
+  createMutationBulk(input: { mutation: $mutation, mutationVariables: $mutationVariables }) {
     data {
       id
       status
@@ -73,6 +82,27 @@ const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: Creat
     ${MUTATION_ERROR_SELECTION}
   }
 }`;
+
+/**
+ * The mutation's single variable name, which each `mutationVariables` entry is
+ * keyed by (TTD's example: `{ "input": { ... } }`). Refuses what cannot be bound.
+ */
+function bulkMutationVariableName(mutation: string): string {
+  const { operations, variables } = inspectBulkMutation(mutation);
+  if (operations !== 1) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `A bulk mutation must contain exactly one mutation operation (TTD allows one); this has ${operations}.`
+    );
+  }
+  if (variables.length !== 1) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `A bulk mutation must declare exactly one variable (for example $input): each entry in inputs is that variable's value. This declares ${variables.length}${variables.length ? ` (${variables.map((v) => `$${v}`).join(", ")})` : ""}.`
+    );
+  }
+  return variables[0]!;
+}
 
 export const GraphqlMutationBulkInputSchema = z
   .object({
@@ -97,6 +127,20 @@ export const GraphqlMutationBulkInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["mutation"],
         message: `Mutation string has ${tokens} GraphQL lexical tokens. TTD's limit for a bulk mutation string is ${MAX_BULK_MUTATION_TOKENS}.`,
+      });
+    }
+    const { operations, variables } = inspectBulkMutation(data.mutation);
+    if (operations !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["mutation"],
+        message: `A bulk mutation must contain exactly one mutation operation (TTD allows one); this has ${operations}.`,
+      });
+    } else if (variables.length !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["mutation"],
+        message: `A bulk mutation must declare exactly one variable (for example $input): each entry in inputs is that variable's value. This declares ${variables.length}.`,
       });
     }
   })
@@ -191,15 +235,12 @@ export async function graphqlMutationBulkLogic(
     });
   }
 
-  // UNVERIFIED binding: no TTD source (the platform samples, or the Workflows SDKs
-  // for Python, Go and Java) shows
-  // createMutationBulk, its input type, or how a `mutationVariables` entry binds
-  // to the mutation's variables. Left as-is pending a sandbox run.
+  // TTD's page: each `mutationVariables` entry is a JSON string of the variables
+  // map for one execution, keyed by the mutation's variable name.
+  const variableName = bulkMutationVariableName(input.mutation);
   const variables = {
-    input: {
-      mutation: input.mutation,
-      mutationVariables: input.inputs.map((v) => JSON.stringify(v)),
-    },
+    mutation: input.mutation,
+    mutationVariables: input.inputs.map((entry) => JSON.stringify({ [variableName]: entry })),
   };
 
   const result = (await ttdService.graphqlQuery(
@@ -317,9 +358,8 @@ export const graphqlMutationBulkTool = {
   // `bidLinesToAdd`/`bidLinesToRemove`, payload `data { id } userErrors { field
   // message }`, from docs/api/ttd_partner_portal_api_docs.md:6062-6082) and the
   // `BidListUpdateInput` type this package already sends (ttd-service.ts
-  // updateBidList). The previous `updateCampaign` / `updateAdGroup` examples used
-  // verb-first names that TTD's Platform API reference does not list. Its names are
-  // `campaignUpdate` / `adGroupUpdate` (docs/api/reference.md:155,331).
+  // updateBidList). Mutation names are entity first (`campaignUpdate`,
+  // `adGroupCreate`), as in TTD's Bulk operations page.
   inputExamples: [
     {
       label: "Remove a domain bid line from many bid lists via bulk mutation",

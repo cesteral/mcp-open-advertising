@@ -5,28 +5,42 @@
  * Shared helpers for the TTD GraphQL bulk-job tools (`createQueryBulk`,
  * `createMutationBulk`, `bulkJob`, `cancelBulkJob`).
  *
- * Provenance — TTD's GraphQL hosts and doc pages are unreachable from this
- * repo's egress, so everything here is taken from TTD's own published code:
+ * Provenance. The contract is TTD's own "Bulk operations" page
+ * (https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlBulkOperations,
+ * read 2026-10-01; a public page whose code samples are Monaco editors, so read
+ * them from the editor models, not the page text). It documents:
  *
- * - `thetradedesk/ttd-workflows-python` (commit cd4e64c, 2026-04-24),
- *   `src/ttd_workflows/models/bulkjobstatus.py:7-13` — the bulk-job status enum
- *   has exactly six members: Queued, InProgress, PartialSuccess, Failure,
- *   Success, Cancelled. `graphqlbulkjob.py:20` says that model "mirrors the GQL
- *   bulkjob". Its wire values are the Workflows REST facade's PascalCase.
- * - `thetradedesk/platform` (commit adff1a6, 2025-06-23), e.g.
- *   `Python/FirstPartyData/GetAdvertiserFirstPartyDataBatchedGQL.py:158-185` —
- *   polls GraphQL `bulkJob(id:) { id status url gqlErrors }` and keeps polling
- *   only while `status == 'QUEUED' or status == 'IN_PROGRESS'`. So GraphQL
- *   returns SCREAMING_SNAKE spellings, and every other status is terminal.
- *   `GetAllThirdPartyDataForPartnerWithCallbackGQL.py:154` only retrieves a
- *   result for `Success` / `PartialSuccess`.
+ * - `createMutationBulk(input: { mutation, mutationVariables })`, where
+ *   `mutation` is ONE mutation operation and `mutationVariables` is an array of
+ *   JSON-encoded strings, one per execution, each keyed by the mutation's
+ *   variable name (`"{ \"input\": { \"campaignId\": ... } }"`); at most 1000
+ *   entries and fewer than 15,000 lexical tokens in the mutation; only
+ *   advertiser, campaign and ad group entities;
+ * - mutation jobs cannot be cancelled (`cancelBulkJob` is for query jobs);
+ * - at most 10 active and 20 queued jobs; the result file expires one hour
+ *   after `completedAt`; results and errors are merged into one file;
+ * - the poll `bulkJob(id: 123) { id createdAt rawResult completionPercentage
+ *   completedAt status url runtimeErrors ... on BulkMutationJob {
+ *   mutationGqlErrors { error index } } ... on BulkQueryJob { queryGqlErrors } }`,
+ *   so per-input errors of a mutation job arrive as `mutationGqlErrors`, each
+ *   with the failed input's `index`;
+ * - statuses SUCCESS, PARTIAL_SUCCESS and FAILURE by name.
  *
- * The GraphQL spellings of the other four statuses (SUCCESS, PARTIAL_SUCCESS,
- * FAILURE, CANCELLED) are inferred from that convention, not observed, so
- * classification is spelling-insensitive: `PartialSuccess` and
+ * Earlier versions of this file, written while the page was unreachable, took
+ * the poll fields from TTD's `thetradedesk/platform` samples (`gqlErrors`) and
+ * the status enum from `thetradedesk/ttd-workflows-python`
+ * (`bulkjobstatus.py:7-13`: Queued, InProgress, PartialSuccess, Failure,
+ * Success, Cancelled; samples poll while `status == 'QUEUED' or 'IN_PROGRESS'`).
+ * The status spellings QUEUED, IN_PROGRESS and CANCELLED still come only from
+ * those, so classification is spelling-insensitive: `PartialSuccess` and
  * `PARTIAL_SUCCESS` classify identically.
+ *
+ * Still unconfirmed against a live TTD: that this server's requests are
+ * accepted as written (nothing here has run against TTD), and the exact GraphQL
+ * type of the `mutationVariables` variable (the page's example never declares it).
  */
 
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { isTtdProductionUrl } from "../../../config/sandbox-guard.js";
 
 export type BulkJobOutcome =
@@ -83,9 +97,10 @@ export function classifyBulkJobStatus(
 }
 
 /**
- * Normalize `bulkJob.gqlErrors` to a string array. TTD's samples select it as a
- * leaf and print it; the Workflows mirror types it `List[str]`. Anything else is
- * JSON-stringified rather than dropped.
+ * Normalize a leaf error field of `bulkJob` (`runtimeErrors`, `queryGqlErrors`)
+ * to a string array. TTD's page selects them as leaves without showing their
+ * type, so a string, a list, or an object is accepted; anything other than a
+ * string is JSON-stringified rather than dropped.
  */
 export function normalizeGqlErrors(value: unknown): string[] | undefined {
   if (value === null || value === undefined) return undefined;
@@ -94,6 +109,59 @@ export function normalizeGqlErrors(value: unknown): string[] | undefined {
     .filter((e) => e !== null && e !== undefined && e !== "")
     .map((e) => (typeof e === "string" ? e : JSON.stringify(e)));
   return out.length > 0 ? out : undefined;
+}
+
+/** One per-input failure of a bulk mutation job: TTD's `{ error, index }`. */
+export interface MutationGqlError {
+  error: string;
+  /** Position of the failed input in the submitted `mutationVariables`, when TTD gives it. */
+  index?: number;
+}
+
+/**
+ * Normalize `bulkJob { ... on BulkMutationJob { mutationGqlErrors { error index } } }`.
+ * `index` is the position of the failed input. An entry that is not an object
+ * is kept as its text rather than dropped.
+ */
+export function normalizeMutationGqlErrors(value: unknown): MutationGqlError[] | undefined {
+  if (value === null || value === undefined) return undefined;
+  const entries = Array.isArray(value) ? value : [value];
+  const out: MutationGqlError[] = [];
+  for (const raw of entries) {
+    if (raw === null || raw === undefined || raw === "") continue;
+    if (typeof raw !== "object") {
+      out.push({ error: String(raw) });
+      continue;
+    }
+    const e = raw as Record<string, unknown>;
+    const error =
+      typeof e.error === "string"
+        ? e.error
+        : e.error === undefined
+          ? JSON.stringify(e)
+          : JSON.stringify(e.error);
+    out.push({
+      error,
+      ...(typeof e.index === "number" && Number.isInteger(e.index) ? { index: e.index } : {}),
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Write a bulk job id as the GraphQL literal TTD's own example uses
+ * (`bulkJob(id: 123)`), which is valid whether the argument is an `ID` or an
+ * integer type. A variable would need the argument's declared type, which TTD's
+ * page does not show. Only characters that cannot break out of the literal are
+ * accepted.
+ */
+export function bulkJobIdLiteral(jobId: string): string {
+  if (/^\d+$/.test(jobId)) return jobId;
+  if (/^[A-Za-z0-9_-]+$/.test(jobId)) return JSON.stringify(jobId);
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `Invalid bulk job id ${JSON.stringify(jobId)}: TTD bulk job ids are numeric (for example 2989826).`
+  );
 }
 
 /**
@@ -158,11 +226,11 @@ export function describePayloadErrors(errors: unknown[]): string {
 }
 
 /**
- * `ttd_graphql_mutation_bulk` input cap. TTD's documented limit is said to be
- * 1000, but nothing about `createMutationBulk` is confirmed (#231): no TTD
- * source this repo can reach shows the operation, its input type or how an
- * entry binds to the mutation's variables. A job is not cancellable once
- * submitted, so the cap bounds how many writes one unverified call can start.
+ * `ttd_graphql_mutation_bulk` input cap. TTD allows up to 1000 inputs per job
+ * (its Bulk operations page). This server caps lower on purpose: the tool has
+ * never been run against TTD (#231), and a submitted job cannot be cancelled, so
+ * the cap bounds how many writes one not-yet-exercised call can start. Raise it
+ * once a sandbox run has confirmed the request shape.
  */
 export const MAX_MUTATION_BULK_INPUTS = 100;
 
@@ -176,19 +244,17 @@ export const MUTATION_BULK_PRODUCTION_OPT_IN = "TTD_ALLOW_UNVERIFIED_MUTATION_BU
  * Why `ttd_graphql_mutation_bulk` must not run against `graphqlUrl`, or
  * undefined when it may.
  *
- * TTD's published code (the `thetradedesk/platform` samples and the Workflows
- * SDKs for Python, Go and Java) documents `createQueryBulk(input: { query,
- * bulkJobCallback })` and polls `bulkJob`, but never `createMutationBulk`. Its
- * bulk-write sample uses a different flow entirely (`fileUpload`, then
- * `bulkCreateCampaigns(input: { advertiserId, fileId })`, then `jobProgress`).
- * So the operation this tool submits has never been confirmed, and it can
- * start up to MAX_MUTATION_BULK_INPUTS writes that cannot be cancelled.
- *
- * It runs against the sandbox, or any non-TTD host (a local mock), freely.
- * Against production it runs only when the operator sets
+ * TTD documents `createMutationBulk` (its Bulk operations page), but this server
+ * has never submitted one to TTD, and a submitted job cannot be cancelled and
+ * has no rollback. It can start up to MAX_MUTATION_BULK_INPUTS writes, so it
+ * runs freely against the sandbox, or any non-TTD host (a local mock), and
+ * against production only when the operator sets
  * TTD_ALLOW_UNVERIFIED_MUTATION_BULK=true. The check keys on the endpoint the
  * session actually calls, so a sandbox flag with a production override (which
  * the config guard already refuses) cannot slip through.
+ *
+ * The gate exists because the tool is unexercised, not because the operation is
+ * unknown; it can be lifted once a sandbox run has confirmed the request shape.
  */
 export function mutationBulkProductionRefusal(
   graphqlUrl: string,
@@ -200,10 +266,10 @@ export function mutationBulkProductionRefusal(
   }
   if (!isTtdProductionUrl(graphqlUrl)) return undefined;
   return (
-    "ttd_graphql_mutation_bulk is disabled against production TTD. The createMutationBulk " +
-    "operation it submits is not shown in any TTD source this server can check, and a " +
-    "submitted job cannot be cancelled (#231). Run it against the sandbox " +
-    "(TTD_USE_SANDBOX=true) to verify it first, or have the operator set " +
+    "ttd_graphql_mutation_bulk is disabled against production TTD until it has been run once " +
+    "against the sandbox. TTD documents createMutationBulk, but this server has never submitted " +
+    "one to TTD, and a submitted job cannot be cancelled or rolled back (#231). Run it against " +
+    "the sandbox (TTD_USE_SANDBOX=true) first, or have the operator set " +
     `${MUTATION_BULK_PRODUCTION_OPT_IN}=true to allow it in production. For writes today, ` +
     "use ttd_graphql_query with a single mutation, or the per-entity REST tools " +
     "(ttd_bulk_update_entities, ttd_bulk_manage_bid_lists)."
@@ -229,19 +295,20 @@ const NAME_START = /[_A-Za-z]/;
 const NAME_CONTINUE = /[_0-9A-Za-z]/;
 const NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/;
 
+export interface GraphqlToken {
+  kind: "punct" | "name" | "number" | "string" | "other";
+  text: string;
+}
+
 /**
- * Count lexical tokens as the GraphQL spec (October 2021, section 2.1) defines
- * them: punctuators (`...` is one), names, numbers and strings (block strings
- * included) each count once; whitespace, line terminators, commas and comments
- * are ignored. A character the lexer does not recognise counts as one token,
- * so a malformed document is never undercounted.
- *
- * This replaces a 60,000-character proxy for the 15,000-token limit that was
- * not conservative: punctuators are one character each, so 60k characters can
- * hold far more than 15k tokens.
+ * Split a GraphQL document into lexical tokens as the GraphQL spec (October
+ * 2021, section 2.1) defines them: punctuators (`...` is one), names, numbers
+ * and strings (block strings included). Whitespace, line terminators, commas and
+ * comments are ignored. A character the lexer does not recognise is one `other`
+ * token, so a malformed document is never undercounted.
  */
-export function countGraphqlLexicalTokens(source: string): number {
-  let count = 0;
+export function tokenizeGraphql(source: string): GraphqlToken[] {
+  const tokens: GraphqlToken[] = [];
   let i = 0;
   const n = source.length;
   while (i < n) {
@@ -254,21 +321,27 @@ export function countGraphqlLexicalTokens(source: string): number {
       while (i < n && source[i] !== "\n" && source[i] !== "\r") i++;
       continue;
     }
-    count++;
+    const start = i;
+    let kind: GraphqlToken["kind"];
     if (source.startsWith("...", i)) {
+      kind = "punct";
       i += 3;
     } else if (GRAPHQL_PUNCTUATORS.has(ch)) {
+      kind = "punct";
       i++;
     } else if (NAME_START.test(ch)) {
+      kind = "name";
       i++;
       while (i < n && NAME_CONTINUE.test(source[i])) i++;
     } else if (source.startsWith('"""', i)) {
+      kind = "string";
       i += 3;
       while (i < n && !source.startsWith('"""', i)) {
         i += source.startsWith('\\"""', i) ? 4 : 1;
       }
       i += 3;
     } else if (ch === '"') {
+      kind = "string";
       i++;
       while (i < n && source[i] !== '"' && source[i] !== "\n") {
         i += source[i] === "\\" ? 2 : 1;
@@ -276,8 +349,71 @@ export function countGraphqlLexicalTokens(source: string): number {
       i++;
     } else {
       const number = NUMBER.exec(source.slice(i, i + 64));
+      kind = number ? "number" : "other";
       i += number ? number[0].length : 1;
     }
+    tokens.push({ kind, text: source.slice(start, Math.min(i, n)) });
   }
-  return count;
+  return tokens;
+}
+
+/**
+ * Count lexical tokens, the unit of TTD's 15,000-token limit on a bulk
+ * mutation. This replaced a 60,000-character proxy that was not conservative:
+ * punctuators are one character each, so 60k characters can hold far more than
+ * 15k tokens.
+ */
+export function countGraphqlLexicalTokens(source: string): number {
+  return tokenizeGraphql(source).length;
+}
+
+/**
+ * What a bulk mutation string declares: how many mutation operations it holds
+ * (TTD allows one) and the variables of the first, which each `mutationVariables`
+ * entry is keyed by. Works on tokens, so a `$variable` or the word "mutation"
+ * inside a comment or string is not counted.
+ */
+export function inspectBulkMutation(source: string): { operations: number; variables: string[] } {
+  const tokens = tokenizeGraphql(source);
+  let braces = 0;
+  let parens = 0;
+  let operations = 0;
+  const variables: string[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t.kind === "punct") {
+      if (t.text === "{") braces++;
+      else if (t.text === "}") braces--;
+      else if (t.text === "(") parens++;
+      else if (t.text === ")") parens--;
+      continue;
+    }
+    // At brace and paren depth 0 only: a field, a variable (`$mutation`) or a
+    // word in a string is never an operation keyword.
+    const isOperationKeyword =
+      t.kind === "name" && t.text === "mutation" && braces === 0 && parens === 0;
+    if (!isOperationKeyword) continue;
+
+    operations++;
+    if (operations > 1) continue;
+
+    let j = i + 1;
+    if (tokens[j]?.kind === "name") j++; // the operation's name
+    if (tokens[j]?.kind === "punct" && tokens[j]!.text === "(") {
+      let depth = 0;
+      for (; j < tokens.length; j++) {
+        const u = tokens[j]!;
+        if (u.kind !== "punct") continue;
+        if (u.text === "(") depth++;
+        else if (u.text === ")") {
+          depth--;
+          if (depth === 0) break;
+        } else if (u.text === "$" && depth === 1 && tokens[j + 1]?.kind === "name") {
+          variables.push(tokens[j + 1]!.text);
+        }
+      }
+    }
+  }
+  return { operations, variables };
 }

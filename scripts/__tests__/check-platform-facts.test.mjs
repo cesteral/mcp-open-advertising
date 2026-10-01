@@ -65,6 +65,9 @@ describe("the shipped ledger", () => {
     ["tiktok.async_report_download_endpoint", "2026-09-30"],
     ["tiktok.async_task_statuses", "2026-09-30"],
     ["tiktok.async_report_create_options", "2026-09-30"],
+    ["ttd.bulk_mutation_variable_binding", "2026-10-01"],
+    ["ttd.bulk_job_poll_fields", "2026-10-01"],
+    ["ttd.bulk_mutation_limits", "2026-10-01"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {

@@ -191,7 +191,7 @@ describe("ttd graphql bulk tools", () => {
   // ── createMutationBulk ──
 
   describe("graphqlMutationBulkLogic", () => {
-    it("passes mutation + mutationVariables as array of JSON strings and returns jobId + status", async () => {
+    it("passes mutation + mutationVariables (JSON strings keyed by the variable name) and returns jobId + status", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
           createMutationBulk: { data: { id: "2989900", status: "QUEUED" }, errors: [] },
@@ -212,10 +212,8 @@ describe("ttd graphql bulk tools", () => {
       expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining("createMutationBulk"),
         {
-          input: {
-            mutation: expect.any(String),
-            mutationVariables: [JSON.stringify({ id: "c1", name: "New" })],
-          },
+          mutation: expect.any(String),
+          mutationVariables: [JSON.stringify({ input: { id: "c1", name: "New" } })],
         },
         expect.any(Object)
       );
@@ -225,12 +223,12 @@ describe("ttd graphql bulk tools", () => {
       const inputs = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `e${i}` }));
       expect(
         GraphqlMutationBulkInputSchema.safeParse({
-          mutation: "mutation { foo }",
+          mutation: "mutation ($input: X!) { foo(input: $input) { id } }",
           inputs: inputs(100),
         }).success
       ).toBe(true);
       const result = GraphqlMutationBulkInputSchema.safeParse({
-        mutation: "mutation { foo }",
+        mutation: "mutation ($input: X!) { foo(input: $input) { id } }",
         inputs: inputs(101),
       });
       expect(result.success).toBe(false);
@@ -239,17 +237,17 @@ describe("ttd graphql bulk tools", () => {
 
     it("counts the 15,000-token limit in GraphQL tokens, not characters", () => {
       // 16,000 tokens in 32,000 characters: the old 60,000-character proxy passed this.
-      const punctuatorHeavy = "mutation { a" + "()".repeat(8_000) + " }";
+      const punctuatorHeavy = "mutation ($input: X!) { a" + "()".repeat(8_000) + " }";
       expect(punctuatorHeavy.length).toBeLessThan(60_000);
       const tooMany = GraphqlMutationBulkInputSchema.safeParse({
         mutation: punctuatorHeavy,
         inputs: [{ id: "e1" }],
       });
       expect(tooMany.success).toBe(false);
-      expect(tooMany.error?.issues[0].message).toMatch(/16004 GraphQL lexical tokens.*15000/);
+      expect(tooMany.error?.issues[0].message).toMatch(/16011 GraphQL lexical tokens.*15000/);
 
       // 60,001 characters but only 4 tokens: the old proxy rejected this.
-      const longName = "mutation { " + "x".repeat(60_001) + " }";
+      const longName = "mutation ($input: X!) { " + "x".repeat(60_001) + " }";
       expect(
         GraphqlMutationBulkInputSchema.safeParse({ mutation: longName, inputs: [{ id: "e1" }] })
           .success
@@ -462,7 +460,7 @@ describe("ttd graphql bulk tools", () => {
             createdAt: "2026-04-14T10:49:55.64Z",
             completedAt: "2026-04-14T10:49:56.266Z",
             url: "https://results.example/job.json",
-            gqlErrors: null,
+            runtimeErrors: null,
           },
         },
       });
@@ -479,36 +477,14 @@ describe("ttd graphql bulk tools", () => {
       expect(result.terminal).toBe(true);
       expect(result.jobType).toBe("BulkJob");
       expect(result.resultUrl).toBe("https://results.example/job.json");
-      expect(result.gqlErrors).toBeUndefined();
+      expect(result.runtimeErrors).toBeUndefined();
+      expect(result.mutationGqlErrors).toBeUndefined();
       expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
-        expect.stringContaining("bulkJob"),
-        { id: "2989826" },
+        expect.stringContaining("bulkJob(id: 2989826)"),
+        undefined,
         expect.any(Object)
       );
       expect(GraphqlBulkJobOutputSchema.safeParse(result).success).toBe(true);
-    });
-
-    it("selects url and gqlErrors directly on bulkJob (TTD sample field set), with no guessed type fragments", async () => {
-      mockTtdService.graphqlQuery.mockResolvedValueOnce({
-        data: { bulkJob: { id: "1", status: "QUEUED" } },
-      });
-      await graphqlBulkJobLogic({ jobId: "1" }, createMockContext(), createMockSdkContext());
-
-      const doc = mockTtdService.graphqlQuery.mock.calls[0][0] as string;
-      const selection = doc.slice(doc.indexOf("bulkJob(id: $id) {"));
-      for (const field of ["id", "status", "url", "gqlErrors"]) {
-        expect(selection).toMatch(new RegExp(`^\\s+${field}$`, "m"));
-      }
-      expect(doc).not.toContain("... on");
-      // Workflows-REST-only names must not be requested: one unknown field fails the whole poll.
-      for (const field of [
-        "completionPercentage",
-        "runtimeErrors",
-        "rawResult",
-        "queryGqlErrors",
-      ]) {
-        expect(doc).not.toContain(field);
-      }
     });
 
     it.each([["QUEUED"], ["IN_PROGRESS"]])("reports %s as non-terminal", async (status) => {
@@ -528,14 +504,17 @@ describe("ttd graphql bulk tools", () => {
       expect(graphqlBulkJobResponseFormatter(result)[0].text).toContain("Poll again");
     });
 
-    it("treats PARTIAL_SUCCESS as terminal and surfaces gqlErrors with a no-rollback warning", async () => {
+    it("treats PARTIAL_SUCCESS as terminal and surfaces per-input errors with a no-rollback warning", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
           bulkJob: {
             id: "2989900",
             status: "PARTIAL_SUCCESS",
             url: "https://results.example/job.json",
-            gqlErrors: ["Input 17: bid list bl-17 not found", "Input 42: UNAUTHORIZED"],
+            mutationGqlErrors: [
+              { error: "bid list bl-17 not found", index: 17 },
+              { error: "UNAUTHORIZED", index: 42 },
+            ],
           },
         },
       });
@@ -548,26 +527,26 @@ describe("ttd graphql bulk tools", () => {
 
       expect(result.outcome).toBe("partial_success");
       expect(result.terminal).toBe(true);
-      expect(result.gqlErrors).toEqual([
-        "Input 17: bid list bl-17 not found",
-        "Input 42: UNAUTHORIZED",
+      expect(result.mutationGqlErrors).toEqual([
+        { error: "bid list bl-17 not found", index: 17 },
+        { error: "UNAUTHORIZED", index: 42 },
       ]);
 
       const text = graphqlBulkJobResponseFormatter(result)[0].text;
       expect(text).toContain("PARTIAL SUCCESS");
       expect(text).toContain("(terminal)");
-      expect(text).toContain("Input 17: bid list bl-17 not found");
+      expect(text).toContain("input #17: bid list bl-17 not found");
       expect(text).toMatch(/cannot be cancelled or rolled back/);
     });
 
-    it("treats FAILURE with no url as terminal and prints gqlErrors", async () => {
+    it("treats FAILURE with no url as terminal and prints the runtime errors", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
           bulkJob: {
             id: "2989901",
             status: "FAILURE",
             url: null,
-            gqlErrors: ["AUTHENTICATION_FAILURE"],
+            runtimeErrors: ["AUTHENTICATION_FAILURE"],
           },
         },
       });
@@ -763,7 +742,13 @@ describe("ttd graphql bulk tools", () => {
       ).rejects.toThrow("No session ID available");
 
       await expect(
-        graphqlMutationBulkLogic({ mutation: "mutation { foo }", inputs: [{ id: "1" }] }, ctx)
+        graphqlMutationBulkLogic(
+          {
+            mutation: "mutation ($input: X!) { foo(input: $input) { id } }",
+            inputs: [{ id: "1" }],
+          },
+          ctx
+        )
       ).rejects.toThrow("No session ID available");
 
       await expect(graphqlBulkJobLogic({ jobId: "job-1" }, ctx)).rejects.toThrow(
