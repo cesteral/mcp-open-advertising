@@ -575,8 +575,6 @@ export class TtdService {
     reportType: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await consumeTtdQuota(this.rateLimiter, this.httpClient);
-
     const mutationMap = {
       adGroup: { name: "adGroupReportExecute", typeEnum: "AdGroupReportType" },
       campaign: { name: "campaignReportExecute", typeEnum: "CampaignReportType" },
@@ -589,6 +587,10 @@ export class TtdService {
         `reportType must be a valid ${typeEnum} enum value. Use ttd_get_entity_report_types to discover supported values for this entity.`
       );
     }
+
+    // Draw the token only for a request that will be sent: a refused report
+    // type used to spend one on nothing (#236).
+    await consumeTtdQuota(this.rateLimiter, this.httpClient);
 
     const query = `
       mutation($entityId: ID!) {
