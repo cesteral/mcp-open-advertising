@@ -1,0 +1,251 @@
+{
+  "$comment": "Write tools (readOnlyHint === false) with no vendor-sourced wire-request test in their own package, checked by wire-request-coverage.test.mjs (#236). `uncovered` may only shrink: an entry whose tool is now covered, is no longer a write, or no longer exists fails the ratchet. `noUpstream` is for a write tool that never issues an upstream request (so there is no wire to assert); state why. Empty is the goal for `uncovered`.",
+  "uncovered": [
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_adjust_bids",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_bulk_create_entities",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_bulk_update_entities",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_bulk_update_status",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_create_entity",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_delete_entity",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_duplicate_entity",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_update_entity",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_upload_image",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_upload_video",
+      "reason": "linkedin-mcp has no vendor-sourced wire-request suite yet (#236); its /v2/ -> /rest/ migration is also incomplete (#210). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_adjust_bids",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_bulk_create_entities",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_bulk_update_entities",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_bulk_update_status",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_create_entity",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_delete_entity",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_duplicate_entity",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_submit_report",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_update_entity",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_upload_image",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_upload_video",
+      "reason": "snapchat-mcp has no vendor-sourced wire-request suite yet (#236). Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "tiktok-mcp",
+      "tool": "tiktok_submit_report",
+      "reason": "Its POST /report/task/create/ request is asserted in tests/services/tiktok-reporting-service.test.ts (#232/#259), which cites no vendor basis and is not a wire-request suite; move it into tiktok-wire-requests.test.ts with a // basis: citation."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_adjust_bids",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_archive_entities",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_bulk_create_entities",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_bulk_manage_bid_lists",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_bulk_update_entities",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_bulk_update_status",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_cancel_report_execution",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_create_entity",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_create_report_schedule",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_create_report_template",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_create_template_schedule",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_delete_entity",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_delete_report_schedule",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_duplicate_entity",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_execute_entity_report",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_graphql_cancel_bulk_job",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_graphql_mutation_bulk",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_graphql_query",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_graphql_query_bulk",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_manage_bid_list",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_manage_seed",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_rerun_report_schedule",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_submit_report",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_update_entity",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_update_report_schedule",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_update_report_template",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_upload_video",
+      "reason": "ttd-mcp has no vendor-sourced wire-request suite yet (#236); one is being written. Remove each entry as its tool gains a // basis:-cited wire test."
+    }
+  ],
+  "noUpstream": []
+}
