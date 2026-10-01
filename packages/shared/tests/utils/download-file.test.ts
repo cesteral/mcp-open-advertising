@@ -100,6 +100,62 @@ describe("downloadFileToBuffer", () => {
   });
 });
 
+/**
+ * Every media-upload tool fetches its caller-supplied `mediaUrl` through
+ * downloadFileToBuffer. It used to be a bare fetch: any host, and redirects
+ * followed unchecked, so a hosted server could be pointed at the metadata
+ * service directly or through a redirect.
+ */
+describe("downloadFileToBuffer URL and redirect checks", () => {
+  function stubRedirects(responses: Array<{ status: number; location?: string; body?: string }>) {
+    const sent: Array<{ url: string; redirect: RequestRedirect | undefined }> = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      sent.push({ url: String(input), redirect: init?.redirect });
+      const next = responses.shift();
+      if (!next) throw new Error("unexpected request");
+      return new Response(next.body ?? null, {
+        status: next.status,
+        headers: next.location ? { location: next.location } : {},
+      });
+    });
+    return sent;
+  }
+
+  it.each([
+    "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token",
+    "https://metadata.google.internal/computeMetadata/v1/",
+    "http://localhost:8080/admin",
+    "https://10.0.0.5/x.png",
+  ])("refuses %s without requesting it", async (url) => {
+    const sent = stubRedirects([{ status: 200, body: "secret" }]);
+    await expect(downloadFileToBuffer(url)).rejects.toThrow(/download URL/);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("refuses a redirect to an internal address before requesting it", async () => {
+    const sent = stubRedirects([
+      { status: 302, location: "http://169.254.169.254/computeMetadata/v1/" },
+    ]);
+    await expect(downloadFileToBuffer("https://cdn.example.com/a.png")).rejects.toThrow(
+      /redirect refused/
+    );
+    expect(sent).toEqual([{ url: "https://cdn.example.com/a.png", redirect: "manual" }]);
+  });
+
+  it("follows a redirect between public hosts, and still admits http", async () => {
+    const sent = stubRedirects([
+      { status: 301, location: "https://cdn2.example.com/a.png" },
+      { status: 200, body: "png" },
+    ]);
+    const result = await downloadFileToBuffer("http://cdn.example.com/a.png");
+    expect(result.buffer.toString("utf-8")).toBe("png");
+    expect(sent.map((s) => s.url)).toEqual([
+      "http://cdn.example.com/a.png",
+      "https://cdn2.example.com/a.png",
+    ]);
+  });
+});
+
 describe("ensureFilenameExtension", () => {
   it("returns the filename unchanged when it already has an extension", () => {
     expect(ensureFilenameExtension("report.pdf", "image/png")).toBe("report.pdf");

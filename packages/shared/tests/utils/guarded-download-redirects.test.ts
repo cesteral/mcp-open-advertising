@@ -104,6 +104,66 @@ describe("fetchGuardedDownload", () => {
     );
   });
 
+  // The URL itself is checked too, so a caller that never validated it (the
+  // media-upload `mediaUrl`, a platform-returned report URL) is covered.
+  it.each([
+    "https://169.254.169.254/latest/meta-data/",
+    "https://metadata.google.internal/computeMetadata/v1/",
+    "http://www.googleapis.com/x",
+  ])("refuses the first URL %s without requesting it", async (target) => {
+    const { sent } = stubFetch([{ status: 200, body: "secret" }]);
+    const error = await fetchGuardedDownload(target, { timeoutMs: 1000 }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(McpError);
+    expect((error as McpError).message).toMatch(/download URL/);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("applies allowedHostSuffixes to the first URL and to every hop", async () => {
+    const S3 = "https://bucket.s3.amazonaws.com/report.csv?X-Amz-Signature=1";
+    const allowed = { timeoutMs: 1000, allowedHostSuffixes: ["amazonaws.com"] };
+
+    stubFetch([]);
+    await expect(fetchGuardedDownload("https://evil.example/r.csv", allowed)).rejects.toThrow(
+      /not an allowed report host/
+    );
+    vi.restoreAllMocks();
+
+    const offHost = stubFetch([{ status: 302, location: "https://evil.example/r.csv" }]);
+    await expect(fetchGuardedDownload(S3, allowed)).rejects.toThrow(
+      /redirect refused: target host evil\.example is not an allowed report host/
+    );
+    expect(offHost.sent.map((s) => s.url)).toEqual([S3]);
+    vi.restoreAllMocks();
+
+    const onHost = stubFetch([
+      { status: 307, location: "https://bucket.s3.eu-west-1.amazonaws.com/report.csv?s=1" },
+      { status: 200, body: "a,b" },
+    ]);
+    const response = await fetchGuardedDownload(S3, allowed);
+    expect(await response.text()).toBe("a,b");
+    expect(onHost.sent).toHaveLength(2);
+  });
+
+  it("admits http only with allowHttp, and still refuses internal hosts then", async () => {
+    stubFetch([]);
+    await expect(
+      fetchGuardedDownload("http://cdn.example.com/a.mp4", { timeoutMs: 1000 })
+    ).rejects.toThrow(/must use https/);
+    vi.restoreAllMocks();
+
+    const { sent } = stubFetch([
+      { status: 301, location: "http://cdn2.example.com/a.mp4" },
+      { status: 302, location: "http://169.254.169.254/computeMetadata/v1/" },
+    ]);
+    await expect(
+      fetchGuardedDownload("http://cdn.example.com/a.mp4", { timeoutMs: 1000, allowHttp: true })
+    ).rejects.toThrow(/redirect refused: target must use a hostname/);
+    expect(sent.map((s) => s.url)).toEqual([
+      "http://cdn.example.com/a.mp4",
+      "http://cdn2.example.com/a.mp4",
+    ]);
+  });
+
   it("returns a non-redirect error response to the caller unchanged", async () => {
     stubFetch([{ status: 404, body: "nope" }]);
     const response = await fetchGuardedDownload(START, { timeoutMs: 1000 });

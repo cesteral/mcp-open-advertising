@@ -34,6 +34,13 @@ export interface DownloadUrlGuardOptions {
   allowedHostSuffixes?: readonly string[];
   /** Tool name for the error message. */
   toolName?: string;
+  /**
+   * Admit `http:` as well as `https:`. Only for anonymous fetches of public
+   * files whose tools already accept http (the media-upload `mediaUrl`): it
+   * relaxes the scheme rule and nothing else, so internal hosts, IP literals
+   * and embedded credentials are still refused.
+   */
+  allowHttp?: boolean;
 }
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata", "metadata.google.internal"]);
@@ -66,7 +73,7 @@ export function checkDownloadUrl(
     return "is not a valid URL";
   }
 
-  if (url.protocol !== "https:") {
+  if (url.protocol !== "https:" && !(options.allowHttp && url.protocol === "http:")) {
     return `must use https (got ${url.protocol.replace(/:$/, "")})`;
   }
   if (url.username || url.password) {
@@ -112,6 +119,17 @@ export const MAX_GUARDED_DOWNLOAD_REDIRECTS = 5;
 
 export interface GuardedDownloadOptions {
   timeoutMs: number;
+  /**
+   * Host allowlist applied to the first URL **and every redirect target**. Pass
+   * it when the allowlist protects more than a credential, e.g. amazon-dsp's
+   * `amazonaws.com` (the only host reports are documented to live on). Leave
+   * it out when the allowlist exists only to keep a credential on its API host
+   * (cm360, sa360): Google's media downloads may redirect off it, and a hop to
+   * another origin no longer carries the credential.
+   */
+  allowedHostSuffixes?: readonly string[];
+  /** As `DownloadUrlGuardOptions.allowHttp`, for the first URL and every hop. */
+  allowHttp?: boolean;
   context?: { requestId?: string };
   init?: RequestInit;
   /** Tool name for error messages. */
@@ -124,9 +142,12 @@ export interface GuardedDownloadOptions {
 }
 
 /**
- * GET a report download that `assertSafeDownloadUrl` already admitted,
- * following redirects by hand so each hop gets the same treatment:
+ * Fetch a download URL, following redirects by hand so each hop gets the same
+ * treatment:
  *
+ * - The URL itself is checked with `assertSafeDownloadUrl` (and the options'
+ *   `allowedHostSuffixes` / `allowHttp`) before anything is requested, so a
+ *   caller that never validated it, or a URL a platform returned, is covered.
  * - Every redirect target passes the generic checks of `checkDownloadUrl`
  *   (https, a public hostname, no IP literal, no embedded credentials) before
  *   it is requested. With `redirect: "follow"` only the first URL was checked,
@@ -138,13 +159,18 @@ export interface GuardedDownloadOptions {
  *   holds on every Node release and for custom credential headers, which the
  *   standard does not know about.
  *
- * The caller's host allowlist is not re-applied to redirect targets: a hop off
- * the allowlist no longer carries the credential the allowlist protects.
+ * `allowedHostSuffixes`, when given, applies to every hop as well.
  */
 export async function fetchGuardedDownload(
   url: string,
   options: GuardedDownloadOptions
 ): Promise<Response> {
+  const urlOptions: DownloadUrlGuardOptions = {
+    allowedHostSuffixes: options.allowedHostSuffixes,
+    allowHttp: options.allowHttp,
+  };
+  assertSafeDownloadUrl(url, { ...urlOptions, toolName: options.toolName });
+
   const credentialNames = new Set(
     ["authorization", ...(options.credentialHeaders ?? [])].map((h) => h.toLowerCase())
   );
@@ -171,7 +197,7 @@ export async function fetchGuardedDownload(
     if (hop >= MAX_GUARDED_DOWNLOAD_REDIRECTS) {
       throw new McpError(
         JsonRpcErrorCode.InvalidRequest,
-        `${prefix}report download redirected more than ${MAX_GUARDED_DOWNLOAD_REDIRECTS} times`
+        `${prefix}download redirected more than ${MAX_GUARDED_DOWNLOAD_REDIRECTS} times`
       );
     }
 
@@ -181,14 +207,14 @@ export async function fetchGuardedDownload(
     } catch {
       throw new McpError(
         JsonRpcErrorCode.InvalidRequest,
-        `${prefix}report download redirected to an invalid location`
+        `${prefix}download redirected to an invalid location`
       );
     }
-    const reason = checkDownloadUrl(next.href);
+    const reason = checkDownloadUrl(next.href, urlOptions);
     if (reason) {
       throw new McpError(
         JsonRpcErrorCode.InvalidRequest,
-        `${prefix}report download redirect refused: target ${reason}`
+        `${prefix}download redirect refused: target ${reason}`
       );
     }
 

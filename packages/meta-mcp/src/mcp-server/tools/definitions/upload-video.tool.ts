@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
   createLogger,
-  fetchWithTimeout,
+  fetchGuardedDownload,
   McpError,
   JsonRpcErrorCode,
   pollUntilComplete,
@@ -109,7 +109,15 @@ async function getRemoteContentLength(
   context?: RequestContext
 ): Promise<number | undefined> {
   try {
-    const response = await fetchWithTimeout(url, 30_000, context, { method: "HEAD" });
+    // The same guard as the download that follows: the caller's URL and every
+    // redirect hop must name a public host before the HEAD is sent. A refusal
+    // lands in the catch, and downloadFileToBuffer then refuses the URL itself.
+    const response = await fetchGuardedDownload(url, {
+      timeoutMs: 30_000,
+      context,
+      init: { method: "HEAD" },
+      allowHttp: true,
+    });
     if (!response.ok) {
       return undefined;
     }
