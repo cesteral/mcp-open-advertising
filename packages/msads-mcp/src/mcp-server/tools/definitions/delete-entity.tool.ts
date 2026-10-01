@@ -3,7 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import {
+  getEntityTypeEnum,
+  missingDeleteParentMessage,
+  type MsAdsEntityType,
+} from "../utils/entity-mapping.js";
 import { mapMsAdsItemOutcomes } from "../../../services/msads/partial-errors.js";
 import {
   elicitBulkDeleteConfirmation,
@@ -161,11 +165,24 @@ export async function deleteEntityLogic(
 
 /**
  * Symbolic effect dry-run for `delete_entity`. Validates every id is non-empty
- * and projects the would-be effect (an N-item delete of one entity kind).
- * Microsoft Ads has no native bulk validate, so both axes are symbolic. Pure.
+ * and that `additionalParams` carries the parent element the type's Delete
+ * request requires (`missingDeleteParentMessage`), and projects the would-be
+ * effect (an N-item delete of one entity kind). Microsoft Ads has no native
+ * bulk validate, so both axes are symbolic. Pure.
  */
 function buildBulkEffectDryRun(input: DeleteEntityInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
+  const missingParent = missingDeleteParentMessage(
+    input.entityType as MsAdsEntityType,
+    input.additionalParams
+  );
+  if (missingParent) {
+    validationErrors.push({
+      code: "MISSING_PARENT_ID",
+      message: missingParent,
+      field: "additionalParams",
+    });
+  }
   input.entityIds.forEach((entityId, i) => {
     if (!entityId || entityId.trim().length === 0) {
       validationErrors.push({
@@ -265,7 +282,11 @@ export const deleteEntityTool = {
   inputExamples: [
     {
       label: "Delete campaigns",
-      input: { entityType: "campaign", entityIds: ["123456", "789012"] },
+      input: {
+        entityType: "campaign",
+        entityIds: ["123456", "789012"],
+        additionalParams: { AccountId: "987654321" },
+      },
     },
   ],
   logic: deleteEntityLogic,

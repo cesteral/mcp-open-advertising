@@ -22,7 +22,11 @@ import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
-const baseInput = { entityType: "campaign", entityIds: ["123456", "789012"] };
+const baseInput = {
+  entityType: "campaign",
+  entityIds: ["123456", "789012"],
+  additionalParams: { AccountId: "987654321" },
+};
 
 describe("msads_delete_entity governance contract (effect class)", () => {
   let svc: { deleteEntity: ReturnType<typeof vi.fn> };
@@ -58,6 +62,60 @@ describe("msads_delete_entity governance contract (effect class)", () => {
     );
     expect(result.dryRun?.wouldSucceed).toBe(false);
     expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_ENTITY_ID");
+  });
+
+  // basis: each Delete operation's Request Body Elements (MicrosoftDocs/Advertising
+  // @ main, read 2026-10-01, advertising/bingads-13/campaign-management-service/):
+  // deletecampaigns.md AccountId, deleteadgroups.md CampaignId, deleteads.md
+  // AdGroupId, deleteadextensions.md AccountId, deletekeywords.md AdGroupId and
+  // AssetGroupId; deletebudgets.md / deleteaudiences.md / deletelabels.md none.
+  it.each([
+    ["campaign", "AccountId"],
+    ["adGroup", "CampaignId"],
+    ["ad", "AdGroupId"],
+    ["adExtension", "AccountId"],
+    ["keyword", "AdGroupId"],
+  ])("dry_run flags a %s delete without additionalParams.%s", async (entityType, field) => {
+    const result = await deleteEntityLogic(
+      { entityType, entityIds: ["1"], dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+    expect(result.dryRun?.validationErrors).toEqual([
+      expect.objectContaining({ code: "MISSING_PARENT_ID", field: "additionalParams" }),
+    ]);
+    expect(result.dryRun?.validationErrors[0]?.message).toContain(`additionalParams.${field}`);
+    expect(svc.deleteEntity).not.toHaveBeenCalled();
+  });
+
+  it("dry_run does not take a camelCase key for the request-body parent", async () => {
+    const result = await deleteEntityLogic(
+      { ...baseInput, additionalParams: { accountId: "987654321" }, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.wouldSucceed).toBe(false);
+  });
+
+  it.each([
+    ["campaign", { AccountId: 987654321 }],
+    ["adGroup", { CampaignId: "111" }],
+    ["ad", { AdGroupId: "222" }],
+    ["keyword", { AdGroupId: "222" }],
+    ["keyword", { AssetGroupId: "333" }],
+    ["adExtension", { AccountId: "987654321" }],
+    ["budget", undefined],
+    ["audience", undefined],
+    ["label", undefined],
+  ])("dry_run accepts a %s delete with %j", async (entityType, additionalParams) => {
+    const result = await deleteEntityLogic(
+      { entityType, entityIds: ["1"], additionalParams, dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.validationErrors).toEqual([]);
+    expect(result.dryRun?.wouldSucceed).toBe(true);
   });
 
   it("execute returns the batch effect identity + null-kind capability", async () => {
