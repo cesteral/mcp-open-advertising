@@ -209,9 +209,9 @@ describe("TTD long-tail governance contracts (effect class)", () => {
     expect(dry.dryRun?.expectedEffect?.summary).toEqual({ job_id: "j1" });
     expect(dry.dispatchedCapability).toEqual({ operation: "manage", canonicalEntityKind: null });
 
-    svc.graphqlQuery.mockResolvedValue({
-      data: { cancelBulkJob: { data: { id: "j1", status: "CANCELLED" } } },
-    });
+    svc.graphqlQuery
+      .mockResolvedValueOnce({ data: { cancelBulkJob: { data: { id: "j1" } } } })
+      .mockResolvedValueOnce({ data: { bulkJob: { id: "j1", status: "CANCELLED" } } });
     const exec = await graphqlCancelBulkJobLogic({ jobId: "j1" } as any, ctx, sdk);
     expect(exec.effect).toEqual({
       effectKind: "bulk_job_cancelled",

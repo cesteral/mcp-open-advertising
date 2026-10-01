@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import type { TtdService } from "../../../services/ttd/ttd-service.js";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -21,7 +22,11 @@ import type {
   DispatchedCapability,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
-import { MUTATION_ERROR_SELECTION, describePayloadErrors } from "../utils/graphql-bulk-job.js";
+import {
+  MUTATION_ERROR_SELECTION,
+  bulkJobIdLiteral,
+  describePayloadErrors,
+} from "../utils/graphql-bulk-job.js";
 
 const TOOL_NAME = "ttd_graphql_cancel_bulk_job";
 const TOOL_TITLE = "TTD GraphQL Cancel Bulk Job";
@@ -30,15 +35,43 @@ const TOOL_DESCRIPTION = `Cancel a running bulk GraphQL **query** job.
 ### ⚠️ Mutation jobs are NON-CANCELABLE
 This tool only works for bulk query jobs submitted via \`ttd_graphql_query_bulk\`. Bulk mutation jobs submitted via \`ttd_graphql_mutation_bulk\` cannot be cancelled — the API will return an error if you attempt to cancel one.`;
 
-const CANCEL_BULK_JOB_MUTATION = `mutation CancelBulkJob($input: CancelBulkJobInput!) {
-  cancelBulkJob(input: $input) {
+// basis: TTD's GraphQL "Bulk operations" page
+// (https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlBulkOperations,
+// read 2026-10-01 for #262 and recorded in platform-facts.json
+// `ttd.bulk_mutation_limits`, status verified) cancels a query job as
+// `cancelBulkJob(input: { jobId: 123 }) { data { id } }`: an inline input object
+// with the job id as an integer literal, selecting only `id`. The page never
+// names the input type, so none is guessed (this used to declare
+// `$input: CancelBulkJobInput!`, which fails validation if TTD's type has any
+// other name) and the id is written as the literal `bulkJobIdLiteral` builds for
+// the poll. `status` is not in the example's selection, so it is not asked of the
+// payload; it is read afterwards from the documented `bulkJob` poll fields.
+// `errors` keeps the payload-error selection this server uses for every bulk-job
+// mutation (TTD's mutation payload convention, docs/api/thetradedesk_graphql_api_docs.md
+// "Mutation Errors"), so a refused cancel is reported by TTD's own message.
+function cancelBulkJobMutation(jobId: string): string {
+  return `mutation CancelBulkJob {
+  cancelBulkJob(input: { jobId: ${bulkJobIdLiteral(jobId)} }) {
     data {
       id
-      status
     }
     ${MUTATION_ERROR_SELECTION}
   }
 }`;
+}
+
+// A subset of TTD's documented poll selection (`bulkJob(id: 123) { id ... status
+// ... }`, same page; fact `ttd.bulk_job_poll_fields`), used to report the job's
+// status after the cancel.
+function bulkJobStatusQuery(jobId: string): string {
+  return `query BulkJobStatus {
+  bulkJob(id: ${bulkJobIdLiteral(jobId)}) {
+    __typename
+    id
+    status
+  }
+}`;
+}
 
 export const GraphqlCancelBulkJobInputSchema = z
   .object({
@@ -99,8 +132,8 @@ export async function graphqlCancelBulkJobLogic(
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const result = (await ttdService.graphqlQuery(
-    CANCEL_BULK_JOB_MUTATION,
-    { input: { jobId: input.jobId } },
+    cancelBulkJobMutation(input.jobId),
+    undefined,
     context
   )) as Record<string, any>;
 
@@ -133,10 +166,10 @@ export async function graphqlCancelBulkJobLogic(
   }
 
   const jobId = job.id !== undefined && job.id !== null ? String(job.id) : input.jobId;
-  const status = job.status as string;
+  const status = await readBulkJobStatus(ttdService, jobId, context);
   const effect: EffectResult = {
     effectKind: "bulk_job_cancelled",
-    summary: { job_id: jobId, status },
+    summary: { job_id: jobId, ...(status !== undefined && { status }) },
   };
 
   return {
@@ -146,6 +179,29 @@ export async function graphqlCancelBulkJobLogic(
     dispatchedCapability,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * The job's status after a successful cancel, from the documented `bulkJob`
+ * poll. The cancel has already happened, so a failed or empty read leaves the
+ * status unreported instead of failing the call.
+ */
+async function readBulkJobStatus(
+  ttdService: Pick<TtdService, "graphqlQuery">,
+  jobId: string,
+  context: RequestContext
+): Promise<string | undefined> {
+  try {
+    const result = (await ttdService.graphqlQuery(
+      bulkJobStatusQuery(jobId),
+      undefined,
+      context
+    )) as Record<string, any> | undefined;
+    const status = (result?.data?.bulkJob ?? result?.bulkJob)?.status;
+    return typeof status === "string" && status.length > 0 ? status : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -188,7 +244,7 @@ export function graphqlCancelBulkJobResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Bulk job cancelled.\n\nJob ID: ${result.jobId}\nStatus: ${result.status}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk job cancelled.\n\nJob ID: ${result.jobId}\nStatus: ${result.status ?? "not reported (the status read after the cancel failed)"}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

@@ -466,7 +466,7 @@ query GetBulkQueryResultsExample {
 **Result:** a result small enough comes back inline as \`rawResult\`; otherwise fetch \`url\` with a plain HTTP GET (no \`TTD-Auth\` header) and parse it as JSON: a GraphQL response, \`{"data": {…}}\`, with results and errors merged into one file. It is **not** a CSV, so \`ttd_download_report\` cannot parse it. The file expires **one hour after \`completedAt\`**, and only the user who submitted the job can read the job.
 
 ### Cancel: \`cancelBulkJob\`
-\`ttd_graphql_cancel_bulk_job\` sends \`mutation CancelBulkJob($input: CancelBulkJobInput!) { cancelBulkJob(input: $input) { data { id status } errors { __typename ... on MutationError { field message } } } }\` with \`{ "input": { "jobId": "…" } }\`. TTD documents \`cancelBulkJob(input: { jobId: 123 }) { data { id } }\` (an integer literal, selecting only \`id\`) for bulk **query** jobs; mutation jobs cannot be cancelled. **Unconfirmed:** this tool's variable form, the \`CancelBulkJobInput\` type name, a string \`jobId\`, and \`status\` on the returned job differ from TTD's example.
+TTD documents \`cancelBulkJob(input: { jobId: 123 }) { data { id } }\` (an inline input with the id as an integer literal, selecting only \`id\`) for bulk **query** jobs; mutation jobs cannot be cancelled. \`ttd_graphql_cancel_bulk_job\` sends exactly that, plus \`errors { __typename ... on MutationError { field message } }\` so a refused cancel comes back with TTD's message, and then reads the job's \`status\` with \`bulkJob(id: 123) { __typename id status }\`. A non-numeric id is written as a quoted literal, as the poll writes it. **Unconfirmed by a live run:** that the payload has the \`errors\` field (TTD's example does not select it).
 
 ---
 
