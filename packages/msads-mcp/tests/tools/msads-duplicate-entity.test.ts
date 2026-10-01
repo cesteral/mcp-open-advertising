@@ -13,6 +13,7 @@ const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
 import {
   duplicateEntityLogic,
+  duplicateEntityTool,
   DuplicateEntityInputSchema,
 } from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 import type { SessionServices } from "../../src/services/session-services.js";
@@ -95,5 +96,13 @@ describe("msads_duplicate_entity", () => {
       DuplicateEntityInputSchema.safeParse({ entityType: "ad", accountId: "a", entityId: "e" })
         .success
     ).toBe(false);
+  });
+});
+
+// msads #15: the service sends one Add for the entity itself
+// (msads-service.ts duplicateEntity), so the copy has no children.
+describe("msads_duplicate_entity description", () => {
+  it("says only the entity itself is copied", () => {
+    expect(duplicateEntityTool.description).toContain("Only the entity itself is copied");
   });
 });

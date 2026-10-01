@@ -29,6 +29,8 @@ Creates a copy of the entity (clone via read + create — MS Ads has no native c
 The copy preserves the source's settings unless overridden via \`options\`, except
 \`Status\`: the copy is always created \`Paused\` (a \`Status\` in \`options\` is ignored), so it
 cannot spend until you activate it with msads_update_entity.
+Only the entity itself is copied (one Add call): a campaign copy has none of the source's ad
+groups, ads, keywords or criteria. Recreate those under the new campaign ID.
 Use \`options\` (e.g. \`{ "Name": "Copy of …" }\`) to rename the copy.`;
 
 /** Pull the first created ID out of an Add response (`*Ids: [...]`). */
