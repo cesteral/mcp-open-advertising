@@ -33,7 +33,12 @@ const TOOL_DESCRIPTION = `Update a TikTok Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-TikTok uses POST for updates with entity ID in the body. Only provided fields are modified.
+TikTok uses POST for updates (\`{entity}/update/\`) with the entity ID in the body:
+- **campaign / adGroup:** the body is \`advertiser_id\`, the entity ID and the fields in \`data\`.
+  Campaign updates cannot change \`budget_mode\` (TikTok's CampaignUpdateBody has no such field).
+- **ad:** the body is TikTok's AdUpdateBody: \`adgroup_id\` (from \`data\`, else read from the ad)
+  and \`creatives: [{ ad_id, ...fields }]\`. Whether TikTok keeps creative fields the body omits is
+  not documented, so include every creative field the ad should keep.
 
 **Gotchas:**
 - Use \`tiktok_bulk_update_status\` for status-only changes (more efficient)

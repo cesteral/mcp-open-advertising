@@ -64,6 +64,7 @@ import {
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 import {
   updateEntityLogic,
+  updateEntityTool,
   UpdateEntityInputSchema,
 } from "../../src/mcp-server/tools/definitions/update-entity.tool.js";
 import {
@@ -309,6 +310,16 @@ describe("tiktok_create_entity → {campaign,adgroup,ad}/create/", () => {
 });
 
 describe("tiktok_update_entity → {campaign,adgroup,ad}/update/", () => {
+  // tiktok #14. basis: SDK f809c39 `ad_update_body.py` (adgroup_id, advertiser_id
+  // and creatives required; ad_id inside creatives[]) and `CampaignUpdateBody.md`
+  // (no budget_mode). "Only provided fields are modified" was false for ads,
+  // whose body always carries adgroup_id and a creatives[] entry.
+  it("describes what each entity type's update body carries", () => {
+    expect(updateEntityTool.description).not.toContain("Only provided fields are modified");
+    expect(updateEntityTool.description).toContain("AdUpdateBody");
+    expect(updateEntityTool.description).toContain("budget_mode");
+  });
+
   it("campaign → pre-state GET, then POST campaign/update/ with campaign_id in the body", async () => {
     stub.route({
       method: "GET",
