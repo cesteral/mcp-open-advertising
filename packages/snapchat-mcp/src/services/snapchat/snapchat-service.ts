@@ -285,31 +285,42 @@ export class SnapchatService {
     return snapchatQuotaKey(this.httpClient);
   }
 
+  /**
+   * Path params of the collection route an update is PUT to: the entity's own
+   * parent (`ad_account_id`, `campaign_id` or `ad_squad_id` on the fetched
+   * entity). A caller-supplied parent that names a different one is refused:
+   * the route would name one parent while the merged body (copied from the
+   * entity) names another. The caller's value is used only when the entity
+   * carries no parent field.
+   */
   private resolveUpdatePathParams<T extends SnapchatEntityType>(
     entityType: T,
+    entityId: string,
     entity: SnapchatEntityMap[T],
     filters: Record<string, string>
   ): Record<string, string> {
-    switch (entityType) {
-      case "campaign":
-      case "creative":
-        return {
-          adAccountId:
-            filters.adAccountId ??
-            String((entity as { ad_account_id?: string }).ad_account_id ?? this.adAccountId),
-        };
-      case "adGroup":
-        return {
-          campaignId:
-            filters.campaignId ?? String((entity as { campaign_id?: string }).campaign_id),
-        };
-      case "ad":
-        return {
-          adSquadId: filters.adSquadId ?? String((entity as { ad_squad_id?: string }).ad_squad_id),
-        };
-      default:
-        return {};
+    const { bodyField, pathParam } = PARENT_LINKS[entityType];
+    const raw = (entity as unknown as Record<string, unknown>)[bodyField];
+    const own = raw === undefined || raw === null || raw === "" ? undefined : String(raw);
+    const given = filters[pathParam];
+
+    if (own !== undefined && given !== undefined && own !== given) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${getEntityConfig(entityType).displayName} ${entityId} belongs to ${bodyField} '${own}', ` +
+          `not ${pathParam} '${given}'. An update is sent to its own parent's route; ` +
+          `pass ${pathParam} '${own}' (or update it in a separate call).`
+      );
     }
+
+    const parentId = own ?? given ?? (pathParam === "adAccountId" ? this.adAccountId : undefined);
+    if (parentId === undefined) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${getEntityConfig(entityType).displayName} ${entityId} carries no ${bodyField}; pass ${pathParam}.`
+      );
+    }
+    return { [pathParam]: parentId };
   }
 
   private async buildMergedUpdateItem<T extends SnapchatEntityType>(
@@ -320,17 +331,18 @@ export class SnapchatService {
     context?: RequestContext
   ): Promise<{ mergedItem: Record<string, unknown>; pathParams: Record<string, string> }> {
     const currentEntity = await this.getEntity(entityType, entityId, context);
-    const pathParams = this.resolveUpdatePathParams(entityType, currentEntity, filters);
+    const pathParams = this.resolveUpdatePathParams(entityType, entityId, currentEntity, filters);
     const mergedItem: Record<string, unknown> = {
       ...(currentEntity as unknown as Record<string, unknown>),
       ...data,
       id: entityId,
     };
 
-    // The route's parent comes from the caller's filter when given, the body's
-    // from the entity as read (or the patch). Refuse a disagreement rather than
-    // PUT an entity into another parent's collection — the same rule
-    // `resolveCreateTarget` applies to creates (#236).
+    // The route is the entity's own parent (resolveUpdatePathParams), but the
+    // body's parent field can still differ when `data` patches it: an update
+    // cannot move an entity to another parent through this route. Refuse that
+    // rather than PUT a body naming one parent into another's collection — the
+    // same rule `resolveCreateTarget` applies to creates (#236).
     const { bodyField, pathParam } = PARENT_LINKS[entityType];
     const bodyParent = mergedItem[bodyField];
     const routeParent = pathParams[pathParam];
@@ -344,8 +356,8 @@ export class SnapchatService {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
         `${getEntityConfig(entityType).displayName} ${entityId} has ${bodyField} '${String(bodyParent)}', ` +
-          `but ${pathParam} '${routeParent}' was given. The update is sent to the parent's collection, ` +
-          `so the two must match; pass ${pathParam} '${String(bodyParent)}'.`
+          `but its update is sent to ${pathParam} '${routeParent}'. An update cannot move it to another ` +
+          `parent; leave ${bodyField} out of data.`
       );
     }
 
@@ -839,8 +851,12 @@ export class SnapchatService {
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const config = getEntityConfig(entityType);
 
+    // The first PUT's tokens are taken before the reads, as the bulk capacity
+    // model (`snapchatBulkCost.bulkUpdate`, leading consume) projects.
     await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
 
+    // Every item is read (and its parent resolved) before anything is written,
+    // so a parent mismatch refuses the whole batch with nothing sent.
     const mergedItems = await Promise.all(
       items.map(async (item) => {
         const { mergedItem, pathParams } = await this.buildMergedUpdateItem(
@@ -854,19 +870,36 @@ export class SnapchatService {
       })
     );
 
-    const collectionPath = interpolatePath(
-      config.updatePath,
-      mergedItems[0]?.pathParams ?? filters
-    );
-    const body = {
-      [config.responseKey]: mergedItems.map((item) => item.mergedItem),
-    };
-    const response = await this.httpClient.put(collectionPath, body, context);
-    const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
+    // The update route is the parent's collection, so items under different
+    // parents (possible only when no parent filter is given; every tool passes
+    // one) go out as one PUT per parent instead of all to the first item's
+    // route. Each PUT after the first takes its own write tokens.
+    const groups = new Map<string, number[]>();
+    mergedItems.forEach((item, i) => {
+      const path = interpolatePath(config.updatePath, item.pathParams);
+      groups.set(path, [...(groups.get(path) ?? []), i]);
+    });
+
+    const outcomes: Array<{ success: boolean; error?: string } | undefined> = [];
+    let firstPut = true;
+    for (const [collectionPath, indices] of groups) {
+      if (!firstPut) {
+        await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
+      }
+      firstPut = false;
+      const body = {
+        [config.responseKey]: indices.map((i) => mergedItems[i]?.mergedItem),
+      };
+      const response = await this.httpClient.put(collectionPath, body, context);
+      const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
+      indices.forEach((itemIndex, position) => {
+        outcomes[itemIndex] = bulkResults[position];
+      });
+    }
 
     return {
       results: items.map((item, i) => {
-        const r = bulkResults[i];
+        const r = outcomes[i];
         return {
           entityId: item.entityId,
           success: r?.success ?? false,
