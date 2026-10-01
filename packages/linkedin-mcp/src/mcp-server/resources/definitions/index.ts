@@ -39,7 +39,11 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "linkedin_bulk_update_entities",
       "linkedin_adjust_bids",
     ],
-    targeting: ["linkedin_search_targeting", "linkedin_get_targeting_options"],
+    targeting: [
+      "linkedin_search_targeting",
+      "linkedin_get_targeting_options",
+      "linkedin_get_audience_count",
+    ],
     specialized: [
       "linkedin_duplicate_entity",
       "linkedin_get_delivery_forecast",

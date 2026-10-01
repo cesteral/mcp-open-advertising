@@ -494,6 +494,7 @@
         "linkedin_get_targeting_options",
         "linkedin_duplicate_entity",
         "linkedin_get_delivery_forecast",
+        "linkedin_get_audience_count",
         "linkedin_get_ad_preview",
         "linkedin_validate_entity",
         "linkedin_upload_image",

@@ -65,16 +65,16 @@ const ENTITY_EXAMPLES: Record<string, string> = {
         "and": [
           {
             "or": {
-              "urn:li:adTargetingFacet:geos": [
+              "urn:li:adTargetingFacet:locations": [
                 "urn:li:geo:103644278"
               ]
             }
           },
           {
             "or": {
-              "urn:li:adTargetingFacet:memberSeniorities": [
-                "urn:li:adSeniority:5",
-                "urn:li:adSeniority:6"
+              "urn:li:adTargetingFacet:seniorities": [
+                "urn:li:seniority:3",
+                "urn:li:seniority:4"
               ]
             }
           }
