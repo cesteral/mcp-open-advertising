@@ -9,7 +9,7 @@ import {
   ComputedMetricsFlagSchema,
   createServiceDownloadedReportView,
   extractReportIdFromUrl,
-  fetchWithTimeout,
+  fetchGuardedDownload,
   formatReportViewResponse,
   parseCSV,
   ReportViewInputSchema,
@@ -78,6 +78,9 @@ const TTD_COMPUTED_METRIC_ALIASES = {
 };
 
 const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
+
+/** The same hosts as `ALLOWED_REPORT_HOSTNAME_PATTERN`, applied to every redirect hop. */
+const TTD_REPORT_DOWNLOAD_HOST_SUFFIXES = ["thetradedesk.com", "amazonaws.com"] as const;
 
 function isAllowedReportUrl(rawUrl: string): boolean {
   try {
@@ -152,7 +155,17 @@ export async function downloadReportLogic(
         ? { headers: { "TTD-Auth": await authAdapter.getAccessToken() } }
         : {};
 
-      const response = await fetchWithTimeout(input.downloadUrl, 60_000, undefined, requestInit);
+      // Redirects are followed by hand: every hop must be on a TTD or S3 host
+      // and pass the SSRF checks, and `TTD-Auth` is dropped once a hop changes
+      // origin. No runtime strips a custom header on redirect, so with
+      // `redirect: "follow"` a TTD host redirecting to S3 handed it the token.
+      const response = await fetchGuardedDownload(input.downloadUrl, {
+        timeoutMs: 60_000,
+        init: requestInit,
+        toolName: TOOL_NAME,
+        allowedHostSuffixes: TTD_REPORT_DOWNLOAD_HOST_SUFFIXES,
+        credentialHeaders: ["TTD-Auth"],
+      });
       if (!response.ok) {
         throw new McpError(
           mapHttpStatusToJsonRpc(response.status),

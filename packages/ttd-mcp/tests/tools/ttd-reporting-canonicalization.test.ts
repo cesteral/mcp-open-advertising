@@ -16,9 +16,20 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 // fetchWithTimeout lives in the shared package — mock it directly.
 vi.mock("@cesteral/shared", async () => {
   const actual = await vi.importActual<typeof import("@cesteral/shared")>("@cesteral/shared");
+  const fetchWithTimeout = vi.fn();
   return {
     ...actual,
-    fetchWithTimeout: vi.fn(),
+    fetchWithTimeout,
+    // Downloads go through the redirect-guarded fetch; route it to the same
+    // mock with fetchWithTimeout's argument order so the assertions read alike.
+    // The guard itself is exercised against a stubbed global fetch elsewhere.
+    fetchGuardedDownload: (
+      url: string,
+      o: { timeoutMs: number; context?: unknown; init?: RequestInit }
+    ) =>
+      o.init === undefined
+        ? fetchWithTimeout(url, o.timeoutMs, o.context)
+        : fetchWithTimeout(url, o.timeoutMs, o.context, o.init),
     spillBodyToGcs: mockSpillBodyToGcs,
   };
 });
