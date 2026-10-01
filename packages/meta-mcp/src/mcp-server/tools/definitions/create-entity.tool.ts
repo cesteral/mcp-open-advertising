@@ -211,7 +211,10 @@ export const createEntityTool = {
       entityIdArgs: ["adAccountId"],
       readPartner: {
         toolName: "meta_get_entity",
-        argMap: { entityType: "entityType", adAccountId: "adAccountId" },
+        // meta_get_entity takes entityType + entityId; the id only exists after
+        // the create, so only the discriminator is mapped (meta #22: the map
+        // used to name `adAccountId`, which meta_get_entity does not accept).
+        argMap: { entityType: "entityType" },
       },
       schemaVersion: 1,
       contractId: "meta.create_entity.v1",

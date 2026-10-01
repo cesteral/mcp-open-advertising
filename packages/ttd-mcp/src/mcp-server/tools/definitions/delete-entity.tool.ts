@@ -241,16 +241,13 @@ export const deleteEntityTool = {
       entityIdArgs: ["entityId"],
       readPartner: {
         toolName: "ttd_get_entity",
-        // Self-contained: ttd_get_entity needs the entityType discriminator plus
-        // the parent IDs (advertiserId for campaign, campaignId for adGroup) to
-        // resolve a read, so a consumer can build a valid reconciliation read
-        // from the manifest alone — not just the entityId.
+        // Self-contained: ttd_get_entity takes exactly entityType + entityId
+        // (GET /v3/{type}/{id} needs no parent), so a consumer can build the
+        // reconciliation read from the manifest alone. The parent IDs this map
+        // used to carry are not ttd_get_entity inputs.
         argMap: {
           entityId: "entityId",
           entityType: "entityType",
-          advertiserId: "advertiserId",
-          campaignId: "campaignId",
-          adGroupId: "adGroupId",
         },
       },
       schemaVersion: 1,
