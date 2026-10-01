@@ -676,6 +676,36 @@ describe("snapchat_bulk_update_status → reads, then ONE collection PUT", () =>
     expect(remaining()).toBe(LIMIT - 3 - 3);
   });
 
+  it("ad squads without campaignId → one PUT to each squad's own campaign route (snapchat #16)", async () => {
+    const SQUAD_2 = "5e7f0a1b-0000-4000-8000-0000000000a2";
+    store.set(SQUAD_2, { ...SQUAD_ENTITY, id: SQUAD_2, campaign_id: CAMP_2 });
+
+    const out = await bulkUpdateStatusLogic(
+      BulkUpdateStatusInputSchema.parse({
+        entityType: "adGroup",
+        adAccountId: ACCOUNT,
+        entityIds: [SQUAD, SQUAD_2],
+        operationStatus: "PAUSED",
+      }),
+      ctx,
+      sdk
+    );
+
+    // basis: unverified (code-only) — the route is each ad squad's own
+    // campaign_id (snapchat-service.ts resolveUpdatePathParams), so a batch
+    // spanning campaigns is one PUT per campaign, in first-seen order.
+    const puts = snapWrites();
+    expect(puts.map((r) => `${r.method} ${r.path}`)).toEqual([
+      `PUT /v1/campaigns/${CAMP}/adsquads`,
+      `PUT /v1/campaigns/${CAMP_2}/adsquads`,
+    ]);
+    expect(puts[0]!.body).toEqual({ adsquads: [merged(SQUAD, { status: "PAUSED" })] });
+    expect(puts[1]!.body).toEqual({
+      adsquads: [{ ...SQUAD_ENTITY, id: SQUAD_2, campaign_id: CAMP_2, status: "PAUSED" }],
+    });
+    expect(out).toMatchObject({ confirmed: true, successCount: 2, failureCount: 0 });
+  });
+
   it("an adSquadId that is not the ad's own squad is refused before the PUT", async () => {
     await expect(
       bulkUpdateStatusLogic(
