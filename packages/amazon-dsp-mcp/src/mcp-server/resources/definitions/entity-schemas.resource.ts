@@ -45,7 +45,7 @@ function buildEntitySchemaMarkdown(entityType: AmazonDspCanonicalEntityType): st
   }
 
 ## Required Fields For Create
-${contract.createFields.includes("adProduct") ? '\`adProduct: "AMAZON_DSP"\` is added by the server' : "No \`adProduct\` on this resource"}${contract.createStateMustBe ? `; \`state\` defaults to ${contract.createStateMustBe} (the only accepted create state)` : ""}.
+${contract.createFields.includes("adProduct") ? '`adProduct: "AMAZON_DSP"` is added by the server' : "No `adProduct` on this resource"}${contract.createStateMustBe ? `; \`state\` defaults to ${contract.createStateMustBe} (the only accepted create state)` : ""}.
 ${requiredFields}
 
 ## Read-Only Fields

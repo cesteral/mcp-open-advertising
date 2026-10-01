@@ -27,6 +27,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mcpConfig } from "../../src/config/index.js";
+import { rateLimiter } from "../../src/utils/platform.js";
 import {
   listEntitiesLogic,
   ListEntitiesInputSchema,
@@ -831,5 +832,240 @@ describe("duplicate_entity", () => {
     });
     expect(result.after?.platformEntityId).toBe("new-adGroups-1");
     expect(result.after?.status.platformRaw).toBe("PAUSED");
+  });
+});
+
+/**
+ * The no-op paths, ported from the pre-#234 `/dsp/*` wire test (#236): a
+ * declined confirmation and a `dry_run` must send no write — on the Unified
+ * surface (`create|update|delete/{resource}`) or the legacy archive PUT. A
+ * dry run may still read pre-state through `query/{resource}`.
+ */
+describe("no-op paths send no write", () => {
+  const isWrite = (req: WireRequest) =>
+    req.method !== "GET" && !/^\/adsApi\/v1\/query\//.test(req.path);
+  const writesSent = () => apiRequests().filter(isWrite);
+  const base = { profileId: PROFILE, accountId: ACCOUNT };
+
+  beforeEach(() => {
+    stub.route({
+      method: "POST",
+      host: ADS_HOST,
+      path: /^\/adsApi\/v1\/query\//,
+      response: unifiedResponder({ name: "Existing", state: "ENABLED", bid: { baseBid: 1 } }),
+    });
+  });
+
+  it.each([
+    [
+      "delete_entity",
+      () =>
+        deleteEntityLogic(
+          DeleteEntityInputSchema.parse({ ...base, entityType: "target", entityIds: ["t-1"] }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "delete_entity (legacy archive)",
+      () =>
+        deleteEntityLogic(
+          DeleteEntityInputSchema.parse({ ...base, entityType: "order", entityIds: ["c-1"] }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "bulk_update_status",
+      () =>
+        bulkUpdateStatusLogic(
+          BulkUpdateStatusInputSchema.parse({
+            ...base,
+            entityType: "lineItem",
+            entityIds: ["ag-1"],
+            operationStatus: "PAUSED",
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "bulk_update_entities",
+      () =>
+        bulkUpdateEntitiesLogic(
+          BulkUpdateEntitiesInputSchema.parse({
+            ...base,
+            entityType: "order",
+            // A budget is a sensitive field, so even one item prompts.
+            items: [{ entityId: "c-1", data: { budgets: [monetaryBudget(7000, "DAILY")] } }],
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "adjust_bids",
+      () =>
+        adjustBidsLogic(
+          AdjustBidsInputSchema.parse({
+            ...base,
+            adjustments: [{ lineItemId: "ag-1", bidAmount: 2 }],
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+  ])("%s: a declined confirmation sends no write", async (_name, run) => {
+    sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
+    await run().catch(() => undefined);
+    expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
+    expect(writesSent()).toEqual([]);
+  });
+
+  it.each([
+    [
+      "create_entity",
+      () =>
+        createEntityLogic(
+          CreateEntityInputSchema.parse({
+            ...base,
+            entityType: "creativeAssociation",
+            data: { adGroupId: "ag-1", adId: "ad-1", state: "ENABLED" },
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "update_entity",
+      () =>
+        updateEntityLogic(
+          UpdateEntityInputSchema.parse({
+            ...base,
+            entityType: "order",
+            entityId: "c-1",
+            data: { name: "Renamed" },
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "delete_entity",
+      () =>
+        deleteEntityLogic(
+          DeleteEntityInputSchema.parse({
+            ...base,
+            entityType: "target",
+            entityIds: ["t-1"],
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "bulk_update_status",
+      () =>
+        bulkUpdateStatusLogic(
+          BulkUpdateStatusInputSchema.parse({
+            ...base,
+            entityType: "lineItem",
+            entityIds: ["ag-1"],
+            operationStatus: "PAUSED",
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "bulk_create_entities",
+      () =>
+        bulkCreateEntitiesLogic(
+          BulkCreateEntitiesInputSchema.parse({
+            ...base,
+            entityType: "creativeAssociation",
+            items: [{ adGroupId: "ag-1", adId: "ad-1", state: "ENABLED" }],
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "bulk_update_entities",
+      () =>
+        bulkUpdateEntitiesLogic(
+          BulkUpdateEntitiesInputSchema.parse({
+            ...base,
+            entityType: "order",
+            items: [{ entityId: "c-1", data: { name: "Renamed" } }],
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "adjust_bids",
+      () =>
+        adjustBidsLogic(
+          AdjustBidsInputSchema.parse({
+            ...base,
+            adjustments: [{ lineItemId: "ag-1", bidAmount: 2 }],
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+    [
+      "duplicate_entity",
+      () =>
+        duplicateEntityLogic(
+          DuplicateEntityInputSchema.parse({
+            ...base,
+            entityType: "lineItem",
+            entityId: "ag-1",
+            dry_run: true,
+          }),
+          ctx,
+          sdk as any
+        ),
+    ],
+  ])("%s: dry_run sends no write and does not prompt", async (_name, run) => {
+    await run();
+    expect(sdk.elicitInput).not.toHaveBeenCalled();
+    expect(writesSent()).toEqual([]);
+  });
+});
+
+describe("metering", () => {
+  it("a Unified write draws 3 from amazon_dsp:write; its pre-state query draws 1 from amazon_dsp:read", async () => {
+    stub.route({
+      method: "POST",
+      host: ADS_HOST,
+      path: /^\/adsApi\/v1\//,
+      response: unifiedResponder({ bid: { baseBid: 1 } }),
+    });
+    const LIMIT = mcpConfig.amazonDspRateLimitPerMinute;
+    await adjustBidsLogic(
+      AdjustBidsInputSchema.parse({
+        profileId: PROFILE,
+        accountId: ACCOUNT,
+        adjustments: [{ lineItemId: "ag-1", bidAmount: 2 }],
+      }),
+      ctx,
+      sdk as any
+    );
+    expect(apiRequests().map((r) => r.path)).toEqual([
+      "/adsApi/v1/query/adGroups",
+      "/adsApi/v1/update/adGroups",
+    ]);
+    expect(rateLimiter.getRemainingTokens("amazon_dsp:read")).toBe(LIMIT - 1);
+    expect(rateLimiter.getRemainingTokens("amazon_dsp:write")).toBe(LIMIT - 3);
   });
 });
