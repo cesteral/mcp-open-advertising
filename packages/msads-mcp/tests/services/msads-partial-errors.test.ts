@@ -8,6 +8,7 @@ import {
   collectMsAdsBatchErrors,
   mapMsAdsItemOutcomes,
   assertMsAdsWriteSucceeded,
+  mergeMsAdsDeleteResults,
 } from "../../src/services/msads/partial-errors.js";
 
 /**
@@ -43,6 +44,18 @@ function createMockHttpClient() {
 }
 
 describe("partial-errors helpers", () => {
+  it("mergeMsAdsDeleteResults rebases indices and keeps an unindexed error inside its chunk", () => {
+    const merged = mergeMsAdsDeleteResults([
+      { offset: 0, size: 2, result: { PartialErrors: [batchError(1)] } },
+      { offset: 2, size: 2, result: { PartialErrors: [{ ...batchError(0), Index: null }] } },
+      { offset: 4, size: 1, result: { PartialErrors: [{ ...batchError(0), Index: null }] } },
+    ]);
+    const outcomes = mapMsAdsItemOutcomes(merged, 5);
+    expect(outcomes.map((o) => o.success)).toEqual([true, false, false, false, false]);
+    expect(outcomes[2]!.error).toMatch(/Outcome unknown/);
+    expect(outcomes[4]!.error).not.toMatch(/Outcome unknown/);
+  });
+
   it("collects PartialErrors and NestedPartialErrors (BatchErrorCollection)", () => {
     const errors = collectMsAdsBatchErrors({
       PartialErrors: [batchError(2)],

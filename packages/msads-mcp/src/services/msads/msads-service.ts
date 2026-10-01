@@ -15,6 +15,7 @@ import { consumeMsAdsQuota, type MsAdsQuotaScope } from "./rate-limit-keys.js";
 import {
   assertMsAdsWriteSucceeded,
   mapMsAdsItemOutcomes,
+  mergeMsAdsDeleteResults,
   type MsAdsItemOutcome,
 } from "./partial-errors.js";
 import type {
@@ -403,13 +404,60 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    await this.consumeQuota("write", 3);
-    const body: Record<string, unknown> = {
-      [config.idsField]: entityIds.map(Number),
-      ...params,
-    };
-    this.logger.info({ entityType, entityIds }, "Deleting entities");
-    return this.httpClient.delete(config.deleteOperation, body, context);
+    // basis: every Delete operation caps its id array at the entity's batch limit
+    // (MicrosoftDocs/Advertising @ main, read 2026-10-01,
+    // advertising/bingads-13/campaign-management-service/: deletecampaigns.md "A
+    // maximum of 100 campaign identifiers", deleteadgroups.md 1,000, deleteads.md
+    // "a maximum of 50 IDs", deletekeywords.md 1,000, deletebudgets.md 100,
+    // deleteadextensions.md 100, deleteaudiences.md 100, deletelabels.md 100) — the
+    // same values as `batchLimit`. One oversized request is refused whole, so ids
+    // are sent in batchLimit-sized chunks, one 3-token write each.
+    const chunks: string[][] = [];
+    for (let i = 0; i < entityIds.length; i += config.batchLimit) {
+      chunks.push(entityIds.slice(i, i + config.batchLimit));
+    }
+
+    const results: Array<{ offset: number; size: number; result: unknown }> = [];
+    for (const [chunkIndex, chunk] of chunks.entries()) {
+      const offset = chunkIndex * config.batchLimit;
+      await this.consumeQuota("write", 3);
+      const body: Record<string, unknown> = {
+        [config.idsField]: chunk.map(Number),
+        ...params,
+      };
+      this.logger.info({ entityType, entityIds: chunk, batchIndex: offset }, "Deleting entities");
+      try {
+        results.push({
+          offset,
+          size: chunk.length,
+          result: await this.httpClient.delete(config.deleteOperation, body, context),
+        });
+      } catch (error) {
+        if (offset === 0) throw error;
+        // Earlier chunks were already sent, and a delete cannot be undone: say so
+        // instead of letting the failure read as "nothing was deleted".
+        const cause = error instanceof Error ? error.message : String(error);
+        throw new McpError(
+          error instanceof McpError ? error.code : JsonRpcErrorCode.InternalError,
+          `${cause} — Microsoft Ads delete failed on entityIds[${offset}..${offset + chunk.length - 1}]; ` +
+            `the ${offset} id(s) before them were already sent for deletion in earlier batches ` +
+            `(their per-item outcome is in data.earlierResults).`,
+          {
+            ...(error instanceof McpError && error.data && typeof error.data === "object"
+              ? (error.data as Record<string, unknown>)
+              : {}),
+            submittedIds: entityIds.slice(0, offset),
+            earlierResults: mergeMsAdsDeleteResults(results),
+          },
+          { cause: error }
+        );
+      }
+    }
+
+    // A single chunk keeps the upstream response exactly as returned.
+    const [only] = results;
+    if (results.length === 1 && only) return only.result;
+    return mergeMsAdsDeleteResults(results);
   }
 
   /**

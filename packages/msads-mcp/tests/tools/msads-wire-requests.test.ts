@@ -263,6 +263,69 @@ describe("msads_delete_entity", () => {
     expect(req.body).toEqual({ CampaignIds: [5], AccountId: 900 });
   });
 
+  it("ad → more than 50 ids go out as DELETE /Ads chunks of at most 50, outcomes per id", async () => {
+    const ids = Array.from({ length: 120 }, (_, i) => String(1000 + i));
+    stub.route({
+      method: "DELETE",
+      path: "/CampaignManagement/v13/Ads",
+      // The second chunk rejects its own item 3 (= id index 53 overall).
+      response: (req) =>
+        (req.body as { AdIds: number[] }).AdIds[0] === 1050
+          ? { PartialErrors: [{ Index: 3, ErrorCode: "InvalidAdId", Code: 1201, Message: "x" }] }
+          : { PartialErrors: [] },
+    });
+    const out = await deleteEntityLogic(
+      { entityType: "ad", entityIds: ids, additionalParams: { AdGroupId: 7 }, dry_run: false },
+      ctx,
+      sdk
+    );
+
+    const writes = campaignWrites();
+    // basis: campaign-management-service/deleteads.md — AdIds: "You can specify a
+    // maximum of 50 IDs"; body AdGroupId (long) next to the id array.
+    expect(writes.map((w) => (w.body as { AdIds: number[] }).AdIds.length)).toEqual([50, 50, 20]);
+    for (const w of writes) {
+      expect(w.method).toBe("DELETE");
+      expect(w.url).toBe(`${CM}/Ads`);
+      expect((w.body as { AdGroupId: number }).AdGroupId).toBe(7);
+    }
+    expect(writes.flatMap((w) => (w.body as { AdIds: number[] }).AdIds)).toEqual(ids.map(Number));
+    expect(out.deletedCount).toBe(119);
+    expect(out.failedCount).toBe(1);
+    expect(out.result).toEqual({
+      PartialErrors: [{ Index: 53, ErrorCode: "InvalidAdId", Code: 1201, Message: "x" }],
+    });
+  });
+
+  it("a failing later chunk says the earlier chunks were already sent", async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => String(i + 1));
+    const path = "/CampaignManagement/v13/Campaigns";
+    stub.route({
+      method: "DELETE",
+      path,
+      // The first chunk succeeds; every later request is rejected with a 400.
+      response: () => {
+        stub.route({ method: "DELETE", path, status: 400, response: { Message: "boom" } });
+        return { PartialErrors: [] };
+      },
+    });
+    const err = await deleteEntityLogic(
+      {
+        entityType: "campaign",
+        entityIds: ids,
+        additionalParams: { AccountId: 9 },
+        dry_run: false,
+      },
+      ctx,
+      sdk
+    ).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(McpError);
+    expect((err as McpError).message).toMatch(/100 id\(s\) before them were already sent/);
+    expect((err as McpError).data).toMatchObject({ submittedIds: ids.slice(0, 100) });
+    expect(campaignWrites()).toHaveLength(2);
+  });
+
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
     await deleteEntityLogic({ entityType: "label", entityIds: ["1"], dry_run: false }, ctx, sdk);
