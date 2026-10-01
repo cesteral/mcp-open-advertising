@@ -38,7 +38,7 @@ const TOOL_DESCRIPTION = `List assigned targeting options for a DV360 entity (Ad
 - TARGETING_TYPE_KEYWORD: Keyword targeting
 - TARGETING_TYPE_URL: URL/placement targeting
 
-See MCP resource \`targeting-types://\` for full list of all 49 targeting types.`;
+See MCP resource \`targeting-types://\` for full list of all 50 targeting types.`;
 
 /**
  * Input schema for list assigned targeting tool

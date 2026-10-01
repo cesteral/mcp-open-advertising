@@ -11,6 +11,7 @@ import {
   getSupportedTargetingParentTypes,
   validateTargetingInput,
   getTargetingValidationError,
+  addTargetingTypeForParentIssue,
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
@@ -68,6 +69,7 @@ export const DeleteAssignedTargetingInputSchema = z
       ),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine((input, ctx) => addTargetingTypeForParentIssue("delete", input, ctx))
   .describe("Parameters for deleting an assigned targeting option");
 
 /**
