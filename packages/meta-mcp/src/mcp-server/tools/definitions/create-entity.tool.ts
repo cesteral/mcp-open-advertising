@@ -11,6 +11,12 @@ import {
 } from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
 import {
+  attachMetaV26Warnings,
+  formatMetaV26Warnings,
+  metaV26CreateWarnings,
+  metaV26WarningsOf,
+} from "../utils/v26-targeting-warnings.js";
+import {
   McpError,
   JsonRpcErrorCode,
   DryRunResultSchema,
@@ -87,6 +93,9 @@ export async function createEntityLogic(
 ): Promise<CreateEntityOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
   const dispatchedCapability = resolveMetaCreateCapability(input.entityType);
+  // v26 targeting warnings (#229): response text only, never structured
+  // content. Computed from the input; a create makes no read for them.
+  const v26Warnings = metaV26CreateWarnings(input.entityType, input.data, "data");
 
   if (input.dry_run === true) {
     const dryRun = await runMetaCreateDryRun(
@@ -94,13 +103,16 @@ export async function createEntityLogic(
       metaService,
       context
     );
-    return {
-      entity: {},
-      entityType: input.entityType,
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
+    return attachMetaV26Warnings(
+      {
+        entity: {},
+        entityType: input.entityType,
+        timestamp: new Date().toISOString(),
+        dryRun,
+        dispatchedCapability,
+      },
+      v26Warnings
+    );
   }
 
   // Fail fast on an empty or invalid create payload before hitting the Graph API,
@@ -136,13 +148,16 @@ export async function createEntityLogic(
     ? await captureMetaSnapshot(metaService, input.entityType, createdId, context)
     : undefined;
 
-  return {
-    entity,
-    entityType: input.entityType,
-    timestamp: new Date().toISOString(),
-    ...(after ? { after } : {}),
-    dispatchedCapability,
-  };
+  return attachMetaV26Warnings(
+    {
+      entity,
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      ...(after ? { after } : {}),
+      dispatchedCapability,
+    },
+    v26Warnings
+  );
 }
 
 export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
@@ -155,6 +170,7 @@ export function createEntityResponseFormatter(result: CreateEntityOutput): McpTe
         text:
           `Dry-run: creating ${result.entityType} ${outcome}.` +
           (errs ? `\nValidation: ${errs}` : "") +
+          formatMetaV26Warnings(metaV26WarningsOf(result)) +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];
@@ -162,7 +178,10 @@ export function createEntityResponseFormatter(result: CreateEntityOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `${result.entityType} created successfully\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text:
+        `${result.entityType} created successfully\n${JSON.stringify(result.entity, null, 2)}` +
+        formatMetaV26Warnings(metaV26WarningsOf(result)) +
+        `\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
