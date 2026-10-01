@@ -75,3 +75,15 @@ describe("gads_upload_video", () => {
     ).toBe(false);
   });
 });
+
+// gads #9: v25 Discovery has YouTubeVideoUploadService (`googleads.media.upload`,
+// POST v25/customers/{customerId}/youTubeVideoUploads:create), so "Google Ads
+// has no binary video upload" is false.
+describe("uploadVideoTool description", () => {
+  it("does not claim Google Ads has no video upload", async () => {
+    const { uploadVideoTool } = await import(
+      "../../src/mcp-server/tools/definitions/upload-video.tool.js"
+    );
+    expect(uploadVideoTool.description).not.toMatch(/has no binary video upload/);
+  });
+});

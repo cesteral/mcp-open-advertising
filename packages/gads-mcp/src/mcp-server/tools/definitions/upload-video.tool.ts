@@ -24,10 +24,11 @@ const TOOL_NAME = "gads_upload_video";
 const TOOL_TITLE = "Create a Video Asset in Google Ads";
 const TOOL_DESCRIPTION = `Create a video asset in Google Ads from a YouTube video ID.
 
-**Google Ads has no binary video upload.** Unlike image assets (which accept raw
-bytes via \`gads_upload_image\`), a Google Ads video asset is a \`YouTubeVideoAsset\`
-that *references* a video already hosted on YouTube — you provide the YouTube
-video ID, not a file. Host the video on YouTube first, then pass its ID here.
+**This tool uploads no video file.** A Google Ads video asset is a \`YouTubeVideoAsset\`
+that *references* a video already hosted on YouTube — you provide the YouTube video ID,
+not a file. Google Ads' YouTubeVideoUploadService (\`youTubeVideoUploads:create\`) can
+upload a file to YouTube, but no tool on this server wraps it, so host the video on
+YouTube first, then pass its ID here.
 
 This tool creates the asset via AssetService (\`assets:mutate\`, \`type: YOUTUBE_VIDEO\`,
 \`youtubeVideoAsset.youtubeVideoId\`) and returns the asset resource name, which video
@@ -149,8 +150,8 @@ export async function uploadVideoLogic(
 /**
  * Symbolic effect dry-run for `upload_video`. Validates the request (the
  * YouTube video ID must be a well-formed 11-character ID) and projects the
- * would-be effect (a video asset). Google Ads has no native asset-create
- * validate/preview, so both axes are symbolic. Pure (no I/O).
+ * would-be effect (a video asset). Both axes are symbolic: MutateAssetsRequest
+ * has `validateOnly`, but the dry run makes no API call. Pure (no I/O).
  */
 function buildUploadEffectDryRun(youtubeVideoId: string): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -228,8 +229,9 @@ export const uploadVideoTool = {
       entityIdArgs: ["customerId"],
       schemaVersion: 1,
       contractId: "google_ads.upload_video.v1",
-      // `dry_run` = symbolic validate + symbolic effect projection. Google Ads
-      // has no native asset-create validate/preview, so both axes are symbolic.
+      // `dry_run` = symbolic validate + symbolic effect projection. It makes no
+      // API call (MutateAssetsRequest.validateOnly is not used), so both axes
+      // are symbolic.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
       requiresValidation: true,

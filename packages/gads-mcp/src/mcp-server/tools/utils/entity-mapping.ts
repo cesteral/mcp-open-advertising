@@ -101,9 +101,10 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     supportedMutateOps: ALL_MUTATE_OPS,
   },
   asset: {
-    // AssetService only exposes a `create` field on AssetOperation — assets
-    // cannot be updated or removed programmatically once uploaded.
-    // https://developers.google.com/google-ads/api/docs/assets/working-with-assets
+    // v25 Discovery AssetOperation has `create`, `update` and `updateMask` (no
+    // `remove`). Only create is offered here: allowing `update` would put
+    // `asset` under gads_update_entity's governed entity kinds, which is a
+    // governance decision (gads #9).
     gaqlResource: "asset",
     mutateEndpoint: "assets",
     resourceNamePattern: "customers/{customerId}/assets/{assetId}",
