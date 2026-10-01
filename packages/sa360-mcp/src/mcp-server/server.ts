@@ -27,7 +27,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const SA360_PACKAGE_NAME = "sa360-mcp";
 const SA360_PLATFORM = "sa360";
 
-const sa360WorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `sa360_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const sa360WorkflowIdByToolName: Record<string, string> = {
   // Read tools
   sa360_gaql_search: "mcp.execute.sa360_query",
   sa360_list_accounts: "mcp.execute.sa360_query",
@@ -42,6 +48,13 @@ const sa360WorkflowIdByToolName: Record<string, string> = {
   sa360_update_conversions: "mcp.execute.sa360_conversions",
   // Validation tools
   sa360_validate_conversion: "mcp.execute.sa360_validation",
+  // Pacing, reports and change history (all reads are queries)
+  sa360_get_pacing_status: "mcp.execute.sa360_query",
+  sa360_list_report_columns: "mcp.execute.sa360_query",
+  sa360_submit_report: "mcp.execute.sa360_query",
+  sa360_check_report_status: "mcp.execute.sa360_query",
+  sa360_download_report: "mcp.execute.sa360_query",
+  sa360_get_change_history: "mcp.execute.sa360_query",
 };
 
 /**

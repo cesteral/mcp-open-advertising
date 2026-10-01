@@ -27,7 +27,14 @@ import packageJson from "../../package.json" with { type: "json" };
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
 
-const dbmWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory must appear here, and nothing else may
+ * (`scripts/lib/workflow-id-maps.test.mjs`); a missing entry logs the tool's
+ * calls with no workflowId. `dbm_run_custom_query_async` is registered by
+ * `registerAsyncTaskTool`, not the factory, so no workflow id reaches it.
+ */
+export const dbmWorkflowIdByToolName: Record<string, string> = {
   dbm_get_campaign_delivery: "mcp.troubleshoot.delivery",
   dbm_get_performance_metrics: "mcp.troubleshoot.delivery",
   dbm_get_historical_metrics: "mcp.troubleshoot.delivery",

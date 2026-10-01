@@ -28,7 +28,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const SNAPCHAT_PACKAGE_NAME = "snapchat-mcp";
 const SNAPCHAT_PLATFORM = "snapchat";
 
-const snapchatWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `snapchat_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const snapchatWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   snapchat_list_entities: "mcp.execute.snapchat_entity_read",
   snapchat_get_entity: "mcp.execute.snapchat_entity_read",
@@ -52,6 +58,16 @@ const snapchatWorkflowIdByToolName: Record<string, string> = {
   snapchat_get_audience_estimate: "mcp.execute.snapchat_entity_read",
   snapchat_get_ad_preview: "mcp.execute.snapchat_entity_read",
   snapchat_validate_entity: "mcp.execute.snapchat_entity_read",
+  // Pacing
+  snapchat_get_pacing_status: "mcp.execute.snapchat_entity_read",
+  // Async reports
+  snapchat_submit_report: "mcp.execute.snapchat_reporting",
+  snapchat_check_report_status: "mcp.execute.snapchat_reporting",
+  snapchat_download_report: "mcp.execute.snapchat_reporting",
+  // Duplicate and media uploads
+  snapchat_duplicate_entity: "mcp.execute.snapchat_entity_update",
+  snapchat_upload_image: "mcp.execute.snapchat_entity_update",
+  snapchat_upload_video: "mcp.execute.snapchat_entity_update",
 };
 
 /**

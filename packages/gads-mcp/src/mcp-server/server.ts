@@ -27,7 +27,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const GADS_PACKAGE_NAME = "gads-mcp";
 const GADS_PLATFORM = "gads";
 
-const gadsWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `gads_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const gadsWorkflowIdByToolName: Record<string, string> = {
   // Read tools
   gads_gaql_search: "mcp.execute.gads_entity_read",
   gads_list_accounts: "mcp.execute.gads_entity_read",
@@ -45,6 +51,12 @@ const gadsWorkflowIdByToolName: Record<string, string> = {
   gads_bulk_update_status: "mcp.execute.gads_bulk_operations",
   // Preview
   gads_get_ad_preview: "mcp.execute.gads_entity_read",
+  // Pacing
+  gads_get_pacing_status: "mcp.execute.gads_entity_read",
+  // Duplicate and media uploads
+  gads_duplicate_entity: "mcp.execute.gads_entity_management",
+  gads_upload_image: "mcp.execute.gads_entity_management",
+  gads_upload_video: "mcp.execute.gads_entity_management",
 };
 
 /**

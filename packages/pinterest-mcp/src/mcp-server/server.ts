@@ -28,7 +28,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const PINTEREST_PACKAGE_NAME = "pinterest-mcp";
 const PINTEREST_PLATFORM = "pinterest";
 
-const pinterestWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `pinterest_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const pinterestWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   pinterest_list_entities: "mcp.execute.pinterest_entity_read",
   pinterest_get_entity: "mcp.execute.pinterest_entity_read",
@@ -52,6 +58,15 @@ const pinterestWorkflowIdByToolName: Record<string, string> = {
   pinterest_get_delivery_estimate: "mcp.execute.pinterest_entity_read",
   pinterest_get_ad_preview: "mcp.execute.pinterest_entity_read",
   pinterest_validate_entity: "mcp.execute.pinterest_entity_read",
+  // Pacing
+  pinterest_get_pacing_status: "mcp.execute.pinterest_entity_read",
+  // Async reports
+  pinterest_submit_report: "mcp.execute.pinterest_reporting",
+  pinterest_check_report_status: "mcp.execute.pinterest_reporting",
+  pinterest_download_report: "mcp.execute.pinterest_reporting",
+  // Bids and media uploads
+  pinterest_adjust_bids: "mcp.execute.pinterest_bulk_operations",
+  pinterest_upload_video: "mcp.execute.pinterest_entity_update",
 };
 
 /**

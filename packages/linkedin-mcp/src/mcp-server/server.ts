@@ -27,7 +27,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const LINKEDIN_PACKAGE_NAME = "linkedin-mcp";
 const LINKEDIN_PLATFORM = "linkedin";
 
-const linkedInWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `linkedin_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const linkedInWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   linkedin_list_entities: "mcp.execute.linkedin_entity_read",
   linkedin_get_entity: "mcp.execute.linkedin_entity_read",
@@ -54,6 +60,8 @@ const linkedInWorkflowIdByToolName: Record<string, string> = {
   linkedin_upload_image: "mcp.execute.linkedin_entity_update",
   linkedin_upload_video: "mcp.execute.linkedin_entity_update",
   linkedin_validate_entity: "mcp.execute.linkedin_entity_read",
+  // Pacing
+  linkedin_get_pacing_status: "mcp.execute.linkedin_entity_read",
 };
 
 /**
