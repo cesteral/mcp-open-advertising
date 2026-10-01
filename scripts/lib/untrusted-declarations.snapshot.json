@@ -501,7 +501,7 @@
       "contentBlocks": [0]
     },
     "linkedin_get_analytics_breakdowns": {
-      "structuredPaths": ["$.results"],
+      "structuredPaths": ["$.results", "$.warnings"],
       "contentBlocks": [0]
     },
     "linkedin_get_delivery_forecast": {

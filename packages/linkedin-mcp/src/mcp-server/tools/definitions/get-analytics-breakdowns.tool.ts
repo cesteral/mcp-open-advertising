@@ -12,6 +12,11 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  ANALYTICS_MAX_FIELDS,
+  LINKEDIN_ANALYTICS_PIVOTS,
+  analyticsTruncationWarning,
+} from "../../../services/linkedin/analytics-fields.js";
 
 const TOOL_NAME = "linkedin_get_analytics_breakdowns";
 const TOOL_TITLE = "Get LinkedIn Ads Analytics with Breakdowns";
@@ -19,7 +24,9 @@ const TOOL_DESCRIPTION = `Get analytics with multiple dimensional breakdowns for
 
 Runs one independent analytics query per pivot and returns each pivot's rows separately, grouped by pivot.
 
-**Results are not cross-tabulated.** \`pivots: ["CAMPAIGN", "CREATIVE"]\` returns one set of rows per campaign and another per creative — not creative-by-campaign rows. Use it to compare several single-dimension breakdowns in one call.`;
+**Results are not cross-tabulated.** \`pivots: ["CAMPAIGN", "CREATIVE"]\` returns one set of rows per campaign and another per creative — not creative-by-campaign rows. Use it to compare several single-dimension breakdowns in one call.
+
+**Pivots:** ${LINKEDIN_ANALYTICS_PIVOTS.join(", ")}. The geo pivots are MEMBER_COUNTRY_V2 and MEMBER_REGION_V2. Metric names, the ${ANALYTICS_MAX_FIELDS}-field limit (\`dateRange\` and \`pivotValues\` are added and count) and the 15,000-row cap per pivot are as for \`linkedin_get_analytics\`; there is no \`conversions\`, \`reach\`, \`frequency\` or CTR field.`;
 
 export const GetAnalyticsBreakdownsInputSchema = z
   .object({
@@ -42,13 +49,16 @@ export const GetAnalyticsBreakdownsInputSchema = z
       .optional()
       .describe("End date in YYYY-MM-DD format (required if datePreset not provided)"),
     pivots: z
-      .array(z.string())
+      .array(z.enum(LINKEDIN_ANALYTICS_PIVOTS))
       .min(1)
-      .describe("Pivot dimensions to break down by (e.g., CAMPAIGN, MEMBER_COUNTRY)"),
+      .describe("Pivot dimensions to break down by (e.g., CAMPAIGN, MEMBER_COUNTRY_V2)"),
     metrics: z
       .array(z.string())
+      .max(ANALYTICS_MAX_FIELDS)
       .optional()
-      .describe("Metrics to retrieve (defaults to impressions, clicks, costInUsd)"),
+      .describe(
+        `LinkedIn metric names (defaults to impressions, clicks, costInUsd, costInLocalCurrency, externalWebsiteConversions, leadGenerationMailContactInfoShares, oneClickLeads). dateRange and pivotValues are added and count toward LinkedIn's limit of ${ANALYTICS_MAX_FIELDS} fields, so pass at most ${ANALYTICS_MAX_FIELDS - 2}`
+      ),
   })
   .merge(ComputedMetricsFlagSchema)
   .refine(
@@ -70,6 +80,10 @@ export const GetAnalyticsBreakdownsOutputSchema = z
       )
       .describe("Analytics results per pivot"),
     dateRange: z.object({ start: z.string(), end: z.string() }),
+    warnings: z
+      .array(z.string())
+      .optional()
+      .describe("Pivots whose response reached LinkedIn's 15,000-row cap and was probably cut off"),
     timestamp: z.string().datetime(),
   })
   .describe("Analytics breakdowns result");
@@ -110,6 +124,11 @@ export async function getAnalyticsBreakdownsLogic(
     context
   );
 
+  const warnings = result.results.flatMap((r) => {
+    const warning = analyticsTruncationWarning(r.elements.length);
+    return warning ? [`${r.pivot}: ${warning}`] : [];
+  });
+
   return {
     results: result.results.map((r) => {
       const raw = r.elements as Record<string, unknown>[];
@@ -130,6 +149,7 @@ export async function getAnalyticsBreakdownsLogic(
       };
     }),
     dateRange: { start: resolvedStartDate!, end: resolvedEndDate! },
+    ...(warnings.length > 0 ? { warnings } : {}),
     timestamp: new Date().toISOString(),
   };
 }
@@ -138,7 +158,7 @@ const BREAKDOWNS_COMPUTED_METRIC_ALIASES = {
   cost: ["costInUsd", "costInLocalCurrency"],
   impressions: ["impressions"],
   clicks: ["clicks"],
-  conversions: ["externalWebsiteConversions", "conversions", "oneClickLeads"],
+  conversions: ["externalWebsiteConversions", "oneClickLeads"],
   conversionValue: ["conversionValueInLocalCurrency"],
 };
 
@@ -155,6 +175,8 @@ export function getAnalyticsBreakdownsResponseFormatter(
     lines.push(JSON.stringify(r.elements, null, 2));
     lines.push("");
   }
+
+  for (const w of result.warnings ?? []) lines.push(`⚠️ ${w}`);
 
   lines.push(`Timestamp: ${result.timestamp}`);
 
@@ -184,7 +206,7 @@ export const getAnalyticsBreakdownsTool = {
       input: {
         adAccountUrn: "urn:li:sponsoredAccount:123456789",
         datePreset: "LAST_30_DAYS",
-        pivots: ["CAMPAIGN", "MEMBER_COUNTRY"],
+        pivots: ["CAMPAIGN", "MEMBER_COUNTRY_V2"],
         metrics: ["impressions", "clicks", "costInUsd"],
       },
     },
@@ -201,7 +223,7 @@ export const getAnalyticsBreakdownsTool = {
   logic: getAnalyticsBreakdownsLogic,
   responseFormatter: getAnalyticsBreakdownsResponseFormatter,
   untrustedContent: {
-    structuredPaths: ["$.results"],
+    structuredPaths: ["$.results", "$.warnings"],
     contentBlocks: [0],
   },
 };

@@ -5,6 +5,7 @@ import type { LinkedInHttpClient } from "./linkedin-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { resolveAnalyticsFields } from "./analytics-fields.js";
 
 /**
  * LinkedIn Reporting Service — Queries the adAnalytics API for performance data.
@@ -14,7 +15,7 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
  * - dateRange=(start:(year:2026,month:1,day:1),end:(year:2026,month:1,day:31))
  * - pivot: CAMPAIGN, CAMPAIGN_GROUP, CREATIVE, MEMBER_COMPANY_SIZE, etc.
  * - timeGranularity: DAILY, MONTHLY, YEARLY, ALL
- * - metrics: impressions, clicks, costInUsd, conversions, etc.
+ * - metrics: impressions, clicks, costInUsd, externalWebsiteConversions, etc.
  */
 export class LinkedInReportingService {
   constructor(
@@ -38,18 +39,8 @@ export class LinkedInReportingService {
     pivot?: string,
     timeGranularity?: string,
     context?: RequestContext
-  ): Promise<{ elements: unknown[]; paging?: unknown }> {
+  ): Promise<{ elements: unknown[] }> {
     await this.rateLimiter.consume(`linkedin:${adAccountUrn}`);
-
-    const defaultMetrics = [
-      "impressions",
-      "clicks",
-      "costInUsd",
-      "conversions",
-      "externalWebsiteConversions",
-      "leadGenerationMailContactInfoShares",
-      "oneClickLeads",
-    ];
 
     const startDate = this.parseDateParts(dateRange.start);
     const endDate = this.parseDateParts(dateRange.end);
@@ -64,7 +55,7 @@ export class LinkedInReportingService {
       timeGranularity: timeGranularity ?? "DAILY",
       accounts: [adAccountUrn],
       dateRange: { start: startDate, end: endDate },
-      fields: (metrics ?? defaultMetrics).join(","),
+      fields: resolveAnalyticsFields(metrics).join(","),
     };
 
     const result = (await this.httpClient.get("/rest/adAnalytics", params, context)) as Record<
@@ -72,9 +63,9 @@ export class LinkedInReportingService {
       unknown
     >;
 
+    // adAnalytics does not paginate (LinkedIn's docs), so there is no `paging` to pass on.
     return {
       elements: (result.elements as unknown[]) || [],
-      paging: result.paging,
     };
   }
 

@@ -94,8 +94,10 @@ Get delivery metrics for LinkedIn Ads entities via `/rest/adAnalytics` (Rest.li 
 - `adAccountUrn` (string, required): Ad Account URN
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
-- `metrics` (string[], optional): Metrics to return (e.g., `impressions`, `clicks`, `costInUsd`)
-- `pivot` (string, optional): Pivot dimension (e.g., `CAMPAIGN`, `CREATIVE`)
+- `metrics` (string[], optional): LinkedIn metric names (e.g., `impressions`, `clicks`, `costInUsd`). At most 20 fields: `dateRange` and `pivotValues` are added so each row says what it belongs to and count toward the limit, so pass at most 18. There is no `conversions`, `reach`, `frequency` or CTR field (use `externalWebsiteConversions`, `approximateMemberReach`, `videoStarts`; set `includeComputedMetrics` for rates)
+- `pivot` (enum, optional): Pivot dimension (e.g., `CAMPAIGN`, `CREATIVE`). The geo pivots are `MEMBER_COUNTRY_V2` / `MEMBER_REGION_V2`
+
+LinkedIn does not paginate this endpoint and returns at most 15,000 rows; a warning is added when that many come back.
 
 #### 8. `linkedin_get_analytics_breakdowns`
 
@@ -106,7 +108,7 @@ Get delivery metrics broken down by dimension (geo, device, member demographics,
 - `adAccountUrn` (string, required): Ad Account URN
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
-- `pivots` (string[], required): Breakdown dimensions (e.g., `['MEMBER_COMPANY_SIZE', 'MEMBER_INDUSTRY']`)
+- `pivots` (enum[], required): Breakdown dimensions (e.g., `['MEMBER_COMPANY_SIZE', 'MEMBER_INDUSTRY']`). One independent query per pivot, so results are not cross-tabulated
 - `metrics` (string[], optional): Metrics to return
 - `datePreset` (string, optional): Date preset
 

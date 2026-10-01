@@ -232,7 +232,7 @@ describe("linkedin_get_analytics_breakdowns tool", () => {
       mockReportingService.getAnalyticsBreakdowns.mockResolvedValueOnce({
         results: [
           { pivot: "CAMPAIGN", elements: [{ impressions: 100 }, { impressions: 200 }] },
-          { pivot: "MEMBER_COUNTRY", elements: [{ impressions: 50 }] },
+          { pivot: "MEMBER_COUNTRY_V2", elements: [{ impressions: 50 }] },
         ],
       });
 
@@ -241,7 +241,7 @@ describe("linkedin_get_analytics_breakdowns tool", () => {
           adAccountUrn: URN,
           startDate: "2026-01-01",
           endDate: "2026-01-31",
-          pivots: ["CAMPAIGN", "MEMBER_COUNTRY"],
+          pivots: ["CAMPAIGN", "MEMBER_COUNTRY_V2"],
         } as any,
         mockContext as any
       );
@@ -249,7 +249,7 @@ describe("linkedin_get_analytics_breakdowns tool", () => {
       expect(result.results).toHaveLength(2);
       expect(result.results[0]!.pivot).toBe("CAMPAIGN");
       expect(result.results[0]!.count).toBe(2);
-      expect(result.results[1]!.pivot).toBe("MEMBER_COUNTRY");
+      expect(result.results[1]!.pivot).toBe("MEMBER_COUNTRY_V2");
       expect(result.results[1]!.count).toBe(1);
     });
 
@@ -341,7 +341,7 @@ describe("linkedin_get_analytics_breakdowns tool", () => {
       const formatted = getAnalyticsBreakdownsResponseFormatter({
         results: [
           { pivot: "CAMPAIGN", elements: [{ id: "1" }, { id: "2" }], count: 2 },
-          { pivot: "MEMBER_COUNTRY", elements: [{ country: "US" }], count: 1 },
+          { pivot: "MEMBER_COUNTRY_V2", elements: [{ country: "US" }], count: 1 },
         ],
         dateRange: { start: "2026-01-01", end: "2026-01-31" },
         timestamp: "2026-03-04T00:00:00.000Z",
@@ -349,7 +349,7 @@ describe("linkedin_get_analytics_breakdowns tool", () => {
 
       const text = (formatted[0] as { type: string; text: string }).text;
       expect(text).toContain("## CAMPAIGN (2 rows)");
-      expect(text).toContain("## MEMBER_COUNTRY (1 rows)");
+      expect(text).toContain("## MEMBER_COUNTRY_V2 (1 rows)");
       expect(text).toContain("2026-01-01 to 2026-01-31");
       expect(text).toContain("2026-03-04T00:00:00.000Z");
     });

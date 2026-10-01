@@ -68,6 +68,19 @@ describe("the shipped ledger", () => {
     ["ttd.bulk_mutation_variable_binding", "2026-10-01"],
     ["ttd.bulk_job_poll_fields", "2026-10-01"],
     ["ttd.bulk_mutation_limits", "2026-10-01"],
+    ["linkedin.api_version", "2026-10-01"],
+    ["linkedin.rest_is_the_versioned_surface", "2026-10-01"],
+    ["linkedin.campaigns_are_account_scoped", "2026-10-01"],
+    ["linkedin.campaign_groups_are_account_scoped", "2026-10-01"],
+    ["linkedin.ad_analytics_path", "2026-10-01"],
+    ["linkedin.ad_targeting_facets_path", "2026-10-01"],
+    ["linkedin.rest_uses_cursor_pagination", "2026-10-01"],
+    ["linkedin.creatives_need_schema_rewrite", "2026-10-01"],
+    ["linkedin.restli_protocol_header", "2026-10-01"],
+    ["linkedin.ad_analytics_fields", "2026-10-01"],
+    ["linkedin.ad_analytics_pivots", "2026-10-01"],
+    ["linkedin.ad_analytics_limits", "2026-10-01"],
+    ["linkedin.rate_limit_daily_per_app_member", "2026-10-01"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
@@ -103,10 +116,11 @@ describe("the shipped ledger", () => {
   });
 
   it("agrees with linkedin-mcp's own verification basis", () => {
-    // The ledger says `unverified`; api-version.ts says the pin was `inferred`.
-    // If someone flips that constant to "confirmed" without re-verifying here,
-    // the two halves start telling different stories — which is precisely the
-    // incoherence #209 shipped by recording a date with no basis beside it.
+    // api-version.ts says how the pin was established (`confirmed` or `inferred`)
+    // and the ledger carries the same fact as `verified` or `unverified`. If one
+    // moves without the other, the two halves tell different stories — which is
+    // precisely the incoherence #209 shipped by recording a date with no basis
+    // beside it.
     const src = readFileSync(
       join(ROOT, "packages/linkedin-mcp/src/config/api-version.ts"),
       "utf-8"
@@ -117,9 +131,9 @@ describe("the shipped ledger", () => {
     expect(basis, "api-version.ts must declare how the pin was established").toBeTruthy();
 
     const fact = ledger.facts.find((f) => f.id === "linkedin.api_version");
-    if (basis[1] === "inferred") {
-      expect(fact.status).toBe("unverified");
-    }
+    // Both directions: `confirmed` without a verified ledger entry, or a verified
+    // entry while the code still says `inferred`, is the same incoherence.
+    expect(fact.status).toBe(basis[1] === "confirmed" ? "verified" : "unverified");
   });
 });
 

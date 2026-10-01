@@ -35,9 +35,9 @@ export const LINKEDIN_API_VERSION = "202608";
  * its own a date says an assessment happened, not that anyone saw the vendor's
  * list.
  *
- * Source: https://learn.microsoft.com/en-us/linkedin/marketing/versioning
+ * Source: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/migrations
  */
-export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-09-16";
+export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-10-01";
 
 /**
  * How {@link LINKEDIN_API_VERSION} was established, and therefore how much the
@@ -47,19 +47,22 @@ export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-09-16";
  * - `inferred`  — derived from LinkedIn's documented monthly-release cadence and
  *                 one-year support window WITHOUT reading that list.
  *
- * Currently `inferred`, and that is not a formality. `learn.microsoft.com` is
- * unreachable from this repo's agent/CI egress policy, so the pin was reasoned
- * to rather than looked up. An `inferred` pin is a plausible guess with a real
- * failure mode: if LinkedIn skipped a month, or shortened a window, the value is
- * wrong and every call errors exactly as in #206 — the failure this file exists
- * to prevent. `platform-facts.json` therefore carries `linkedin.api_version` as
- * `unverified`, and it stays that way until someone with doc access flips this
- * to `confirmed` and sets the date to the day they read it.
+ * `confirmed`. On 2026-10-01 LinkedIn's migrations page was read directly (it is
+ * server-rendered and fetchable; the earlier note here that it was unreachable
+ * was true of the review sandbox, not of a developer machine). It lists version
+ * 202608 as Active with a sunset of 2027-08-17, and 202609 as Active until
+ * 2027-09-15 (the latest). The versioning page states the one-year floor and that
+ * a sunset or missing `Linkedin-Version` header returns an error.
  *
- * Making this explicit is the point: #209 shipped the date alone, which reads as
- * a confirmation that never happened.
+ * What `confirmed` does NOT mean: nothing here has called the live API, so it
+ * says the version is supported on LinkedIn's published list, not that every
+ * request this server sends is accepted at it.
+ *
+ * `platform-facts.json` carries `linkedin.api_version` as `verified` on the same
+ * basis, and a test requires the two to agree: this constant cannot say
+ * `confirmed` while the ledger says `unverified`, or the reverse.
  */
-export const LINKEDIN_API_VERSION_VERIFICATION_BASIS: "confirmed" | "inferred" = "inferred";
+export const LINKEDIN_API_VERSION_VERIFICATION_BASIS: "confirmed" | "inferred" = "confirmed";
 
 /**
  * LinkedIn's documented minimum support window, in months. Releases are

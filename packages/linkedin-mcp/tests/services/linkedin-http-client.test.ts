@@ -139,7 +139,8 @@ describe("LinkedInHttpClient", () => {
         "https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot=CAMPAIGN&timeGranularity=DAILY" +
           "&accounts=List(urn%3Ali%3AsponsoredAccount%3A123)" +
           "&dateRange=(start:(year:2026,month:3,day:1),end:(year:2026,month:3,day:4))" +
-          "&fields=impressions,clicks"
+          // dateRange and pivotValues are added so each row says what it belongs to.
+          "&fields=impressions,clicks,dateRange,pivotValues"
       );
     });
 

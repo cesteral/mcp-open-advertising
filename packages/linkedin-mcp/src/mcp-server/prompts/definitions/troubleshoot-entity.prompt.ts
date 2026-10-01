@@ -46,11 +46,12 @@ linkedin_get_analytics({
   "adAccountUrn": "urn:li:sponsoredAccount:{accountId}",
   "startDate": "2026-02-01",
   "endDate": "2026-03-07",
-  "metrics": ["impressions", "clicks", "costInUsd", "conversions"],
-  "pivot": "CAMPAIGN",
-  "campaigns": ["${entityUrn}"]
+  "metrics": ["impressions", "clicks", "costInUsd", "externalWebsiteConversions"],
+  "pivot": "CAMPAIGN"
 })
 \`\`\`
+
+The tool returns the whole account, one row per campaign: find this entity's row by its URN in \`pivotValues\`.
 
 ## Step 3: Check Parent Entity
 
