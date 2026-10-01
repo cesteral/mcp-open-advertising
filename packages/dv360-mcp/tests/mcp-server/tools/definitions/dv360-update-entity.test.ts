@@ -61,7 +61,6 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async 
           "insertionOrderId",
           "lineItemId",
           "adGroupId",
-          "adId",
           "creativeId",
         ]) {
           if (input[key] && typeof input[key] === "string") {
@@ -120,7 +119,6 @@ vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
       insertionOrderId: z.string().optional(),
       lineItemId: z.string().optional(),
       adGroupId: z.string().optional(),
-      adId: z.string().optional(),
       creativeId: z.string().optional(),
       data: z.record(z.any()),
       updateMask: z.string(),

@@ -39,7 +39,7 @@ const TOOL_TITLE = "Create DV360 Entity";
  * Generate dynamic description that includes entity hierarchy information
  */
 function generateToolDescription(): string {
-  return "Create a DV360 entity with full server-side validation. Use entity-schema://{entityType} and entity-examples://{entityType} before calling.";
+  return "Create a DV360 entity. The payload is checked against the entity type's generated v4 schema before anything is sent; DV360 validates it again on create. Use entity-schema://{entityType} and entity-examples://{entityType} before calling.";
 }
 
 const TOOL_DESCRIPTION = generateToolDescription();

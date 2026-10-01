@@ -11,6 +11,8 @@ import {
   createSimplifiedCreateEntityInputSchema,
   createSimplifiedUpdateEntityInputSchema,
 } from "../../../../src/mcp-server/tools/utils/simplified-schemas.js";
+import { EntityIdFieldsSchema } from "../../../../src/mcp-server/tools/utils/entity-id-extraction.js";
+import { createEntityTool } from "../../../../src/mcp-server/tools/definitions/create-entity.tool.js";
 import { BulkCreateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
 import { BulkUpdateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
 
@@ -86,5 +88,17 @@ describe("read-only entity types are excluded from the bulk create/update schema
   it("bulk update offers exactly the updatable types", () => {
     expect(enumOf(BulkUpdateEntitiesInputSchema)).toEqual(getUpdatableEntityTypesDynamic());
     for (const t of READ_ONLY_TYPES) expect(enumOf(BulkUpdateEntitiesInputSchema)).not.toContain(t);
+  });
+});
+
+// dv360 #26: there is no `ad` entity type, so no `adId`; and create's
+// validation is the client-side check against the generated schema.
+describe("dv360 entity id fields and create description", () => {
+  it("offers no adId", () => {
+    expect(EntityIdFieldsSchema).not.toHaveProperty("adId");
+  });
+
+  it("does not claim server-side validation", () => {
+    expect(createEntityTool.description).not.toMatch(/server-side validation/);
   });
 });

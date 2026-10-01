@@ -55,7 +55,6 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async 
           "insertionOrderId",
           "lineItemId",
           "adGroupId",
-          "adId",
           "creativeId",
         ]) {
           if (input[key] && typeof input[key] === "string") {

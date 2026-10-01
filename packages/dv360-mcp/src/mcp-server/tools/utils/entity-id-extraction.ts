@@ -26,7 +26,6 @@ export const EntityIdFieldsSchema = {
   lineItemId: z.string().optional().describe("Line Item ID (if entity type is lineItem)"),
   adGroupId: z.string().optional().describe("Ad Group ID (if entity type is adGroup)"),
   adGroupAdId: z.string().optional().describe("Ad Group Ad ID (if entity type is adGroupAd)"),
-  adId: z.string().optional().describe("Ad ID (if entity type is ad)"),
   creativeId: z.string().optional().describe("Creative ID (if entity type is creative)"),
   customBiddingAlgorithmId: z
     .string()
@@ -101,7 +100,6 @@ export function extractEntityIds(
     lineItemId: "lineItemId",
     adGroupId: "adGroupId",
     adGroupAdId: "adGroupAdId",
-    adId: "adId",
     creativeId: "creativeId",
     partnerId: "partnerId",
     advertiserId: "advertiserId",
