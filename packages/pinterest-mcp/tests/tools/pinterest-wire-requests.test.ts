@@ -572,6 +572,18 @@ describe("pinterest_delete_entity", () => {
 });
 
 describe("pinterest_bulk_update_status → ad_groups/update per id", () => {
+  // pinterest #10. basis: OpenAPI v5.28.0 (src/generated/types.ts) `Pin` and
+  // `PinUpdate` have no `status` field, so a creative (Pin) has no status to set.
+  it("does not offer creative (Pin)", () => {
+    const input = { adAccountId: AD, entityIds: ["1"], operationStatus: "PAUSED" };
+    expect(
+      BulkUpdateStatusInputSchema.safeParse({ ...input, entityType: "creative" }).success
+    ).toBe(false);
+    expect(BulkUpdateStatusInputSchema.safeParse({ ...input, entityType: "adGroup" }).success).toBe(
+      true
+    );
+  });
+
   it("PATCHes [{status, id}] once per ad group", async () => {
     stub.route({ method: "PATCH", path: `/v5/ad_accounts/${AD}/ad_groups`, response: batchEcho() });
     await bulkUpdateStatusLogic(

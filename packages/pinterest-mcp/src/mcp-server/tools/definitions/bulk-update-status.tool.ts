@@ -31,9 +31,19 @@ import type {
 const TOOL_NAME = "pinterest_bulk_update_status";
 const TOOL_TITLE = "Pinterest Bulk Status Update";
 const EFFECT_KIND = "entity_statuses_updated";
+/**
+ * Entity types with a status. A creative is a Pin, and the v5.28.0 spec's
+ * `Pin` / `PinUpdate` have no `status` field (pinterest #10), so it is not
+ * offered.
+ */
+const STATUS_ENTITY_TYPES = getEntityTypeEnum().filter((t) => t !== "creative") as [
+  string,
+  ...string[],
+];
+
 const TOOL_DESCRIPTION = `Batch update the status of Pinterest Ads entities.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${STATUS_ENTITY_TYPES.join(", ")} (a creative is a Pin, which has no status)
 
 **Operation status values:**
 - **ACTIVE** — Activate entities
@@ -44,7 +54,7 @@ Each id is sent as its own PATCH (a one-item batch), so every id gets its own su
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityType: z.enum(STATUS_ENTITY_TYPES).describe("Type of entities to update"),
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
