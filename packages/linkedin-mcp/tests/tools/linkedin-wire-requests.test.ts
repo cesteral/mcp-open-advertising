@@ -103,10 +103,12 @@ import {
 } from "../../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 import {
   uploadImageLogic,
+  uploadImageTool,
   UploadImageInputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-image.tool.js";
 import {
   uploadVideoLogic,
+  uploadVideoTool,
   UploadVideoInputSchema,
 } from "../../src/mcp-server/tools/definitions/upload-video.tool.js";
 import {
@@ -1006,9 +1008,13 @@ describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTIO
     });
   }
 
-  it.todo(
-    "linkedin_upload_image / linkedin_upload_video: the tool descriptions promise a 3-step " +
-      "'register → upload binary → confirm' flow, but no confirm request is ever sent; correcting " +
-      "the description changes both definitionHashes"
-  );
+  // The wire test above pins exactly two LinkedIn requests (register, PUT).
+  // The descriptions used to promise a third "confirm" step that is never sent.
+  for (const tool of [uploadImageTool, uploadVideoTool]) {
+    it(`${tool.name}: the description names the two requests sent and promises no confirm step`, () => {
+      expect(tool.description).not.toMatch(/3-step|→ confirm/);
+      expect(tool.description).toContain("POST /v2/assets?action=registerUpload");
+      expect(tool.description).toContain("No confirm or finalize request is sent");
+    });
+  }
 });

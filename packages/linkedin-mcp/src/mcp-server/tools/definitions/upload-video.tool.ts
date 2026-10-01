@@ -29,7 +29,9 @@ const TOOL_TITLE = "Upload Video to LinkedIn Ads";
 const TOOL_DESCRIPTION = `Upload a video to LinkedIn Ads from a URL.
 
 The server downloads the video and uploads it to LinkedIn's Digital Media Assets library.
-Uses LinkedIn's 3-step upload flow: register → upload binary → confirm.
+Two requests after the download: register the upload (\`POST /v2/assets?action=registerUpload\`),
+then PUT the bytes to the returned upload URL. No confirm or finalize request is sent; the
+asset URN comes from the register response.
 
 **Video requirements:**
 - Formats: MP4 (H.264)
