@@ -13,6 +13,7 @@ import {
 } from "../../../../src/mcp-server/tools/utils/simplified-schemas.js";
 import { EntityIdFieldsSchema } from "../../../../src/mcp-server/tools/utils/entity-id-extraction.js";
 import { createEntityTool } from "../../../../src/mcp-server/tools/definitions/create-entity.tool.js";
+import { updateEntityTool } from "../../../../src/mcp-server/tools/definitions/update-entity.tool.js";
 import { BulkCreateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
 import { BulkUpdateEntitiesInputSchema } from "../../../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
 
@@ -100,5 +101,19 @@ describe("dv360 entity id fields and create description", () => {
 
   it("does not claim server-side validation", () => {
     expect(createEntityTool.description).not.toMatch(/server-side validation/);
+  });
+});
+
+// dv360 #15: v4 Discovery (rev 20260928) adGroups.create / .patch / .delete:
+// "This method is only supported for Demand Gen ad groups." Delete already
+// said so; create and update did not.
+describe("dv360 adGroup writes are Demand Gen only", () => {
+  it("create and update say so", () => {
+    expect(createEntityTool.description).toContain(
+      "adGroup create is only supported for Demand Gen ad groups"
+    );
+    expect(updateEntityTool.description).toContain(
+      "adGroup update is only supported for Demand Gen ad groups"
+    );
   });
 });

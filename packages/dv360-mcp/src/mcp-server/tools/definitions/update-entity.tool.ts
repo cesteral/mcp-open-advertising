@@ -42,6 +42,7 @@ function generateToolDescription(): string {
     typesWithExamples.length > 0 ? ` Common examples available for: ${typesWithExamples}.` : "";
   return (
     "Update a DV360 entity using partial data plus updateMask. " +
+    "adGroup update is only supported for Demand Gen ad groups. " +
     "Use updateMask as a comma-separated list of field paths to specify exactly which fields to update (e.g., 'entityStatus' or 'budget.budgetSegments'). " +
     "Fetch entity-fields://{entityType} for the full field schema and entity-examples://{entityType} for common update patterns before calling." +
     examplesHint
