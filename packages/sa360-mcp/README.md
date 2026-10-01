@@ -140,7 +140,7 @@ MCP_AUTH_SECRET_KEY=your-jwt-secret
 
 ### Reporting API v0 Tools (Read-Only)
 
-#### `sa360_search`
+#### `sa360_gaql_search`
 
 Execute raw SA360 query language queries against any SA360 resource. Same syntax as GAQL (Google Ads Query Language).
 
@@ -148,7 +148,6 @@ Execute raw SA360 query language queries against any SA360 resource. Same syntax
 | ------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------- |
 | `customerId` | string   | Yes      | SA360 customer ID (no dashes)                                                                              |
 | `query`      | string   | Yes      | SA360 query (SELECT ... FROM ... WHERE ...)                                                                |
-| `pageSize`   | number   | No       | _Deprecated._ Use `maxRows` for the returned row count.                                                    |
 | `pageToken`  | string   | No       | Cursor for the next upstream page (different from `offset` which slices the in-memory buffer)              |
 | `mode`       | enum     | No       | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
 | `columns`    | string[] | No       | Project returned rows to selected columns                                                                  |
