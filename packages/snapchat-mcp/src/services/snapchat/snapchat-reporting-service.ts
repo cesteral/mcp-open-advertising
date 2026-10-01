@@ -177,12 +177,19 @@ export class SnapchatReportingService {
 
   /**
    * Single status check for a report task. No polling, no sleep.
-   * Returns current status and download URL if COMPLETE.
+   * Returns current status and download URL if COMPLETE. `status` is the
+   * normalized value; `rawStatus` is Snap's `async_status` exactly as returned
+   * (absent when the response has none).
    */
   async checkReportStatus(
     taskId: string,
     context?: RequestContext
-  ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
+  ): Promise<{
+    taskId: string;
+    status: ReportTaskStatus;
+    rawStatus?: string;
+    downloadUrl?: string;
+  }> {
     await consumeSnapchatReportingQuota(this.rateLimiter, this.httpClient);
 
     const envelope = (await this.httpClient.get(
@@ -207,6 +214,7 @@ export class SnapchatReportingService {
     return {
       taskId: report.report_run_id ?? taskId,
       status: this.normalizeReportStatus(report.async_status),
+      ...(report.async_status !== undefined ? { rawStatus: report.async_status } : {}),
       downloadUrl: report.result,
     };
   }

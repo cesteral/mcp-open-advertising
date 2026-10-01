@@ -15,7 +15,7 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Snapchat re
 Makes a single API call to check task status. Does not poll or wait.
 
 **Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
-Snapchat raw statuses (PENDING/RUNNING/COMPLETE/FAILED) are mapped; the raw string is returned as \`rawStatus\`.
+Snapchat's \`async_status\` is mapped (STARTED or RUNNING → \`running\`, COMPLETED → \`complete\`, FAILED → \`failed\`, anything else → \`pending\`); the value Snapchat returned is passed through unchanged as \`rawStatus\`.
 - If state is \`complete\` with a \`downloadUrl\`, use \`snapchat_download_report\` to fetch results.
 - If not done, call this tool again in ~10 seconds.`;
 
@@ -28,7 +28,12 @@ export const CheckReportStatusInputSchema = z
 
 export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   taskId: z.string().describe("Report task ID"),
-  rawStatus: z.string().describe("Raw Snapchat status (PENDING/RUNNING/COMPLETE/FAILED)"),
+  rawStatus: z
+    .string()
+    .optional()
+    .describe(
+      "Snapchat's async_status exactly as returned (e.g. STARTED, COMPLETED); absent when the response has none"
+    ),
   isComplete: z.boolean().describe("Whether the canonical state is 'complete'"),
   timestamp: z.string().datetime(),
 }).describe("Report status check result");
@@ -54,7 +59,7 @@ export async function checkReportStatusLogic(
   return {
     ...canonical,
     taskId: result.taskId,
-    rawStatus: result.status,
+    ...(result.rawStatus !== undefined ? { rawStatus: result.rawStatus } : {}),
     isComplete: canonical.state === "complete",
     timestamp: new Date().toISOString(),
   };
@@ -84,7 +89,7 @@ export function checkReportStatusResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Report in progress: ${result.taskId}\nState: ${result.state} (${result.rawStatus})\n\nCall \`snapchat_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
+      text: `Report in progress: ${result.taskId}\nState: ${result.state}${result.rawStatus ? ` (${result.rawStatus})` : ""}\n\nCall \`snapchat_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

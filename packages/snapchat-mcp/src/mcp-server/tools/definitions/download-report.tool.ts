@@ -23,11 +23,11 @@ const TOOL_NAME = "snapchat_download_report";
 const TOOL_TITLE = "Download Snapchat Report";
 const TOOL_DESCRIPTION = `Download and parse a Snapchat report from a download URL.
 
-After a report task is DONE (via \`snapchat_check_report_status\`), use the \`downloadUrl\` to fetch and parse the CSV data.
+After a report task is \`complete\` (via \`snapchat_check_report_status\`), use the \`downloadUrl\` to fetch and parse the CSV data.
 
 **Workflow:**
 1. \`snapchat_submit_report\` → get \`taskId\`
-2. \`snapchat_check_report_status\` → get \`downloadUrl\` when DONE
+2. \`snapchat_check_report_status\` → get \`downloadUrl\` when \`complete\`
 3. \`snapchat_download_report\` with that URL → get a bounded summary or paged row slice
 
 **Options:**
