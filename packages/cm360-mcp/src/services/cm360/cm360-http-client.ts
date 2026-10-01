@@ -3,7 +3,12 @@
 
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { assertSafeDownloadUrl, executeWithRetry, type RetryConfig } from "@cesteral/shared";
+import {
+  assertSafeDownloadUrl,
+  executeWithRetry,
+  fetchGuardedDownload,
+  type RetryConfig,
+} from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { withCM360ApiSpan } from "../../utils/platform.js";
 
@@ -67,7 +72,10 @@ export class CM360HttpClient {
     // the download's own timeout. `rawResponse` hands back the CSV body
     // unread, while every attempt lands in the upstream trail that
     // `tool_failure` logs read. A non-2xx response throws `McpError`, as
-    // `fetch` does.
+    // `fetch` does. Each attempt follows redirects by hand (fleet review cm360
+    // #1): every hop must pass the SSRF checks, and the bearer token is
+    // dropped once a hop changes origin, on every Node release. A refused
+    // redirect throws before the next request and is not retried.
     return withCM360ApiSpan(`api.raw.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
@@ -83,6 +91,13 @@ export class CM360HttpClient {
             return { Authorization: `Bearer ${accessToken}` };
           },
           rawResponse: true,
+          fetchFn: (attemptUrl, attemptTimeoutMs, attemptContext, init) =>
+            fetchGuardedDownload(attemptUrl, {
+              timeoutMs: attemptTimeoutMs,
+              context: attemptContext,
+              init,
+              toolName: "cm360_download_report",
+            }),
         }
       );
     });
