@@ -27,10 +27,6 @@ import type {
   DryRunValidationError,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
-import type {
-  SnapchatMediaUploadResponse,
-  SnapchatMediaGetResponse,
-} from "../utils/media-types.js";
 import { mcpConfig } from "../../../config/index.js";
 
 const TOOL_NAME = "snapchat_upload_image";
@@ -122,19 +118,11 @@ export async function uploadImageLogic(
   );
 
   // Step 1: Create the media entity
-  const createResult = (await snapchatService.client.post(
-    `/v1/adaccounts/${input.adAccountId}/media`,
-    {
-      media: [
-        {
-          name: input.name ?? filename,
-          type: "IMAGE",
-          ad_account_id: input.adAccountId,
-        },
-      ],
-    },
+  const createResult = await snapchatService.createMedia(
+    input.adAccountId,
+    { name: input.name ?? filename, type: "IMAGE" },
     context
-  )) as SnapchatMediaUploadResponse;
+  );
 
   const createdItem = createResult.media?.[0]?.media;
   const mediaId = createdItem?.id;
@@ -146,25 +134,13 @@ export async function uploadImageLogic(
   }
 
   // Step 2: Upload the binary
-  await snapchatService.client.postMultipart(
-    `/v1/media/${mediaId}/upload`,
-    {},
-    "file",
-    buffer,
-    filename,
-    contentType,
-    context
-  );
+  await snapchatService.uploadMediaFile(mediaId, { buffer, filename, contentType }, context);
 
   // Step 3: Poll for READY status
   try {
     const finalStatus = await pollUntilComplete<string>({
       fetchStatus: async () => {
-        const statusResult = (await snapchatService.client.get(
-          `/v1/media/${mediaId}`,
-          undefined,
-          context
-        )) as SnapchatMediaGetResponse;
+        const statusResult = await snapchatService.getMedia(mediaId, context);
         return statusResult.media?.[0]?.media?.media_status ?? "PENDING";
       },
       isComplete: (s) => s === "READY",

@@ -37,16 +37,16 @@ describe("snapchat_upload_image", () => {
   });
 
   it("throws a timeout error when media never reaches READY", async () => {
-    const client = {
-      post: vi.fn().mockResolvedValue({
+    const snapchatService = {
+      createMedia: vi.fn().mockResolvedValue({
         media: [{ media: { id: "media_123" } }],
       }),
-      postMultipart: vi.fn().mockResolvedValue({}),
-      get: vi.fn(),
+      uploadMediaFile: vi.fn().mockResolvedValue(undefined),
+      getMedia: vi.fn(),
     };
     mockResolveSessionServices.mockReturnValue({
       boundAdAccountId: "acct_123",
-      snapchatService: { client },
+      snapchatService,
     } as any);
     mockPollUntilComplete.mockRejectedValue(new ReportTimeoutError(3));
 

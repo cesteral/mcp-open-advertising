@@ -37,22 +37,22 @@ const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
 describe("snapchat uploads governance contract (effect class)", () => {
-  let client: {
-    post: ReturnType<typeof vi.fn>;
-    postMultipart: ReturnType<typeof vi.fn>;
-    get: ReturnType<typeof vi.fn>;
+  let service: {
+    createMedia: ReturnType<typeof vi.fn>;
+    uploadMediaFile: ReturnType<typeof vi.fn>;
+    getMedia: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = {
-      post: vi.fn().mockResolvedValue({ media: [{ media: { id: "media-1" } }] }),
-      postMultipart: vi.fn().mockResolvedValue(undefined),
-      get: vi.fn().mockResolvedValue({ media: [{ media: { media_status: "READY" } }] }),
+    service = {
+      createMedia: vi.fn().mockResolvedValue({ media: [{ media: { id: "media-1" } }] }),
+      uploadMediaFile: vi.fn().mockResolvedValue(undefined),
+      getMedia: vi.fn().mockResolvedValue({ media: [{ media: { media_status: "READY" } }] }),
     };
     mockResolveSessionServices.mockReturnValue({
       boundAdAccountId: "1",
-      snapchatService: { client },
+      snapchatService: service,
     });
   });
 
@@ -79,7 +79,7 @@ describe("snapchat uploads governance contract (effect class)", () => {
     describe(c.label, () => {
       it("dry_run returns a symbolic effect preview, no download or API call", async () => {
         const result = await c.logic({ ...c.input, dry_run: true } as any, ctx, sdk);
-        expect(client.post).not.toHaveBeenCalled();
+        expect(service.createMedia).not.toHaveBeenCalled();
         expect(result.mediaId).toBeUndefined();
         expect(result.dryRun?.expectedEffect).toEqual({
           effectKind: "asset_uploaded",
@@ -105,7 +105,7 @@ describe("snapchat uploads governance contract (effect class)", () => {
 
       it("execute returns the effect identity + null-kind capability", async () => {
         const result = await c.logic({ ...c.input } as any, ctx, sdk);
-        expect(client.postMultipart).toHaveBeenCalledOnce();
+        expect(service.uploadMediaFile).toHaveBeenCalledOnce();
         expect(result.mediaId).toBe("media-1");
         expect(result.effect).toEqual({
           effectKind: "asset_uploaded",

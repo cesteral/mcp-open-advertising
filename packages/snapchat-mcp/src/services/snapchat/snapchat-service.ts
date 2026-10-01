@@ -18,6 +18,11 @@ import type {
   SnapchatAdAccount,
 } from "./types.js";
 
+import type {
+  SnapchatMediaUploadResponse,
+  SnapchatMediaGetResponse,
+} from "../../mcp-server/tools/utils/media-types.js";
+
 export type { SnapchatCampaign, SnapchatAdSquad, SnapchatAd, SnapchatCreative, SnapchatAdAccount };
 
 interface SnapchatEntityMap {
@@ -455,9 +460,54 @@ export class SnapchatService {
     }
   }
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
-  get client(): SnapchatHttpClient {
-    return this.httpClient;
+  // ─── Media uploads ──────────────────────────────────────────────
+  //
+  // The upload tools used to reach the HTTP client through a `client` getter,
+  // so the media create, the binary upload and every status poll bypassed the
+  // limiter (#237, snapchat #21). These draw from the session's entity bucket
+  // like every other call: the two POSTs as writes, each poll as a read. The
+  // getter is gone so no tool can bypass the limiter again.
+
+  /** `POST /v1/adaccounts/{adAccountId}/media` — create one media entity. */
+  async createMedia(
+    adAccountId: string,
+    media: { name: string; type: "IMAGE" | "VIDEO" },
+    context?: RequestContext
+  ): Promise<SnapchatMediaUploadResponse> {
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
+    return (await this.httpClient.post(
+      `/v1/adaccounts/${adAccountId}/media`,
+      { media: [{ ...media, ad_account_id: adAccountId }] },
+      context
+    )) as SnapchatMediaUploadResponse;
+  }
+
+  /** `POST /v1/media/{mediaId}/upload` — the binary, as multipart field `file`. */
+  async uploadMediaFile(
+    mediaId: string,
+    file: { buffer: Buffer; filename: string; contentType: string },
+    context?: RequestContext
+  ): Promise<void> {
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient, SNAPCHAT_WRITE_TOKENS);
+    await this.httpClient.postMultipart(
+      `/v1/media/${mediaId}/upload`,
+      {},
+      "file",
+      file.buffer,
+      file.filename,
+      file.contentType,
+      context
+    );
+  }
+
+  /** `GET /v1/media/{mediaId}` — one status poll. */
+  async getMedia(mediaId: string, context?: RequestContext): Promise<SnapchatMediaGetResponse> {
+    await consumeSnapchatQuota(this.rateLimiter, this.httpClient);
+    return (await this.httpClient.get(
+      `/v1/media/${mediaId}`,
+      undefined,
+      context
+    )) as SnapchatMediaGetResponse;
   }
 
   // ─── Standard CRUD ──────────────────────────────────────────────
