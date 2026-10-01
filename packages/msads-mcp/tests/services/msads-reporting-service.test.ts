@@ -10,9 +10,20 @@ import pino from "pino";
 
 vi.mock("@cesteral/shared", async () => {
   const actual = await vi.importActual("@cesteral/shared");
+  const fetchWithTimeout = vi.fn();
   return {
     ...actual,
-    fetchWithTimeout: vi.fn(),
+    fetchWithTimeout,
+    // Downloads go through the redirect-guarded fetch; route it to the same
+    // mock with fetchWithTimeout's argument order so the assertions read alike.
+    // The guard itself is exercised against a stubbed global fetch elsewhere.
+    fetchGuardedDownload: (
+      url: string,
+      o: { timeoutMs: number; context?: unknown; init?: RequestInit }
+    ) =>
+      o.init === undefined
+        ? fetchWithTimeout(url, o.timeoutMs, o.context)
+        : fetchWithTimeout(url, o.timeoutMs, o.context, o.init),
     delay: vi.fn().mockResolvedValue(undefined),
   };
 });

@@ -6,7 +6,7 @@ import { consumeTikTokReportingQuota } from "./rate-limit-keys.js";
 import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import {
-  fetchWithTimeout,
+  fetchGuardedDownload,
   McpError,
   JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
@@ -318,11 +318,14 @@ export class TikTokReportingService {
     context?: RequestContext,
     options: { includeRawCsv?: boolean } = {}
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-      context
-    );
+    // An anonymous fetch of a platform-signed URL, which reaches here from the
+    // MCP client (download_report) or from the platform (get_report). Redirects
+    // are followed by hand so every hop passes the SSRF checks; with
+    // `redirect: "follow"` only the first URL was checked.
+    const response = await fetchGuardedDownload(downloadUrl, {
+      timeoutMs: DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context,
+    });
 
     if (!response.ok) {
       throw new McpError(
