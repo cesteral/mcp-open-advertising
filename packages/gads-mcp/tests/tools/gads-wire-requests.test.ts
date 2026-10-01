@@ -155,13 +155,26 @@ function expectOneTokenPerApiCall() {
   );
 }
 
-function routeSearch(results: unknown[]) {
+const CURRENCY_QUERY = "SELECT customer.currency_code FROM customer";
+
+/**
+ * Answer `googleAds:search` with `results`, except the snapshot currency read,
+ * which gets the customer's `currencyCode`.
+ */
+function routeSearch(results: unknown[], currencyCode = "USD") {
   stub.route({
     method: "POST",
     host: GADS_HOST,
     path: `/v25/customers/${CID}/googleAds:search`,
-    response: { results },
+    response: (req: WireRequest) =>
+      (req.body as { query?: string })?.query === CURRENCY_QUERY
+        ? { results: [{ customer: { resourceName: `customers/${CID}`, currencyCode } }] }
+        : { results },
   });
+}
+
+function currencyReads(): WireRequest[] {
+  return searches().filter((r) => (r.body as { query?: string })?.query === CURRENCY_QUERY);
 }
 
 function routeMutate(collection: string, response: unknown) {
@@ -309,8 +322,44 @@ describe("gads_update_entity → customers.<collection>.mutate (update + updateM
         },
       ],
     });
-    // before + after snapshot reads bracket the write.
-    expect(searches()).toHaveLength(2);
+    // before + after snapshot reads bracket the write, plus one currency read
+    // for both snapshots.
+    expect(searches()).toHaveLength(3);
+    expect(currencyReads()).toHaveLength(1);
+    expectOneTokenPerApiCall();
+  });
+
+  it("campaignBudget snapshots are in the customer's currency and its minor units", async () => {
+    routeMutate("campaignBudgets", {
+      results: [{ resourceName: `customers/${CID}/campaignBudgets/999` }],
+    });
+    routeSearch([{ campaignBudget: { id: "999", name: "B", amountMicros: "1500000000" } }], "JPY");
+
+    const out = await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "campaignBudget",
+        customerId: CID,
+        entityId: "999",
+        data: { amountMicros: "2000000000" },
+        updateMask: "amountMicros",
+      }),
+      ctx,
+      sdk
+    );
+
+    // basis: discovery `Resources__Customer.currencyCode` ("Immutable. The
+    // currency in which the account operates", ISO 4217), read once with GAQL;
+    // `Resources__CampaignBudget.amountMicros` ("Amount is specified in micros",
+    // one millionth of the account currency). JPY has no minor unit, so
+    // 1,500,000,000 micros is ¥1,500 = 1,500 minor units, not 150,000 "cents".
+    const [read] = currencyReads();
+    expect(read!.method).toBe("POST");
+    expect(read!.url).toBe(`${API}/customers/${CID}/googleAds:search`);
+    expectGAdsHeaders(read!);
+    expect(read!.body).toEqual({ query: CURRENCY_QUERY });
+    expect(currencyReads()).toHaveLength(1);
+    expect(out.before?.budget.daily).toEqual({ amountMinor: 1500, currency: "JPY" });
+    expect(out.after?.budget.daily).toEqual({ amountMinor: 1500, currency: "JPY" });
     expectOneTokenPerApiCall();
   });
 

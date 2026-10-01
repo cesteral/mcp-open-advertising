@@ -34,6 +34,33 @@ export interface GAdsServiceLike {
     entityId: string,
     context?: RequestContext
   ) => Promise<unknown>;
+  /** ISO 4217 currency of the customer account (`GAdsService.getCustomerCurrency`). */
+  getCustomerCurrency?: (customerId: string, context?: RequestContext) => Promise<string>;
+}
+
+/**
+ * ISO 4217 "no currency involved" code, used when the customer's currency
+ * cannot be read, so a snapshot never claims a currency it does not know.
+ */
+export const GADS_UNKNOWN_CURRENCY = "XXX";
+
+/**
+ * The customer's currency for snapshots. Degrades to GADS_UNKNOWN_CURRENCY
+ * when the service cannot provide it, rather than failing the write or dry run
+ * the snapshot belongs to.
+ */
+export async function resolveGAdsCurrency(
+  service: GAdsServiceLike,
+  customerId: string,
+  context?: RequestContext
+): Promise<string> {
+  if (!service.getCustomerCurrency) return GADS_UNKNOWN_CURRENCY;
+  try {
+    const code = await service.getCustomerCurrency(customerId, context);
+    return /^[A-Z]{3}$/.test(code) ? code : GADS_UNKNOWN_CURRENCY;
+  } catch {
+    return GADS_UNKNOWN_CURRENCY;
+  }
 }
 
 /** Governed entity types → canonical kind. Keyed by the MCP `entityType` input. */
@@ -67,12 +94,31 @@ function normalizeStatus(raw: unknown): { canonical: CanonicalStatus; platformRa
   return { canonical: STATUS_MAP[platformRaw] ?? "unknown", platformRaw };
 }
 
-function microsToMinor(micros: unknown): number | undefined {
+/**
+ * ISO 4217 minor-unit exponent for `currency` (USD 2, JPY 0, KWD 3), read from
+ * the runtime's ICU currency data. Falls back to 2 for codes ICU does not know
+ * (including GADS_UNKNOWN_CURRENCY).
+ */
+function currencyExponent(currency: string): number {
+  if (currency === GADS_UNKNOWN_CURRENCY) return 2;
+  try {
+    const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
+      .maximumFractionDigits;
+    return typeof digits === "number" ? digits : 2;
+  } catch {
+    return 2;
+  }
+}
+
+/**
+ * Micros of the account currency → its minor units. 1,000,000 micros is one
+ * major unit: $1.00 = 100 cents, but ¥1 = 1 minor unit (JPY has none smaller).
+ */
+function microsToMinor(micros: unknown, currency: string): number | undefined {
   if (micros == null) return undefined;
   const n = typeof micros === "string" ? Number(micros) : Number(micros);
   if (!Number.isFinite(n)) return undefined;
-  // micros → minor units (cents). 1,000,000 micros = $1.00 = 100 cents.
-  return Math.round(n / 10000);
+  return Math.round(n / 10 ** (6 - currencyExponent(currency)));
 }
 
 /**
@@ -94,26 +140,28 @@ export function unwrapResource(
 /**
  * Pure builder: normalize a flat Google Ads resource object into the canonical
  * snapshot. `resource` is the un-nested entity (post-overlay for dry-run, or
- * the post-write read for `after`).
+ * the post-write read for `after`). `currency` is the customer's ISO 4217 code
+ * (`resolveGAdsCurrency`): Google Ads amounts are micros of the account
+ * currency, which the entity row does not carry.
  */
 export function buildGAdsSnapshot(
   entityType: string,
   customerId: string,
   entityId: string,
-  resource: Record<string, unknown>
+  resource: Record<string, unknown>,
+  currency: string
 ): NormalizedEntitySnapshot | null {
   const entityKind = ENTITY_KIND_MAP[entityType];
   if (!entityKind) return null;
 
   const r = resource as Record<string, any>;
-  // Google Ads amounts are micros in the account currency, which is not
-  // carried on the entity row. Round-1 canonical shape defaults to USD.
-  const currency = "USD";
 
   // Budget lives only on the campaignBudget entity (`amountMicros`, a daily
   // budget). campaign / adGroup rows carry no budget field.
   const dailyMinor =
-    entityKind === "campaign_budget" ? microsToMinor(r.amountMicros ?? r.amount_micros) : undefined;
+    entityKind === "campaign_budget"
+      ? microsToMinor(r.amountMicros ?? r.amount_micros, currency)
+      : undefined;
 
   // Since v23, Campaign carries the flight as `startDateTime` / `endDateTime`
   // ("yyyy-MM-dd HH:mm:ss" in the customer's time zone); the date-only
@@ -161,7 +209,8 @@ export async function captureGAdsSnapshot(
     if (!row || typeof row !== "object") return undefined;
     const resource = unwrapResource(entityType, row);
     if (!resource) return undefined;
-    const snapshot = buildGAdsSnapshot(entityType, customerId, entityId, resource);
+    const currency = await resolveGAdsCurrency(gadsService, customerId, context);
+    const snapshot = buildGAdsSnapshot(entityType, customerId, entityId, resource, currency);
     return snapshot ?? undefined;
   } catch {
     return undefined;

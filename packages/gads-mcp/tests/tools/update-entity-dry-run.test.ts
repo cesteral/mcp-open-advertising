@@ -6,7 +6,7 @@
  * symbolic apply) and the before/after snapshot normalizer.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RequestContext } from "@cesteral/shared";
 import {
   runGAdsUpdateDryRun,
@@ -63,6 +63,7 @@ function fakeService(opts: {
       return { valid: opts.valid ?? true, errors: opts.errors };
     },
     getEntity: async () => opts.row ?? campaignRow(),
+    getCustomerCurrency: async () => "USD",
   };
 }
 
@@ -138,6 +139,61 @@ describe("runGAdsUpdateDryRun", () => {
       amountMinor: 7500,
       currency: "USD",
     });
+  });
+
+  it("uses the customer's currency and minor-unit exponent, not a fixed USD", async () => {
+    const service = {
+      ...fakeService({ valid: true, row: budgetRow() }),
+      getCustomerCurrency: vi.fn().mockResolvedValue("EUR"),
+    };
+    const eur = await runGAdsUpdateDryRun(
+      {
+        entityType: "campaignBudget",
+        customerId: "111",
+        entityId: "999",
+        data: { amountMicros: "75000000" },
+        updateMask: "amountMicros",
+      },
+      service,
+      ctx
+    );
+    expect(service.getCustomerCurrency).toHaveBeenCalledWith("111", ctx);
+    expect(eur.expectedPostState!.budget.daily).toEqual({ amountMinor: 7500, currency: "EUR" });
+
+    service.getCustomerCurrency.mockResolvedValue("KWD");
+    const kwd = await runGAdsUpdateDryRun(
+      {
+        entityType: "campaignBudget",
+        customerId: "111",
+        entityId: "999",
+        data: { amountMicros: "75000000" },
+        updateMask: "amountMicros",
+      },
+      service,
+      ctx
+    );
+    // KWD has three decimals: 75 KWD = 75,000 fils.
+    expect(kwd.expectedPostState!.budget.daily).toEqual({ amountMinor: 75000, currency: "KWD" });
+  });
+
+  it("reports XXX, not USD, when the customer's currency cannot be read", async () => {
+    const service = {
+      ...fakeService({ valid: true, row: budgetRow() }),
+      getCustomerCurrency: vi.fn().mockRejectedValue(new Error("quota")),
+    };
+    const result = await runGAdsUpdateDryRun(
+      {
+        entityType: "campaignBudget",
+        customerId: "111",
+        entityId: "999",
+        data: { amountMicros: "75000000" },
+        updateMask: "amountMicros",
+      },
+      service,
+      ctx
+    );
+    expect(result.wouldSucceed).toBe(true);
+    expect(result.expectedPostState!.budget.daily).toEqual({ amountMinor: 7500, currency: "XXX" });
   });
 
   it("fails the call when the native validateOnly request itself throws", async () => {
@@ -220,7 +276,8 @@ describe("applyGAdsPatch", () => {
       "222",
       { id: "222", name: "Sample Campaign", status: "PAUSED" },
       { status: "ENABLED", name: "Ignored — not in mask" },
-      "status"
+      "status",
+      "USD"
     );
     expect(snapshot!.status.canonical).toBe("active");
     expect(snapshot!.displayName).toBe("Sample Campaign");
@@ -229,14 +286,17 @@ describe("applyGAdsPatch", () => {
 
 describe("buildGAdsSnapshot", () => {
   it("returns null for an out-of-scope entity type", () => {
-    expect(buildGAdsSnapshot("keyword", "111", "1~2", {})).toBeNull();
+    expect(buildGAdsSnapshot("keyword", "111", "1~2", {}, "USD")).toBeNull();
   });
 
   it("leaves budget null for campaign / adGroup (no budget field on the entity)", () => {
-    const snapshot = buildGAdsSnapshot("adGroup", "111", "333", {
-      name: "AG",
-      status: "ENABLED",
-    });
+    const snapshot = buildGAdsSnapshot(
+      "adGroup",
+      "111",
+      "333",
+      { name: "AG", status: "ENABLED" },
+      "USD"
+    );
     expect(snapshot!.entityKind).toBe("ad_group");
     expect(snapshot!.budget).toEqual({ daily: null, lifetime: null });
   });
