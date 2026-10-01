@@ -44,7 +44,6 @@ export const UpdateEntityInputSchema = z
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
     campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
-    adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
     data: z.record(z.any()).describe("Entity data fields to update"),
     strictMode: z
       .boolean()
