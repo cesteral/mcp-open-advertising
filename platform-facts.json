@@ -764,6 +764,50 @@
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": ["packages/ttd-mcp/src/config/index.ts:37"]
+    },
+    {
+      "id": "ttd.bulk_mutation_variable_binding",
+      "package": "ttd-mcp",
+      "class": "behavioral-constraint",
+      "claim": "`createMutationBulk(input: { mutation, mutationVariables })`: `mutation` is ONE mutation operation, and `mutationVariables` is an array of JSON-encoded STRINGS, one per execution, each an object keyed by the mutation's variable name (`$input` -> `{ \"input\": { ... } }`). Read from TTD's Bulk operations page via its Monaco editor models, 2026-10-01. Not exercised against a live TTD; the declared GraphQL type of the $mutationVariables variable is not shown by the page.",
+      "value": "mutationVariables",
+      "sourceUrl": "https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlBulkOperations",
+      "status": "verified",
+      "verifiedAt": "2026-10-01",
+      "verifyBy": "2027-03-30",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/ttd-mcp/src/mcp-server/tools/definitions/graphql-mutation-bulk.tool.ts:243"
+      ]
+    },
+    {
+      "id": "ttd.bulk_job_poll_fields",
+      "package": "ttd-mcp",
+      "class": "behavioral-constraint",
+      "claim": "TTD's bulkJob poll selects id createdAt rawResult completionPercentage completedAt status url runtimeErrors, plus `... on BulkMutationJob { mutationGqlErrors { error index } }` and `... on BulkQueryJob { queryGqlErrors }`. Per-input errors of a mutation job arrive as mutationGqlErrors with the failed input's index. The page does not list `gqlErrors`, which this server used to select from TTD's sample scripts. Read from TTD's Bulk operations page, 2026-10-01.",
+      "value": "mutationGqlErrors",
+      "sourceUrl": "https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlBulkOperations",
+      "status": "verified",
+      "verifiedAt": "2026-10-01",
+      "verifyBy": "2027-03-30",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/ttd-mcp/src/mcp-server/tools/definitions/graphql-bulk-job.tool.ts:58"]
+    },
+    {
+      "id": "ttd.bulk_mutation_limits",
+      "package": "ttd-mcp",
+      "class": "behavioral-constraint",
+      "claim": "A bulk mutation must have fewer than 15,000 lexical tokens, include at most 1000 inputs and exactly one mutation operation; bulk operations exist only at advertiser, campaign and ad group level; mutation jobs cannot be cancelled (cancelBulkJob is for query jobs); at most 10 active and 20 queued bulk jobs; the result file expires one hour after completedAt. This server caps inputs at 100 and gates production on purpose, because the tool has never run against TTD. Read from TTD's Bulk operations page, 2026-10-01.",
+      "value": "15_000",
+      "sourceUrl": "https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlBulkOperations",
+      "status": "verified",
+      "verifiedAt": "2026-10-01",
+      "verifyBy": "2027-03-30",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/ttd-mcp/src/mcp-server/tools/utils/graphql-bulk-job.ts:238"]
     }
   ]
 }
