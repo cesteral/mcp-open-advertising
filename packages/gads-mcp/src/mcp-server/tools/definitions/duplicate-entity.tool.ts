@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { runGAdsDuplicateDryRun, resolveGAdsDuplicateCapability } from "../utils/dry-run.js";
@@ -63,10 +64,7 @@ function extractNewId(result: unknown): string {
 export const DuplicateEntityInputSchema = z
   .object({
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
       .record(z.any())

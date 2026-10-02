@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
@@ -36,7 +37,7 @@ Note: In Google Ads, "remove" sets the entity status to REMOVED. The entity data
 export const RemoveEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to remove"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     entityId: z.string().min(1).describe("The entity ID to remove"),
     dry_run: z
       .boolean()

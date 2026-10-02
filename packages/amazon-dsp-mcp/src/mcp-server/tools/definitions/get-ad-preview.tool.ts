@@ -16,7 +16,7 @@ Uses the legacy \`GET /dsp/creatives/{creativeId}/preview\` endpoint — the Uni
 
 export const GetAdPreviewInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("Amazon DSP Advertiser ID"),
+    profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
     adId: z.string().min(1).describe("The creative ID to preview"),
   })
   .describe("Parameters for getting an Amazon DSP creative preview");

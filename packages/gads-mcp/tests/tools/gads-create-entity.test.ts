@@ -10,6 +10,8 @@ import {
   CreateEntityInputSchema,
   createEntityLogic,
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
+import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
+import { CustomerIdSchema } from "../../src/mcp-server/tools/utils/customer-id.js";
 
 const ctx = { requestId: "r", timestamp: new Date().toISOString(), operation: "t" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -141,5 +143,53 @@ describe("createEntityLogic governance contract", () => {
       createEntityLogic({ entityType: "campaign", customerId: "1", data: {} } as any, ctx, sdk)
     ).rejects.toThrow(/at least one field/);
     expect(svc.createEntity).not.toHaveBeenCalled();
+  });
+});
+
+// gads #12: a version literal in a governed description makes every API
+// version bump move that tool's definitionHash (v23 → v25 did, in #255).
+describe("governed gads tool descriptions", () => {
+  it("name no Google Ads API version", () => {
+    const governed = allTools.filter(
+      (t) => (t.annotations as { cesteral?: unknown } | undefined)?.cesteral !== undefined
+    );
+    expect(governed.length).toBeGreaterThan(0);
+    const withVersion = governed.filter((t) => /\bv2\d\b/.test(t.description)).map((t) => t.name);
+    expect(withVersion).toEqual([]);
+  });
+});
+
+// gads #17: `customerId` is interpolated into the URL path and GAQL resource
+// names. Ten tools took any non-empty string (the dashed UI form reached the
+// path); seven required digits. Every tool now shares one schema.
+describe("customerId validation", () => {
+  const shapeOf = (schema: unknown): Record<string, unknown> | undefined => {
+    let s = schema as {
+      shape?: Record<string, unknown>;
+      _def?: { schema?: unknown; innerType?: unknown };
+    };
+    while (s && !s.shape && s._def) s = (s._def.schema ?? s._def.innerType) as typeof s;
+    return s?.shape;
+  };
+
+  it("every tool taking a customerId uses the one digits-only schema", () => {
+    const taking = allTools.filter((t) => shapeOf(t.inputSchema)?.customerId !== undefined);
+    expect(taking.length).toBeGreaterThan(10);
+    const other = taking
+      .filter((t) => shapeOf(t.inputSchema)!.customerId !== CustomerIdSchema)
+      .map((t) => t.name);
+    expect(other).toEqual([]);
+  });
+
+  it("refuses the dashed UI form", () => {
+    expect(CustomerIdSchema.safeParse("1234567890").success).toBe(true);
+    expect(CustomerIdSchema.safeParse("123-456-7890").success).toBe(false);
+    expect(
+      CreateEntityInputSchema.safeParse({
+        entityType: "campaign",
+        customerId: "123-456-7890",
+        data: { name: "x" },
+      }).success
+    ).toBe(false);
   });
 });

@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   createReportView,
@@ -19,10 +20,7 @@ const TOOL_DESCRIPTION = `Execute a Google Ads Query Language (GAQL) query again
 
 export const GAQLSearchInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes, e.g., '1234567890')"),
+    customerId: CustomerIdSchema,
     query: z.string().min(1).describe("GAQL query string (must include SELECT and FROM clauses)"),
     pageToken: z
       .string()

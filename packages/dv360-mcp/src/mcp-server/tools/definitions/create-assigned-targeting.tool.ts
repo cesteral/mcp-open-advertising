@@ -12,6 +12,7 @@ import {
   getSupportedTargetingParentTypes,
   validateTargetingInput,
   getTargetingValidationError,
+  addTargetingTypeForParentIssue,
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
@@ -91,6 +92,7 @@ export const CreateAssignedTargetingInputSchema = z
       ),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine((input, ctx) => addTargetingTypeForParentIssue("create", input, ctx))
   .describe("Parameters for creating an assigned targeting option");
 
 /**

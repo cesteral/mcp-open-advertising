@@ -29,14 +29,16 @@ import type {
 
 const TOOL_NAME = "snapchat_adjust_bids";
 const TOOL_TITLE = "Snapchat Ad Group Bid Adjustment";
-const TOOL_DESCRIPTION = `Batch adjust ad group bid prices with safe read-modify-write.
+const TOOL_DESCRIPTION = `Batch adjust ad squad (ad group) bids with safe read-modify-write.
 
-Reads current bid prices, applies new values, and reports previous/new amounts.
-Bid prices are in the advertiser's account currency.
+Reads each ad squad's current \`bid_micro\`, writes the new bid as \`bid_micro\`, and reports
+previous/new amounts. \`bidPrice\` is in the ad account's currency; the tool converts it to
+micro-currency (\`bidPrice\` × 1,000,000).
 
 **Gotchas:**
-- Only applies to ad groups with manual bidding (bid_price field).
-- Ad groups using automated bidding strategies may ignore bid_price.
+- \`bid_micro\` is the bid for ad squads whose \`bid_strategy\` is LOWEST_COST_WITH_MAX_BID or
+  TARGET_COST. An AUTO_BID ad squad may ignore it; change \`bid_strategy\` with
+  snapchat_update_entity first.
 - Each read + write pair consumes rate limit tokens.
 - Max 50 adjustments per call.`;
 
@@ -146,7 +148,7 @@ export async function adjustBidsLogic(
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "ad squad",
-    summary: input.reason ?? "Applying bid_price changes.",
+    summary: input.reason ?? "Applying bid_micro changes.",
     impactPreview: input.adjustments.map((a) => a.adGroupId),
     sdkContext,
   });

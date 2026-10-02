@@ -357,6 +357,29 @@ describe("ttd_create_entity → POST /v3/{entity}", () => {
     expect(remaining()).toBe(LIMIT - 1);
   });
 
+  it("takes no adGroupId: no entity type has an ad-group parent (ttd REST #25)", async () => {
+    // The schemas offered "Ad Group ID (required for ad)" for an `ad` type that
+    // does not exist, and merged it into the body as AdGroupId for any type.
+    expect(CreateEntityInputSchema.innerType().shape).not.toHaveProperty("adGroupId");
+    expect(UpdateEntityInputSchema.innerType().shape).not.toHaveProperty("adGroupId");
+
+    stub.route({ method: "POST", path: `${V}/campaign`, response: { CampaignId: "camp002" } });
+    const data = { CampaignName: "Winter", Version: "Kokai" };
+    await createEntityLogic(
+      CreateEntityInputSchema.parse({
+        entityType: "campaign",
+        advertiserId: ADV,
+        adGroupId: "ag-stray",
+        data,
+      }),
+      ctx,
+      sdk
+    );
+    // basis: as the campaign create above — a campaign body carries
+    // AdvertiserId and no AdGroupId.
+    expect(onlyRestWrite().body).toEqual({ AdvertiserId: ADV, ...data });
+  });
+
   it("adGroup → POST /v3/adgroup with CampaignId (and AdvertiserId) in the body", async () => {
     stub.route({ method: "POST", path: `${V}/adgroup`, response: { AdGroupId: "ag001" } });
     const data = {

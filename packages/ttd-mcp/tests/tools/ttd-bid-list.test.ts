@@ -14,6 +14,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import {
   bidListLogic,
+  manageBidListTool,
   BidListInputSchema,
 } from "../../src/mcp-server/tools/definitions/manage-bid-list.tool.js";
 import {
@@ -45,6 +46,17 @@ const unlimitedBulkCapacityCheck = (
   toolName,
   itemCount,
   buckets: [{ key: "ttd:test", costPerItem }],
+});
+
+// ttd REST #12: the delete action (bidListDelete) is irreversible, so the MCP
+// hint must not tell clients the tool is non-destructive.
+describe("ttd_manage_bid_list annotations", () => {
+  it("is destructive: it can delete a bid list", () => {
+    expect(BidListInputSchema.safeParse({ operation: "delete", data: { id: "1" } }).success).toBe(
+      true
+    );
+    expect(manageBidListTool.annotations.destructiveHint).toBe(true);
+  });
 });
 
 describe("ttd bid list tools", () => {

@@ -164,6 +164,20 @@ describe("Amazon DSP MCP definitions coverage", () => {
     expect(getPromptDefinition("amazon_dsp_campaign_setup_workflow")).toBeDefined();
   });
 
+  // amazon-dsp #23: profileId is the profile (Amazon-Advertising-API-Scope)
+  // id the session is bound to, not an advertiser id.
+  it("never describes profileId as an advertiser ID", () => {
+    const misdescribed = allTools
+      .map((tool) => {
+        const shape = (tool.inputSchema as { shape?: Record<string, { description?: string }> })
+          .shape;
+        return { name: tool.name, description: shape?.profileId?.description };
+      })
+      .filter((t) => t.description !== undefined && /advertiser/i.test(t.description))
+      .map((t) => t.name);
+    expect(misdescribed).toEqual([]);
+  });
+
   it("registers the 7 v1 commitment tools and update_commitment carries its contractId", () => {
     const v1ToolNames = [
       "amazon_dsp_list_commitments",

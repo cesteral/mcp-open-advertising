@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { GAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
@@ -21,10 +22,7 @@ The adId is the numeric ID, not the resource name.`;
 
 export const GetAdPreviewInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads Customer ID (without dashes, e.g., 1234567890)"),
+    customerId: CustomerIdSchema,
     adId: z.string().min(1).describe("Google Ads Ad ID"),
   })
   .describe("Parameters for getting a Google Ads ad preview");

@@ -293,7 +293,7 @@ describe("bulkUpdateStatusResponseFormatter", () => {
 describe("BulkUpdateStatusInputSchema", () => {
   it("requires profileId, entityType, entityIds, status", () => {
     const result = BulkUpdateStatusInputSchema.safeParse({
-      profileId: "p1",
+      profileId: "123",
       entityType: "campaign",
       entityIds: ["1"],
       status: "ARCHIVED",
@@ -303,7 +303,7 @@ describe("BulkUpdateStatusInputSchema", () => {
 
   it("rejects empty entityIds", () => {
     const result = BulkUpdateStatusInputSchema.safeParse({
-      profileId: "p1",
+      profileId: "123",
       entityType: "campaign",
       entityIds: [],
       status: "ARCHIVED",
@@ -314,7 +314,7 @@ describe("BulkUpdateStatusInputSchema", () => {
   it("rejects more than 50 entityIds", () => {
     const ids = Array.from({ length: 51 }, (_, i) => String(i));
     const result = BulkUpdateStatusInputSchema.safeParse({
-      profileId: "p1",
+      profileId: "123",
       entityType: "campaign",
       entityIds: ids,
       status: "ARCHIVED",

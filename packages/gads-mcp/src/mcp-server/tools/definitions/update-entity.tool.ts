@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
@@ -33,7 +34,7 @@ Example updateMask: "name,status" or "campaignBudget,endDateTime"
 export const UpdateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     entityId: z.string().min(1).describe("The entity ID to update"),
     data: z.record(z.any()).describe("Entity data fields to update"),
     updateMask: z

@@ -184,7 +184,7 @@ describe("mcp transport error propagation (CM360)", () => {
         arguments: {
           profileId: "12345",
           entityType: "campaign",
-          entityId: "nonexistent",
+          entityId: "999999999",
         },
       },
     });

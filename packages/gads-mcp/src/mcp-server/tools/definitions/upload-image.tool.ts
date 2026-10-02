@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
@@ -36,8 +37,8 @@ handles the download + base64 encoding for you.
 - Formats: JPEG, PNG, GIF
 - Max file size: 5MB
 
-Note: Google Ads has no binary video upload — video assets reference a YouTube video ID, so
-create them with \`gads_create_entity\` (entityType \`asset\`, \`youtubeVideoAsset\`).`;
+Note: video assets reference a YouTube video ID rather than uploaded bytes; create them with
+\`gads_upload_video\` (or \`gads_create_entity\`, entityType \`asset\`, \`youtubeVideoAsset\`).`;
 
 const ASSET_TYPE = "image";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -53,10 +54,7 @@ function toImageMimeType(contentType: string): string | undefined {
 
 export const UploadImageInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     name: z.string().min(1).describe("Asset name (unique within the account)"),
     mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
     dry_run: z
@@ -162,9 +160,9 @@ export async function uploadImageLogic(
 /**
  * Symbolic effect dry-run for `upload_image`. Validates the request (mediaUrl
  * must be an http(s) URL — Zod's `.url()` admits other schemes) and projects
- * the would-be effect (an image asset). The upload fetches the URL and streams
- * it upstream — there is no native validate/preview — so both axes are
- * symbolic. Pure (no I/O: no download, no create).
+ * the would-be effect (an image asset). Both axes are symbolic: the dry run
+ * makes no API call (MutateAssetsRequest.validateOnly is not used). Pure (no
+ * I/O: no download, no create).
  */
 function buildUploadEffectDryRun(mediaUrl: string): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
@@ -249,8 +247,9 @@ export const uploadImageTool = {
       entityIdArgs: ["customerId"],
       schemaVersion: 1,
       contractId: "google_ads.upload_image.v1",
-      // `dry_run` = symbolic validate + symbolic effect projection. Google Ads
-      // has no native asset-upload validate/preview, so both axes are symbolic.
+      // `dry_run` = symbolic validate + symbolic effect projection. It makes no
+      // API call (MutateAssetsRequest.validateOnly is not used), so both axes
+      // are symbolic.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
       requiresValidation: true,

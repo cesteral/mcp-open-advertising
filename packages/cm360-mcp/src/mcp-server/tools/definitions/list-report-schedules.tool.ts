@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   fromCm360Schedule,
@@ -22,7 +23,7 @@ Reads one page of CM360 reports (\`scope=ALL\`, so other users' reports in the a
 
 export const ListReportSchedulesInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     maxResults: z
       .number()
       .int()

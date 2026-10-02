@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   assertSnapchatBulkCapacity,
   snapchatBulkCost,
+  hasParentFilter,
   snapchatBulkCapacityDryRunErrors,
 } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
@@ -37,7 +38,9 @@ const TOOL_DESCRIPTION = `Batch update multiple Snapchat Ads entities of the sam
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Each item must include an \`entityId\` and a \`data\` object with fields to update.
-The server fetches the current entities first so it can send the full payload Snapchat requires.
+The server fetches the current entities first so it can send the full payload Snapchat requires,
+and PUTs each one to its own parent's collection route, so \`campaignId\` / \`adSquadId\` are
+optional; a batch whose entities have different parents goes out as one PUT per parent.
 
 Max 50 items per call.`;
 
@@ -47,8 +50,18 @@ export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
-    campaignId: z.string().optional().describe("Campaign ID required when entityType is 'adGroup'"),
-    adSquadId: z.string().optional().describe("Ad Squad ID required when entityType is 'ad'"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe(
+        "Optional, for entityType 'adGroup'. Each ad squad is sent to its own campaign's route (read from the ad squad); when given, an ad squad under another campaign refuses the whole batch."
+      ),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe(
+        "Optional, for entityType 'ad'. Each ad is sent to its own ad squad's route (read from the ad); when given, an ad under another ad squad refuses the whole batch."
+      ),
     items: z
       .array(
         z.object({
@@ -66,22 +79,6 @@ export const BulkUpdateEntitiesInputSchema = z
       .describe(
         "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk update) without prompting for confirmation or calling the Snapchat API. No entities are updated."
       ),
-  })
-  .superRefine((data, ctx) => {
-    if (data.entityType === "adGroup" && !data.campaignId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["campaignId"],
-        message: "campaignId is required for adGroup updates",
-      });
-    }
-    if (data.entityType === "ad" && !data.adSquadId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["adSquadId"],
-        message: "adSquadId is required for ad updates",
-      });
-    }
   })
   .describe("Parameters for bulk entity updates");
 
@@ -139,7 +136,11 @@ export async function bulkUpdateEntitiesLogic(
       snapchatBulkCapacityDryRunErrors(
         TOOL_NAME,
         input.items.length,
-        snapchatBulkCost.bulkUpdate(session.snapchatService, input.entityType),
+        snapchatBulkCost.bulkUpdate(
+          session.snapchatService,
+          input.entityType,
+          hasParentFilter(input)
+        ),
         "items"
       )
     );
@@ -160,7 +161,7 @@ export async function bulkUpdateEntitiesLogic(
   assertSnapchatBulkCapacity(
     TOOL_NAME,
     input.items.length,
-    snapchatBulkCost.bulkUpdate(session.snapchatService, input.entityType)
+    snapchatBulkCost.bulkUpdate(session.snapchatService, input.entityType, hasParentFilter(input))
   );
 
   const payloads = input.items.map((it) => it.data ?? {});

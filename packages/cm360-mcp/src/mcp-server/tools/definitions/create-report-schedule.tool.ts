@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   assertGovernedEffectDryRun,
@@ -54,7 +55,7 @@ const ENTITY_LABEL = "report_schedule";
 
 export const CreateReportScheduleInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     name: z.string().min(1).describe("Name for the scheduled report"),
     type: CM360ReportTypeSchema.describe("Report type"),
     schedule: CM360ScheduleSchema.describe("Schedule configuration"),

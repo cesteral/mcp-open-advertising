@@ -9,7 +9,9 @@
  */
 
 /**
- * All 49 targeting types supported by DV360 API v4
+ * All 50 targeting types in DV360 API v4's `targetingType` enum (Discovery rev
+ * 20260928, without TARGETING_TYPE_UNSPECIFIED). Which ones a parent accepts on
+ * create/delete is narrower: see {@link TARGETING_TYPES_BY_PARENT}.
  * @see https://developers.google.com/display-video/api/reference/rest/v4/TargetingType
  */
 export const ALL_TARGETING_TYPES = [
@@ -67,6 +69,7 @@ export const ALL_TARGETING_TYPES = [
   "TARGETING_TYPE_AUTHORIZED_SELLER_STATUS",
   "TARGETING_TYPE_YOUTUBE_VIDEO",
   "TARGETING_TYPE_YOUTUBE_CHANNEL",
+  "TARGETING_TYPE_YOUTUBE_CHANNEL_PACK",
   "TARGETING_TYPE_SESSION_POSITION",
   "TARGETING_TYPE_THIRD_PARTY_VERIFIER",
 ] as const;
@@ -99,7 +102,9 @@ export const TARGETING_PARENT_TYPES = {
   },
   // campaign and insertionOrder were removed from the DV360 v4 API
   // (Discovery doc revision 20260608 dropped their targeting sub-resources
-  // and schemas entirely) — targeting is now partner/advertiser/lineItem/adGroup only.
+  // and schemas entirely). v4 also has partner-level targeting (CHANNEL only),
+  // which this server does not expose: the parents here are advertiser,
+  // lineItem and adGroup.
   lineItem: {
     apiPathTemplate:
       "/advertisers/{advertiserId}/lineItems/{lineItemId}/targetingTypes/{targetingType}/assignedTargetingOptions",
@@ -118,6 +123,75 @@ export const TARGETING_PARENT_TYPES = {
  * Parent entity types that support assigned targeting options (derived)
  */
 export type TargetingParentType = keyof typeof TARGETING_PARENT_TYPES;
+
+/**
+ * The targeting types a parent accepts on create and delete, where v4
+ * Discovery (rev 20260928) gives an exhaustive list: the `targetingType`
+ * parameter of `advertisers.targetingTypes.assignedTargetingOptions.create` /
+ * `.delete` ("Supported targeting types: …", 5 types) and of
+ * `advertisers.adGroups.targetingTypes.assignedTargetingOptions.create` (14) /
+ * `.delete` (the same plus SESSION_POSITION). The line-item methods say
+ * "Supported targeting types include: …", which is not exhaustive, so line
+ * items are not restricted here.
+ */
+export const TARGETING_TYPES_BY_PARENT: Partial<
+  Record<
+    TargetingParentType,
+    { create: readonly TargetingType[]; delete: readonly TargetingType[] }
+  >
+> = (() => {
+  const advertiser: readonly TargetingType[] = [
+    "TARGETING_TYPE_CHANNEL",
+    "TARGETING_TYPE_DIGITAL_CONTENT_LABEL_EXCLUSION",
+    "TARGETING_TYPE_OMID",
+    "TARGETING_TYPE_SENSITIVE_CATEGORY_EXCLUSION",
+    "TARGETING_TYPE_KEYWORD",
+  ];
+  const adGroupCreate: readonly TargetingType[] = [
+    "TARGETING_TYPE_AGE_RANGE",
+    "TARGETING_TYPE_APP",
+    "TARGETING_TYPE_APP_CATEGORY",
+    "TARGETING_TYPE_AUDIENCE_GROUP",
+    "TARGETING_TYPE_CATEGORY",
+    "TARGETING_TYPE_GENDER",
+    "TARGETING_TYPE_GEO_REGION",
+    "TARGETING_TYPE_HOUSEHOLD_INCOME",
+    "TARGETING_TYPE_KEYWORD",
+    "TARGETING_TYPE_LANGUAGE",
+    "TARGETING_TYPE_PARENTAL_STATUS",
+    "TARGETING_TYPE_URL",
+    "TARGETING_TYPE_YOUTUBE_CHANNEL",
+    "TARGETING_TYPE_YOUTUBE_VIDEO",
+  ];
+  return {
+    advertiser: { create: advertiser, delete: advertiser },
+    adGroup: {
+      create: adGroupCreate,
+      delete: [...adGroupCreate, "TARGETING_TYPE_SESSION_POSITION"],
+    },
+  };
+})();
+
+/**
+ * Zod refinement for the create/delete assigned-targeting tools: refuses a
+ * targeting type the parent does not accept for that operation
+ * ({@link TARGETING_TYPES_BY_PARENT}) before any request is sent.
+ */
+export function addTargetingTypeForParentIssue(
+  operation: "create" | "delete",
+  input: { parentType: string; targetingType: string },
+  ctx: { addIssue: (issue: { code: "custom"; message: string; path: string[] }) => void }
+): void {
+  const allowed = TARGETING_TYPES_BY_PARENT[input.parentType as TargetingParentType]?.[operation];
+  if (!allowed || allowed.includes(input.targetingType as TargetingType)) return;
+  ctx.addIssue({
+    code: "custom",
+    path: ["targetingType"],
+    message:
+      `DV360 does not ${operation} ${input.targetingType} on a ${input.parentType}. ` +
+      `Supported for ${input.parentType} ${operation}: ${allowed.join(", ")}.`,
+  });
+}
 
 /**
  * Union of all required ID field names across all parent types (excluding advertiserId when used with tools)
@@ -178,6 +252,7 @@ export const TARGETING_TYPE_DESCRIPTIONS: Record<TargetingType, string> = {
   TARGETING_TYPE_AUTHORIZED_SELLER_STATUS: "Target by authorized seller (ads.txt) status",
   TARGETING_TYPE_YOUTUBE_VIDEO: "Target specific YouTube videos",
   TARGETING_TYPE_YOUTUBE_CHANNEL: "Target specific YouTube channels",
+  TARGETING_TYPE_YOUTUBE_CHANNEL_PACK: "Target ads to a specific YouTube channel pack",
   TARGETING_TYPE_SESSION_POSITION: "Target by session position (first impression, etc.)",
   TARGETING_TYPE_THIRD_PARTY_VERIFIER: "Apply third-party verification settings",
 };

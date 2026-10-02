@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
@@ -27,7 +28,7 @@ const TOOL_DESCRIPTION = `Create a new Google Ads entity using the :mutate API.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Provide entity data matching the Google Ads API v25 field format.
+Provide entity data in the Google Ads REST field format (camelCase JSON) of the server's pinned API version.
 Refer to \`entity-schema://{entityType}\` resources for field reference.
 
 **Important**: For campaigns, create a campaignBudget first and reference it via the \`campaignBudget\` field.`;
@@ -35,7 +36,7 @@ Refer to \`entity-schema://{entityType}\` resources for field reference.
 export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     data: z
       .record(z.any())
       .describe("Entity data to create (fields vary by entity type — see entity-schema resources)"),

@@ -45,6 +45,7 @@ describe("checkReportStatusLogic", () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-1",
       status: "COMPLETE",
+      rawStatus: "COMPLETED",
       downloadUrl: "https://example.com/report.csv",
     });
 
@@ -56,7 +57,8 @@ describe("checkReportStatusLogic", () => {
 
     expect(result.taskId).toBe("task-1");
     expect(result.state).toBe("complete");
-    expect(result.rawStatus).toBe("COMPLETE");
+    // Snap's own async_status, not the normalized COMPLETE (snapchat #22).
+    expect(result.rawStatus).toBe("COMPLETED");
     expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://example.com/report.csv");
   });
@@ -65,6 +67,7 @@ describe("checkReportStatusLogic", () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-2",
       status: "RUNNING",
+      rawStatus: "STARTED",
     });
 
     const result = await checkReportStatusLogic(
@@ -74,9 +77,22 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.state).toBe("running");
-    expect(result.rawStatus).toBe("RUNNING");
+    expect(result.rawStatus).toBe("STARTED");
     expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
+  });
+
+  it("omits rawStatus when Snapchat returned no async_status", async () => {
+    mockCheckReportStatus.mockResolvedValueOnce({ taskId: "task-4", status: "PENDING" });
+
+    const result = await checkReportStatusLogic(
+      { adAccountId: "1234567890", taskId: "task-4" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.state).toBe("pending");
+    expect(result).not.toHaveProperty("rawStatus");
   });
 
   it("calls checkReportStatus with correct taskId", async () => {
@@ -100,7 +116,7 @@ describe("checkReportStatusResponseFormatter", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-1",
       state: "complete",
-      rawStatus: "COMPLETE",
+      rawStatus: "COMPLETED",
       isComplete: true,
       downloadUrl: "https://example.com/report.csv",
       timestamp: new Date().toISOString(),
@@ -114,7 +130,7 @@ describe("checkReportStatusResponseFormatter", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-2",
       state: "running",
-      rawStatus: "RUNNING",
+      rawStatus: "STARTED",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });
@@ -122,6 +138,7 @@ describe("checkReportStatusResponseFormatter", () => {
     expect(content[0].text).toContain("Report in progress");
     expect(content[0].text).toContain("snapchat_check_report_status");
     expect(content[0].text).toContain("10 seconds");
+    expect(content[0].text).toContain("State: running (STARTED)");
   });
 
   it("shows failure message when failed", () => {

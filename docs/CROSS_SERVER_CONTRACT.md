@@ -115,7 +115,7 @@ The three non-paging platform reads (meta, pinterest, tiktok) are documented as 
 | Server                      | `upload_image`      | `upload_video`           | Notes                                                                                             |
 | --------------------------- | ------------------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
 | dv360-mcp                   | ✅ binary           | ✅ binary                | Uploads bytes via the DV360 asset API (`advertisers/{id}/assets`).                                |
-| gads-mcp                    | ✅ binary           | ⚠️ **YouTube reference** | See below — Google Ads has **no binary video upload**.                                            |
+| gads-mcp                    | ✅ binary           | ⚠️ **YouTube reference** | See below — the video tool references a YouTube video; it uploads no file.                        |
 | meta-mcp                    | ✅ binary           | ✅ binary                | Ad-account media library.                                                                         |
 | linkedin-mcp                | ✅ binary           | ✅ binary                | Vector/registerUpload flow.                                                                       |
 | tiktok-mcp                  | ✅ binary           | ✅ binary                | `/file/image` + `/file/video` upload.                                                             |
@@ -125,9 +125,9 @@ The three non-paging platform reads (meta, pinterest, tiktok) are documented as 
 | amazon-dsp-mcp              | ❌                  | ✅ binary                | See below — Creative Asset Library upload → register.                                             |
 | cm360 / msads / sa360 / dbm | ❌                  | ❌                       | Not applicable to these servers' scope.                                                           |
 
-### gads — no binary video upload (YouTube-referenced)
+### gads — video assets reference YouTube (no file upload here)
 
-`gads_upload_image` uploads raw bytes (→ `ImageAsset`), but Google Ads has **no binary video upload**: a video asset is a `YouTubeVideoAsset` that _references_ a video already hosted on YouTube. `gads_upload_video` therefore takes a **YouTube video ID** (not a file / not a URL) and creates the `YOUTUBE_VIDEO` asset via `assets:mutate`. Callers must host the video on YouTube first. This differs from DV360 (a separate Google product) which does expose a binary asset-upload API — same company, different API surface, so the two Google servers are intentionally asymmetric here.
+`gads_upload_image` uploads raw bytes (→ `ImageAsset`). A Google Ads video asset is a `YouTubeVideoAsset` that _references_ a video already hosted on YouTube, so `gads_upload_video` takes a **YouTube video ID** (not a file / not a URL) and creates the `YOUTUBE_VIDEO` asset via `assets:mutate`. Callers must host the video on YouTube first. Google Ads does have a binary path to YouTube — YouTubeVideoUploadService (`youTubeVideoUploads:create`, `googleads.media.upload` in v25 Discovery) — but no tool here wraps it (gads #9). DV360 (a separate Google product) uploads bytes through its own asset API.
 
 ### ttd — hosted video upload (three-step)
 

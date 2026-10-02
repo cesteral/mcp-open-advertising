@@ -36,7 +36,8 @@ const TOOL_TITLE = "Bulk Update Microsoft Ads Entity Status";
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_DESCRIPTION = `Batch update the status of multiple Microsoft Advertising entities.
 
-Valid statuses: Active, Paused, Deleted (varies by entity type).
+Valid statuses: Active, Paused. Microsoft Advertising's \`Deleted\` status is "for internal use
+only" on every one of these entity types; delete an entity with msads_delete_entity.
 
 Supported entity types are the ones with a settable Status: campaign, adGroup, ad,
 keyword. All IDs in one call belong to one parent, sent as the request-body parent
@@ -54,7 +55,11 @@ export const BulkUpdateStatusInputSchema = z
   .object({
     entityType: z.enum(STATUS_ENTITY_TYPES).describe("Type of entities to update"),
     entityIds: z.array(z.string()).min(1).describe("Array of entity IDs"),
-    status: z.string().describe("New status (Active, Paused, Deleted)"),
+    status: z
+      .enum(["Active", "Paused"])
+      .describe(
+        "New status. Active or Paused: the values campaign, ad group, ad and keyword Update accepts"
+      ),
     ...parentIdInputFields,
     dry_run: z
       .boolean()

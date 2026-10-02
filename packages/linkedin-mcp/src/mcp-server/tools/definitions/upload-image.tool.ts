@@ -29,7 +29,9 @@ const TOOL_TITLE = "Upload Image to LinkedIn Ads";
 const TOOL_DESCRIPTION = `Upload an image to LinkedIn Ads from a URL.
 
 The server downloads the image and uploads it to LinkedIn's Digital Media Assets library.
-Uses LinkedIn's 3-step upload flow: register → upload binary → confirm.
+Two requests after the download: register the upload (\`POST /v2/assets?action=registerUpload\`),
+then PUT the bytes to the returned upload URL. No confirm or finalize request is sent; the
+asset URN comes from the register response.
 
 **Image requirements:**
 - Formats: JPEG, PNG, GIF

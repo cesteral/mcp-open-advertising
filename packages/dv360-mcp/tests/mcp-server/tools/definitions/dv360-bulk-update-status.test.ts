@@ -42,6 +42,7 @@ vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => 
 import {
   bulkUpdateStatusLogic,
   bulkUpdateStatusResponseFormatter,
+  bulkUpdateStatusTool,
   BulkUpdateStatusInputSchema,
 } from "../../../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
 
@@ -487,7 +488,6 @@ describe("dv360_bulk_update_status", () => {
         "ENTITY_STATUS_ACTIVE",
         "ENTITY_STATUS_PAUSED",
         "ENTITY_STATUS_ARCHIVED",
-        "ENTITY_STATUS_DRAFT",
       ];
 
       for (const status of validStatuses) {
@@ -499,6 +499,24 @@ describe("dv360_bulk_update_status", () => {
         });
         expect(parsed.success).toBe(true);
       }
+    });
+
+    // dv360 #19, v4 Discovery (rev 20260928) InsertionOrder/LineItem
+    // `entityStatus`: "cannot be changed back to ENTITY_STATUS_DRAFT status
+    // from any other status"; Campaign accepts ACTIVE, ARCHIVED and PAUSED.
+    it("rejects ENTITY_STATUS_DRAFT, which no status update can set", () => {
+      const parsed = BulkUpdateStatusInputSchema.safeParse({
+        entityType: "lineItem",
+        advertiserId: "adv-1",
+        entityIds: ["li-1"],
+        status: "ENTITY_STATUS_DRAFT",
+      });
+      expect(parsed.success).toBe(false);
+    });
+
+    it("does not claim that pausing a parent pauses its children", () => {
+      expect(bulkUpdateStatusTool.description).not.toMatch(/pauses all children/);
+      expect(bulkUpdateStatusTool.description).toContain("cannot spend while the parent");
     });
 
     it("rejects invalid status values", () => {

@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema, cm360EntityIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
@@ -15,9 +16,9 @@ const TOOL_DESCRIPTION = `Get a single Campaign Manager 360 entity by ID.
 
 export const GetEntityInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
-    entityId: z.string().min(1).describe("The entity ID to retrieve"),
+    entityId: cm360EntityIdSchema("The entity ID to retrieve"),
   })
   .describe("Parameters for getting a CM360 entity");
 

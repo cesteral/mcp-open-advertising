@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { Cm360ProfileIdSchema } from "../utils/cm360-ids.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { fromCm360Status, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
@@ -18,7 +19,7 @@ When state is \`complete\`, a downloadUrl is provided. Use cm360_download_report
 
 export const CheckReportStatusInputSchema = z
   .object({
-    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    profileId: Cm360ProfileIdSchema,
     reportId: z.string().min(1).describe("Report ID from cm360_submit_report"),
     fileId: z.string().min(1).describe("File ID from cm360_submit_report"),
   })

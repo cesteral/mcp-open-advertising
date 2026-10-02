@@ -127,6 +127,7 @@ describe("SnapchatReportingService", () => {
     expect(result).toEqual({
       taskId: "ASYNC_STATS:acct-snap-123:456",
       status: "RUNNING",
+      rawStatus: "STARTED",
       downloadUrl: undefined,
     });
   });

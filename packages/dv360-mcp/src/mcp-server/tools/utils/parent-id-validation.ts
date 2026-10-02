@@ -11,7 +11,6 @@ const knownIdFields = [
   "insertionOrderId",
   "lineItemId",
   "adGroupId",
-  "adId",
   "creativeId",
 ] as const;
 

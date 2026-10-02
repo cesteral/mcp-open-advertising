@@ -42,6 +42,21 @@ import {
 } from "../../../services/snapchat/snapchat-service.js";
 import type { SnapchatEntityType } from "./entity-mapping.js";
 
+/**
+ * Whether a bulk update names the parent its items' route is scoped by. A
+ * campaign or creative is always under the ad account; an ad squad needs
+ * `campaignId` and an ad `adSquadId` for the batch to be one PUT.
+ */
+export function hasParentFilter(input: {
+  entityType: string;
+  campaignId?: string;
+  adSquadId?: string;
+}): boolean {
+  if (input.entityType === "adGroup") return Boolean(input.campaignId);
+  if (input.entityType === "ad") return Boolean(input.adSquadId);
+  return true;
+}
+
 /** Dry-run validation error code for a batch the limiter cannot admit within budget. */
 export const BULK_EXCEEDS_CAPACITY = "BULK_EXCEEDS_CAPACITY";
 
@@ -69,10 +84,21 @@ export const snapchatBulkCost = {
    * taken FIRST, then a `getEntity` per item (`buildMergedUpdateItem`, run
    * concurrently) including its ownership walk.
    */
-  bulkUpdate: (scope: SnapchatBulkScope, entityType: string): SnapchatBulkCostModel => ({
+  bulkUpdate: (
+    scope: SnapchatBulkScope,
+    entityType: string,
+    parentFilterGiven = true
+  ): SnapchatBulkCostModel => ({
     key: scope.quotaKey,
     leading: [SNAPCHAT_WRITE_TOKENS],
-    perItem: getEntityWorstCaseConsumes(entityType as SnapchatEntityType),
+    // With a parent filter every item shares one route, so one PUT. Without
+    // one (adGroup without campaignId, ad without adSquadId) the items may
+    // span parents and each parent gets its own PUT, so the worst case is a
+    // PUT per item.
+    perItem: [
+      ...getEntityWorstCaseConsumes(entityType as SnapchatEntityType),
+      ...(parentFilterGiven ? [] : [SNAPCHAT_WRITE_TOKENS]),
+    ],
   }),
   /**
    * `snapchat_delete_entity` (`deleteEntity` per id, concurrently): the

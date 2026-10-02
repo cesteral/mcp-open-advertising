@@ -25,6 +25,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { GetEntityInputSchema } from "../../src/mcp-server/tools/definitions/get-entity.tool.js";
 import { mcpConfig } from "../../src/config/index.js";
 import {
   createEntityLogic,
@@ -361,7 +362,54 @@ describe("cm360_delete_entity → floodlightActivities.delete", () => {
   });
 });
 
+// cm360 #19. basis: dfareporting v5 Discovery (rev 20260721) — every
+// `profileId` and `id` path parameter of the entity collections is
+// `type: string, format: int64`. Ids are interpolated into the path, so a
+// non-numeric one is refused at validation.
+describe("cm360 ids are numeric before they reach a path", () => {
+  it("profileId and entityId refuse anything but digits", () => {
+    const ok = { profileId: PID, entityType: "campaign", entityId: "1" };
+    expect(GetEntityInputSchema.safeParse(ok).success).toBe(true);
+    expect(GetEntityInputSchema.safeParse({ ...ok, profileId: "../123" }).success).toBe(false);
+    expect(GetEntityInputSchema.safeParse({ ...ok, entityId: "1/../2" }).success).toBe(false);
+    expect(
+      BulkUpdateStatusInputSchema.safeParse({
+        profileId: PID,
+        entityType: "campaign",
+        entityIds: ["1", "x"],
+        status: "ARCHIVED",
+      }).success
+    ).toBe(false);
+  });
+});
+
 describe("cm360_bulk_update_status → <collection>.get then <collection>.update (PUT)", () => {
+  // cm360 #11: only campaign, ad, creative and placement have a status
+  // mapping; the schema used to offer every entity type, which the logic then
+  // refused.
+  it("offers only the four entity types with a status mapping", () => {
+    for (const entityType of ["advertiser", "site", "floodlightActivity"]) {
+      expect(
+        BulkUpdateStatusInputSchema.safeParse({
+          profileId: PID,
+          entityType,
+          entityIds: ["1"],
+          status: "ARCHIVED",
+        }).success
+      ).toBe(false);
+    }
+    for (const entityType of ["campaign", "ad", "creative", "placement"]) {
+      expect(
+        BulkUpdateStatusInputSchema.safeParse({
+          profileId: PID,
+          entityType,
+          entityIds: ["1"],
+          status: "ARCHIVED",
+        }).success
+      ).toBe(true);
+    }
+  });
+
   it("campaign ARCHIVED → PUT the whole entity just read, with archived: true", async () => {
     const current = {
       id: "1",

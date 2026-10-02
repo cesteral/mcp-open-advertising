@@ -56,6 +56,10 @@ import { bulkUpdateEntitiesLogic } from "../../src/mcp-server/tools/definitions/
 import { bulkCreateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
 import { adjustBidsLogic } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
 import { deleteEntityLogic } from "../../src/mcp-server/tools/definitions/delete-entity.tool.js";
+import {
+  hasParentFilter,
+  snapchatBulkCost,
+} from "../../src/mcp-server/tools/utils/bulk-capacity.js";
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
@@ -311,5 +315,23 @@ describe("snapchat bulk capacity pre-check (real default limiter: 10/min, 120s b
     expect(http.post).toHaveBeenCalledTimes(1);
     expect(used()).toBe(3);
     expect(result.successCount).toBe(50);
+  });
+});
+
+describe("bulk update cost without a parent filter (snapchat #16)", () => {
+  const scope = { quotaKey: KEY };
+
+  it("hasParentFilter: ad squads need campaignId, ads adSquadId; the rest always have one", () => {
+    expect(hasParentFilter({ entityType: "adGroup" })).toBe(false);
+    expect(hasParentFilter({ entityType: "adGroup", campaignId: "c" })).toBe(true);
+    expect(hasParentFilter({ entityType: "ad" })).toBe(false);
+    expect(hasParentFilter({ entityType: "ad", adSquadId: "s" })).toBe(true);
+    expect(hasParentFilter({ entityType: "campaign" })).toBe(true);
+  });
+
+  it("projects a PUT per item when the batch may span parents", () => {
+    const reads = getEntityWorstCaseConsumes("ad");
+    expect(snapchatBulkCost.bulkUpdate(scope, "ad").perItem).toEqual(reads);
+    expect(snapchatBulkCost.bulkUpdate(scope, "ad", false).perItem).toEqual([...reads, 3]);
   });
 });

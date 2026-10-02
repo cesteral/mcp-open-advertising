@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
@@ -29,7 +30,7 @@ Sends the payload to the Google Ads :mutate endpoint with \`validateOnly: true\`
 export const ValidateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
-    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),

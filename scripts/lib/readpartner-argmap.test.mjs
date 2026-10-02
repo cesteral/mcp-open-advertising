@@ -18,7 +18,9 @@
 // a readPartner:
 //   - the readPartner tool is advertised by the same server, and
 //   - every REQUIRED arg of the readPartner that the write tool can SUPPLY from
-//     its own inputs is covered by some argMap value (Object.values(argMap)).
+//     its own inputs is covered by some argMap value (Object.values(argMap)), and
+//   - every argMap entry maps an input of the write tool to an input of the
+//     read partner (no entry names a parameter either side lacks).
 //
 // Required args come from the read partner's wire JSON-Schema `required` array.
 // "Can supply" means the write tool declares an input arg of the same name: a
@@ -59,7 +61,7 @@ function inputArgNames(tool) {
 
 describe("governed write readPartner.argMap self-containment", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every readPartner covers its read tool's required args`, async () => {
+    it(`${pkg}: every readPartner covers its read tool's required args and names real args`, async () => {
       const tools = await withServerClient(pkg, listRawTools);
       const byName = new Map(tools.map((t) => [t.name, t]));
 
@@ -89,6 +91,25 @@ describe("governed write readPartner.argMap self-containment", () => {
               `but argMap supplies only [${[...mappedReadArgs].join(", ")}] — ` +
               `add the missing arg(s) to readPartner.argMap`
           );
+        }
+
+        // Both sides of every entry must name a real arg. A value the read
+        // partner does not accept is stripped by its Zod schema, so the entry
+        // is harmless at runtime but tells governance to pass a parameter
+        // that does not exist (meta #22: `adAccountId` → meta_get_entity).
+        const readArgs = inputArgNames(readTool);
+        for (const [writeArg, readArg] of Object.entries(argMap ?? {})) {
+          if (!suppliable.has(writeArg)) {
+            problems.push(
+              `${tool.name}: readPartner.argMap key "${writeArg}" is not an input of ${tool.name}`
+            );
+          }
+          if (!readArgs.has(readArg)) {
+            problems.push(
+              `${tool.name}: readPartner.argMap maps "${writeArg}" to "${readArg}", ` +
+                `which "${toolName}" does not accept`
+            );
+          }
         }
       }
 

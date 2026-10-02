@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertBulkCapacityAll, bulkCapacityDryRunErrors } from "../utils/bulk-capacity.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
+import { getUpdatableEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { getEntitySchemaForOperation } from "../utils/entity-mapping-dynamic.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
@@ -45,7 +45,7 @@ const EFFECT_KIND = "entities_updated";
 export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z
-      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
+      .enum(getUpdatableEntityTypesDynamic() as [string, ...string[]])
       .describe(
         "Type of entities to update. Fetch entity-fields://{entityType} for valid updateMask paths."
       ),

@@ -1341,6 +1341,73 @@ describe("dv360_create_assigned_targeting → …targetingTypes.assignedTargetin
   });
 });
 
+// dv360 #16. basis: v4 Discovery rev 20260928 — `targetingType` enum
+// (TARGETING_TYPE_YOUTUBE_CHANNEL_PACK is new), and the `targetingType`
+// parameter description of each create/delete method: advertiser "Supported
+// targeting types:" 5 types; adGroup create 14, delete the same plus
+// TARGETING_TYPE_SESSION_POSITION; lineItem "Supported targeting types
+// include:" (not exhaustive, so not restricted).
+describe("dv360 assigned targeting: per-parent targeting types", () => {
+  const base = { advertiserId: ADV, data: { channelDetails: { channelId: "1" } } };
+  const create = (extra: Record<string, unknown>) =>
+    CreateAssignedTargetingInputSchema.safeParse({ ...base, ...extra }).success;
+  const del = (extra: Record<string, unknown>) =>
+    DeleteAssignedTargetingInputSchema.safeParse({
+      advertiserId: ADV,
+      assignedTargetingOptionId: "1",
+      ...extra,
+    }).success;
+
+  it("offers TARGETING_TYPE_YOUTUBE_CHANNEL_PACK", () => {
+    expect(
+      create({
+        parentType: "lineItem",
+        lineItemId: "222",
+        targetingType: "TARGETING_TYPE_YOUTUBE_CHANNEL_PACK",
+      })
+    ).toBe(true);
+  });
+
+  it("advertiser: only the five documented types, on create and delete", () => {
+    expect(create({ parentType: "advertiser", targetingType: "TARGETING_TYPE_CHANNEL" })).toBe(
+      true
+    );
+    expect(create({ parentType: "advertiser", targetingType: "TARGETING_TYPE_GEO_REGION" })).toBe(
+      false
+    );
+    expect(del({ parentType: "advertiser", targetingType: "TARGETING_TYPE_GEO_REGION" })).toBe(
+      false
+    );
+  });
+
+  it("adGroup: SESSION_POSITION can be deleted but not created", () => {
+    const sp = {
+      parentType: "adGroup",
+      adGroupId: "666",
+      targetingType: "TARGETING_TYPE_SESSION_POSITION",
+    };
+    expect(create(sp)).toBe(false);
+    expect(del(sp)).toBe(true);
+    expect(
+      create({
+        parentType: "adGroup",
+        adGroupId: "666",
+        targetingType: "TARGETING_TYPE_DEVICE_TYPE",
+      })
+    ).toBe(false);
+  });
+
+  it("lineItem: not restricted (the documented list is not exhaustive)", () => {
+    expect(
+      create({
+        parentType: "lineItem",
+        lineItemId: "222",
+        targetingType: "TARGETING_TYPE_DEVICE_TYPE",
+      })
+    ).toBe(true);
+  });
+});
+
 describe("dv360_delete_assigned_targeting → …assignedTargetingOptions.delete", () => {
   const input = {
     parentType: "adGroup",

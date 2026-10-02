@@ -871,9 +871,11 @@ export class SnapchatService {
     );
 
     // The update route is the parent's collection, so items under different
-    // parents (possible only when no parent filter is given; every tool passes
-    // one) go out as one PUT per parent instead of all to the first item's
-    // route. Each PUT after the first takes its own write tokens.
+    // parents (possible only when no parent filter is given: the bulk tools'
+    // campaignId / adSquadId are optional) go out as one PUT per parent
+    // instead of all to the first item's route. Each PUT after the first takes
+    // its own write tokens, which `snapchatBulkCost.bulkUpdate` projects as a
+    // PUT per item when no parent filter is given.
     const groups = new Map<string, number[]>();
     mergedItems.forEach((item, i) => {
       const path = interpolatePath(config.updatePath, item.pathParams);

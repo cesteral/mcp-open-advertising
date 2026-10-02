@@ -12,7 +12,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const targetingManagementPrompt: Prompt = {
   name: "targeting_management_workflow",
   description:
-    "Step-by-step guide for managing DV360 targeting options: discover available types, create assignments, audit configurations, and delete options. Covers geo, audience, device, content, and all 49 targeting types.",
+    "Step-by-step guide for managing DV360 targeting options: discover available types, create assignments, audit configurations, and delete options. Covers geo, audience, device, content, and all 50 targeting types.",
   arguments: [
     {
       name: "advertiserId",
@@ -52,7 +52,7 @@ Fetch the targeting types reference to understand what's available:
 
 **Resource:** \`targeting-types://\`
 
-This returns all **49 targeting types** grouped by category:
+This returns all **50 targeting types** grouped by category:
 - **Audience**: age range, gender, household income, parental status, custom audiences
 - **Geographic**: geo region, regional location list, proximity location
 - **Content**: channel, keyword, URL, category, digital content label

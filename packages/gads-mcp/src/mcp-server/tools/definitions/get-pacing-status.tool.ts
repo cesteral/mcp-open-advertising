@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { CustomerIdSchema } from "../utils/customer-id.js";
 import { calculatePacingStatus, NO_UNTRUSTED_CONTENT } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
@@ -18,10 +19,7 @@ const TOOL_DESCRIPTION =
  */
 export const GetPacingStatusInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .regex(/^\d+$/, "Customer ID must contain only digits (no dashes)")
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: CustomerIdSchema,
     campaignId: z.string().describe("Google Ads Campaign ID"),
     spendToDate: z
       .number()
