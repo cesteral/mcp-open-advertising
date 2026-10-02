@@ -14,7 +14,7 @@ import {
 import type { ReportDimension } from "./report-dimensions.js";
 import { accountDayRange, assertOnHourBoundary } from "../../utils/report-time.js";
 import {
-  fetchWithTimeout,
+  fetchGuardedDownload,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
   DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
@@ -224,11 +224,14 @@ export class SnapchatReportingService {
     context?: RequestContext,
     options: { includeRawCsv?: boolean } = {}
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-      context
-    );
+    // An anonymous fetch of a platform-signed URL, which reaches here from the
+    // MCP client (download_report) or from the platform (get_report). Redirects
+    // are followed by hand so every hop passes the SSRF checks; with
+    // `redirect: "follow"` only the first URL was checked.
+    const response = await fetchGuardedDownload(downloadUrl, {
+      timeoutMs: DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context,
+    });
 
     if (!response.ok) {
       throw new McpError(

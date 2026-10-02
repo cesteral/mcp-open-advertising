@@ -6,7 +6,7 @@ import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
 import {
-  fetchWithTimeout,
+  fetchGuardedDownload,
   McpError,
   JsonRpcErrorCode,
   parseCSV,
@@ -139,11 +139,14 @@ export class MsAdsReportingService {
   ): Promise<{ headers: string[]; rows: string[][]; totalRows: number; rawCsv?: string }> {
     this.logger.info({ downloadUrl: downloadUrl.substring(0, 80) }, "Downloading report");
 
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-      context
-    );
+    // An anonymous fetch of a platform-signed URL, which reaches here from the
+    // MCP client (download_report) or from the platform (get_report). Redirects
+    // are followed by hand so every hop passes the SSRF checks; with
+    // `redirect: "follow"` only the first URL was checked.
+    const response = await fetchGuardedDownload(downloadUrl, {
+      timeoutMs: DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context,
+    });
 
     if (!response.ok) {
       throw new McpError(

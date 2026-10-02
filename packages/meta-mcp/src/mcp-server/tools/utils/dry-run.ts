@@ -32,8 +32,86 @@ import type {
   RequestContext,
 } from "@cesteral/shared";
 import { buildMetaSnapshot, ENTITY_KIND_MAP, type MetaServiceLike } from "./capture-snapshot.js";
+import {
+  metaV26TargetingWarnings,
+  needsSpecialAdCategories,
+  specialAdCategoriesOf,
+  type MetaV26Warning,
+  type SpecialAdCategoriesKnowledge,
+} from "./v26-targeting-warnings.js";
 
 export type { MetaServiceLike };
+
+/**
+ * Read an ad set's parent campaign's `special_ad_categories` for the v26
+ * advantage_audience warning (#229). DRY RUN ONLY: no execute path makes this
+ * read. It goes through `metaService.getEntity`, so it takes a read token from
+ * the session's rate limiter like any other read. Best-effort: the warning is
+ * text-only advice, so a missing id or a failed read yields "unknown" (and the
+ * warning says the categories were not checked) instead of failing the dry run.
+ */
+export async function readParentSpecialAdCategories(
+  metaService: MetaServiceLike,
+  campaignId: unknown,
+  context: RequestContext
+): Promise<SpecialAdCategoriesKnowledge> {
+  if (typeof campaignId !== "string" || campaignId.length === 0) {
+    return { unknown: "the ad set's campaign_id is not known" };
+  }
+  if (!metaService.getEntity) {
+    return { unknown: "no campaign read is available" };
+  }
+  try {
+    const campaign = await metaService.getEntity(
+      "campaign",
+      campaignId,
+      ["special_ad_categories"],
+      context
+    );
+    return (
+      specialAdCategoriesOf(campaign) ?? {
+        unknown: "the parent campaign read returned no special_ad_categories",
+      }
+    );
+  } catch {
+    return { unknown: "reading the parent campaign failed" };
+  }
+}
+
+/**
+ * The v26 warnings (#229) for an ad set's update or duplicate dry run.
+ * `adSet` is the ad set as the dry run already read it (undefined when it was
+ * not read). Check 3 needs the parent campaign's categories, so the campaign
+ * is read only when the targeting omits advantage_audience; check 3 is
+ * skipped for a type that is neither an ad set nor untyped.
+ */
+async function metaV26DryRunWarnings(
+  rawTargeting: unknown,
+  location: string,
+  targetingPath: string | null,
+  entityType: string | undefined,
+  adSet: Record<string, unknown> | undefined,
+  metaService: MetaServiceLike,
+  context: RequestContext
+): Promise<MetaV26Warning[]> {
+  if (rawTargeting === undefined) return [];
+  let specialAdCategories: SpecialAdCategoriesKnowledge | undefined;
+  if (
+    (entityType === "adSet" || entityType === undefined) &&
+    needsSpecialAdCategories(rawTargeting)
+  ) {
+    specialAdCategories =
+      entityType === undefined
+        ? { unknown: "entityType was not given, so the ad set and its campaign were not read" }
+        : await readParentSpecialAdCategories(metaService, adSet?.campaign_id, context);
+  }
+  return metaV26TargetingWarnings(rawTargeting, {
+    targetingPath,
+    fallbackField: "entityId",
+    location,
+    ...(specialAdCategories ? { specialAdCategories } : {}),
+  });
+}
 
 export function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
@@ -117,22 +195,28 @@ export interface MetaDryRunArgs {
   data: Record<string, unknown>;
 }
 
+/**
+ * `warningsOut`, when given, receives the v26 targeting warnings (#229) for
+ * the response TEXT. They never enter the returned DryRunResult.
+ */
 export async function runMetaUpdateDryRun(
   input: MetaDryRunArgs,
   metaService: MetaServiceLike,
-  context: RequestContext
+  context: RequestContext,
+  warningsOut?: MetaV26Warning[]
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  let current: Record<string, unknown> | undefined;
 
   // Expected post-state via symbolic apply over the read partner. A read
   // failure propagates: a governed dry-run that cannot simulate must fail the
   // call (see assertGovernedDryRunResult below), not swallow the error and
   // return an incomplete payload the governance layer would reject.
   if (input.entityType && ENTITY_KIND_MAP[input.entityType] && metaService.getEntity) {
-    const current = (await metaService.getEntity(
+    current = (await metaService.getEntity(
       input.entityType,
       input.entityId,
       undefined,
@@ -145,6 +229,22 @@ export async function runMetaUpdateDryRun(
         expectedStateSource = "server_symbolic_apply";
       }
     }
+  }
+
+  // v26 warnings (#229), text only. `targeting` replaces the ad set's
+  // targeting wholesale, so only the targeting in `data` is checked.
+  if (warningsOut) {
+    warningsOut.push(
+      ...(await metaV26DryRunWarnings(
+        input.data.targeting,
+        "in data.targeting",
+        "data.targeting",
+        input.entityType,
+        current,
+        metaService,
+        context
+      ))
+    );
   }
 
   return assertGovernedDryRunResult(
@@ -330,7 +430,8 @@ export interface MetaDuplicateDryRunArgs {
 export async function runMetaDuplicateDryRun(
   args: MetaDuplicateDryRunArgs,
   metaService: MetaServiceLike,
-  context: RequestContext
+  context: RequestContext,
+  warningsOut?: MetaV26Warning[]
 ): Promise<DryRunResult> {
   const validationErrors: DryRunValidationError[] = [];
   let expectedPostState: NormalizedEntitySnapshot | undefined;
@@ -363,6 +464,22 @@ export async function runMetaDuplicateDryRun(
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";
+      }
+      // v26 warnings (#229), text only: a copied ad set carries the source's
+      // targeting into a new ad set under the same campaign. A campaign copy
+      // has no children (no deep_copy), so only an ad set is checked.
+      if (warningsOut && entityType === "adSet") {
+        warningsOut.push(
+          ...(await metaV26DryRunWarnings(
+            source.targeting,
+            "copied from the source ad set",
+            null,
+            entityType,
+            source,
+            metaService,
+            context
+          ))
+        );
       }
     }
   }

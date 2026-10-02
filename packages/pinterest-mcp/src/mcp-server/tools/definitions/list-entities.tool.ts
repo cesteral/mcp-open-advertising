@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
+import { PINTEREST_ENTITY_STATUSES } from "../../../services/pinterest/pinterest-service.js";
 import {
   PaginationOutputSchema,
   buildPaginationOutput,
@@ -32,6 +33,13 @@ export const ListEntitiesInputSchema = z
       .optional()
       .describe("Filter by campaign ID (for adGroup/ad entity types)"),
     adGroupId: z.string().optional().describe("Filter by ad group ID (for ad entity type)"),
+    entityStatuses: z
+      .array(z.enum(PINTEREST_ENTITY_STATUSES))
+      .min(1)
+      .optional()
+      .describe(
+        "Statuses to include (campaign, adGroup and ad only). When omitted, Pinterest returns ACTIVE and PAUSED entities only, so archived or draft entities are listed only when ARCHIVED or DRAFT is named"
+      ),
     bookmark: z
       .string()
       .optional()
@@ -72,6 +80,7 @@ export async function listEntitiesLogic(
       adAccountId: input.adAccountId,
       campaignId: input.campaignId,
       adGroupId: input.adGroupId,
+      entityStatuses: input.entityStatuses,
     },
     input.bookmark,
     input.pageSize,
@@ -133,6 +142,14 @@ export const listEntitiesTool = {
         entityType: "adGroup",
         adAccountId: "1234567890",
         campaignId: "1800123456789",
+      },
+    },
+    {
+      label: "List archived campaigns",
+      input: {
+        entityType: "campaign",
+        adAccountId: "1234567890",
+        entityStatuses: ["ARCHIVED"],
       },
     },
     {

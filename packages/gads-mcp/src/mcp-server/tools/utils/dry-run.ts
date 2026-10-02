@@ -29,6 +29,7 @@ import {
   buildGAdsSnapshot,
   captureGAdsSnapshot,
   ENTITY_KIND_MAP,
+  resolveGAdsCurrency,
   unwrapResource,
   type GAdsServiceLike,
 } from "./capture-snapshot.js";
@@ -65,7 +66,8 @@ export function applyGAdsPatch(
   entityId: string,
   preState: Record<string, unknown>,
   data: Record<string, unknown>,
-  updateMask: string
+  updateMask: string,
+  currency: string
 ): NormalizedEntitySnapshot | undefined {
   const applied: Record<string, any> = structuredClone(preState);
   const maskFields = updateMask
@@ -77,7 +79,7 @@ export function applyGAdsPatch(
       applied[field] = (data as Record<string, any>)[field];
     }
   }
-  const snapshot = buildGAdsSnapshot(entityType, customerId, entityId, applied);
+  const snapshot = buildGAdsSnapshot(entityType, customerId, entityId, applied, currency);
   return snapshot ?? undefined;
 }
 
@@ -257,7 +259,8 @@ export async function runGAdsDuplicateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[args.entityType]) {
-    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data);
+    const currency = await resolveGAdsCurrency(gadsService, args.customerId, context);
+    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data, currency);
     if (snapshot) {
       expectedPostState = snapshot;
       expectedStateSource = "server_symbolic_apply";
@@ -312,7 +315,8 @@ export async function runGAdsCreateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[args.entityType]) {
-    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data);
+    const currency = await resolveGAdsCurrency(gadsService, args.customerId, context);
+    const snapshot = buildGAdsSnapshot(args.entityType, args.customerId, "", args.data, currency);
     if (snapshot) {
       expectedPostState = snapshot;
       expectedStateSource = "server_symbolic_apply";
@@ -392,7 +396,8 @@ export async function runGAdsUpdateDryRun(
           input.entityId,
           resource,
           input.data,
-          input.updateMask
+          input.updateMask,
+          await resolveGAdsCurrency(gadsService, input.customerId, context)
         );
         if (snapshot) {
           expectedPostState = snapshot;

@@ -27,7 +27,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const DV360_PACKAGE_NAME = "dv360-mcp";
 const DV360_PLATFORM = "dv360-management";
 
-const dv360WorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `dv360_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const dv360WorkflowIdByToolName: Record<string, string> = {
   // Read operations
   dv360_get_entity: "mcp.execute.dv360_entity_read",
   dv360_list_entities: "mcp.execute.dv360_entity_read",
@@ -60,6 +66,8 @@ const dv360WorkflowIdByToolName: Record<string, string> = {
   // Specialized
   dv360_duplicate_entity: "mcp.execute.dv360_entity_update",
   dv360_get_delivery_estimate: "mcp.execute.dv360_entity_read",
+  // Pacing
+  dv360_get_pacing_status: "mcp.execute.dv360_entity_read",
 };
 
 /**

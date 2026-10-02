@@ -8,7 +8,7 @@
  * AI agent provides a URL, server downloads the binary, uploads to platform API.
  */
 
-import { fetchWithTimeout } from "./fetch-with-timeout.js";
+import { fetchGuardedDownload } from "./download-url-guard.js";
 import type { RequestContext } from "./request-context.js";
 import path from "path";
 
@@ -24,6 +24,12 @@ export interface DownloadedFile {
  * Extracts the Content-Type from the response headers and derives
  * a filename from the URL path or Content-Disposition header.
  *
+ * The URL comes from the MCP client (`mediaUrl`), so it is fetched through
+ * `fetchGuardedDownload`: the URL and every redirect hop must name a public
+ * host (no loopback, link-local, private or `.internal` host, no IP literal,
+ * no embedded credentials) before it is requested. `http:` is still admitted,
+ * as the upload tools' dry runs accept it.
+ *
  * @param url - Publicly accessible URL of the file to download
  * @param timeoutMs - Request timeout in milliseconds (default: 60s)
  * @param context - Optional request context for tracing
@@ -33,8 +39,11 @@ export async function downloadFileToBuffer(
   timeoutMs = 60_000,
   context?: RequestContext
 ): Promise<DownloadedFile> {
-  const response = await fetchWithTimeout(url, timeoutMs, context, {
-    method: "GET",
+  const response = await fetchGuardedDownload(url, {
+    timeoutMs,
+    context,
+    init: { method: "GET" },
+    allowHttp: true,
   });
 
   if (!response.ok) {

@@ -78,7 +78,7 @@
       "id": "meta.v26_changes_apply_to_all_versions",
       "package": "meta-mcp",
       "class": "behavioral-constraint",
-      "claim": "From 2026-10-27 three Marketing API v26.0 changes apply to every API version, so pinning an older version does not avoid them: (1) instagram_positions \"explore\" (the Instagram Explore Feed placement; explore_home is separate) is rejected with an error; (2) messenger_positions \"story\" is accepted but silently dropped, narrowing delivery without notice; (3) an ad set in the Housing, Employment or Financial Products and Services special ad categories must set targeting.targeting_automation.advantage_audience explicitly (1 or 0). meta-mcp passes targeting through unchanged and ships no guard. No shipped example names either placement or puts an ad set in a special ad category (every campaign example sends special_ad_categories: []), so (1)-(3) as reported do not break an example; most ad-set examples omit targeting_automation, which matters only if the broader readings of (3) noted below are right (#229).",
+      "claim": "From 2026-10-27 three Marketing API v26.0 changes apply to every API version, so pinning an older version does not avoid them: (1) instagram_positions \"explore\" (the Instagram Explore Feed placement; explore_home is separate) is rejected with an error; (2) messenger_positions \"story\" is accepted but silently dropped, narrowing delivery without notice; (3) an ad set in the Housing, Employment or Financial Products and Services special ad categories must set targeting.targeting_automation.advantage_audience explicitly (1 or 0). meta-mcp sends targeting unchanged and warns about all three in the response text only of its ad-set write tools' dry runs and executes; no structured field or validationErrors entry changes (#229). No shipped example names either placement or puts an ad set in a special ad category (every campaign example sends special_ad_categories: []), so (1)-(3) as reported do not break an example; most ad-set examples omit targeting_automation, which matters only if the broader readings of (3) noted below are right (#229).",
       "value": "2026-10-27",
       "sourceUrl": "https://developers.facebook.com/blog/post/2026/07/29/introducing-graph-api-v26-and-marketing-api-v26/",
       "status": "unverified",
@@ -86,7 +86,10 @@
       "verifyBy": "2026-10-27",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["CLAUDE.md:122"],
+      "codeRefs": [
+        "CLAUDE.md:122",
+        "packages/meta-mcp/src/mcp-server/tools/utils/v26-targeting-warnings.ts:34"
+      ],
       "verificationBasis": "corroborated-secondary",
       "note": "NOT confirmed by any Meta primary source reachable from here (checked 2026-09-30). Meta's generated specs cannot express any of the three: Targeting.instagram_positions and messenger_positions are list<string> with no enum, and the read-side AdCampaignPlacementGet_effective_instagram_positions / _effective_messenger_positions enums still list EXPLORE and MESSENGER_STORY at facebook-business-sdk-codegen 8420be6d5752c568a4f01dd608fa3cce6b2db960; TargetingAutomation.advantage_audience is an optional unsigned int and a conditional requirement has no spec form. No SDK CHANGELOG has a v26 entry. CORROBORATION ONLY, from third-party code on GitHub: jeffreywlai/meta-ads-mcp@fb7e1e83c528baa3f699ee69ff3ef0ae89408889 docs/v26_compatibility_audit.md (explore removed, Messenger Stories silently removed); byadsco/meta-ads-mcp@692fad75d5a875a7464f87438e1f757fd2581f87 src/meta/targeting-compat.ts (explore and messenger story removed in v26.0); mikusnuz/meta-ads-mcp@e9dfd7bfc84564492b894e146e69d897efd6130d src/tools/adsets.ts (HEC-F ad sets with relaxable targeting get ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG); yvfl/faceads-mcp-v2@91592c417756de82b7454c8c4f793f65947ff84f src/tools/shared.ts (all versions from 2026-10-27, citing Meta's v26 launch post). They disagree on scope for (3): byadsco dates an explicit-flag requirement for non-default targeting to v23.0, and fl100inc/extuitive-skill@caf0724cb79451305f8f7344f86f06b31f688188 says every ad set (subcode 1870227). Read Meta's v26 changelog and the Advantage+ audience reference before 2026-10-27; if confirmed, decide whether meta_create_entity / meta_update_entity / meta_bulk_* should refuse explore and messenger story rather than let Meta error or silently narrow delivery."
     },
@@ -388,7 +391,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:415"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:461"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string and no account. Not exercised against a live account."
     },
     {
@@ -403,7 +406,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:462"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:508"],
       "note": "Not exercised against a live account."
     },
     {
@@ -478,7 +481,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:560"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:606"],
       "note": "The page's samples write the range both as timeRange.start=... and as timeRange=(start:...,end:...); the record form is sent. Not exercised against a live account."
     },
     {
@@ -493,7 +496,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:478"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:524"],
       "note": "The page's samples show no Linkedin-Version header; the client sends it on every request. Not exercised against a live account."
     },
     {
@@ -539,7 +542,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:581"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:627"],
       "note": "Replaces linkedin.ad_previews_is_an_action, whose claim (that the versioned equivalent is only the livePreviewForCreative action) was REFUTED for existing creatives by the Ad Preview page. Not exercised against a live account."
     },
     {
@@ -554,7 +557,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:92"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:140"],
       "note": "Read 2026-10-01. /rest/images and /rest/videos q=associatedAccount, and adAnalytics, still take start/count."
     },
     {
@@ -636,7 +639,7 @@
       "verifyBy": "2027-03-24",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/dbm-mcp/src/config/index.ts:40"]
+      "codeRefs": ["packages/dbm-mcp/src/config/index.ts:41"]
     },
     {
       "id": "dv360.rate_limit_default",

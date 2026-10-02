@@ -40,6 +40,23 @@ function buildPinterestNextAction(
 }
 
 /**
+ * Query parameters for a GET/DELETE. An array value is sent as one
+ * `key=value` pair per element (`entity_statuses=ACTIVE&entity_statuses=ARCHIVED`).
+ *
+ * basis: Pinterest's OpenAPI description
+ * (raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.json,
+ * openapi 3.0.3, info.version 5.28.0, sha256 b698c180…a3e5 — the copy
+ * `src/generated/types.ts` is generated from) declares
+ * `components.parameters.query_entity_statuses`, `query_campaign_ids`,
+ * `query_ad_group_ids` and `query_ad_ids` as arrays with no `style` /
+ * `explode`, so OpenAPI 3's query default applies: `style: form`,
+ * `explode: true` — one pair per element. The spec marks the arrays it wants
+ * comma-joined (`query_columns`, `query_keywords`, …) `explode: false`
+ * explicitly; for one of those, pass the comma-joined string, not an array.
+ */
+export type PinterestQueryParams = Record<string, string | readonly string[]>;
+
+/**
  * HTTP client for Pinterest Marketing API v5 requests.
  *
  * Handles authentication via Bearer token, retry with exponential backoff,
@@ -92,11 +109,12 @@ export class PinterestHttpClient {
   }
 
   /**
-   * Make an authenticated GET request.
+   * Make an authenticated GET request. An array value is sent as one
+   * `key=value` pair per element (see {@link PinterestQueryParams}).
    */
   async get(
     path: string,
-    params?: Record<string, string>,
+    params?: PinterestQueryParams,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
@@ -136,7 +154,7 @@ export class PinterestHttpClient {
    */
   async delete(
     path: string,
-    params?: Record<string, string>,
+    params?: PinterestQueryParams,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
@@ -186,12 +204,15 @@ export class PinterestHttpClient {
     });
   }
 
-  private buildUrl(path: string, params?: Record<string, string>): string {
+  private buildUrl(path: string, params?: PinterestQueryParams): string {
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== null) {
+        if (value === undefined || value === null) continue;
+        if (typeof value === "string") {
           url.searchParams.set(key, value);
+        } else {
+          for (const item of value) url.searchParams.append(key, item);
         }
       }
     }

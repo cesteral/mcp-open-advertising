@@ -23,7 +23,6 @@ import type {
   DryRunValidationError,
   CesteralWriteToolAnnotations,
 } from "@cesteral/shared";
-import type { LinkedInRegisterUploadResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "linkedin_upload_image";
 const TOOL_TITLE = "Upload Image to LinkedIn Ads";
@@ -121,24 +120,11 @@ export async function uploadImageLogic(
   }
 
   // Step 2: Register upload
-  const registerPayload = {
-    registerUploadRequest: {
-      owner: input.adAccountUrn,
-      recipes: ["urn:li:digitalmediaRecipe:ads-image"],
-      serviceRelationships: [
-        {
-          identifier: "urn:li:userGeneratedContent",
-          relationshipType: "OWNER",
-        },
-      ],
-    },
-  };
-
-  const registerResult = (await linkedInService.client.post(
-    "/v2/assets?action=registerUpload",
-    registerPayload,
+  const registerResult = await linkedInService.registerAssetUpload(
+    input.adAccountUrn,
+    "urn:li:digitalmediaRecipe:ads-image",
     context
-  )) as LinkedInRegisterUploadResponse;
+  );
 
   const uploadRequest =
     registerResult.value?.uploadMechanism?.[
@@ -155,7 +141,7 @@ export async function uploadImageLogic(
   }
 
   // Step 3: PUT the binary to the registered upload URL
-  await linkedInService.client.putBinary(uploadUrl, buffer, contentType, context);
+  await linkedInService.uploadAssetBinary(uploadUrl, buffer, contentType, context);
 
   const effect: EffectResult = {
     effectKind: "asset_uploaded",

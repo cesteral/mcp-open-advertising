@@ -18,6 +18,16 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     ...actual,
     downloadFileToBuffer: mockDownloadFileToBuffer,
     fetchWithTimeout: mockFetchWithTimeout,
+    // Downloads go through the redirect-guarded fetch; route it to the same
+    // mock with fetchWithTimeout's argument order so the assertions read alike.
+    // The guard itself is exercised against a stubbed global fetch elsewhere.
+    fetchGuardedDownload: (
+      url: string,
+      o: { timeoutMs: number; context?: unknown; init?: RequestInit }
+    ) =>
+      o.init === undefined
+        ? mockFetchWithTimeout(url, o.timeoutMs, o.context)
+        : mockFetchWithTimeout(url, o.timeoutMs, o.context, o.init),
   };
 });
 

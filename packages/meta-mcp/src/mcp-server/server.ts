@@ -29,7 +29,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const META_PACKAGE_NAME = "meta-mcp";
 const META_PLATFORM = "meta";
 
-const metaWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `meta_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const metaWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   meta_list_entities: "mcp.execute.meta_entity_read",
   meta_get_entity: "mcp.execute.meta_entity_read",
@@ -53,6 +59,18 @@ const metaWorkflowIdByToolName: Record<string, string> = {
   meta_get_ad_preview: "mcp.execute.meta_entity_read",
   meta_validate_entity: "mcp.execute.meta_entity_read",
   meta_adjust_bids: "mcp.execute.meta_bulk_operations",
+  // Pacing
+  meta_get_pacing_status: "mcp.execute.meta_entity_read",
+  // Async insights reports
+  meta_get_available_metrics: "mcp.execute.meta_insights",
+  meta_submit_report: "mcp.execute.meta_insights",
+  meta_check_report_status: "mcp.execute.meta_insights",
+  meta_download_report: "mcp.execute.meta_insights",
+  // Bulk updates, media uploads and budget schedules
+  meta_bulk_update_entities: "mcp.execute.meta_bulk_operations",
+  meta_upload_image: "mcp.execute.meta_entity_update",
+  meta_upload_video: "mcp.execute.meta_entity_update",
+  meta_manage_budget_schedule: "mcp.execute.meta_entity_update",
 };
 
 /**

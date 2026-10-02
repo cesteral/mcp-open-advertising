@@ -43,12 +43,15 @@ const cases = [
 ] as const;
 
 describe("linkedin uploads fetch the file before registering the asset", () => {
-  let client: { post: ReturnType<typeof vi.fn>; putBinary: ReturnType<typeof vi.fn> };
+  let linkedInService: {
+    registerAssetUpload: ReturnType<typeof vi.fn>;
+    uploadAssetBinary: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = { post: vi.fn(), putBinary: vi.fn() };
-    mockResolveSessionServices.mockReturnValue({ linkedInService: { client } });
+    linkedInService = { registerAssetUpload: vi.fn(), uploadAssetBinary: vi.fn() };
+    mockResolveSessionServices.mockReturnValue({ linkedInService });
   });
 
   for (const c of cases) {
@@ -57,7 +60,7 @@ describe("linkedin uploads fetch the file before registering the asset", () => {
         mockDownload.mockRejectedValueOnce(new Error("download failed: 404"));
 
         await expect(c.logic({ ...c.input } as any, ctx, sdk)).rejects.toThrow("download failed");
-        expect(client.post).not.toHaveBeenCalled();
+        expect(linkedInService.registerAssetUpload).not.toHaveBeenCalled();
       });
 
       it("refuses an oversized file as InvalidParams without registering", async () => {
@@ -70,8 +73,8 @@ describe("linkedin uploads fetch the file before registering the asset", () => {
         await expect(c.logic({ ...c.input } as any, ctx, sdk)).rejects.toMatchObject({
           code: JsonRpcErrorCode.InvalidParams,
         });
-        expect(client.post).not.toHaveBeenCalled();
-        expect(client.putBinary).not.toHaveBeenCalled();
+        expect(linkedInService.registerAssetUpload).not.toHaveBeenCalled();
+        expect(linkedInService.uploadAssetBinary).not.toHaveBeenCalled();
       });
     });
   }

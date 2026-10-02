@@ -59,6 +59,12 @@ export interface MsAdsEntityConfig {
    */
   writeParentIdField?: MsAdsWriteParentIdField;
   /**
+   * Request-body elements naming the parent on this type's Delete operation.
+   * The request needs at least one of them; absent means the Delete body takes
+   * only the id array. See `missingDeleteParentMessage`.
+   */
+  deleteParentIdFields?: readonly string[];
+  /**
    * Extra request-body fields sent on every read of this entity type unless
    * the caller supplies them. Used for `CampaignType` on campaign reads, which
    * otherwise default to Search campaigns only.
@@ -101,6 +107,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     requiredGetByIdsFields: ["AccountId"],
     supportsDuplicate: true,
     writeParentIdField: "AccountId",
+    deleteParentIdFields: ["AccountId"],
     defaultReadFields: { CampaignType: MSADS_ALL_CAMPAIGN_TYPES },
   },
   adGroup: {
@@ -117,6 +124,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     batchLimit: 1000,
     requiredGetByIdsFields: ["CampaignId"],
     writeParentIdField: "CampaignId",
+    deleteParentIdFields: ["CampaignId"],
   },
   ad: {
     addOperation: "/Ads",
@@ -132,6 +140,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     batchLimit: 50,
     requiredGetByIdsFields: ["AdGroupId"],
     writeParentIdField: "AdGroupId",
+    deleteParentIdFields: ["AdGroupId"],
   },
   keyword: {
     addOperation: "/Keywords",
@@ -147,6 +156,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     batchLimit: 1000,
     requiredGetByIdsFields: ["AdGroupId"],
     writeParentIdField: "AdGroupId",
+    deleteParentIdFields: ["AdGroupId", "AssetGroupId"],
   },
   budget: {
     addOperation: "/Budgets",
@@ -171,6 +181,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     batchLimit: 100,
     requiredGetByIdsFields: ["AccountId", "AdExtensionType"],
     writeParentIdField: "AccountId",
+    deleteParentIdFields: ["AccountId"],
   },
   audience: {
     addOperation: "/Audiences",
@@ -262,6 +273,40 @@ export function missingWriteParentMessage(
   const value = parentIds[parent.inputKey];
   if (typeof value === "string" && value.trim().length > 0) return undefined;
   return `${parent.inputKey} is required for entityType '${entityType}' — Microsoft Ads needs ${parent.bodyField} in the request body next to the ${getEntityConfig(entityType).pluralName} array`;
+}
+
+/**
+ * Validation message when a Delete for `entityType` lacks the parent element
+ * its request body needs, or undefined when one is present or none is needed.
+ * `msads_delete_entity` takes the parent in its free-form `additionalParams`,
+ * which is spread into the body as given, so it is looked up by its exact
+ * request-body name.
+ *
+ * basis: the Request Body Elements of each Delete operation (MicrosoftDocs/Advertising
+ * @ main, read 2026-10-01, advertising/bingads-13/campaign-management-service/;
+ * "Unless otherwise noted below, all request elements are required"):
+ * deletecampaigns.md `AccountId`, `CampaignIds`; deleteadgroups.md `CampaignId`,
+ * `AdGroupIds`; deleteads.md `AdGroupId`, `AdIds`; deleteadextensions.md
+ * `AccountId`, `AdExtensionIds`; deletekeywords.md `AdGroupId`, `AssetGroupId`,
+ * `KeywordIds`; deletebudgets.md, deleteaudiences.md and deletelabels.md take
+ * only the id array. Keywords list both an ad-group and an asset-group parent,
+ * so either one satisfies the check rather than demanding both.
+ */
+export function missingDeleteParentMessage(
+  entityType: MsAdsEntityType,
+  params: Record<string, unknown> | undefined
+): string | undefined {
+  const config = getEntityConfig(entityType);
+  const fields = config.deleteParentIdFields ?? [];
+  if (fields.length === 0) return undefined;
+  const present = fields.some((field) => {
+    const value = params?.[field];
+    if (typeof value === "number") return Number.isFinite(value);
+    return typeof value === "string" && value.trim().length > 0;
+  });
+  if (present) return undefined;
+  const names = fields.map((f) => `additionalParams.${f}`).join(" or ");
+  return `${names} is required for entityType '${entityType}' — Microsoft Ads' Delete${config.pluralName} request needs ${fields.join(" or ")} next to ${config.idsField}`;
 }
 
 /** Tool input keys that give a by-ID read (and update) its parent context. */

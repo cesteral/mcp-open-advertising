@@ -68,7 +68,9 @@ export function assertContract(
     fixture.args.entityId,
     fixture.preState,
     fixture.args.data,
-    fixture.args.updateMask
+    fixture.args.updateMask,
+    // The fixtures model a USD account (their budgets are USD cents).
+    "USD"
   );
   if (got == null) {
     throw new Error(`assertContract(${fixture.description}): symbolic apply returned undefined`);

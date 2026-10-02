@@ -2258,22 +2258,54 @@ describe("ttd_graphql_query_bulk → createQueryBulk", () => {
 });
 
 describe("ttd_graphql_cancel_bulk_job → cancelBulkJob", () => {
-  it("sends { jobId } as $input", async () => {
+  it("sends TTD's documented cancelBulkJob(input: { jobId: <literal> }), then reads the status", async () => {
     routeGraphql("cancelBulkJob", {
-      data: { cancelBulkJob: { data: { id: "job1", status: "CANCELLED" }, errors: [] } },
+      data: { cancelBulkJob: { data: { id: 2989826 }, errors: [] } },
     });
-    await graphqlCancelBulkJobLogic(
-      GraphqlCancelBulkJobInputSchema.parse({ jobId: "job1" }),
+    routeGraphql("bulkJob", {
+      data: { bulkJob: { __typename: "BulkQueryJob", id: 2989826, status: "CANCELLED" } },
+    });
+    const out = await graphqlCancelBulkJobLogic(
+      GraphqlCancelBulkJobInputSchema.parse({ jobId: "2989826" }),
       ctx,
       sdk
     );
     const req = onlyMutation();
     expectGraphqlRequest(req);
-    // basis: unverified (code-only) — no TTD source here shows cancelBulkJob
-    // or CancelBulkJobInput.
-    expect(gqlQuery(req)).toMatch(/cancelBulkJob\(input: \$input\)/);
-    expect(gqlVariables(req)).toEqual({ input: { jobId: "job1" } });
-    expect(remaining()).toBe(LIMIT - 1);
+    // basis: TTD's GraphQL "Bulk operations" page, read 2026-10-01 (#262; fact
+    // ttd.bulk_mutation_limits): `cancelBulkJob(input: { jobId: 123 }) { data { id } }`.
+    // No guessed input type name, no variables, the id as an integer literal.
+    expect(gqlQuery(req)).toMatch(/cancelBulkJob\(input: \{ jobId: 2989826 \}\)/);
+    expect(gqlQuery(req)).not.toMatch(/CancelBulkJobInput|\$input/);
+    expect(gqlQuery(req)).toMatch(/data \{\s*id\s*\}/);
+    expect((req.body as Record<string, unknown>).variables).toBeUndefined();
+    // basis: the same page's poll, `bulkJob(id: 123) { id ... status ... }`
+    // (fact ttd.bulk_job_poll_fields); the status is read from it.
+    const reads = graphqlRequests().filter((r) => !/^\s*mutation\b/.test(gqlQuery(r)));
+    expect(reads).toHaveLength(1);
+    expectGraphqlRequest(reads[0]!);
+    expect(gqlQuery(reads[0]!)).toMatch(/bulkJob\(id: 2989826\)/);
+    expect(stub.requests.map((r) => gqlQuery(r).trim().split(/\s/)[0])).toEqual([
+      "mutation",
+      "query",
+    ]);
+    expect(out.jobId).toBe("2989826");
+    expect(out.status).toBe("CANCELLED");
+    expect(out.effect?.summary).toEqual({ job_id: "2989826", status: "CANCELLED" });
+    expect(remaining()).toBe(LIMIT - 2);
+  });
+
+  it("refuses a job id that cannot be written as a GraphQL literal, sending nothing", async () => {
+    await expect(
+      graphqlCancelBulkJobLogic(
+        GraphqlCancelBulkJobInputSchema.parse({
+          jobId: "1) { data { id } } x: cancelBulkJob(input: {jobId: 2",
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/Invalid bulk job id/);
+    expect(stub.requests).toHaveLength(0);
   });
 
   it("dry_run sends nothing", async () => {

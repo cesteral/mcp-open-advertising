@@ -28,6 +28,14 @@ import type {
   CreateLinkedInCampaignRequest,
   CreateLinkedInCreativeRequest,
 } from "./types.js";
+import type { LinkedInRegisterUploadResponse } from "../../mcp-server/tools/utils/media-types.js";
+
+/**
+ * Tokens a write draws from `linkedin:default` (a read draws 1). This is the
+ * server's own cost model, not a LinkedIn figure: no LinkedIn source here
+ * states per-call quota costs.
+ */
+export const LINKEDIN_WRITE_TOKENS = 3;
 
 export type {
   LinkedInAdAccount,
@@ -148,9 +156,49 @@ export class LinkedInService {
     private readonly httpClient: LinkedInHttpClient
   ) {}
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
-  get client(): LinkedInHttpClient {
-    return this.httpClient;
+  // ─── Media uploads ─────────────────────────────────────────────────
+  //
+  // The upload tools used to reach the HTTP client through a `client` getter,
+  // so the registerUpload POST and the binary PUT drew no limiter token. These
+  // draw from `linkedin:default` like every other call: both are writes, at
+  // LINKEDIN_WRITE_TOKENS, the server's own cost (no LinkedIn source states
+  // one). The flow has no status poll. The getter is gone so no tool can
+  // bypass the limiter again.
+
+  /** `POST /v2/assets?action=registerUpload` — register one ads asset upload. */
+  async registerAssetUpload(
+    ownerUrn: string,
+    recipe: "urn:li:digitalmediaRecipe:ads-image" | "urn:li:digitalmediaRecipe:ads-video",
+    context?: RequestContext
+  ): Promise<LinkedInRegisterUploadResponse> {
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
+    return (await this.httpClient.post(
+      "/v2/assets?action=registerUpload",
+      {
+        registerUploadRequest: {
+          owner: ownerUrn,
+          recipes: [recipe],
+          serviceRelationships: [
+            {
+              identifier: "urn:li:userGeneratedContent",
+              relationshipType: "OWNER",
+            },
+          ],
+        },
+      },
+      context
+    )) as LinkedInRegisterUploadResponse;
+  }
+
+  /** `PUT {uploadUrl}` — the binary, to the URL registerUpload returned. */
+  async uploadAssetBinary(
+    uploadUrl: string,
+    buffer: Buffer,
+    contentType: string,
+    context?: RequestContext
+  ): Promise<void> {
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
+    await this.httpClient.putBinary(uploadUrl, buffer, contentType, context);
   }
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
@@ -216,8 +264,7 @@ export class LinkedInService {
   ): Promise<LinkedInEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
-    // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`linkedin:default`, 3);
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     // A create payload for an account-scoped entity carries the owning account,
     // so the path can be built without adding a parameter to the tool schema.
@@ -237,8 +284,7 @@ export class LinkedInService {
     data: LinkedInUpdateEntityInputMap[T],
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
-    // Writes consume 3x rate limit tokens
-    await this.rateLimiter.consume(`linkedin:default`, 3);
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.patch(
       this.entityItemPath(entityType, entityUrn),
@@ -252,7 +298,7 @@ export class LinkedInService {
     entityUrn: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`linkedin:default`, 3);
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.delete(this.entityItemPath(entityType, entityUrn), context);
   }

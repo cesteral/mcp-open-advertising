@@ -101,7 +101,10 @@ export function registerRunCustomQueryAsyncTool(
             timestamp: new Date().toISOString(),
             operation: "dbm_run_custom_query_async",
           },
-          sdkContext
+          sdkContext,
+          // Not capped by reportSyncMaxWallTimeMs: this runs in the background,
+          // and the task TTL above is sized from the full worst-case run.
+          { maxWallTimeMs: null }
         );
       },
       formatContent: (output, input: RunCustomQueryInput) =>

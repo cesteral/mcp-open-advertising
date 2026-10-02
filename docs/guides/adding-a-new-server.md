@@ -1162,7 +1162,9 @@ import packageJson from "../../package.json" with { type: "json" };
 const PACKAGE_NAME = "{platform}-mcp";
 const PLATFORM = "{platform}";
 
-const workflowIdByToolName: Record<string, string> = {
+// Exported: scripts/lib/workflow-id-maps.test.mjs requires one entry per
+// registered tool (the generated {prefix}_search_tools excepted) and no others.
+export const {prefix}WorkflowIdByToolName: Record<string, string> = {
   {prefix}_list_entities: "mcp.execute.{prefix}_entity_read",
   {prefix}_get_entity: "mcp.execute.{prefix}_entity_read",
   {prefix}_create_entity: "mcp.execute.{prefix}_entity_update",
@@ -1206,7 +1208,7 @@ export async function createMcpServer(
     defaultTextFormat: "compact",
     packageName: PACKAGE_NAME,
     platform: PLATFORM,
-    workflowIdByToolName,
+    workflowIdByToolName: {prefix}WorkflowIdByToolName,
     interactionLogger,
     authContextResolver: sessionId
       ? () => sessionServiceStore.getAuthContext(sessionId)

@@ -9,6 +9,7 @@ import {
   runTiktokUpdateDryRun,
   resolveTiktokDispatchedCapability,
   symbolicValidate,
+  updateStatusShapeErrors,
 } from "../utils/dry-run.js";
 import {
   captureTiktokEntity,
@@ -118,9 +119,13 @@ export async function updateEntityLogic(
       "`data` must contain at least one field to update a TikTok entity."
     );
   }
+  const isStatusChange = "operation_status" in input.data;
   const updateValidationErrors = [
     ...symbolicValidate(input.data),
-    ...(input.entityType === "ad" ? adUpdateShapeErrors(input.entityId, input.data) : []),
+    ...updateStatusShapeErrors(input.data),
+    ...(input.entityType === "ad" && !isStatusChange
+      ? adUpdateShapeErrors(input.entityId, input.data)
+      : []),
   ];
   if (updateValidationErrors.length > 0) {
     throw new McpError(
@@ -133,6 +138,34 @@ export async function updateEntityLogic(
   // entity types and read failures leave `before` undefined.
   const pre = await captureTiktokEntity(tiktokService, input.entityType, input.entityId, context);
   const before = pre?.snapshot;
+
+  // A status change (pause / resume) goes to {entity}/status/update/: TikTok's
+  // update bodies have no operation_status (updateStatusShapeErrors), so sent
+  // to {entity}/update/ it changed nothing while the call reported a pause.
+  // The status endpoint returns no entity, so `after` is a re-read.
+  if (isStatusChange) {
+    await tiktokService.updateEntityStatus(
+      input.entityType as TikTokEntityType,
+      [input.entityId],
+      input.data.operation_status as "ENABLE" | "DISABLE",
+      context
+    );
+    const after = await captureTiktokSnapshot(
+      tiktokService,
+      input.entityType,
+      input.entityId,
+      context
+    );
+    return {
+      entityId: input.entityId,
+      entityType: input.entityType,
+      updated: true,
+      timestamp: new Date().toISOString(),
+      ...(before ? { before } : {}),
+      ...(after ? { after } : {}),
+      dispatchedCapability,
+    };
+  }
 
   // TikTok's ad/update/ body needs the ad's adgroup_id (AdUpdateBody); the
   // pre-read already has it, so the service need not read the ad again. When

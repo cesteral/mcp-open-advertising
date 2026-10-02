@@ -30,7 +30,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const MSADS_PACKAGE_NAME = "msads-mcp";
 const MSADS_PLATFORM = "msads";
 
-const msadsWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `msads_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const msadsWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   msads_list_entities: "mcp.execute.msads_entity_read",
   msads_get_entity: "mcp.execute.msads_entity_read",
@@ -56,6 +62,18 @@ const msadsWorkflowIdByToolName: Record<string, string> = {
   msads_get_ad_details: "mcp.execute.msads_entity_read",
   msads_validate_entity: "mcp.execute.msads_entity_read",
   msads_import_from_google: "mcp.execute.msads_entity_update",
+  // Pacing
+  msads_get_pacing_status: "mcp.execute.msads_entity_read",
+  // Duplicate
+  msads_duplicate_entity: "mcp.execute.msads_entity_update",
+  // Targeting reads
+  msads_search_targeting: "mcp.execute.msads_entity_read",
+  msads_get_targeting_options: "mcp.execute.msads_entity_read",
+  // Report breakdowns and schedules
+  msads_get_report_breakdowns: "mcp.execute.msads_reporting",
+  msads_create_report_schedule: "mcp.execute.msads_reporting",
+  msads_list_report_schedules: "mcp.execute.msads_reporting",
+  msads_delete_report_schedule: "mcp.execute.msads_reporting",
 };
 
 export async function createMcpServer(

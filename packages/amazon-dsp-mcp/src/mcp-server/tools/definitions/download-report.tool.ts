@@ -17,11 +17,11 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES } from "../../../services/amazon-dsp/amazon-dsp-reporting-service.js";
+
+export { AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES };
 
 const TOOL_NAME = "amazon_dsp_download_report";
-
-/** Hosts a report `location` may point at (presigned S3). */
-export const AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES = ["amazonaws.com"] as const;
 const TOOL_TITLE = "Download AmazonDsp Report";
 const TOOL_DESCRIPTION = `Download and parse a AmazonDsp report from a download URL.
 

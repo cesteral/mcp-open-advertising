@@ -80,6 +80,47 @@ export class GAdsService {
     private readonly httpClient: GAdsHttpClient
   ) {}
 
+  /** Customer currency reads, one per customer per session. */
+  private readonly customerCurrencies = new Map<string, Promise<string>>();
+
+  /**
+   * The customer account's ISO 4217 currency code, which every micros amount
+   * on that customer is denominated in. Read once per customer and kept for
+   * the session; a failed read is not kept, so the next call retries.
+   *
+   * basis: `Resources__Customer.currencyCode` ("Immutable. The currency in
+   * which the account operates. A subset of the currency codes from the ISO
+   * 4217 standard is supported."), Google Ads API v25 Discovery document
+   * (googleads.googleapis.com/$discovery/rest?version=v25, revision 20260929;
+   * also in tests/fixtures/google-ads-discovery-extract.json). Immutable, so
+   * one read per customer is enough. Read with GAQL
+   * `SELECT customer.currency_code FROM customer`.
+   */
+  getCustomerCurrency(customerId: string, context?: RequestContext): Promise<string> {
+    const cached = this.customerCurrencies.get(customerId);
+    if (cached) return cached;
+    const pending = this.gaqlSearch(
+      customerId,
+      "SELECT customer.currency_code FROM customer",
+      1,
+      undefined,
+      context
+    ).then(({ results }) => {
+      const customer = (results[0] as Record<string, any> | undefined)?.customer;
+      const code = customer?.currencyCode ?? customer?.currency_code;
+      if (typeof code !== "string" || code.length === 0) {
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
+          `Google Ads returned no currency_code for customer ${customerId}`
+        );
+      }
+      return code;
+    });
+    this.customerCurrencies.set(customerId, pending);
+    pending.catch(() => this.customerCurrencies.delete(customerId));
+    return pending;
+  }
+
   /**
    * The bulk-capacity projection input for a batch this service would run
    * against one customer. Every call here consumes one token from

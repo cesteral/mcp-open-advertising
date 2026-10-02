@@ -145,9 +145,9 @@ export async function uploadImageLogic(
       },
       isComplete: (s) => s === "READY",
       isFailed: (s) => s === "FAILED",
-      initialDelayMs: mcpConfig.snapchatVideoUploadPollIntervalMs,
-      maxDelayMs: mcpConfig.snapchatVideoUploadPollIntervalMs,
-      maxAttempts: mcpConfig.snapchatVideoUploadMaxPollAttempts,
+      initialDelayMs: mcpConfig.snapchatImageUploadPollIntervalMs,
+      maxDelayMs: mcpConfig.snapchatImageUploadPollIntervalMs,
+      maxAttempts: mcpConfig.snapchatImageUploadMaxPollAttempts,
       backoffFactor: 1,
     });
     return {

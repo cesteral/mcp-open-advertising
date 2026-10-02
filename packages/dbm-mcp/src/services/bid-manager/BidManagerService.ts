@@ -18,6 +18,7 @@ import {
   pollUntilComplete,
   ReportTimeoutError,
   ReportFailedError,
+  ReportAbortedError,
   ReportingError,
   mapReportingError,
   McpError,
@@ -32,6 +33,7 @@ import {
   ReportFetchError,
   BidManagerError,
   RetryExhaustedError,
+  ReportWallTimeExceededError,
 } from "../../utils/errors/bid-manager-errors.js";
 import {
   parseCSVToDeliveryMetrics,
@@ -54,7 +56,10 @@ import { safeDivide, round } from "../../utils/math.js";
 import { daysBetween } from "../../utils/date.js";
 import { withBidManagerApiSpan } from "../../utils/platform.js";
 import { classifyReportError, isNetworkError } from "./retry-policy.js";
-import { REPORT_POLL_BACKOFF_MULTIPLIER } from "./report-timing.js";
+import {
+  DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS,
+  REPORT_POLL_BACKOFF_MULTIPLIER,
+} from "./report-timing.js";
 
 /** Options accepted by {@link BidManagerService.executeQueryWithRetry}. */
 export interface ExecuteQueryOptions {
@@ -66,6 +71,54 @@ export interface ExecuteQueryOptions {
    * can fail — so the caller can delete the saved query whatever happens next.
    */
   onQueryCreated?: (queryId: string) => void;
+  /**
+   * Wall-time cap on the whole create → run → poll → retry loop, in ms.
+   * Omitted: `reportSyncMaxWallTimeMs` (a synchronous tool call). `null`:
+   * uncapped — only for the async task tool, whose task TTL is sized from the
+   * full worst-case run (`computeWorstCaseReportDurationMs`).
+   *
+   * Every sleep (the poll delays and the retry cooldown) ends at the cap, and
+   * nothing new is sent after it; an HTTP call already in flight (and its
+   * rate-limiter wait) is allowed to finish, so the overshoot is one request.
+   */
+  maxWallTimeMs?: number | null;
+}
+
+/** Options a report-running public method passes through to the run. */
+export type ReportRunOptions = Pick<ExecuteQueryOptions, "maxWallTimeMs">;
+
+/** Resolves after `ms`, or as soon as `signal` aborts (never rejects). */
+function sleepUntil(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) return delay(ms);
+  if (signal.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/** An AbortSignal that fires after `ms`; no signal at all when uncapped. */
+function startWallTimeCap(ms: number | null): {
+  signal?: AbortSignal;
+  expired: () => boolean;
+  dispose: () => void;
+} {
+  if (ms === null) return { expired: () => false, dispose: () => {} };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  timer.unref?.();
+  return {
+    signal: controller.signal,
+    expired: () => controller.signal.aborted,
+    dispose: () => clearTimeout(timer),
+  };
 }
 
 /**
@@ -271,7 +324,8 @@ export class BidManagerService {
   async pollForCompletion(
     queryId: string,
     reportId: string,
-    options?: Partial<ExponentialBackoffConfig>
+    options?: Partial<ExponentialBackoffConfig>,
+    signal?: AbortSignal
   ): Promise<ReportMetadata> {
     const config: ExponentialBackoffConfig = {
       initialDelayMs: options?.initialDelayMs ?? this.config.reportPollInitialDelayMs ?? 2000,
@@ -283,10 +337,13 @@ export class BidManagerService {
     this.logger.info({ queryId, reportId, config }, "Starting exponential backoff polling");
 
     // Sleep before the first fetch — a report is never ready immediately.
-    await delay(config.initialDelayMs);
+    // An aborted `signal` (the wall-time cap) cuts every sleep short, and
+    // `pollUntilComplete` then throws ReportAbortedError before fetching.
+    await sleepUntil(config.initialDelayMs, signal);
 
     try {
       return await pollUntilComplete<ReportMetadata>({
+        signal,
         fetchStatus: () => this.getReportStatus(queryId, reportId),
         isComplete: (r) => r.status.state === "DONE",
         isFailed: (r) => r.status.state === "FAILED",
@@ -376,13 +433,46 @@ export class BidManagerService {
   ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     const maxRetries = options?.maxRetries ?? this.config.reportQueryRetries ?? 3;
     const retryCooldownMs = options?.retryCooldownMs ?? this.config.reportRetryCooldownMs ?? 60000;
+    const maxWallTimeMs =
+      options?.maxWallTimeMs === undefined
+        ? (this.config.reportSyncMaxWallTimeMs ?? DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS)
+        : options.maxWallTimeMs;
+    const cap = startWallTimeCap(maxWallTimeMs);
+    try {
+      return await this.runQueryAttempts(spec, options, maxRetries, retryCooldownMs, {
+        ...cap,
+        maxWallTimeMs,
+      });
+    } finally {
+      cap.dispose();
+    }
+  }
 
+  private async runQueryAttempts(
+    spec: QuerySpec,
+    options: ExecuteQueryOptions | undefined,
+    maxRetries: number,
+    retryCooldownMs: number,
+    cap: { signal?: AbortSignal; expired: () => boolean; maxWallTimeMs: number | null }
+  ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     let queryId: string | undefined;
     let reportId: string | undefined;
     let lastError: Error | undefined;
     let lastStatus: string | undefined;
 
+    const wallTimeExceeded = (attempts: number) =>
+      new ReportWallTimeExceededError(cap.maxWallTimeMs ?? 0, {
+        queryId,
+        reportId,
+        attempts,
+        lastError,
+        lastStatus,
+      });
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Nothing new is sent once the cap has passed (a cooldown cut short by
+      // it lands here).
+      if (cap.expired()) throw wallTimeExceeded(attempt);
       try {
         this.logger.info(
           {
@@ -412,7 +502,12 @@ export class BidManagerService {
         }
 
         // Poll for completion with exponential backoff
-        const report = await this.pollForCompletion(queryId, reportId, options?.backoffConfig);
+        const report = await this.pollForCompletion(
+          queryId,
+          reportId,
+          options?.backoffConfig,
+          cap.signal
+        );
 
         lastStatus = report.status.state;
 
@@ -427,6 +522,12 @@ export class BidManagerService {
 
         return { gcsPath: report.googleCloudStoragePath, queryId, reportId };
       } catch (error) {
+        // The cap cut polling short: say so, rather than a bare "polling
+        // aborted". The report had not finished as of the last poll.
+        if (error instanceof ReportAbortedError && cap.expired()) {
+          throw wallTimeExceeded(attempt + 1);
+        }
+
         lastError = error instanceof Error ? error : new Error(String(error));
 
         // Capture last status for error reporting
@@ -463,11 +564,12 @@ export class BidManagerService {
 
         // If this is not the last attempt, wait before retrying
         if (attempt < maxRetries - 1) {
+          if (cap.expired()) throw wallTimeExceeded(attempt + 1);
           this.logger.info(
             { cooldownMs: retryCooldownMs, nextAttempt: attempt + 2 },
             "Waiting before retry with continuation"
           );
-          await delay(retryCooldownMs);
+          await sleepUntil(retryCooldownMs, cap.signal);
         }
       }
     }
@@ -755,14 +857,20 @@ export class BidManagerService {
    *
    * This method accepts dynamic parameters allowing flexible query construction
    * for any combination of Bid Manager API filters and metrics.
+   *
+   * `runOptions.maxWallTimeMs`: omit for a synchronous call (capped at
+   * `reportSyncMaxWallTimeMs`); `null` only from the async task tool.
    */
-  async executeCustomQuery(params_: {
-    reportType: string;
-    groupBys: string[];
-    metrics: string[];
-    filters?: Array<{ type: string; value: string }>;
-    dateRange: { preset?: string; startDate?: string; endDate?: string };
-  }): Promise<{
+  async executeCustomQuery(
+    params_: {
+      reportType: string;
+      groupBys: string[];
+      metrics: string[];
+      filters?: Array<{ type: string; value: string }>;
+      dateRange: { preset?: string; startDate?: string; endDate?: string };
+    },
+    runOptions?: ReportRunOptions
+  ): Promise<{
     queryId: string;
     reportId: string;
     status: string;
@@ -771,17 +879,20 @@ export class BidManagerService {
     data: Record<string, unknown>[];
   }> {
     return withBidManagerApiSpan("executeCustomQuery", undefined, async () => {
-      return this.executeCustomQueryInner(params_);
+      return this.executeCustomQueryInner(params_, runOptions);
     });
   }
 
-  private async executeCustomQueryInner(params: {
-    reportType: string;
-    groupBys: string[];
-    metrics: string[];
-    filters?: Array<{ type: string; value: string }>;
-    dateRange: { preset?: string; startDate?: string; endDate?: string };
-  }): Promise<{
+  private async executeCustomQueryInner(
+    params: {
+      reportType: string;
+      groupBys: string[];
+      metrics: string[];
+      filters?: Array<{ type: string; value: string }>;
+      dateRange: { preset?: string; startDate?: string; endDate?: string };
+    },
+    runOptions?: ReportRunOptions
+  ): Promise<{
     queryId: string;
     reportId: string;
     status: string;
@@ -836,7 +947,7 @@ export class BidManagerService {
     };
 
     // Execute with retry and exponential backoff; the saved query is deleted afterwards
-    const queryResult = await this.runReportAndFetch(querySpec);
+    const queryResult = await this.runReportAndFetch(querySpec, runOptions);
     const csvData = queryResult.csv;
 
     // Parse CSV to structured data

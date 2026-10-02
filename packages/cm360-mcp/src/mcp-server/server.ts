@@ -27,7 +27,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const CM360_PACKAGE_NAME = "cm360-mcp";
 const CM360_PLATFORM = "cm360-management";
 
-const cm360WorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `cm360_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const cm360WorkflowIdByToolName: Record<string, string> = {
   // Read operations
   cm360_list_user_profiles: "mcp.execute.cm360_entity_read",
   cm360_get_entity: "mcp.execute.cm360_entity_read",
@@ -48,6 +54,13 @@ const cm360WorkflowIdByToolName: Record<string, string> = {
   cm360_submit_report: "mcp.execute.cm360_reporting",
   cm360_check_report_status: "mcp.execute.cm360_reporting",
   cm360_download_report: "mcp.execute.cm360_reporting",
+  // Pacing
+  cm360_get_pacing_status: "mcp.execute.cm360_entity_read",
+  // Report breakdowns and schedules
+  cm360_get_report_breakdowns: "mcp.execute.cm360_reporting",
+  cm360_create_report_schedule: "mcp.execute.cm360_reporting",
+  cm360_list_report_schedules: "mcp.execute.cm360_reporting",
+  cm360_delete_report_schedule: "mcp.execute.cm360_reporting",
 };
 
 /**

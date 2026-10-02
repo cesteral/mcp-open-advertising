@@ -28,7 +28,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const AMAZON_DSP_PACKAGE_NAME = "amazon-dsp-mcp";
 const AMAZON_DSP_PLATFORM = "amazon_dsp";
 
-const amazonDspWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `amazon_dsp_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const amazonDspWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   amazon_dsp_list_entities: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_get_entity: "mcp.execute.amazon_dsp_entity_read",
@@ -52,6 +58,18 @@ const amazonDspWorkflowIdByToolName: Record<string, string> = {
   amazon_dsp_duplicate_entity: "mcp.execute.amazon_dsp_entity_update",
   amazon_dsp_get_ad_preview: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_validate_entity: "mcp.execute.amazon_dsp_entity_read",
+  // Pacing
+  amazon_dsp_get_pacing_status: "mcp.execute.amazon_dsp_entity_read",
+  // Media uploads
+  amazon_dsp_upload_video: "mcp.execute.amazon_dsp_entity_update",
+  // Commitments and forecasts
+  amazon_dsp_list_commitments: "mcp.execute.amazon_dsp_entity_read",
+  amazon_dsp_get_commitments: "mcp.execute.amazon_dsp_entity_read",
+  amazon_dsp_get_commitment: "mcp.execute.amazon_dsp_entity_read",
+  amazon_dsp_get_commitment_spend: "mcp.execute.amazon_dsp_entity_read",
+  amazon_dsp_create_commitment: "mcp.execute.amazon_dsp_entity_update",
+  amazon_dsp_update_commitment: "mcp.execute.amazon_dsp_entity_update",
+  amazon_dsp_get_campaign_forecast: "mcp.execute.amazon_dsp_entity_read",
 };
 
 /**

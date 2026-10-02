@@ -46,6 +46,14 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Video upload poll configuration
   snapchatVideoUploadPollIntervalMs: z.number().default(20_000),
   snapchatVideoUploadMaxPollAttempts: z.number().default(30),
+
+  // Image upload poll configuration. Images used to poll at the video interval
+  // (20 s). These defaults are local tuning, not a Snap-documented figure: no
+  // Snap source states how long an image takes to reach READY. The first poll
+  // runs at once; 30 attempts keeps the worst-case limiter draw (one read per
+  // poll) the same as before, over about a minute instead of ten.
+  snapchatImageUploadPollIntervalMs: z.number().default(2_000),
+  snapchatImageUploadMaxPollAttempts: z.number().default(30),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -91,6 +99,14 @@ export function parseConfig(): AppConfig {
       : undefined,
     snapchatVideoUploadMaxPollAttempts: process.env.SNAPCHAT_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
       ? Number(process.env.SNAPCHAT_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
+      : undefined,
+
+    // Image upload poll configuration
+    snapchatImageUploadPollIntervalMs: process.env.SNAPCHAT_IMAGE_UPLOAD_POLL_INTERVAL_MS
+      ? Number(process.env.SNAPCHAT_IMAGE_UPLOAD_POLL_INTERVAL_MS)
+      : undefined,
+    snapchatImageUploadMaxPollAttempts: process.env.SNAPCHAT_IMAGE_UPLOAD_MAX_POLL_ATTEMPTS
+      ? Number(process.env.SNAPCHAT_IMAGE_UPLOAD_MAX_POLL_ATTEMPTS)
       : undefined,
   };
 

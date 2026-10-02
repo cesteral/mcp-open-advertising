@@ -7,6 +7,12 @@ import { getDuplicateEntityTypeEnum } from "../utils/entity-mapping.js";
 import { runMetaDuplicateDryRun, resolveMetaDuplicateCapability } from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
 import {
+  attachMetaV26Warnings,
+  formatMetaV26Warnings,
+  metaV26WarningsOf,
+  type MetaV26Warning,
+} from "../utils/v26-targeting-warnings.js";
+import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -98,6 +104,9 @@ export async function duplicateEntityLogic(
   const dispatchedCapability = resolveMetaDuplicateCapability(input.entityType);
 
   if (input.dry_run === true) {
+    // v26 targeting warnings (#229) for a copied ad set's targeting: response
+    // text only. An execute has no targeting in its input and adds no read.
+    const v26Warnings: MetaV26Warning[] = [];
     const dryRun = await runMetaDuplicateDryRun(
       {
         entityType: input.entityType,
@@ -106,15 +115,19 @@ export async function duplicateEntityLogic(
         renameOptions: input.renameOptions,
       },
       metaService,
-      context
+      context,
+      v26Warnings
     );
-    return {
-      result: {},
-      entityType: input.entityType,
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
+    return attachMetaV26Warnings(
+      {
+        result: {},
+        entityType: input.entityType,
+        timestamp: new Date().toISOString(),
+        dryRun,
+        dispatchedCapability,
+      },
+      v26Warnings
+    );
   }
 
   const options: Record<string, unknown> = {};
@@ -170,6 +183,7 @@ export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput):
         text:
           `Dry run: duplicating ${result.entityType} ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). No copy was created.` +
           (errs ? `\n${errs}` : "") +
+          formatMetaV26Warnings(metaV26WarningsOf(result)) +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

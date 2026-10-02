@@ -5,7 +5,7 @@
 // src/generated/types.ts — run `pnpm run generate` to produce this file from the
 // official Pinterest OpenAPI spec (https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.json).
 
-import type { PinterestHttpClient } from "./pinterest-http-client.js";
+import type { PinterestHttpClient, PinterestQueryParams } from "./pinterest-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   type RequestContext,
@@ -43,6 +43,28 @@ interface PinterestEntityMap {
 }
 
 export type { PinterestCampaign, PinterestAdGroup, PinterestAd, PinterestPin };
+
+/** `components.schemas.EntityStatus` — the values `entity_statuses` accepts. */
+export type PinterestEntityStatus = components["schemas"]["EntityStatus"];
+
+/**
+ * Every `EntityStatus` value, in spec order, for the list tool's input enum.
+ * The type below fails to compile if the generated enum gains a value this
+ * list lacks (or this list names one it does not have).
+ */
+export const PINTEREST_ENTITY_STATUSES = [
+  "ACTIVE",
+  "PAUSED",
+  "ARCHIVED",
+  "DRAFT",
+  "DELETED_DRAFT",
+] as const satisfies readonly PinterestEntityStatus[];
+type MissingEntityStatus = Exclude<
+  PinterestEntityStatus,
+  (typeof PINTEREST_ENTITY_STATUSES)[number]
+>;
+const entityStatusesAreExhaustive: [MissingEntityStatus] extends [never] ? true : never = true;
+void entityStatusesAreExhaustive;
 
 /**
  * Limiter tokens one read / one write `consume` costs (a read passes no count,
@@ -104,20 +126,39 @@ export class PinterestService {
 
   async listEntities<T extends PinterestEntityType>(
     entityType: T,
-    filters: { adAccountId: string; campaignId?: string; adGroupId?: string },
+    filters: {
+      adAccountId: string;
+      campaignId?: string;
+      adGroupId?: string;
+      entityStatuses?: readonly PinterestEntityStatus[];
+    },
     bookmark?: string,
     pageSize = 25,
     context?: RequestContext
   ): Promise<{ entities: PinterestEntityMap[T][]; pageInfo: PinterestPageInfo }> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.listPath, { adAccountId: filters.adAccountId });
-    const params: Record<string, string> = { page_size: String(pageSize) };
+    const params: PinterestQueryParams = { page_size: String(pageSize) };
     if (bookmark) params.bookmark = bookmark;
     // Pinterest v5 list filters are plural arrays (`campaign_ids`, `ad_group_ids`);
     // the singular `campaign_id` / `ad_group_id` are not parameters and were
     // ignored, returning every entity in the account.
     if (filters.campaignId) params.campaign_ids = filters.campaignId;
     if (filters.adGroupId) params.ad_group_ids = filters.adGroupId;
+    if (filters.entityStatuses && filters.entityStatuses.length > 0) {
+      // basis: `campaigns/list`, `ad_groups/list` and `ads/list` take
+      // `entity_statuses` (`components.parameters.query_entity_statuses`,
+      // default `["ACTIVE", "PAUSED"]`); `GET /pins` does not, so a creative
+      // list would silently ignore it. Without it, ARCHIVED and DRAFT
+      // entities could not be listed at all.
+      if (entityType === "creative") {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          "entityStatuses applies to campaign, adGroup and ad lists only; Pinterest's GET /v5/pins takes no status filter."
+        );
+      }
+      params.entity_statuses = filters.entityStatuses;
+    }
 
     await consumePinterestAccountQuota(
       this.rateLimiter,

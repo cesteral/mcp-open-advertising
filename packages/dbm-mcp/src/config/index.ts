@@ -9,6 +9,7 @@ import {
   parseConfigWithSchema,
   getDefaultHost,
 } from "@cesteral/shared";
+import { DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS } from "../services/bid-manager/report-timing.js";
 
 // Load .env file from package root
 loadDotEnv();
@@ -46,6 +47,14 @@ const ConfigSchema = BaseConfigSchema.extend({
   reportPollMaxDelayMs: z.number().default(30000), // Max backoff delay (30s)
   reportQueryRetries: z.number().default(5), // High-level query retries
   reportRetryCooldownMs: z.number().default(60000), // Delay before retry (60s)
+  // Wall-time cap on one synchronous report run (create → run → poll → retries).
+  // The async task tool is not capped by it. See DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS
+  // (services/bid-manager/report-timing.ts) for the default and its basis.
+  reportSyncMaxWallTimeMs: z
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -104,6 +113,9 @@ export function parseConfig(): AppConfig {
       : undefined,
     reportRetryCooldownMs: process.env.REPORT_RETRY_COOLDOWN_MS
       ? Number(process.env.REPORT_RETRY_COOLDOWN_MS)
+      : undefined,
+    reportSyncMaxWallTimeMs: process.env.REPORT_SYNC_MAX_WALL_TIME_MS
+      ? Number(process.env.REPORT_SYNC_MAX_WALL_TIME_MS)
       : undefined,
   };
 

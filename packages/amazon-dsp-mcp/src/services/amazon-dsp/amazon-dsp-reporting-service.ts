@@ -4,7 +4,7 @@
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
-  fetchWithTimeout,
+  fetchGuardedDownload,
   McpError,
   JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
@@ -21,6 +21,12 @@ import {
 import type { Logger } from "pino";
 import { AMAZON_DSP_REPORTING_CONTRACT } from "./amazon-dsp-api-contract.js";
 import { encodePathSegment } from "../../mcp-server/tools/utils/entity-mapping.js";
+
+/**
+ * Hosts a report `location` may point at (presigned S3), checked on the URL
+ * and on every redirect hop of the download.
+ */
+export const AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES = ["amazonaws.com"] as const;
 
 /** Amazon DSP report task status values (DSP reports v3). */
 export type ReportTaskStatus = (typeof AMAZON_DSP_REPORTING_CONTRACT.statuses)[number];
@@ -200,11 +206,15 @@ export class AmazonDspReportingService {
     rawCsv?: string;
     rawMimeType?: string;
   }> {
-    const response = await fetchWithTimeout(
-      downloadUrl,
-      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-      context
-    );
+    // Both callers pass a URL to fetch anonymously: `amazon_dsp_download_report`
+    // one from the MCP client, `getReport` the `location` Amazon returned.
+    // Redirects are followed by hand so every hop must stay on S3 and pass the
+    // SSRF checks; with `redirect: "follow"` only the first URL was checked.
+    const response = await fetchGuardedDownload(downloadUrl, {
+      timeoutMs: DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context,
+      allowedHostSuffixes: AMAZON_DSP_REPORT_DOWNLOAD_HOST_SUFFIXES,
+    });
 
     if (!response.ok) {
       throw new McpError(

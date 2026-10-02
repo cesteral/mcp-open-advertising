@@ -28,7 +28,13 @@ import packageJson from "../../package.json" with { type: "json" };
 const TIKTOK_PACKAGE_NAME = "tiktok-mcp";
 const TIKTOK_PLATFORM = "tiktok";
 
-const tiktokWorkflowIdByToolName: Record<string, string> = {
+/**
+ * Interaction-log workflow id per tool. Every tool registered through the
+ * factory except the generated `tiktok_search_tools` must appear here, and
+ * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`); a missing
+ * entry logs the tool's calls with no workflowId.
+ */
+export const tiktokWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   tiktok_list_entities: "mcp.execute.tiktok_entity_read",
   tiktok_get_entity: "mcp.execute.tiktok_entity_read",
@@ -53,6 +59,15 @@ const tiktokWorkflowIdByToolName: Record<string, string> = {
   tiktok_get_audience_estimate: "mcp.execute.tiktok_entity_read",
   tiktok_get_ad_preview: "mcp.execute.tiktok_entity_read",
   tiktok_validate_entity: "mcp.execute.tiktok_entity_read",
+  // Pacing
+  tiktok_get_pacing_status: "mcp.execute.tiktok_entity_read",
+  // Async reports
+  tiktok_submit_report: "mcp.execute.tiktok_reporting",
+  tiktok_check_report_status: "mcp.execute.tiktok_reporting",
+  tiktok_download_report: "mcp.execute.tiktok_reporting",
+  // Media uploads
+  tiktok_upload_image: "mcp.execute.tiktok_entity_update",
+  tiktok_upload_video: "mcp.execute.tiktok_entity_update",
 };
 
 /**

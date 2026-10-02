@@ -11,6 +11,13 @@ import {
 } from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
 import {
+  attachMetaV26Warnings,
+  formatMetaV26Warnings,
+  metaV26UpdateWarnings,
+  metaV26WarningsOf,
+  type MetaV26Warning,
+} from "../utils/v26-targeting-warnings.js";
+import {
   McpError,
   JsonRpcErrorCode,
   DryRunResultSchema,
@@ -95,19 +102,26 @@ export async function updateEntityLogic(
   const dispatchedCapability = resolveMetaDispatchedCapability(input.entityType, input.data);
 
   if (input.dry_run === true) {
+    // v26 targeting warnings (#229): response text only. The dry run reads the
+    // ad set's campaign for check 3 when it needs to.
+    const v26Warnings: MetaV26Warning[] = [];
     const dryRun = await runMetaUpdateDryRun(
       { entityType: input.entityType, entityId: input.entityId, data: input.data },
       metaService,
-      context
+      context,
+      v26Warnings
     );
-    return {
-      success: dryRun.wouldSucceed,
-      entityId: input.entityId,
-      entityType: input.entityType,
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
+    return attachMetaV26Warnings(
+      {
+        success: dryRun.wouldSucceed,
+        entityId: input.entityId,
+        entityType: input.entityType,
+        timestamp: new Date().toISOString(),
+        dryRun,
+        dispatchedCapability,
+      },
+      v26Warnings
+    );
   }
 
   // Fail fast on an empty or invalid update payload before hitting the Graph
@@ -144,15 +158,20 @@ export async function updateEntityLogic(
     ? await captureMetaSnapshot(metaService, input.entityType, input.entityId, context)
     : undefined;
 
-  return {
-    success,
-    entityId: input.entityId,
-    entityType: input.entityType,
-    timestamp: new Date().toISOString(),
-    ...(before ? { before } : {}),
-    ...(after ? { after } : {}),
-    dispatchedCapability,
-  };
+  // v26 targeting warnings (#229): response text only, from the input (an
+  // execute adds no read, so check 3 says the category was not checked).
+  return attachMetaV26Warnings(
+    {
+      success,
+      entityId: input.entityId,
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      ...(before ? { before } : {}),
+      ...(after ? { after } : {}),
+      dispatchedCapability,
+    },
+    metaV26UpdateWarnings(input.entityType, input.data, "data")
+  );
 }
 
 export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
@@ -161,7 +180,10 @@ export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `${entityLabel} ${result.entityId} ${status}\n\nTimestamp: ${result.timestamp}`,
+      text:
+        `${entityLabel} ${result.entityId} ${status}` +
+        formatMetaV26Warnings(metaV26WarningsOf(result)) +
+        `\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

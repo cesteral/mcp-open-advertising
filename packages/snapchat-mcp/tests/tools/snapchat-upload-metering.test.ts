@@ -24,6 +24,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.hoisted(() => {
   // One poll, no wait: the first status read returns READY.
   process.env.SNAPCHAT_VIDEO_UPLOAD_POLL_INTERVAL_MS = "1";
+  process.env.SNAPCHAT_IMAGE_UPLOAD_POLL_INTERVAL_MS = "1";
 });
 
 vi.mock("@cesteral/shared", async (importOriginal) => {

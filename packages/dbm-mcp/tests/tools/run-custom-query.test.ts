@@ -127,7 +127,9 @@ describe("runCustomQueryLogic", () => {
         groupBys: ["FILTER_DATE", "FILTER_LINE_ITEM"],
         metrics: ["METRIC_IMPRESSIONS", "METRIC_CLICKS"],
         dateRange: { preset: "LAST_7_DAYS" },
-      })
+      }),
+      // No run options: the synchronous tool is capped at reportSyncMaxWallTimeMs.
+      undefined
     );
   });
 

@@ -40,19 +40,17 @@ const linkedInService = {
   duplicateEntity: vi.fn(async () => ({ id: "urn:li:test:copy" })),
   getAdSupplyForecast: vi.fn(async () => ({ elements: [] })),
   getAdPreviews: vi.fn(async () => ({ elements: [{ preview: "<iframe></iframe>" }] })),
-  client: {
-    post: vi.fn(async () => ({
-      value: {
-        uploadMechanism: {
-          "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-            uploadUrl: "https://example.com/upload",
-          },
+  registerAssetUpload: vi.fn(async () => ({
+    value: {
+      uploadMechanism: {
+        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+          uploadUrl: "https://example.com/upload",
         },
-        asset: "urn:li:digitalmediaAsset:test123",
       },
-    })),
-    putBinary: vi.fn(async () => undefined),
-  },
+      asset: "urn:li:digitalmediaAsset:test123",
+    },
+  })),
+  uploadAssetBinary: vi.fn(async () => undefined),
 };
 
 const linkedInReportingService = {

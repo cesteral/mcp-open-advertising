@@ -661,12 +661,14 @@ describe("ttd graphql bulk tools", () => {
   // ── cancelBulkJob ──
 
   describe("graphqlCancelBulkJobLogic", () => {
-    it("wraps jobId in CancelBulkJobInput and returns cancelled status", async () => {
-      mockTtdService.graphqlQuery.mockResolvedValueOnce({
-        data: {
-          cancelBulkJob: { data: { id: "2989826", status: "CANCELLED" }, errors: [] },
-        },
-      });
+    it("writes the job id into TTD's inline input and reads the status back", async () => {
+      mockTtdService.graphqlQuery
+        .mockResolvedValueOnce({
+          data: { cancelBulkJob: { data: { id: "2989826" }, errors: [] } },
+        })
+        .mockResolvedValueOnce({
+          data: { bulkJob: { __typename: "BulkQueryJob", id: "2989826", status: "CANCELLED" } },
+        });
 
       const result = await graphqlCancelBulkJobLogic(
         { jobId: "2989826" },
@@ -676,11 +678,40 @@ describe("ttd graphql bulk tools", () => {
 
       expect(result.jobId).toBe("2989826");
       expect(result.status).toBe("CANCELLED");
-      expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
-        expect.stringContaining("cancelBulkJob"),
-        { input: { jobId: "2989826" } },
+      expect(mockTtdService.graphqlQuery).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("cancelBulkJob(input: { jobId: 2989826 })"),
+        undefined,
         expect.any(Object)
       );
+      expect(mockTtdService.graphqlQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("bulkJob(id: 2989826)"),
+        undefined,
+        expect.any(Object)
+      );
+    });
+
+    it("still reports the cancel when the status read afterwards fails", async () => {
+      mockTtdService.graphqlQuery
+        .mockResolvedValueOnce({
+          data: { cancelBulkJob: { data: { id: "2989826" }, errors: [] } },
+        })
+        .mockRejectedValueOnce(new Error("network"));
+
+      const result = await graphqlCancelBulkJobLogic(
+        { jobId: "2989826" },
+        createMockContext(),
+        createMockSdkContext()
+      );
+
+      expect(result.jobId).toBe("2989826");
+      expect(result.status).toBeUndefined();
+      expect(result.effect).toEqual({
+        effectKind: "bulk_job_cancelled",
+        summary: { job_id: "2989826" },
+      });
+      expect(graphqlCancelBulkJobResponseFormatter(result)[0].text).toContain("not reported");
     });
 
     it("throws when payload.errors is populated (non-cancelable mutation job)", async () => {

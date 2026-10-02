@@ -133,7 +133,7 @@ Use \`tiktok_update_entity\` for **field changes** (name, budget, bid, targeting
 
 ## Step 3: Update Status (Separate Endpoint)
 
-⚠️ **CRITICAL GOTCHA**: TikTok uses a **separate endpoint** for status changes. Do NOT include \`operation_status\` in \`tiktok_update_entity\` — it won't work.
+⚠️ **CRITICAL GOTCHA**: TikTok uses a **separate endpoint** (\`{entity}/status/update/\`) for status changes. Never mix \`operation_status\` with field changes: \`tiktok_update_entity\` refuses that, and sends a status-only \`data: { "operation_status": "ENABLE" | "DISABLE" }\` to the status endpoint as its own request.
 
 Use \`tiktok_bulk_update_status\` for all status changes:
 

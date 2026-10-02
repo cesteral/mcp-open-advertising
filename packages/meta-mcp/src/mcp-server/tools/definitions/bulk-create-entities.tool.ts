@@ -11,6 +11,12 @@ import {
 } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
 import {
+  attachMetaV26Warnings,
+  formatMetaV26Warnings,
+  metaV26CreateWarnings,
+  metaV26WarningsOf,
+} from "../utils/v26-targeting-warnings.js";
+import {
   BulkOperationResultSchema,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -100,6 +106,12 @@ export async function bulkCreateEntitiesLogic(
   // run fails as the real call would.
   const { metaService } = resolveSessionServices(sdkContext);
 
+  // v26 targeting warnings (#229) per item: response text only, never
+  // structured content. From the input; no read.
+  const v26Warnings = input.items.flatMap((item, i) =>
+    metaV26CreateWarnings(input.entityType, item, `items.${i}`)
+  );
+
   // Symbolic dry-run: validate the batch and project the would-be effect. No API call.
   if (input.dry_run === true) {
     const dryRun = buildBulkEffectDryRun(
@@ -111,14 +123,17 @@ export async function bulkCreateEntitiesLogic(
         "items"
       )
     );
-    return {
-      results: [],
-      successCount: 0,
-      failureCount: 0,
-      timestamp: new Date().toISOString(),
-      dryRun,
-      dispatchedCapability,
-    };
+    return attachMetaV26Warnings(
+      {
+        results: [],
+        successCount: 0,
+        failureCount: 0,
+        timestamp: new Date().toISOString(),
+        dryRun,
+        dispatchedCapability,
+      },
+      v26Warnings
+    );
   }
 
   // Reuse the symbolic batch validator on the execute path: the dry-run
@@ -161,14 +176,17 @@ export async function bulkCreateEntitiesLogic(
     },
   };
 
-  return {
-    results: result.results as BulkCreateEntitiesOutput["results"],
-    successCount,
-    failureCount,
-    timestamp: new Date().toISOString(),
-    effect,
-    dispatchedCapability,
-  };
+  return attachMetaV26Warnings(
+    {
+      results: result.results as BulkCreateEntitiesOutput["results"],
+      successCount,
+      failureCount,
+      timestamp: new Date().toISOString(),
+      effect,
+      dispatchedCapability,
+    },
+    v26Warnings
+  );
 }
 
 /**
@@ -227,6 +245,7 @@ export function bulkCreateEntitiesResponseFormatter(
         text:
           `Dry run: bulk-creating ${String(n)} ${String(kind)}(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No entities were created.` +
           (errs ? `\n${errs}` : "") +
+          formatMetaV26Warnings(metaV26WarningsOf(result)) +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];
@@ -234,7 +253,10 @@ export function bulkCreateEntitiesResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Bulk create: ${result.successCount} succeeded, ${result.failureCount} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text:
+        `Bulk create: ${result.successCount} succeeded, ${result.failureCount} failed\n\n${JSON.stringify(result.results, null, 2)}` +
+        formatMetaV26Warnings(metaV26WarningsOf(result)) +
+        `\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
