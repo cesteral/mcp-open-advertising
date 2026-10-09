@@ -103,6 +103,121 @@ function assertJsonCompatible(value: unknown): unknown {
   return value;
 }
 
+// =============================================================================
+// HASH ALGORITHMS
+// =============================================================================
+
+/**
+ * The canonicalizations a hash can be computed under. A signed `hashAlg` claim on
+ * a decision token (and an optional `hashAlg` on a manifest entry) names exactly
+ * one of these; the verifier never tries both.
+ *
+ * - `cesteral-c14n-v1` — {@link stableStringify}, frozen. Sorts keys, then lets
+ *   `JSON.stringify` emit them, so the JS engine re-orders integer-like keys ahead
+ *   of the rest (`{"9":…,"10":…,"-1":…}`). Every hash minted before this field
+ *   existed was computed this way, so an ABSENT claim means this algorithm.
+ * - `rfc8785` — RFC 8785 (JCS): properties sorted by UTF-16 code units
+ *   (`{"-1":…,"10":…,"9":…}`), which any language can reproduce from the RFC.
+ *
+ * The two produce identical bytes for every value that has no order-sensitive
+ * object (see {@link hasOrderSensitiveKeys}).
+ */
+export const HASH_ALGS = ["cesteral-c14n-v1", "rfc8785"] as const;
+export type HashAlg = (typeof HASH_ALGS)[number];
+
+/** What an absent `hashAlg` means on the wire. */
+export const DEFAULT_HASH_ALG: HashAlg = "cesteral-c14n-v1";
+
+export function isHashAlg(value: unknown): value is HashAlg {
+  return typeof value === "string" && (HASH_ALGS as readonly string[]).includes(value);
+}
+
+function assertHashAlg(alg: unknown): asserts alg is HashAlg {
+  if (!isHashAlg(alg)) {
+    throw new Error(`unsupported hash algorithm: ${String(alg)}`);
+  }
+}
+
+/** A UTF-16 surrogate with no partner: not valid I-JSON, so RFC 8785 forbids it. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+
+function jcsString(s: string): string {
+  if (LONE_SURROGATE.test(s)) {
+    throw new Error("rfc8785: lone surrogate is not valid I-JSON");
+  }
+  return JSON.stringify(s);
+}
+
+/**
+ * RFC 8785 serialization of an already-validated JSON value. The string is built
+ * by hand from explicitly sorted keys so the engine's property-enumeration order
+ * can never re-order them; numbers, booleans and null use `JSON.stringify`, which
+ * is ECMAScript `Number::toString` — the number form RFC 8785 mandates.
+ */
+function serializeJcs(value: unknown): string {
+  if (Array.isArray(value)) {
+    const parts: string[] = [];
+    for (let i = 0; i < value.length; i++) {
+      if (!(i in value)) throw new Error("rfc8785: sparse array hole is not valid JSON");
+      parts.push(serializeJcs(value[i]));
+    }
+    return "[" + parts.join(",") + "]";
+  }
+  if (value !== null && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj)
+      .filter((k) => obj[k] !== undefined)
+      .sort();
+    return "{" + keys.map((k) => jcsString(k) + ":" + serializeJcs(obj[k])).join(",") + "}";
+  }
+  if (typeof value === "string") return jcsString(value);
+  return JSON.stringify(value);
+}
+
+/**
+ * Canonical JSON text under `alg`. Same fail-loud contract as
+ * {@link stableStringify}: non-JSON input throws; undefined object properties are
+ * dropped; undefined array elements are rejected. An unknown `alg` throws.
+ */
+export function canonicalStringify(value: unknown, alg: HashAlg = DEFAULT_HASH_ALG): string {
+  assertHashAlg(alg);
+  if (alg === "cesteral-c14n-v1") return stableStringify(value);
+  if (typeof value === "undefined") {
+    throw new Error("stableStringify: undefined is not valid JSON at the root");
+  }
+  return serializeJcs(assertJsonCompatible(value));
+}
+
+/**
+ * True when `cesteral-c14n-v1` and `rfc8785` would serialize `value` differently:
+ * some object's keys, rebuilt in sorted order exactly as the legacy serializer
+ * does, come back from the engine in a different order. Lets a verifier report,
+ * per call, whether an argument hash depends on which algorithm is selected.
+ */
+export function hasOrderSensitiveKeys(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasOrderSensitiveKeys);
+  if (value !== null && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    // `undefined` properties are dropped from the canonical bytes under both
+    // algorithms, so they cannot contribute to an ordering difference.
+    const sorted = Object.keys(obj)
+      .filter((k) => obj[k] !== undefined)
+      .sort();
+    const rebuilt: Record<string, unknown> = {};
+    for (const k of sorted) {
+      Object.defineProperty(rebuilt, k, {
+        value: null,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    if (Object.keys(rebuilt).some((k, i) => k !== sorted[i])) return true;
+    return sorted.some((k) => hasOrderSensitiveKeys(obj[k]));
+  }
+  return false;
+}
+
 /**
  * Canonical "executable write args" that both connector and governance hash.
  *
@@ -147,8 +262,8 @@ export function canonicalizeExecutableArgs(opts: { rawArgs: unknown; exclude: st
  * (lib/features/governance/decisions/mutations.ts). The connector recomputes it
  * from the received args to bind the token to the actual write.
  */
-export function hashActionInput(value: unknown): string {
-  return createHash("sha256").update(stableStringify(value), "utf8").digest("hex");
+export function hashActionInput(value: unknown, alg: HashAlg = DEFAULT_HASH_ALG): string {
+  return createHash("sha256").update(canonicalStringify(value, alg), "utf8").digest("hex");
 }
 
 /**
@@ -170,7 +285,10 @@ export function hashActionInput(value: unknown): string {
  * stable hash. For valid wire JSON — which is all `tools/list` ever yields — the
  * canonical bytes are unchanged, so every golden vector still holds.
  */
-export function computeDefinitionHash(tool: HashableToolDefinition): string {
+export function computeDefinitionHash(
+  tool: HashableToolDefinition,
+  alg: HashAlg = DEFAULT_HASH_ALG
+): string {
   const projection: Record<string, unknown> = {};
   for (const field of GOVERNANCE_FIELDS) {
     const v = tool[field as keyof HashableToolDefinition];
@@ -178,7 +296,7 @@ export function computeDefinitionHash(tool: HashableToolDefinition): string {
       projection[field] = v;
     }
   }
-  const canonical = stableStringify(projection);
+  const canonical = canonicalStringify(projection, alg);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
 
@@ -188,6 +306,8 @@ export {
   CROSS_REPO_DEFINITION_HASH_GOLDEN_VECTORS,
   CROSS_REPO_GOLDEN_DISTINCTNESS_PAIRS,
   CROSS_REPO_PROTO_POLLUTION_VECTORS,
+  CROSS_REPO_HASH_ALG_VECTORS,
+  type CrossRepoHashAlgVector,
   type CrossRepoGoldenVector,
   type CrossRepoProtoPollutionVector,
 } from "./cross-repo-golden.js";
