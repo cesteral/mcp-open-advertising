@@ -114,6 +114,13 @@ prove it works.
 
 ### 4. Documentation an adopter can trust
 
+> **Status: fixed in PR #269** (commit `fea67782` on its branch). The three
+> discrepancies below were corrected in the runbook, the new-server guide and
+> `GOVERNANCE-OVERVIEW.md`. The same "default is `off`" claim was also corrected in the
+> `TokenMode` JSDoc, three comments in `tool-handler-factory.ts` and the terraform
+> variable descriptions. The text and line references below describe the state at
+> `7058ee57`.
+
 The docs are currently the only prose spec, and they disagree with the code:
 
 - [decision-token-rollout-and-rotation.md:63](../governance/decision-token-rollout-and-rotation.md)
@@ -153,7 +160,7 @@ snapshot capture is about 500 lines (`dry-run.ts` 295, `capture-snapshot.ts` 200
 
 ## Suggested order
 
-1. Correct the documentation (prerequisite 4).
+1. Correct the documentation (prerequisite 4). _Done in PR #269._
 2. Pick the adopter model.
 3. Prerequisites 1, 2 and 3, in that order.
 4. Then whichever design-choice rows the chosen model requires.
