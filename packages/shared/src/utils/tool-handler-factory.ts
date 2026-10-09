@@ -722,9 +722,10 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
   }
 
-  // Fail-open visibility guard (issue #102): governance defaults to `off`, so a
-  // deploy that never sets a GOVERNANCE_TOKEN_MODE* tier ships every governed
-  // write ungoverned while the manifest still advertises the tools as governed.
+  // Fail-open visibility guard (issue #102): governance defaults to `off` off-hosted
+  // (hosted deployments default to `warn`), so a self-host deploy that never sets a
+  // GOVERNANCE_TOKEN_MODE* tier ships every governed write ungoverned while the
+  // manifest still advertises the tools as governed.
   // The default is intentional for staged rollout, but it must not be silent —
   // surface a single registration-time summary so an operator can see at boot
   // exactly how many governed writes are actually gated vs. running fail-open.
@@ -930,7 +931,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             // Runs AFTER advertiser-scope authz (above) so an unauthorized call
             // never reaches jti consumption, and BEFORE tool.logic so an
             // enforced rejection prevents the mutation. Gated to cesteral write
-            // annotations; global default mode is `off` (no behavior change).
+            // annotations; mode `off` (the off-hosted default) is a no-op.
             let idempotencyKey: string | undefined;
             const cesteralAnnotation = (
               tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
@@ -949,7 +950,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               // irrelevant to token verification (verify is writeClass-agnostic).
               //
               // Behaviour by configured mode (the operator's explicit intent):
-              //  - `off`     → no-op (read-only behaviour preserved; global default).
+              //  - `off`     → no-op (read-only behaviour preserved; off-hosted default).
               //  - `warn`    → verify + log the verdict; never block.
               //  - `enforce` → block on a bad verdict or an unresolved
               //                definition hash; on ok, expose jti as

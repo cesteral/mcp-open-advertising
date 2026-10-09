@@ -932,7 +932,7 @@ annotations: {
 
 ### Effect write annotation
 
-An **effect write** has no canonical entity snapshot (e.g. media upload, report-schedule create, conversion upload, fire-and-forget bulk job). It carries **no `readPartner`**, `supportsBeforeAfterSnapshot: false`, and its `requiresValidation` / `requiresSimulation` are **honest booleans** — set them to `true` only if the tool actually validates/simulates. Effect writes are not currently token-governed (the control plane mints no token for them), so the factory forces token verification to `off` for them regardless of mode.
+An **effect write** has no canonical entity snapshot (e.g. media upload, report-schedule create, conversion upload, fire-and-forget bulk job). It carries **no `readPartner`**, `supportsBeforeAfterSnapshot: false`, and its `requiresValidation` / `requiresSimulation` are **honest booleans** — set them to `true` only if the tool actually validates/simulates. Effect writes take the same decision-token path as entity writes: the factory resolves a mode for them and verifies the token identically (the check is `writeClass`-agnostic), so `enforce` applies to them too.
 
 ```typescript
 cesteral: {
@@ -965,7 +965,7 @@ cesteral: {
 
 Once the annotation is correct, the shared `registerToolsFromDefinitions()` factory does the rest automatically:
 
-- **Decision-token verification** — for entity writes, the factory resolves the per-contract mode (`off` / `warn` / `enforce`), verifies signature, claims, expiry, issuer/audience, `definitionHash`, `actionHash`, and replay (`jti`) before invoking `tool.logic`. The **code default is `off`**, so self-hosted/open-source servers stay neutral with no `MISSING_TOKEN` noise.
+- **Decision-token verification** — for governed writes (entity and effect class), the factory resolves the per-contract mode (`off` / `warn` / `enforce`), verifies signature, claims, expiry, issuer/audience, `definitionHash`, `actionHash`, and replay (`jti`) before invoking `tool.logic`. The **code default is `off` outside a hosted deployment** (`warn` when `K_SERVICE` is set), so self-hosted/open-source servers stay neutral with no `MISSING_TOKEN` noise.
 - **Dry-run / snapshot honesty checks** — if your handler honors `supportsDryRun`, the shared `governed-dry-run.ts` helpers enforce that a tool promising `requiresValidation` / `requiresSimulation` never returns `validationSource: "none"` / `expectedStateSource: "none"`. Wire your `create`/`update` logic to return the dry-run result and before/after snapshots; the factory validates the promises.
 - **`definitionHash`** — computed canonically by `@cesteral/contract-hash` and blessed in the release manifest (Step 19). You never compute it yourself; just keep the tool definition stable and bump `schemaVersion` on real changes.
 
@@ -1861,9 +1861,9 @@ What "governed" means in practice, and the minimum a new platform must do to par
 | 5   | Verify `pnpm run generate:manifests` writes a manifest for the package                       | build step (Step 19.6)       |
 | 6   | Add the platform to `docs/guides/platform-mapping.md`                                        | platform-mapping doc         |
 
-**Free, handled by `@cesteral/shared` once the annotation is right:** decision-token verification (default `off`), dry-run/snapshot honesty enforcement, `definitionHash` computation, telemetry span attributes via `workflowIdByToolName`.
+**Free, handled by `@cesteral/shared` once the annotation is right:** decision-token verification (default `off` off-hosted, `warn` on a hosted deployment), dry-run/snapshot honesty enforcement, `definitionHash` computation, telemetry span attributes via `workflowIdByToolName`.
 
 **Two strictness axes — don't conflate them** (see decision-token runbook):
 
-- `GOVERNANCE_TOKEN_MODE` (`off`/`warn`/`enforce`) is **fleet-global**, set per deployment in terraform; the server _code_ default is `off`.
+- `GOVERNANCE_TOKEN_MODE` (`off`/`warn`/`enforce`) is **fleet-global**, set per deployment in terraform; the server _code_ default is `off` off-hosted and `warn` on a hosted deployment (`K_SERVICE` set).
 - Per-tenant strictness is the governance layer's per-org `AttestedWritePolicy` — not a server-side setting.

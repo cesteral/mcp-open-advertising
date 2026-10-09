@@ -5,7 +5,8 @@
  * Decision-token enforcement mode for a governed write tool.
  *
  * - `off` — verification skipped entirely (read-only behavior preserved). The
- *   global default, so unconfigured servers behave exactly as before.
+ *   default off-hosted, so unconfigured self-host servers behave exactly as
+ *   before; `resolveTokenMode` defaults to `warn` when `K_SERVICE` is set.
  * - `warn` — verify and log the verdict, but never block the write.
  * - `enforce` — reject any write whose token does not verify.
  */

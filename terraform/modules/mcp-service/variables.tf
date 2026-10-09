@@ -162,7 +162,7 @@ variable "interaction_log_mode" {
 }
 
 variable "governance_token_mode" {
-  description = "Decision-token enforcement mode (GOVERNANCE_TOKEN_MODE): off | warn | enforce. Verification runs in the server; the code default is 'off' so an unconfigured/self-hosted server stays neutral. Empty string leaves the env unset (server falls back to its 'off' code default)."
+  description = "Decision-token enforcement mode (GOVERNANCE_TOKEN_MODE): off | warn | enforce. Verification runs in the server; the code default is 'off' off-hosted so a self-hosted server stays neutral, and 'warn' on Cloud Run (K_SERVICE set). Empty string leaves the env unset (server falls back to that code default)."
   type        = string
   default     = "off"
   validation {
