@@ -22,7 +22,10 @@ package owns _the shape of what gets governed_:
 - **Governed response shapes** — `dryRunResultSchema`,
   `normalizedEntitySnapshotSchema`, `dispatchedCapabilitySchema`,
   `effectDryRunResultSchema`, and their TS mirrors.
-- **Release attestation manifest** — `cesteralManifestSchema`.
+- **Release attestation manifest** — `cesteralManifestSchema`. An entry may carry an
+  optional `hashAlg` naming the canonicalization its `definitionHash` was computed under
+  (`HASH_ALGS` / `hashAlgSchema`; absent means `cesteral-c14n-v1`). The algorithms live in
+  `@cesteral/contract-hash`; this package owns only the names.
 
 ```ts
 import {

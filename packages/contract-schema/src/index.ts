@@ -28,6 +28,9 @@ export {
   type ContractToolSlug,
 } from "./slug.js";
 
+// Hash algorithm names (the algorithms live in @cesteral/contract-hash)
+export { HASH_ALGS, hashAlgSchema, type HashAlg } from "./hash-alg.js";
+
 // Canonical enums
 export { canonicalEntityKindSchema, type CanonicalEntityKind } from "./entity-kind.js";
 export {

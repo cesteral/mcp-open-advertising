@@ -35,6 +35,8 @@ export function logDecisionTokenVerdict(
     reasonCode: verdict.reasonCode,
     detail: verdict.detail,
     definitionHashVerified: verdict.definitionHashVerified,
+    hashAlg: verdict.hashAlg,
+    orderSensitiveArgs: verdict.orderSensitiveArgs,
     mode,
     contractId,
     toolName,

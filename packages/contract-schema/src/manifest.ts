@@ -3,6 +3,8 @@
 
 import { z } from "zod";
 
+import { hashAlgSchema, type HashAlg } from "./hash-alg.js";
+
 /**
  * Schema for `dist/cesteral-manifest.json`, the per-release attestation
  * manifest that ships inside each `@cesteral/<platform>-mcp` package tarball.
@@ -25,6 +27,18 @@ export interface CesteralManifestTool {
   contractToolSlug: string;
   schemaVersion: string;
   definitionHash: string;
+  /**
+   * The canonicalization `definitionHash` was computed under. Absent means
+   * `cesteral-c14n-v1`, which is every manifest published before this field existed.
+   *
+   * A decision token carries a signed `hashAlg` too, and the verifier requires the
+   * token's to equal this entry's, so the RELEASE — not the minter — decides which
+   * algorithm a server is on and a legacy server is never sent an `rfc8785` token.
+   * Optional for the same reason as `verification` below: an older consumer strips
+   * it and treats the entry as legacy, which fails closed (`HASH_ALG_MISMATCH`)
+   * rather than comparing hashes across algorithms.
+   */
+  hashAlg?: HashAlg;
   /**
    * Optional so a consumer pinned to an older @cesteral/contract-schema still
    * parses manifests that carry it (zod strips unknown keys). `manifestVersion`
@@ -168,6 +182,7 @@ export const cesteralManifestSchema: z.ZodType<CesteralManifest> = z.object({
         contractToolSlug: z.string(),
         schemaVersion: z.string(),
         definitionHash: z.string().regex(/^[0-9a-f]{64}$/),
+        hashAlg: hashAlgSchema.optional(),
         verification: verificationSchema.optional(),
       })
     )

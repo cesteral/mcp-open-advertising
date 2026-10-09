@@ -4,7 +4,7 @@
 /**
  * Every governed server wires a `definitionHash` resolver — sweep 2026-07-25, 10-F3.
  *
- * `registerToolsFromDefinitions` takes an optional `resolveDefinitionHash`. When
+ * `registerToolsFromDefinitions` takes an optional `resolveManifestEntry`. When
  * it is absent the decision-token verifier has nothing to compare the token's
  * `definitionHash` claim against, so it reports `definitionHashVerified: false`.
  * Under `warn` that binding is simply unchecked; under `enforce` it fails closed
@@ -57,13 +57,13 @@ describe("definitionHash resolver coverage (10-F3)", () => {
     expect(governed.length).toBeGreaterThan(5);
   });
 
-  it.each(governed)("%s wires resolveDefinitionHash", (pkg) => {
+  it.each(governed)("%s wires resolveManifestEntry", (pkg) => {
     const src = serverSource(pkg);
     expect(src, `${pkg} has no src/mcp-server/server.ts`).not.toBe("");
     expect(
-      /resolveDefinitionHash:\s*createDefinitionHashResolver\(/.test(src),
+      /resolveManifestEntry:\s*createManifestEntryResolver\(/.test(src),
       `${pkg} is declared governed in registry.json but does not pass ` +
-        `resolveDefinitionHash to registerToolsFromDefinitions. The decision-token ` +
+        `resolveManifestEntry to registerToolsFromDefinitions. The decision-token ` +
         `verifier then reports definitionHashVerified: false — unchecked under warn, ` +
         `and a total write outage under enforce.`
     ).toBe(true);
@@ -77,7 +77,7 @@ describe("definitionHash resolver coverage (10-F3)", () => {
     const src = serverSource(pkg);
     if (src === "") return;
     expect(
-      /resolveDefinitionHash:\s*createDefinitionHashResolver\(/.test(src),
+      /resolveManifestEntry:\s*createManifestEntryResolver\(/.test(src),
       `${pkg} is declared ungoverned in registry.json, so no manifest is generated ` +
         `for it and this resolver can only ever resolve nothing. Either set ` +
         `governed: true in registry.json, or drop the wiring.`

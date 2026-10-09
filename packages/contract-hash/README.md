@@ -16,6 +16,37 @@ import { computeDefinitionHash } from "@cesteral/contract-hash";
 const hash = computeDefinitionHash({ name: "meta_update_entity", inputSchema, annotations });
 ```
 
+## Hash algorithms
+
+There are two canonicalizations, selected by name. A decision token carries a signed
+`hashAlg` claim and a manifest entry may carry one; an absent value means
+`cesteral-c14n-v1`.
+
+| Name               | What it is                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cesteral-c14n-v1` | The original (`stableStringify`). Sorts keys, then lets `JSON.stringify` emit them, so the JS engine puts integer-like keys first. **Frozen**: every hash minted before the field existed. |
+| `rfc8785`          | RFC 8785 (JCS): properties in UTF-16 code-unit order. Reproducible in any language from the RFC.                                                                                           |
+
+```ts
+import {
+  hashActionInput,
+  computeDefinitionHash,
+  canonicalStringify,
+} from "@cesteral/contract-hash";
+
+hashActionInput(args); // cesteral-c14n-v1, as before
+hashActionInput(args, "rfc8785"); // RFC 8785
+computeDefinitionHash(tool, "rfc8785");
+canonicalStringify(value, "rfc8785"); // the canonical text itself
+```
+
+The two agree on every value that has no _order-sensitive_ object; `hasOrderSensitiveKeys(value)`
+says whether a value has one. `CROSS_REPO_HASH_ALG_VECTORS` gives, for five inputs, the exact
+canonical bytes and sha256 under each algorithm as literals, so another implementation can check
+itself without trusting this one. An unknown algorithm name throws.
+
+`rfc8785` rejects what RFC 8785 forbids and the original tolerates: lone surrogates (invalid I-JSON).
+
 ## Version coordination (cross-repo parity)
 
 Parity is now single-sourced: both repos consume `computeDefinitionHash` and the

@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import type { HashableToolDefinition } from "./index.js";
+import type { HashAlg, HashableToolDefinition } from "./index.js";
 
 /**
  * SINGLE-SOURCED cross-repo `definitionHash` vector.
@@ -244,5 +244,98 @@ export const CROSS_REPO_PROTO_POLLUTION_VECTORS: readonly CrossRepoProtoPollutio
     cleanJson: '{"name":"vec_pp","inputSchema":{"type":"object"}}',
     pollutedJson: '{"name":"vec_pp","inputSchema":{"type":"object","constructor":{"x":1}}}',
     expectedPollutedHash: "538fd756d27d2432eedf89c5ab08a3cf6fd6d3af607115a3bf9ce6e478d968d3",
+  },
+];
+
+/**
+ * Cross-repo vectors for the `hashAlg` selector (`cesteral-c14n-v1` vs `rfc8785`).
+ *
+ * Each vector gives an input and, for EVERY algorithm, the exact canonical bytes and
+ * the sha256 of those bytes. The expected values are literals computed independently
+ * of this package (sha256 over the hand-written canonical text), so a consumer — or
+ * an implementation in another language — can assert its own serializer against them
+ * without trusting this one.
+ *
+ * What they pin:
+ *  - one vector where both algorithms AGREE (the common case: no order-sensitive
+ *    object), identical to the shipped `golden-action-hashes.json` entry;
+ *  - four where they DIFFER, all through the same mechanism — the JS engine hands
+ *    integer-like keys back before the others, so `cesteral-c14n-v1` is not in
+ *    UTF-16 code-unit order while `rfc8785` is. The bids vector is the realistic
+ *    one: a map keyed by numeric entity ids.
+ *
+ * Changing an existing vector's value changes what a verifier accepts; add vectors,
+ * never edit them.
+ */
+export interface CrossRepoHashAlgVector {
+  label: string;
+  /** A JSON value, as it would arrive in a governed write's executable args. */
+  input: unknown;
+  /** The exact canonical text under each algorithm. */
+  canonical: Record<HashAlg, string>;
+  /** Lowercase-hex sha256 of that canonical text (`hashActionInput`). */
+  actionHash: Record<HashAlg, string>;
+}
+
+export const CROSS_REPO_HASH_ALG_VECTORS: readonly CrossRepoHashAlgVector[] = [
+  {
+    label: "no order-sensitive keys: both algorithms agree",
+    input: { customerId: "1", entityId: "2", data: { status: "PAUSED" } },
+    canonical: {
+      "cesteral-c14n-v1": '{"customerId":"1","data":{"status":"PAUSED"},"entityId":"2"}',
+      rfc8785: '{"customerId":"1","data":{"status":"PAUSED"},"entityId":"2"}',
+    },
+    actionHash: {
+      "cesteral-c14n-v1": "bad12abd17b823c4cc4d7050aa9d096384cc63fb7921e4d18aeabdcddce6a35e",
+      rfc8785: "bad12abd17b823c4cc4d7050aa9d096384cc63fb7921e4d18aeabdcddce6a35e",
+    },
+  },
+  {
+    label: "integer-like keys at the top level",
+    input: { b: 1, "10": 2, "9": 3, a: 4, "-1": 5 },
+    canonical: {
+      "cesteral-c14n-v1": '{"9":3,"10":2,"-1":5,"a":4,"b":1}',
+      rfc8785: '{"-1":5,"10":2,"9":3,"a":4,"b":1}',
+    },
+    actionHash: {
+      "cesteral-c14n-v1": "91092eceaa9ce19eef7485fa6ab8bd03ed46500122780bfaef02b21273771bb5",
+      rfc8785: "5dd3e2704022214cd98ca83434e83554e3b80c8966c212bb024631ff8b1818b9",
+    },
+  },
+  {
+    label: "numeric-id-keyed map in a write (bids by entity id)",
+    input: { accountId: "a1", bids: { "12345": 1.5, "9876": 2 } },
+    canonical: {
+      "cesteral-c14n-v1": '{"accountId":"a1","bids":{"9876":2,"12345":1.5}}',
+      rfc8785: '{"accountId":"a1","bids":{"12345":1.5,"9876":2}}',
+    },
+    actionHash: {
+      "cesteral-c14n-v1": "da31a5c004c5f7ac1a0be071cb92ea87b02b3c622b6cb6c3a6b5e921d377c1f2",
+      rfc8785: "dbb313f074baad4179bec77f2088436ff546585fc3d478ec001ece54b3a217ba",
+    },
+  },
+  {
+    label: "negative-looking key sorts before an integer key only under rfc8785",
+    input: { "1": "x", "-1": "y" },
+    canonical: {
+      "cesteral-c14n-v1": '{"1":"x","-1":"y"}',
+      rfc8785: '{"-1":"y","1":"x"}',
+    },
+    actionHash: {
+      "cesteral-c14n-v1": "8ff2bbb29a68043e8c49379453a7f2c51e37f8ec2cdc76f47eda6bf6c31d3f76",
+      rfc8785: "a25abde03740aedac8a5220d0bdeb63e40436267ff22516222cfe4095a6e849a",
+    },
+  },
+  {
+    label: "ordering applies at every depth, through arrays",
+    input: { z: { "10": 1, "9": 2 }, a: [{ "2": 0, "10": 0 }] },
+    canonical: {
+      "cesteral-c14n-v1": '{"a":[{"2":0,"10":0}],"z":{"9":2,"10":1}}',
+      rfc8785: '{"a":[{"10":0,"2":0}],"z":{"10":1,"9":2}}',
+    },
+    actionHash: {
+      "cesteral-c14n-v1": "ef4544e3cc37a092845711ce05d9018e3cf3aa8ee06292c3678cdefc4beb7d12",
+      rfc8785: "3eb80be2f097660ffe6ac6ab2ea80b3a0f3b8ec5f27c590fb34764e01f59b3b3",
+    },
   },
 ];

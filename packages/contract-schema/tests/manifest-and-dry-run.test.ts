@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  HASH_ALGS,
   cesteralManifestSchema,
   dryRunResultSchema,
   effectDryRunResultSchema,
@@ -59,6 +60,46 @@ describe("cesteralManifestSchema", () => {
 
   it("rejects an empty tools array", () => {
     expect(cesteralManifestSchema.safeParse({ ...valid, tools: [] }).success).toBe(false);
+  });
+
+  // `hashAlg` names how an entry's precomputed `definitionHash` was computed. A
+  // decision token carries the same name, and the verifier requires the two to
+  // match, so the manifest — not the minter — decides which algorithm a release
+  // is on. Absent means `cesteral-c14n-v1`: every manifest published before this
+  // field existed.
+  describe("hashAlg", () => {
+    const withAlg = (hashAlg: unknown) => ({
+      ...valid,
+      tools: [{ ...valid.tools[0], hashAlg }],
+    });
+
+    it("names the supported algorithms, legacy first", () => {
+      expect([...HASH_ALGS]).toEqual(["cesteral-c14n-v1", "rfc8785"]);
+    });
+
+    it.each(["cesteral-c14n-v1", "rfc8785"])("accepts %s and keeps it in the output", (alg) => {
+      const parsed = cesteralManifestSchema.safeParse(withAlg(alg));
+      expect(parsed.success).toBe(true);
+      // zod strips unknown keys, so this fails if the schema does not declare it.
+      expect(parsed.success && parsed.data.tools[0]?.hashAlg).toBe(alg);
+    });
+
+    it("still accepts an entry with no hashAlg, and does not invent one", () => {
+      const parsed = cesteralManifestSchema.safeParse(valid);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && "hashAlg" in parsed.data.tools[0]!).toBe(false);
+    });
+
+    it.each(["md5", "RFC8785", "legacy", "", null, 1, ["rfc8785"]])("rejects hashAlg %j", (bad) => {
+      expect(cesteralManifestSchema.safeParse(withAlg(bad)).success).toBe(false);
+    });
+
+    it("leaves manifestVersion at 1: the field is optional, so older consumers ignore it", () => {
+      expect(
+        cesteralManifestSchema.safeParse({ ...withAlg("rfc8785"), manifestVersion: 2 }).success
+      ).toBe(false);
+      expect(cesteralManifestSchema.safeParse(withAlg("rfc8785")).success).toBe(true);
+    });
   });
 });
 

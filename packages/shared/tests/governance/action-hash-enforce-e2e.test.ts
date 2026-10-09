@@ -134,7 +134,7 @@ async function callUnderEnforce(
       GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
     },
     jtiStore: new InMemoryJtiStore(),
-    resolveDefinitionHash: () => DEF_HASH,
+    resolveManifestEntry: () => ({ definitionHash: DEF_HASH }),
   });
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
