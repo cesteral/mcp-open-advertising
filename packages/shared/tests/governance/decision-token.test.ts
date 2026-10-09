@@ -4,6 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import * as jose from "jose";
 import { hashActionInput } from "@cesteral/contract-hash";
+import type { HashAlg } from "@cesteral/contract-hash";
 import { verifyDecisionToken, InMemoryJtiStore } from "../../src/index.js";
 import type { JtiStore } from "../../src/index.js";
 
@@ -16,10 +17,13 @@ const DEFINITION_HASH = "d".repeat(64);
 const ACTION_ARGS = { entityId: "1", status: "PAUSED" };
 const ACTION_HASH = hashActionInput(ACTION_ARGS);
 
+// The verifier receives the executable args and hashes them under the algorithm the
+// SIGNED token names; it can no longer be handed a hash computed before the token
+// was opened, which could only ever be the legacy one.
 const expected = {
   contractId: CONTRACT_ID,
   definitionHash: DEFINITION_HASH,
-  actionHash: ACTION_HASH,
+  executableArgs: ACTION_ARGS,
 };
 
 function basePayload(): Record<string, unknown> {
@@ -261,7 +265,7 @@ describe("verifyDecisionToken", () => {
   describe("unresolved definition hash", () => {
     it("verifies all other bindings and reports definitionHashVerified:false", async () => {
       const v = await verify(await sign(basePayload()), {
-        expected: { contractId: CONTRACT_ID, actionHash: ACTION_HASH }, // no definitionHash
+        expected: { contractId: CONTRACT_ID, executableArgs: ACTION_ARGS }, // no definitionHash
       });
       expect(v.reasonCode).toBe("OK");
       expect(v.definitionHashVerified).toBe(false);
@@ -269,7 +273,7 @@ describe("verifyDecisionToken", () => {
 
     it("still catches a bad actionHash when definition hash is unresolved", async () => {
       const v = await verify(await sign({ ...basePayload(), actionHash: "wrong" }), {
-        expected: { contractId: CONTRACT_ID, actionHash: ACTION_HASH },
+        expected: { contractId: CONTRACT_ID, executableArgs: ACTION_ARGS },
       });
       expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
     });
@@ -295,5 +299,204 @@ describe("verifyDecisionToken", () => {
     clock.ms += 60_000;
     const replay = await verify(token, { jtiTtlMs: 1, now }, store);
     expect(replay.reasonCode).toBe("REPLAYED_JTI");
+  });
+  describe("hashAlg selector", () => {
+    // A map keyed by numeric entity ids: the realistic case where the two
+    // canonicalizations produce different bytes.
+    const SENSITIVE_ARGS = { accountId: "a1", bids: { "12345": 1.5, "9876": 2 } };
+    const sensitiveExpected = {
+      contractId: CONTRACT_ID,
+      definitionHash: DEFINITION_HASH,
+      executableArgs: SENSITIVE_ARGS,
+    };
+    const signedFor = (hashAlgForHash: HashAlg, extra: Record<string, unknown> = {}) =>
+      sign({
+        ...basePayload(),
+        actionHash: hashActionInput(SENSITIVE_ARGS, hashAlgForHash),
+        ...extra,
+      });
+
+    it("treats an absent hashAlg as cesteral-c14n-v1 and reports the algorithm in force", async () => {
+      const v = await verify(await signedFor("cesteral-c14n-v1"), {
+        expected: sensitiveExpected,
+      });
+      expect(v.reasonCode).toBe("OK");
+      expect(v.hashAlg).toBe("cesteral-c14n-v1");
+    });
+
+    it("accepts an explicit cesteral-c14n-v1 claim exactly as an absent one", async () => {
+      const v = await verify(await signedFor("cesteral-c14n-v1", { hashAlg: "cesteral-c14n-v1" }), {
+        expected: sensitiveExpected,
+      });
+      expect(v.reasonCode).toBe("OK");
+      expect(v.hashAlg).toBe("cesteral-c14n-v1");
+    });
+
+    it("hashes the args under rfc8785 when the signed claim says so", async () => {
+      const v = await verify(await signedFor("rfc8785", { hashAlg: "rfc8785" }), {
+        expected: { ...sensitiveExpected, definitionHashAlg: "rfc8785" },
+      });
+      expect(v.reasonCode).toBe("OK");
+      expect(v.hashAlg).toBe("rfc8785");
+    });
+
+    it("selects exactly one algorithm: an rfc8785 token carrying the legacy hash is rejected", async () => {
+      // Control: the same args DO verify when the token carries the rfc8785 hash.
+      // Without it this test would pass against a verifier that rejects everything.
+      const control = await verify(await signedFor("rfc8785", { hashAlg: "rfc8785" }), {
+        expected: { ...sensitiveExpected, definitionHashAlg: "rfc8785" },
+      });
+      expect(control.reasonCode).toBe("OK");
+      const v = await verify(await signedFor("cesteral-c14n-v1", { hashAlg: "rfc8785" }), {
+        expected: { ...sensitiveExpected, definitionHashAlg: "rfc8785" },
+      });
+      expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+    });
+
+    it("and the reverse: a legacy token carrying the rfc8785 hash is rejected", async () => {
+      const control = await verify(await signedFor("cesteral-c14n-v1"), {
+        expected: sensitiveExpected,
+      });
+      expect(control.reasonCode).toBe("OK");
+      const v = await verify(await signedFor("rfc8785"), { expected: sensitiveExpected });
+      expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+    });
+
+    it("UNSUPPORTED_HASH_ALG for an unknown value, before any binding check or jti consume", async () => {
+      const spy: JtiStore = { consumeOnce: vi.fn(async () => "fresh" as const) };
+      const v = await verify(
+        await signedFor("cesteral-c14n-v1", { hashAlg: "rfc9999", contractId: "other.tool.v1" }),
+        { expected: sensitiveExpected },
+        spy
+      );
+      expect(v.reasonCode).toBe("UNSUPPORTED_HASH_ALG");
+      expect(v.hashAlg).toBeUndefined();
+      expect(spy.consumeOnce).not.toHaveBeenCalled();
+    });
+
+    it("UNSUPPORTED_HASH_ALG for an empty or differently-cased name", async () => {
+      for (const bad of ["", "RFC8785", "legacy"]) {
+        const v = await verify(await signedFor("cesteral-c14n-v1", { hashAlg: bad }), {
+          expected: sensitiveExpected,
+        });
+        expect(v.reasonCode, JSON.stringify(bad)).toBe("UNSUPPORTED_HASH_ALG");
+      }
+    });
+
+    it("MALFORMED_TOKEN when hashAlg is present but not a string; null is not 'absent'", async () => {
+      for (const bad of [null, 1, true, ["rfc8785"], {}]) {
+        const v = await verify(await signedFor("cesteral-c14n-v1", { hashAlg: bad }), {
+          expected: sensitiveExpected,
+        });
+        expect(v.reasonCode, JSON.stringify(bad)).toBe("MALFORMED_TOKEN");
+        expect(v.detail).toBe("hashAlg");
+      }
+    });
+
+    describe("relation to the manifest entry's algorithm", () => {
+      it("HASH_ALG_MISMATCH when the token says rfc8785 and the entry is legacy (absent)", async () => {
+        const v = await verify(await signedFor("rfc8785", { hashAlg: "rfc8785" }), {
+          expected: sensitiveExpected, // entry algorithm absent = legacy
+        });
+        expect(v.reasonCode).toBe("HASH_ALG_MISMATCH");
+      });
+
+      it("HASH_ALG_MISMATCH when the token is legacy (absent) and the entry says rfc8785", async () => {
+        const v = await verify(await signedFor("cesteral-c14n-v1"), {
+          expected: { ...sensitiveExpected, definitionHashAlg: "rfc8785" },
+        });
+        expect(v.reasonCode).toBe("HASH_ALG_MISMATCH");
+      });
+
+      it("is reported instead of comparing hashes across algorithms, and burns no jti", async () => {
+        const spy: JtiStore = { consumeOnce: vi.fn(async () => "fresh" as const) };
+        const v = await verify(
+          await signedFor("rfc8785", { hashAlg: "rfc8785", definitionHash: "e".repeat(64) }),
+          { expected: sensitiveExpected },
+          spy
+        );
+        // The definitionHash differs too, but the algorithm disagreement is the
+        // real problem and must be what the operator sees.
+        expect(v.reasonCode).toBe("HASH_ALG_MISMATCH");
+        expect(spy.consumeOnce).not.toHaveBeenCalled();
+      });
+
+      it("an explicit cesteral-c14n-v1 entry matches an absent token claim", async () => {
+        const v = await verify(await signedFor("cesteral-c14n-v1"), {
+          expected: { ...sensitiveExpected, definitionHashAlg: "cesteral-c14n-v1" },
+        });
+        expect(v.reasonCode).toBe("OK");
+      });
+
+      it("with no manifest entry the token's algorithm alone selects the action hash", async () => {
+        const v = await verify(await signedFor("rfc8785", { hashAlg: "rfc8785" }), {
+          expected: { contractId: CONTRACT_ID, executableArgs: SENSITIVE_ARGS }, // no definitionHash
+        });
+        expect(v.reasonCode).toBe("OK");
+        expect(v.definitionHashVerified).toBe(false);
+        expect(v.hashAlg).toBe("rfc8785");
+      });
+    });
+
+    it("reads the algorithm from the signed payload only, never the JWT header", async () => {
+      // Control: naming rfc8785 in the signed PAYLOAD does select it.
+      const control = await verify(await signedFor("rfc8785", { hashAlg: "rfc8785" }), {
+        expected: { ...sensitiveExpected, definitionHashAlg: "rfc8785" },
+      });
+      expect(control.reasonCode).toBe("OK");
+      // Header claims rfc8785; payload (the signed part) names nothing, so legacy
+      // is in force and a token carrying the rfc8785 hash must not verify.
+      const token = await new jose.SignJWT({
+        ...basePayload(),
+        actionHash: hashActionInput(SENSITIVE_ARGS, "rfc8785"),
+      })
+        .setProtectedHeader({ alg: "HS256", hashAlg: "rfc8785" } as jose.JWTHeaderParameters)
+        .sign(enc.encode(CURRENT));
+      const v = await verify(token, { expected: sensitiveExpected });
+      expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+    });
+
+    describe("arguments that cannot be canonicalized", () => {
+      // A client can send a lone surrogate as a JSON \ud800 escape. RFC 8785 forbids
+      // it, so the minter could not have hashed it; the verifier must return a
+      // verdict, never throw.
+      const LONE = { note: "\ud800" };
+      it("is ACTION_HASH_MISMATCH under rfc8785, not a throw", async () => {
+        const v = await verify(
+          await sign({ ...basePayload(), hashAlg: "rfc8785", actionHash: "0".repeat(64) }),
+          { expected: { ...sensitiveExpected, executableArgs: LONE, definitionHashAlg: "rfc8785" } }
+        );
+        expect(v.reasonCode).toBe("ACTION_HASH_MISMATCH");
+        expect(v.detail).toMatch(/canonical/i);
+      });
+
+      it("still hashes under the legacy algorithm", async () => {
+        const v = await verify(
+          await sign({ ...basePayload(), actionHash: hashActionInput(LONE) }),
+          { expected: { ...sensitiveExpected, executableArgs: LONE } }
+        );
+        expect(v.reasonCode).toBe("OK");
+      });
+    });
+
+    describe("orderSensitiveArgs", () => {
+      it("is reported true when the algorithms would disagree on these args", async () => {
+        const v = await verify(await signedFor("cesteral-c14n-v1"), {
+          expected: sensitiveExpected,
+        });
+        expect(v.orderSensitiveArgs).toBe(true);
+      });
+
+      it("is reported false otherwise", async () => {
+        const v = await verify(await sign(basePayload()));
+        expect(v.orderSensitiveArgs).toBe(false);
+      });
+
+      it("is reported on a rejected verdict too, so warn-mode traffic can measure it", async () => {
+        const v = await verify(undefined, { expected: sensitiveExpected });
+        expect(v.reasonCode).toBe("MISSING_TOKEN");
+        expect(v.orderSensitiveArgs).toBe(true);
+      });
+    });
   });
 });

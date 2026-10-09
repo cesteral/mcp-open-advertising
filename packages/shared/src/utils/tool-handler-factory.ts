@@ -43,9 +43,10 @@ import {
 } from "./request-context.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 import { JsonRpcErrorCode } from "./mcp-errors.js";
-import { hashActionInput, canonicalizeExecutableArgs } from "@cesteral/contract-hash";
+import { canonicalizeExecutableArgs } from "@cesteral/contract-hash";
 import { resolveTokenMode } from "../governance/config.js";
 import { verifyDecisionToken } from "../governance/decision-token.js";
+import type { ManifestEntryRef } from "../governance/manifest-resolver.js";
 import { logDecisionTokenVerdict } from "../governance/audit.js";
 import { InMemoryJtiStore, type JtiStore } from "../governance/jti-store.js";
 import { getGovernanceJtiStore } from "../governance/runtime.js";
@@ -566,12 +567,16 @@ export interface RegisterToolsOptions {
   /** jti TTL in ms (≥ token TTL). Defaults to 600_000. */
   jtiTtlMs?: number;
   /**
-   * Resolves a governed tool's published `definitionHash` (from the attested
-   * `cesteral-manifest.json`) by tool name — the same value governance puts in
-   * the token. Without it, the definition-hash binding cannot be verified:
-   * `warn` logs the gap and proceeds; `enforce` fails closed.
+   * Resolves a governed tool's manifest entry (from the attested
+   * `cesteral-manifest.json`) by tool name: its published `definitionHash` — the
+   * same value governance puts in the token — and the `hashAlg` that hash was
+   * computed under. The verifier requires the token's signed `hashAlg` to equal
+   * the entry's before comparing, so a release, not the minter, decides which
+   * canonicalization a server is on. Without a resolver the definition-hash
+   * binding cannot be verified: `warn` logs the gap and proceeds; `enforce` fails
+   * closed.
    */
-  resolveDefinitionHash?: (toolName: string) => string | undefined;
+  resolveManifestEntry?: (toolName: string) => ManifestEntryRef | undefined;
   /**
    * Called when a tool invocation fails with `JsonRpcErrorCode.Unauthorized`
    * (e.g. a mid-session refresh-token rejection). HTTP servers wire this to
@@ -673,7 +678,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     interactionLogger,
     authContextResolver,
     responseCharacterLimit = RESPONSE_CHARACTER_LIMIT,
-    resolveDefinitionHash,
+    resolveManifestEntry,
     onAuthError,
   } = opts;
 
@@ -957,11 +962,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               //                idempotencyKey.
               const mode = configuredMode;
               if (mode !== "off") {
-                const expectedDefinitionHash = resolveDefinitionHash?.(tool.name);
+                const manifestEntry = resolveManifestEntry?.(tool.name);
                 // Under enforce, an unresolved definition hash means the binding
                 // cannot be fully verified — fail closed rather than admit a
                 // partially-bound token.
-                if (mode === "enforce" && expectedDefinitionHash === undefined) {
+                if (mode === "enforce" && manifestEntry === undefined) {
                   logger.warn(
                     {
                       component: "governance-audit",
@@ -987,9 +992,12 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 // undefined so the OTHER bindings — signature, claims, expiry,
                 // issuer/audience, actionHash, replay — all still run, and the
                 // verdict reports definitionHashVerified:false.
-                // actionHash is computed over the RAW wire arguments, which is
-                // what `canonicalizeExecutableArgs` is contracted to receive and
-                // what the minter hashes when it dispatches the call.
+                // The executable args are the RAW wire arguments, which is what
+                // `canonicalizeExecutableArgs` is contracted to receive and what the
+                // minter hashes when it dispatches the call. They are handed to the
+                // verifier UNHASHED: which canonicalization applies is named by the
+                // token's signed `hashAlg`, which is only known once the verifier has
+                // checked the signature, so the hash cannot be computed here.
                 //
                 // `args` here are POST-validation: the MCP SDK parses
                 // `params.arguments` against the tool's `inputSchema` before
@@ -1025,8 +1033,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                   },
                   expected: {
                     contractId: cesteralAnnotation.contractId,
-                    definitionHash: expectedDefinitionHash,
-                    actionHash: hashActionInput(executableArgs),
+                    definitionHash: manifestEntry?.definitionHash,
+                    definitionHashAlg: manifestEntry?.hashAlg,
+                    executableArgs,
                   },
                   jtiStore,
                   jtiTtlMs,

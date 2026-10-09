@@ -19,7 +19,7 @@ import {
 } from "../../src/utils/tool-handler-factory.js";
 import { runWithRequestContext, createRequestContext } from "../../src/utils/request-context.js";
 import { InMemoryJtiStore } from "../../src/index.js";
-import type { JtiStore } from "../../src/index.js";
+import type { JtiStore, ManifestEntryRef } from "../../src/index.js";
 import type { SessionAuthContext } from "../../src/auth/auth-strategy.js";
 import type { Logger } from "pino";
 
@@ -64,6 +64,7 @@ const writeTool = {
   inputSchema: z.object({
     entityId: z.string(),
     advertiserId: z.string().optional(),
+    bids: z.record(z.number()).optional(),
     dry_run: z.boolean().optional(),
   }),
   annotations: {
@@ -139,7 +140,7 @@ async function mintToken(args: Record<string, unknown>, over: Record<string, unk
 function register(opts: {
   env: Record<string, string | undefined>;
   jtiStore?: JtiStore;
-  resolveDefinitionHash?: (n: string) => string | undefined;
+  resolveManifestEntry?: (n: string) => ManifestEntryRef | undefined;
   authContextResolver?: () => SessionAuthContext | undefined;
   server: ReturnType<typeof createMockServer>;
   logger: Logger;
@@ -157,7 +158,7 @@ function register(opts: {
     }),
     governanceEnv: opts.env,
     jtiStore: opts.jtiStore,
-    resolveDefinitionHash: opts.resolveDefinitionHash ?? (() => DEF_HASH),
+    resolveManifestEntry: opts.resolveManifestEntry ?? (() => ({ definitionHash: DEF_HASH })),
     authContextResolver: opts.authContextResolver,
   });
 }
@@ -195,7 +196,7 @@ async function mintEffectToken(args: Record<string, unknown>, over: Record<strin
 function registerEffect(opts: {
   env: Record<string, string | undefined>;
   jtiStore?: JtiStore;
-  resolveDefinitionHash?: (n: string) => string | undefined;
+  resolveManifestEntry?: (n: string) => ManifestEntryRef | undefined;
   server: ReturnType<typeof createMockServer>;
   logger: Logger;
 }) {
@@ -212,7 +213,7 @@ function registerEffect(opts: {
     }),
     governanceEnv: opts.env,
     jtiStore: opts.jtiStore,
-    resolveDefinitionHash: opts.resolveDefinitionHash ?? (() => DEF_HASH),
+    resolveManifestEntry: opts.resolveManifestEntry ?? (() => ({ definitionHash: DEF_HASH })),
   });
 }
 
@@ -299,7 +300,7 @@ describe("tool-handler-factory governance verification", () => {
   it("enforce mode: missing definition-hash resolver fails closed", async () => {
     register({
       env: { GOVERNANCE_TOKEN_MODE: "enforce", GOVERNANCE_DECISION_TOKEN_SECRET: SECRET },
-      resolveDefinitionHash: () => undefined,
+      resolveManifestEntry: () => undefined,
       server,
       logger,
     });
@@ -311,6 +312,90 @@ describe("tool-handler-factory governance verification", () => {
     expect(res.isError).toBe(true);
     expect(res.content[0].text).toMatch(/definition hash unavailable/i);
     expect(writeTool.logic).not.toHaveBeenCalled();
+  });
+
+  describe("hashAlg end to end (arguments whose canonical bytes depend on the algorithm)", () => {
+    // A map keyed by numeric entity ids: legacy and rfc8785 hash these differently.
+    const ARGS = { entityId: "1", bids: { "12345": 1.5, "9876": 2 } };
+    const mintFor = async (alg: "cesteral-c14n-v1" | "rfc8785", claim: boolean) => {
+      const executable = canonicalizeExecutableArgs({ rawArgs: ARGS, exclude: ["dry_run"] });
+      return mintToken(ARGS, {
+        actionHash: hashActionInput(executable, alg),
+        ...(claim ? { hashAlg: alg } : {}),
+      });
+    };
+    const entry = (hashAlg?: "cesteral-c14n-v1" | "rfc8785") => () => ({
+      definitionHash: DEF_HASH,
+      ...(hashAlg ? { hashAlg } : {}),
+    });
+    const enforceEnv = {
+      GOVERNANCE_TOKEN_MODE: "enforce",
+      GOVERNANCE_DECISION_TOKEN_SECRET: SECRET,
+    };
+    // A fresh replay store per test. mintToken derives the jti from the args and
+    // the current second, so tests that mint identical args would otherwise
+    // consume each other's jti through the shared fallback store and read as
+    // replays.
+    const reg = (resolveManifestEntry: () => ManifestEntryRef | undefined) =>
+      register({
+        env: enforceEnv,
+        jtiStore: new InMemoryJtiStore(),
+        resolveManifestEntry,
+        server,
+        logger,
+      });
+
+    it("control: a legacy token against a legacy manifest entry runs the write", async () => {
+      reg(entry());
+      const res = (await callWithToken(server, ARGS, await mintFor("cesteral-c14n-v1", false))) as {
+        isError?: boolean;
+      };
+      expect(res.isError).toBeUndefined();
+      expect(writeTool.logic).toHaveBeenCalledOnce();
+    });
+
+    it("an rfc8785 token against an rfc8785 manifest entry runs the write", async () => {
+      reg(entry("rfc8785"));
+      const res = (await callWithToken(server, ARGS, await mintFor("rfc8785", true))) as {
+        isError?: boolean;
+      };
+      expect(res.isError).toBeUndefined();
+      expect(writeTool.logic).toHaveBeenCalledOnce();
+    });
+
+    it("an rfc8785 token against a legacy manifest entry is blocked as HASH_ALG_MISMATCH", async () => {
+      reg(entry());
+      const res = (await callWithToken(server, ARGS, await mintFor("rfc8785", true))) as {
+        isError?: boolean;
+        content: Array<{ text: string }>;
+      };
+      expect(res.isError).toBe(true);
+      expect(res.content[0].text).toContain("HASH_ALG_MISMATCH");
+      expect(writeTool.logic).not.toHaveBeenCalled();
+    });
+
+    it("a legacy token against an rfc8785 manifest entry is blocked as HASH_ALG_MISMATCH", async () => {
+      reg(entry("rfc8785"));
+      const res = (await callWithToken(server, ARGS, await mintFor("cesteral-c14n-v1", false))) as {
+        isError?: boolean;
+        content: Array<{ text: string }>;
+      };
+      expect(res.isError).toBe(true);
+      expect(res.content[0].text).toContain("HASH_ALG_MISMATCH");
+      expect(writeTool.logic).not.toHaveBeenCalled();
+    });
+
+    it("an unknown hashAlg is blocked as UNSUPPORTED_HASH_ALG", async () => {
+      reg(entry());
+      const res = (await callWithToken(
+        server,
+        ARGS,
+        await mintToken(ARGS, { hashAlg: "rfc9999" })
+      )) as { isError?: boolean; content: Array<{ text: string }> };
+      expect(res.isError).toBe(true);
+      expect(res.content[0].text).toContain("UNSUPPORTED_HASH_ALG");
+      expect(writeTool.logic).not.toHaveBeenCalled();
+    });
   });
 
   it("warn mode: a throwing jti store does NOT block the write (JTI_STORE_ERROR surfaced, not thrown)", async () => {

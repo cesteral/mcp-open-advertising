@@ -42,6 +42,26 @@ describe("logDecisionTokenVerdict", () => {
     expect(obj).not.toHaveProperty("secret");
   });
 
+  it("records the hash algorithm in force and whether the args were order-sensitive", () => {
+    const logger = fakeLogger();
+    const verdict: DecisionTokenVerdict = {
+      ok: true,
+      reasonCode: "OK",
+      definitionHashVerified: true,
+      hashAlg: "rfc8785",
+      orderSensitiveArgs: true,
+      claims: { sub: "tenant-1", jti: "j1" },
+    };
+    logDecisionTokenVerdict(logger, {
+      verdict,
+      mode: "warn",
+      contractId: "meta.update_entity.v1",
+      toolName: "meta_update_entity",
+    });
+    const [obj] = logger.info.mock.calls[0];
+    expect(obj).toMatchObject({ hashAlg: "rfc8785", orderSensitiveArgs: true });
+  });
+
   it("logs a rejection at warn with the reason code and detail", () => {
     const logger = fakeLogger();
     const verdict: DecisionTokenVerdict = {
