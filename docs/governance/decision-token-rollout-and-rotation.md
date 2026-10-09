@@ -13,15 +13,16 @@ to the connector call as the `X-Cesteral-Decision-Token` header. The **MCP serve
 (`mcp-open-advertising`, open source) verifies it before executing the write,
 binding the call to the exact governance decision.
 
-| Claim            | Meaning                                                          |
-| ---------------- | ---------------------------------------------------------------- |
-| `sub`            | Tenant (orgId or userId)                                         |
-| `contractId`     | `<slug>.<tool>.v<n>` of the admitted write                       |
-| `definitionHash` | SHA-256 of the tool definition (`@cesteral/contract-hash`)       |
-| `actionHash`     | SHA-256 of the executable write args (`@cesteral/contract-hash`) |
-| `approvalId`     | Optional — set when the write passed an approval gate            |
-| `iat` / `exp`    | Issued-at / expiry (default TTL 120s)                            |
-| `jti`            | Unique id; consumed exactly once (replay protection)             |
+| Claim            | Meaning                                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sub`            | Tenant (orgId or userId)                                                                                                                                        |
+| `contractId`     | `<slug>.<tool>.v<n>` of the admitted write                                                                                                                      |
+| `definitionHash` | SHA-256 of the tool definition (`@cesteral/contract-hash`)                                                                                                      |
+| `actionHash`     | SHA-256 of the executable write args (`@cesteral/contract-hash`)                                                                                                |
+| `hashAlg`        | Optional — the canonicalization both hashes were computed under: `cesteral-c14n-v1` (absent means this) or `rfc8785`. Must equal the manifest entry's `hashAlg` |
+| `approvalId`     | Optional — set when the write passed an approval gate                                                                                                           |
+| `iat` / `exp`    | Issued-at / expiry (default TTL 120s)                                                                                                                           |
+| `jti`            | Unique id; consumed exactly once (replay protection)                                                                                                            |
 
 Issuer `cesteral-intelligence`, audience `mcp-open-advertising`.
 
@@ -202,6 +203,8 @@ contract:
   `cesteralManifestSchema`. Bare lowercase hex, no prefix, on both sides.
 - **`contractId`** — `@cesteral/contract-schema` `deriveContractId` is the single
   composer; the annotation's declared id is refined against it.
+- **`hashAlg`** — see [Hash algorithms](#hash-algorithms) below. The two sides must
+  also agree on _which_ canonicalization produced the hashes above.
 - **Token format** — claims, HS256, issuer `cesteral-intelligence`, audience
   `mcp-open-advertising`, default 120s TTL. Pinned by
   `packages/shared/tests/governance/decision-token.test.ts` against a reference
@@ -211,5 +214,44 @@ A genuine end-to-end test (governance mint → connector verify in one process) 
 inherently cross-repo and cannot live in either repo alone; the shared-hash +
 token-format pins above are the contract that keeps the two sides identical.
 Treat any steady-state `CONTRACT_MISMATCH` / `DEFINITION_HASH_MISMATCH` /
-`ACTION_HASH_MISMATCH` verdict as a parity regression to investigate before
-moving a contract to `enforce`.
+`ACTION_HASH_MISMATCH` / `HASH_ALG_MISMATCH` verdict as a parity regression to
+investigate before moving a contract to `enforce`.
+
+## Hash algorithms
+
+`definitionHash` and `actionHash` are SHA-256 over canonical JSON, and there are two
+canonicalizations (`@cesteral/contract-hash`, names owned by
+`@cesteral/contract-schema`):
+
+| `hashAlg`          | Meaning                                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cesteral-c14n-v1` | The original. Sorts keys, then lets `JSON.stringify` emit them, so the JS engine puts integer-like keys first (`{"9":…,"10":…,"-1":…}`). Frozen: every hash minted before the field existed is this. **Absent means this one.** |
+| `rfc8785`          | RFC 8785 (JCS): properties in UTF-16 code-unit order (`{"-1":…,"10":…,"9":…}`). Reproducible in any language from the RFC.                                                                                                      |
+
+They produce identical bytes for every value without an order-sensitive object. Across
+all 315 tool definitions in the fleet at the time of writing, none differ, so no
+current `definitionHash` changes between them. `actionHash` hashes runtime arguments, so
+it can differ for a call carrying a map keyed by numeric ids; the audit field
+`orderSensitiveArgs` reports how often.
+
+**One algorithm per call, chosen by the signed token.** The verifier checks the
+signature, reads the signed `hashAlg` claim (absent = `cesteral-c14n-v1`; a non-string
+is `MALFORMED_TOKEN`; an unknown name is `UNSUPPORTED_HASH_ALG`), and hashes the
+executable args under exactly that algorithm. It never tries both, and it never reads
+the JWT header. The header is not signed payload.
+
+**The manifest entry's algorithm must equal the token's.** A manifest entry may carry
+`hashAlg`, stating how its precomputed `definitionHash` was computed (absent =
+`cesteral-c14n-v1`). If the token's and the entry's differ, the verdict is
+`HASH_ALG_MISMATCH`, checked before the hashes are compared, so a hash is never
+compared against one computed another way. A manifest entry whose `hashAlg` this build
+does not recognise is treated as unresolved (fails closed under `enforce`).
+
+**Consequence for the minter:** the algorithm is a property of the _release_, not a
+global switch. Governance reads the `hashAlg` of the manifest entry it attested and
+stamps that same value on the token, computing `actionHash` under it. A server on a
+legacy manifest is never sent an `rfc8785` token. A governance build that predates the
+field strips it from the manifest, mints legacy tokens, and fails closed
+(`HASH_ALG_MISMATCH`) against an `rfc8785` entry. That is safe but loud, so upgrade
+governance before any server publishes an `rfc8785` manifest. See
+[the handoff](../plans/2026-10-09-hash-alg-selector-handoff.md).

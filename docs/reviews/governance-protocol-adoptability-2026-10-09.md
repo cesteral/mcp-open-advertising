@@ -55,6 +55,12 @@ prove it works.
 
 ### 2. A normative canonicalization with an algorithm id
 
+> **Status: slice 1 implemented** (the verifier side). The migration below is superseded by
+> [the handoff](../plans/2026-10-09-hash-alg-selector-handoff.md), which refines step 3: the
+> algorithm is a property of the _release_, inherited from the manifest entry, not a switch
+> the minter flips, so a server on a legacy manifest is never sent an `rfc8785` token. The
+> text below describes the state at `7058ee57`.
+
 - [`stableStringify`](../../packages/contract-hash/src/index.ts) matched 10 of 10
   RFC 8785 (JCS) number samples that were checked against the RFC text. It diverges
   on **integer-like object keys**: it sorts the keys, but `JSON.stringify` then
