@@ -34,12 +34,17 @@ The two halves live in different repos **on purpose**:
 | **Mint** + hold/rotate the signing secret + per-org `AttestedWritePolicy` | `cesteral-intelligence` (paid) | Minting is a governance decision; the secret and per-tenant policy are product state.             |
 | **Verify** (`GOVERNANCE_TOKEN_MODE`)                                      | `mcp-open-advertising` servers | Verification physically runs in the server process, so the mode is necessarily a server-side env. |
 
-Key rule: **the server _code_ default is `off`** (`resolveTokenMode` Tier-3
-fallback, pinned by `config.test.ts`). An open-source / self-hosted server that
-isn't part of a Cesteral deployment stays neutral — no token checks, no
-`MISSING_TOKEN` noise. "Warn by default" is a property of the **Cesteral-operated
-deployment**, expressed in this repo's terraform (`governance_token_mode = "warn"`),
-not baked into the code.
+Key rule: **the server _code_ default depends on where it runs** (`resolveTokenMode`
+Tier-3 fallback, pinned by `config.test.ts`): `off` on stdio / self-host, `warn` on
+a hosted deployment (`K_SERVICE` set, i.e. Cloud Run). An open-source / self-hosted
+server that isn't part of a Cesteral deployment stays neutral — no token checks,
+no `MISSING_TOKEN` noise. On a hosted deployment the `warn` default means an
+unconfigured server still verifies and logs a verdict per call but never blocks
+(only `enforce` rejects), so a default-deployed server is not silently ungoverned.
+It is not `enforce` on purpose: that would break every deployment that has not
+yet wired the governance layer. Any explicit tier, including
+`GOVERNANCE_TOKEN_MODE=off`, still wins. The Cesteral-operated deployment also
+sets `governance_token_mode = "warn"` explicitly in this repo's terraform.
 
 Decision-token mode is **fleet-global** (one setting per deployment). Per-tenant
 governance strictness is a separate axis handled by the governance layer's
@@ -53,22 +58,29 @@ the two.
 (`packages/shared/src/governance/config.ts`):
 
 - **`off`** — verification skipped. Server behaves exactly as if governance did
-  not exist. The code default.
+  not exist. The code default off-hosted; set explicitly, it also wins on a
+  hosted deployment.
 - **`warn`** — verify every binding and log the verdict
   (`logDecisionTokenVerdict`), but **never block**. Missing/invalid tokens surface
   as `warn` audit lines; the write still runs.
 - **`enforce`** — reject any write whose token does not verify (HTTP 401,
   `JsonRpcErrorCode.Unauthorized`).
 
-Effect-class writes are never token-governed (the control plane mints no token
-for them); they are forced to `off` regardless of mode, with an audit line when a
-non-`off` mode was configured.
+Effect-class writes (uploads, report schedules, conversion uploads, bulk jobs) take
+the same path as entity writes: the connector resolves a mode for them with
+`resolveTokenMode()` and verifies the token identically, because the check is
+`writeClass`-agnostic. Under `enforce`, an effect write with a missing or invalid
+token is rejected; under `warn` it is verified and logged but runs. This is pinned
+by the effect-class cases in
+`packages/shared/tests/utils/tool-handler-factory-governance.test.ts`. Whether the
+governance layer mints a token for a particular effect write is that layer's
+admission policy, not something the connector decides.
 
 Three-tier precedence lets a large rollout be staged without an all-or-nothing
 flip:
 
 ```
-per-contract list  >  per-server (GOVERNANCE_TOKEN_MODE_<SLUG>)  >  global (GOVERNANCE_TOKEN_MODE)  >  off
+per-contract list  >  per-server (GOVERNANCE_TOKEN_MODE_<SLUG>)  >  global (GOVERNANCE_TOKEN_MODE)  >  default (warn if K_SERVICE is set, else off)
 ```
 
 - `GOVERNANCE_TOKEN_MODE_<SLUG>` — e.g. `GOVERNANCE_TOKEN_MODE_META=enforce`.

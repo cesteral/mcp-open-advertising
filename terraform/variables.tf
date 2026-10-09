@@ -235,7 +235,7 @@ variable "log_level" {
 }
 
 variable "governance_token_mode" {
-  description = "Fleet-wide decision-token enforcement mode (GOVERNANCE_TOKEN_MODE) for the Cesteral-operated deployment: off | warn | enforce. Defaults to 'warn' so the hosted fleet verifies and logs governance decision tokens without blocking writes; the in-code default remains 'off' so self-hosted / unconfigured servers stay neutral. Stage to 'enforce' per-contract via governance_token_enforce_contracts once end-to-end token parity is confirmed."
+  description = "Fleet-wide decision-token enforcement mode (GOVERNANCE_TOKEN_MODE) for the Cesteral-operated deployment: off | warn | enforce. Defaults to 'warn' so the hosted fleet verifies and logs governance decision tokens without blocking writes; the in-code default is 'off' off-hosted ('warn' on Cloud Run, where K_SERVICE is set) so self-hosted servers stay neutral. Stage to 'enforce' per-contract via governance_token_enforce_contracts once end-to-end token parity is confirmed."
   type        = string
   default     = "warn"
   validation {
