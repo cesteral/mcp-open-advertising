@@ -43,7 +43,7 @@ different algorithm from the release it targets.
 | Package                           | Change                                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@cesteral/contract-hash` 2.1.0   | `HASH_ALGS`, `DEFAULT_HASH_ALG`, `isHashAlg`, `canonicalStringify(value, alg)`, `hasOrderSensitiveKeys`; `hashActionInput(value, alg?)` and `computeDefinitionHash(tool, alg?)` take an optional algorithm defaulting to `cesteral-c14n-v1`; `CROSS_REPO_HASH_ALG_VECTORS`. Legacy bytes and every existing golden unchanged.                                                 |
-| `@cesteral/contract-schema` 2.2.0 | `HASH_ALGS`, `hashAlgSchema`; optional `hashAlg` on a manifest entry. `manifestVersion` stays `1`.                                                                                                                                                                                                                                                                            |
+| `@cesteral/contract-schema` 2.2.0 | `HASH_ALGS`, `hashAlgSchema`; optional `hashAlg` on a manifest entry. `manifestVersion` stays `1`. **Also carries the unpublished 2.1.0 change** (the manifest `verification` block, #203): see the release note below.                                                                                                                                                       |
 | `@cesteral/shared`                | `verifyDecisionToken` now takes `expected.executableArgs` (not a precomputed `actionHash`) and `expected.definitionHashAlg`; new verdicts `UNSUPPORTED_HASH_ALG`, `HASH_ALG_MISMATCH`; verdict and audit record carry `hashAlg` and `orderSensitiveArgs`. The resolver returns `{ definitionHash, hashAlg? }` (`createManifestEntryResolver`, option `resolveManifestEntry`). |
 
 **Not done, deliberately:** the manifest generator still emits legacy entries with no
@@ -53,6 +53,30 @@ the hosted fleet until governance stamps the claim.
 The verifier's signature change is why `actionHash` cannot be precomputed by the caller:
 the algorithm is named by the signed token, which is only trustworthy after the signature
 check, so the caller cannot know it in advance.
+
+## Release: tag `contract-v2.2.0`
+
+The `contract-v*` lane publishes exactly two packages, in this order, each at the version
+in its own `package.json` (the tag only selects the lane; it is not checked against either
+version):
+
+| Package                     | Publishes | On npm today                      |
+| --------------------------- | --------- | --------------------------------- |
+| `@cesteral/contract-hash`   | **2.1.0** | 1.0.0, 1.1.0, 1.1.1, 1.2.0, 2.0.0 |
+| `@cesteral/contract-schema` | **2.2.0** | 1.0.0, 1.1.0, 1.2.0, 1.3.0, 2.0.0 |
+
+The tag is named for the schema version because the two packages version independently.
+In this lane an already-published version is a hard failure, so a release that would
+silently republish nothing cannot look successful.
+
+> **`@cesteral/contract-schema` 2.1.0 was never published.** `main` has carried 2.1.0 in
+> `package.json` since #203 (the optional manifest `verification` block: `declared` /
+> `fixture-verified` / `live-verified` / `disabled`, bound to the `definitionHash` it was
+> verified against), but no release was cut, and npm still has 2.0.0 as the latest. So the
+> 2.2.0 release delivers **two** changes to every consumer of `@cesteral/contract-schema`
+> at once: `verification` (from the skipped 2.1.0) and `hashAlg`. Both are optional manifest
+> fields that a consumer on an older schema strips without error, but a consumer upgrading
+> from 2.0.0 sees both arrive together.
 
 ## Handoff: `cesteral-intelligence`
 
