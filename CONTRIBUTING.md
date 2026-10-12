@@ -63,7 +63,7 @@ Contributions that are most likely to be accepted:
 
 Contributions that need discussion first:
 
-- New MCP servers or tools — see [Adding a New Server](docs/guides/adding-a-new-server.md) for the step-by-step guide. Open an issue to discuss the platform before starting implementation.
+- New MCP servers or tools — see [Adding a New Server](docs/guides/adding-a-new-server.md) for the step-by-step guide. Open a [New Platform Proposal](https://github.com/cesteral/mcp-open-advertising/issues/new?template=new_platform_proposal.yml) to agree the platform key, scope and auth model before starting implementation.
 - Architectural changes to shared patterns
 - Changes to authentication flows
 - Dependency additions

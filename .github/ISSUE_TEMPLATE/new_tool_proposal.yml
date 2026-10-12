@@ -2,6 +2,11 @@ name: New Tool Proposal
 description: Propose a new MCP tool for an existing or new server
 labels: ["new-tool"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposing a whole new ad platform? Use the **New Platform Proposal** template instead, so the platform key, scope and auth model are agreed before individual tools.
+
   - type: dropdown
     id: server
     attributes:

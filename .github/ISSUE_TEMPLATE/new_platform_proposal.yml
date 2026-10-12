@@ -1,0 +1,178 @@
+name: New Platform Proposal
+description: Propose a new ad platform server for this repo
+title: "[New platform]: "
+labels: ["new-platform"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a platform. Please open this **before** writing code, so the platform key, port and scope can be agreed first; those are hard to change once tools ship.
+
+        Read [Adding a New Server](https://github.com/cesteral/mcp-open-advertising/blob/main/docs/guides/adding-a-new-server.md) and the [Cross-Server Contract](https://github.com/cesteral/mcp-open-advertising/blob/main/docs/CROSS_SERVER_CONTRACT.md) first. Each answer below feeds a specific part of the new server: the registry entry, the platform-facts ledger, the wire tests, or the list of operations that cannot be undone.
+
+        **Never paste access tokens, API keys, account IDs or other credentials here.** This issue is public.
+
+  - type: input
+    id: platform-name
+    attributes:
+      label: Platform
+      description: The ad platform and, if it has several, which API.
+    validations:
+      required: true
+
+  - type: input
+    id: api-docs
+    attributes:
+      label: API documentation
+      description: Link to the vendor's API reference. Wire tests must cite a vendor source, so a public reference matters.
+      placeholder: https://developers.example-ads.com/api/reference
+    validations:
+      required: true
+
+  - type: input
+    id: platform-key
+    attributes:
+      label: Proposed platform key
+      description: |
+        Used as the tool-name prefix (`<key>_list_entities`) and as the platform identifier throughout the server. Lowercase letters, digits and underscores only; no hyphens. Prefer the platform's common short name (`reddit`, not `reddit_ads`). It must not clash with an existing prefix (see the Cross-Server Contract's inventory). Maintainers confirm the key before work starts.
+      placeholder: reddit
+    validations:
+      required: true
+
+  - type: dropdown
+    id: server-type
+    attributes:
+      label: Server type
+      description: What the server would do. This decides which tools the contract requires.
+      options:
+        - Management (create, update and delete campaigns and other entities, plus reporting)
+        - Reporting only
+        - Reporting plus conversion upload
+        - Not sure yet
+    validations:
+      required: true
+
+  - type: dropdown
+    id: first-scope
+    attributes:
+      label: Scope of the first PR
+      description: |
+        A read-only first PR needs no write governance or write wire tests, but needs maintainer agreement: CI currently expects every server except dbm-mcp to be governed. Any write tool must meet the full governed-write requirements before it ships.
+      options:
+        - Read-only first (entity reads and reporting); writes in a later PR
+        - Full surface, including writes, in the first PR
+    validations:
+      required: true
+
+  - type: dropdown
+    id: auth-model
+    attributes:
+      label: Authentication model
+      options:
+        - OAuth 2.0 access token (Bearer)
+        - OAuth 2.0 with refresh token
+        - Static API token or key in a custom header
+        - Several headers (e.g. token plus developer token plus account ID)
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: auth-details
+    attributes:
+      label: Authentication details
+      description: |
+        Which headers carry credentials and the account scope; access-token lifetime; how a token is refreshed; and a cheap endpoint the server can call to check a token at session start (like `/me`).
+      placeholder: |
+        - Authorization: Bearer <token>; tokens expire after 1 hour
+        - Refresh: OAuth 2.0 refresh_token grant at <token endpoint>
+        - Account scope: ad account ID in the URL path
+        - Validation endpoint: GET /v1/me
+    validations:
+      required: true
+
+  - type: textarea
+    id: versioning
+    attributes:
+      label: Base URL, API version and deprecation policy
+      description: |
+        These become facts in `platform-facts.json`, each with its source and a re-check deadline. Link the vendor page that states the supported versions and sunset schedule.
+      placeholder: |
+        - Base URL: https://api.example-ads.com/v1
+        - Versioning: path-versioned; each version is supported for at least 12 months (source: <link>)
+    validations:
+      required: true
+
+  - type: textarea
+    id: rate-limits
+    attributes:
+      label: Rate limits
+      description: The documented quota and how it is scoped (per app, per user, per account), with a link. The server's default rate limit is pinned in the ledger against this source.
+    validations:
+      required: true
+
+  - type: textarea
+    id: entities
+    attributes:
+      label: Entity hierarchy
+      description: The platform's entities and how they map to campaign → ad group → ad → creative. Note platform-specific names (e.g. Snapchat "Ad Squad" = ad group).
+    validations:
+      required: true
+
+  - type: textarea
+    id: reporting
+    attributes:
+      label: Reporting
+      description: Synchronous or asynchronous (submit, poll, download)? Report formats? Any limits on date ranges or row counts?
+    validations:
+      required: false
+
+  - type: textarea
+    id: irreversible
+    attributes:
+      label: Operations that cannot be undone
+      description: |
+        Deletes that are hard deletes, statuses that cannot be reversed (e.g. archived), and similar. Every such tool must be declared on the server card, so the vendor's documented behaviour matters here.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: test-access
+    attributes:
+      label: Test environment
+      description: Wire tests run offline against stubbed `fetch`, but a tool is only marked live-verified after a run against a real, authorized account.
+      options:
+        - Vendor sandbox with no real spend
+        - A test or developer ad account I can use
+        - Production accounts only
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: maintenance
+    attributes:
+      label: Maintenance
+      description: Who will maintain this server after it merges (API version bumps, deprecations, re-verifying facts)? Is the vendor or your organization involved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: Official SDKs, OpenAPI documents, or existing MCP servers for this platform.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have read the Adding a New Server guide.
+          required: true
+        - label: This issue contains no credentials, tokens or private account IDs.
+          required: true
+        - label: I understand that Cesteral's hosted governance layer admits governed writes for a new platform only after it adds the platform on its side. Self-hosted servers are unaffected.
+          required: true
