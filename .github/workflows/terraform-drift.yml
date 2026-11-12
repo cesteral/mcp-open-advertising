@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
 
       # Pinned exactly, not to a minor range. Provider and CLI upgrades change
       # resource normalization and refresh behaviour — which is precisely the

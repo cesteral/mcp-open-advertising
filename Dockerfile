@@ -2,13 +2,13 @@
 # Build with: docker build --build-arg SERVER_NAME=dbm-mcp -t dbm-mcp .
 
 # Pinned by digest for reproducible builds and supply-chain integrity. The bare
-# `node:22-alpine` tag floats, so identical source could otherwise resolve to
+# `node:26-alpine` tag floats, so identical source could otherwise resolve to
 # different OS packages on each rebuild. Digest is the multi-arch index for
-# node:22-alpine (Alpine 3.24, built 2026-09-23; resolved 2026-10-12); bump it
-# deliberately when refreshing the base. Both the build stages and the runtime
-# stage start from it. Node 22 is the line CI tests on; Node 20 reached end of
-# life on 2026-04-30 and its image is no longer rebuilt.
-ARG NODE_IMAGE=node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+# node:26-alpine (built 2026-11-11; resolved 2026-11-12); bump it deliberately
+# when refreshing the base. Both the build stages and the runtime stage start
+# from it. Node 26 is the line CI tests on (Active LTS since 2026-10-28, end of
+# life 2029-04-30); Node 20 reached end of life on 2026-04-30.
+ARG NODE_IMAGE=node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
 
 FROM ${NODE_IMAGE} AS base
 RUN npm install -g pnpm@10.34.5

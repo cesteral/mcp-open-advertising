@@ -52,7 +52,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
 
       # The script's exit code is the payload, not a pass/fail: 1 (a fact needs
       # attention) and 2 (could not check) are both reported through the

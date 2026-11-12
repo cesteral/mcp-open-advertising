@@ -343,7 +343,7 @@ curl -X POST http://localhost:3004/mcp \
 
 ### Technology Stack
 
-- **Runtime**: TypeScript 5.0+, Node.js 22 LTS, Hono (HTTP + MCP transport)
+- **Runtime**: TypeScript 5.0+, Node.js 26 LTS, Hono (HTTP + MCP transport)
 - **Validation**: Zod schemas
 - **Infrastructure**: GCP Cloud Run, BigQuery, Pub/Sub, Secret Manager, Terraform
 - **Build**: Turborepo, pnpm workspaces, Docker
