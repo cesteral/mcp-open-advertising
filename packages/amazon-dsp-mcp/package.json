@@ -61,7 +61,7 @@
     "@types/node": "^26.6.6",
     "openapi-typescript": "^7.10.1",
     "openapi-zod-client": "^1.18.3",
-    "tsx": "^4.20.6",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^1.6.0"
   }
