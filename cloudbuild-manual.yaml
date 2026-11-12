@@ -13,7 +13,7 @@ options:
 steps:
   # The fleet's service list, from registry.json, for the later steps (their
   # images have no node).
-  - name: 'node:22-slim'
+  - name: 'node:26-slim'
     entrypoint: 'sh'
     args:
       - '-c'

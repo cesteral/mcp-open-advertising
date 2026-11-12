@@ -25,7 +25,7 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  - name: 'node:22-slim'
+  - name: 'node:26-slim'
     entrypoint: 'bash'
     args:
       - '-c'
