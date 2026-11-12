@@ -265,15 +265,20 @@ describe("the advertiser currency lookup is bounded, shared, and briefly remembe
   });
 
   it("asks again once the window has passed, and then carries the real code", async () => {
+    // Fake time starts at the real clock and only moves forward. The rate
+    // limiter has already stamped this advertiser's key with real time, so a
+    // fixed calendar date that has since passed would put those stamps in the
+    // future and close the window for good.
+    const t0 = Date.now();
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-20T10:00:00Z"));
+    vi.setSystemTime(t0);
     down();
     routeLineItem();
     await updateEntityLogic(lowerBudget("30000000"), ctx, sdk);
     const placed = advertiserGets().length;
 
     stub.route({ method: "GET", path: `/v4/advertisers/${ADV}`, response: advertiser("EUR") });
-    vi.setSystemTime(new Date("2026-10-20T10:02:00Z"));
+    vi.setSystemTime(t0 + 2 * 60_000);
     const next = await updateEntityLogic(lowerBudget("20000000"), ctx, sdk);
 
     expect(advertiserGets()).toHaveLength(placed + 1);
@@ -285,8 +290,9 @@ describe("the advertiser currency lookup is bounded, shared, and briefly remembe
     routeLineItem();
     await updateEntityLogic(lowerBudget("30000000"), ctx, sdk);
 
+    // Forward from the real clock, for the reason given in the test above.
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-21T10:00:00Z"));
+    vi.setSystemTime(Date.now() + 24 * 60 * 60_000);
     down();
     const next = await updateEntityLogic(lowerBudget("20000000"), ctx, sdk);
 
