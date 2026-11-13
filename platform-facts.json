@@ -330,7 +330,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:90"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:98"],
       "note": "Read 2026-10-01: every endpoint page under learn.microsoft.com/en-us/linkedin/marketing documents https://api.linkedin.com/rest/... and the migrations table lists the unversioned Marketing APIs as Deprecated (sunset 2024-12-16)."
     },
     {
@@ -345,7 +345,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:106"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:114"],
       "note": "Read 2026-10-01 from the Campaigns page: get is GET /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID}; the only account-less /rest/adCampaigns appears in a generic header illustration on the versioning page, which the Campaigns page contradicts."
     },
     {
@@ -360,7 +360,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:98"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:106"],
       "note": "Read 2026-10-01 from the Campaign Groups page."
     },
     {
@@ -390,7 +390,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:461"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:463"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string and no account. Not exercised against a live account."
     },
     {
@@ -405,7 +405,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:508"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:517"],
       "note": "Not exercised against a live account."
     },
     {
@@ -480,7 +480,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:606"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:615"],
       "note": "The page's samples write the range both as timeRange.start=... and as timeRange=(start:...,end:...); the record form is sent. Not exercised against a live account."
     },
     {
@@ -495,7 +495,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:524"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:523"],
       "note": "The page's samples show no Linkedin-Version header; the client sends it on every request. Not exercised against a live account."
     },
     {
@@ -526,8 +526,23 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:130"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:138"],
       "note": "Read 2026-10-01: 'The Creatives API replaces the adCreativesV2 API.'"
+    },
+    {
+      "id": "linkedin.conversions_are_listed_by_account_finder",
+      "package": "linkedin-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Conversion rules live at /rest/conversions: create is POST with the account URN in the body, list is the `account` finder (GET /rest/conversions?q=account&account={sponsoredAccountUrn}) with no start/count/pageSize and a response of `elements` only, and a single rule is GET/POST /rest/conversions/{id}?account={sponsoredAccountUrn}. A `q=search` finder 404s with \"No virtual resource found\" (#301). Read from LinkedIn's Conversions API and Conversion Tracking pages, 2026-11-13; the 404 and the pageSize 400 were reported from a live account in #301.",
+      "value": "/rest/conversions",
+      "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/conversions-api",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-12",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:155"],
+      "note": "Item get/update/delete still use the legacy /v2/conversions/{urn} path because the /rest/ item path needs the account, which a URN call does not carry (#210)."
     },
     {
       "id": "linkedin.ad_previews_existing_creative_is_a_get",
@@ -541,7 +556,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:627"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:623"],
       "note": "Replaces linkedin.ad_previews_is_an_action, whose claim (that the versioned equivalent is only the livePreviewForCreative action) was REFUTED for existing creatives by the Ad Preview page. Not exercised against a live account."
     },
     {

@@ -74,6 +74,10 @@ import {
   CreateEntityInputSchema,
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 import {
+  listEntitiesLogic,
+  ListEntitiesInputSchema,
+} from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
+import {
   updateEntityLogic,
   UpdateEntityInputSchema,
 } from "../../src/mcp-server/tools/definitions/update-entity.tool.js";
@@ -306,18 +310,26 @@ describe("linkedin_create_entity → Rest.li CREATE", () => {
     expect(out.entity).toEqual({ id: "urn:li:sponsoredCreative:800000009" });
   });
 
-  it("conversionRule → POST /v2/conversions (legacy, not migrated)", async () => {
-    createdRoute("/v2/conversions", "900000009");
-    const data = { name: "Signup", type: "LEAD", account: ACCOUNT_URN, status: "ACTIVE" };
+  it("conversionRule → POST /rest/conversions (account stays in the body)", async () => {
+    createdRoute("/rest/conversions", "900000009");
+    const data = {
+      name: "Signup",
+      type: "LEAD",
+      account: ACCOUNT_URN,
+      conversionMethod: "CONVERSIONS_API",
+    };
     await createEntityLogic(
       CreateEntityInputSchema.parse({ entityType: "conversionRule", data }),
       ctx,
       sdk
     );
     const req = onlyWrite();
-    // basis: unverified (code-only) — entity-mapping.ts: /rest/conversions is
-    // unconfirmed (#210), so conversions stay on /v2/conversions.
-    expect(req.url).toBe(`${API_BASE_URL}/v2/conversions`);
+    // basis: LinkedIn Conversions API page, "Create a conversion rule" (read
+    // 2026-11-13): `POST https://api.linkedin.com/rest/conversions` with the
+    // ad account URN as the `account` field of the JSON body; 201 with the id in
+    // the `x-restli-id` header. The path carries no account.
+    expect(req.method).toBe("POST");
+    expect(req.url).toBe(`${API_BASE_URL}/rest/conversions`);
     expect(req.body).toEqual(data);
   });
 
@@ -1017,4 +1029,36 @@ describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTIO
       expect(tool.description).toContain("No confirm or finalize request is sent");
     });
   }
+});
+
+describe("linkedin_list_entities → conversionRule", () => {
+  it("GET /rest/conversions?q=account&account=<urn>, with no paging parameters", async () => {
+    // basis: LinkedIn Conversions API page, "Find Conversion Rules by Ad
+    // Account" (read 2026-11-13): `GET /rest/conversions?q=account&account=
+    // urn%3Ali%3AsponsoredAccount%3A{id}`. The documented response is
+    // `{ elements: [...] }` with no `paging`, and the request has no
+    // start/count/pageSize: a `search` finder 404s ("No virtual resource found")
+    // and a `pageSize` is rejected 400 QUERY_PARAM_NOT_ALLOWED (#301).
+    stub.route({
+      method: "GET",
+      path: "/rest/conversions",
+      response: { elements: [{ id: 104012, name: "Signup", account: ACCOUNT_URN }] },
+    });
+
+    const out = await listEntitiesLogic(
+      ListEntitiesInputSchema.parse({ entityType: "conversionRule", adAccountUrn: ACCOUNT_URN }),
+      ctx,
+      sdk
+    );
+
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.method).toBe("GET");
+    expect(req!.url).toBe(
+      `${API_BASE_URL}/rest/conversions?q=account&account=${enc(ACCOUNT_URN)}`
+    );
+    expect(out.entities).toHaveLength(1);
+    // An unpaged finder must not hand back a cursor the next call would ignore.
+    expect(out.pagination.nextCursor).toBeNull();
+  });
 });

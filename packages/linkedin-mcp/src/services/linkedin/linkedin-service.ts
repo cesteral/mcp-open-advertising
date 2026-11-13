@@ -209,19 +209,27 @@ export class LinkedInService {
     start?: number,
     count?: number,
     context?: RequestContext
-  ): Promise<{ entities: LinkedInEntityMap[T][]; total?: number; start?: number }> {
+  ): Promise<{
+    entities: LinkedInEntityMap[T][];
+    total?: number;
+    start?: number;
+    /** False when the finder returns everything in one response (no start/count). */
+    paged: boolean;
+  }> {
     const config = getEntityConfig(entityType);
+    const finder = config.listFinder ?? { name: "search", paged: true };
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
 
-    const params: Record<string, RestliQueryValue> = {
-      q: "search",
-      start: String(start ?? 0),
-      count: String(Math.min(count ?? 25, 100)),
-    };
+    const params: Record<string, RestliQueryValue> = { q: finder.name };
+    if (finder.paged) {
+      params.start = String(start ?? 0);
+      params.count = String(Math.min(count ?? 25, 100));
+    }
 
-    // Under /rest/ the ad account lives in the PATH; under the legacy /v2/
-    // surface it is a query parameter. entity-mapping.ts owns which is which.
+    // For account-scoped collections the ad account lives in the PATH; otherwise
+    // (creatives on /v2/, conversion rules on /rest/) it is a query parameter.
+    // entity-mapping.ts owns which is which.
     // A `list` param is sent as a one-element Rest.li 2.0 `List(...)`.
     if (adAccountUrn && config.listScopingParam) {
       const { name, list } = config.listScopingParam;
@@ -240,6 +248,7 @@ export class LinkedInService {
       entities: result.elements ?? [],
       total: result.paging?.total,
       start: result.paging?.start,
+      paged: finder.paged,
     };
   }
 
@@ -662,9 +671,7 @@ export class LinkedInService {
     }
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
     const config = getEntityConfig(entityType);
-    const collection = config.accountScoped
-      ? (config.legacyCollectionPath ?? config.collectionPath())
-      : config.collectionPath();
+    const collection = config.legacyCollectionPath ?? config.collectionPath();
     return `${collection}/${encodedUrn}`;
   }
 }
