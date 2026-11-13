@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 
 describe("schema size guard", () => {
-  it("each tool inputSchema stays under the per-tool limit and the aggregate stays under the stdio safety limit", () => {
+  it("each tool inputSchema and outputSchema stays under its per-tool limit and the aggregates stay under their limits", () => {
     assertSchemaSizesUnderLimit(allTools);
   });
 });
