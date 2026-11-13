@@ -63,8 +63,8 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.6",
-    "js-yaml": "^4.1.1",
-    "minimatch": "^10.1.1",
+    "js-yaml": "^5.5.0",
+    "minimatch": "^11.0.8",
     "openapi-typescript": "^7.10.1",
     "openapi-zod-client": "^1.18.3",
     "tsx": "^4.23.15",
