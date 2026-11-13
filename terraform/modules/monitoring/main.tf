@@ -224,49 +224,19 @@ resource "google_monitoring_alert_policy" "latency_p99" {
 }
 
 # ============================================================================
-# ALERT: Instance Count
+# (No "instance count" alert, on purpose)
 # ============================================================================
-
-resource "google_monitoring_alert_policy" "instance_count" {
-  for_each = { for s in var.services : s.name => s }
-
-  display_name = "Cesteral ${each.key} No Active Instances (${var.environment})"
-  project      = var.project_id
-  combiner     = "OR"
-
-  conditions {
-    display_name = "Cloud Run ${each.key} instance count = 0"
-
-    condition_threshold {
-      filter = <<-EOT
-        resource.type = "cloud_run_revision"
-        AND resource.labels.service_name = "${each.key}"
-        AND metric.type = "run.googleapis.com/container/instance_count"
-      EOT
-
-      comparison      = "COMPARISON_LT"
-      threshold_value = 1
-      duration        = "600s"
-
-      aggregations {
-        alignment_period     = "300s"
-        per_series_aligner   = "ALIGN_MAX"
-        cross_series_reducer = "REDUCE_SUM"
-      }
-    }
-  }
-
-  notification_channels = local.effective_channels
-
-  alert_strategy {
-    auto_close = "1800s"
-  }
-
-  documentation {
-    content   = "Cesteral ${each.key} has no active instances in ${var.environment} for >10 minutes. Service may be down."
-    mime_type = "text/markdown"
-  }
-}
+#
+# An alert on run.googleapis.com/container/instance_count < 1 used to live here.
+# It cannot tell a healthy service from a broken one: every service runs with
+# min_instances = 0 (scale to zero), so zero instances is the normal idle state
+# and the alert fired by email whenever nobody had called a service for 10
+# minutes. Instances are also not started by the uptime checks while the
+# services are IAM-locked, because Cloud Run answers 403 at the front end.
+#
+# Reachability is covered by uptime_failure and fleet_lb_failure below. If
+# min_instances is ever raised above 0 for a service that must stay warm,
+# add an instance-count alert for that service only.
 
 # ============================================================================
 # ALERT: Uptime Check Failed
