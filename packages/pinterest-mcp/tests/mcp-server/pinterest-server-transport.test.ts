@@ -16,7 +16,9 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
       registerResource: vi.fn(),
     };
   }),
-  ResourceTemplate: vi.fn().mockImplementation((uriTemplate: string) => ({ uriTemplate })),
+  ResourceTemplate: vi.fn().mockImplementation(function (uriTemplate: string) {
+    return { uriTemplate };
+  }),
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
