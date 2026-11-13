@@ -250,7 +250,7 @@ describe("GCS spill integration", () => {
         body: "date\n2026-03-01\n",
         mimeType: "text/csv",
         sessionId: "test-session",
-        server: "microsoft",
+        server: "msads",
         objectId: "report.csv",
         rowCount: 1,
       })

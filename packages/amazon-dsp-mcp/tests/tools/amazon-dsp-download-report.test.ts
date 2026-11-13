@@ -256,7 +256,7 @@ describe("GCS spill integration", () => {
         body: "date\n2026-03-01\n",
         mimeType: "text/csv",
         sessionId: "test-session",
-        server: "amazonDsp",
+        server: "amazon_dsp",
         objectId: "report.csv",
         rowCount: 1,
       })
@@ -303,7 +303,7 @@ describe("GCS spill integration", () => {
       expect.objectContaining({
         body: '[{"advertiser":"adv-1"}]',
         mimeType: "application/json",
-        server: "amazonDsp",
+        server: "amazon_dsp",
         objectId: "report.json",
       })
     );

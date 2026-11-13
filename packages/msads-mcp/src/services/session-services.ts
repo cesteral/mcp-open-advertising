@@ -41,10 +41,10 @@ export const reportCsvStore = new ReportCsvStore({
 });
 
 // On session close, sweep this session's GCS spill objects and clear its
-// in-memory report-csv entries. Note: slug "microsoft" matches the
+// in-memory report-csv entries. Note: slug "msads" matches the
 // canonical ReportingPlatform value used by the spill helper.
 sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("microsoft", sessionId);
+  void deleteSpilledObjectsForSession("msads", sessionId);
   reportCsvStore.clearForSession(sessionId);
 });
 

@@ -149,7 +149,7 @@ describe("fromMsAdsSchedule", () => {
       enabled: true,
     });
     expect(result.scheduleId).toBe("abc-123");
-    expect(result.platform).toBe("microsoft");
+    expect(result.platform).toBe("msads");
     expect(result.frequency).toBe("DAILY");
     expect(result.status).toBe("ACTIVE");
     expect(result.reportType).toBe("CampaignPerformanceReportRequest");

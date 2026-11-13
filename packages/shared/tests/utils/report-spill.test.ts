@@ -170,7 +170,7 @@ describe("spillBodyToGcs", () => {
     const result = await spillBodyToGcs({
       body: JSON.stringify({ x: 1 }).repeat(100),
       mimeType: "application/json",
-      server: "amazonDsp",
+      server: "amazon_dsp",
       objectId: "r-5",
       logger,
     });

@@ -19,7 +19,7 @@ describe("mapReportingError", () => {
   });
 
   it("marks 4xx (non-429) as non-retryable", () => {
-    const err = mapReportingError({ response: { status: 400 } }, "google");
+    const err = mapReportingError({ response: { status: 400 } }, "google_ads");
     expect(err.retryable).toBe(false);
   });
 
@@ -60,7 +60,7 @@ describe("mapReportingError", () => {
           data: { error: { status: "PERMISSION_DENIED", message: "nope" } },
         },
       },
-      "google"
+      "google_ads"
     );
     expect(err.upstreamCode).toBe("PERMISSION_DENIED");
     expect(err.message).toBe("nope");
@@ -74,7 +74,7 @@ describe("mapReportingError", () => {
           data: { Errors: [{ Code: "AuthenticationTokenExpired", Message: "expired" }] },
         },
       },
-      "microsoft"
+      "msads"
     );
     expect(err.upstreamCode).toBe("AuthenticationTokenExpired");
     expect(err.message).toBe("expired");
@@ -90,8 +90,8 @@ describe("mapReportingError", () => {
   });
 
   it("falls back to message when no envelope matches", () => {
-    const err = mapReportingError(new Error("network down"), "linkedin");
+    const err = mapReportingError(new Error("network down"), "linkedin_ads");
     expect(err.message).toBe("network down");
-    expect(err.platform).toBe("linkedin");
+    expect(err.platform).toBe("linkedin_ads");
   });
 });
