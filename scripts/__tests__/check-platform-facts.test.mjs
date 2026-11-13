@@ -96,6 +96,9 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_supply_forecasts_path", "2026-10-01"],
     ["linkedin.audience_counts_path", "2026-10-01"],
     ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
+    // Amazon Ads advertiser-accounts API: read from Amazon's docs and OpenAPI file, not called live.
+    ["amazon_dsp.advertiser_accounts_api", "2026-11-13"],
+    ["amazon_dsp.account_id_header_value", "2026-11-13"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
