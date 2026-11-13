@@ -53,6 +53,11 @@ export function setApiVersion(version: string): void {
   apiVersion = version;
 }
 
+/** The API version segment currently used to build paths (shared with the Smart+ mapping). */
+export function getApiVersion(): string {
+  return apiVersion;
+}
+
 function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
   const v = apiVersion;
   return {

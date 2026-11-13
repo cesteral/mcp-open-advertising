@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { randomBytes } from "node:crypto";
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import { consumeTikTokQuota, tiktokQuotaBucket } from "./rate-limit-keys.js";
 import type { BulkCapacityBucket, DryRunValidationError, RateLimiter } from "@cesteral/shared";
@@ -14,6 +15,10 @@ import {
   getEntityConfig,
   type TikTokEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import {
+  getSmartPlusEntityConfig,
+  type SmartPlusEntityType,
+} from "../../mcp-server/tools/utils/smart-plus-mapping.js";
 import type { Logger } from "pino";
 import type {
   CreateTikTokAdGroupRequest,
@@ -86,6 +91,16 @@ export const TIKTOK_AD_PREVIEW_UNSUPPORTED_MESSAGE =
  * `ad_api.py` `ad_update`: POST /open_api/v1.3/ad/update/.
  */
 const AD_UPDATE_BODY_FIELDS = new Set(["adgroup_id", "advertiser_id", "creatives", "patch_update"]);
+
+/**
+ * A fresh `request_id` for an Upgraded Smart+ create: a positive 64-bit integer
+ * as a string, which is the form TikTok's `campaign/create/` and
+ * `adgroup/create/` document for it.
+ */
+function newSmartPlusRequestId(): string {
+  const id = BigInt(`0x${randomBytes(8).toString("hex")}`) & 0x7fffffffffffffffn;
+  return (id === 0n ? 1n : id).toString();
+}
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -422,6 +437,112 @@ export class TikTokService {
         [config.idsField]: entityIds,
         operation_status: operationStatus,
       },
+      context
+    );
+  }
+
+  // ─── Upgraded Smart+ ─────────────────────────────────────────────
+
+  /**
+   * GET `/smart_plus/{campaign,adgroup,ad}/get/` filtered to one id
+   * (`campaign_ids` / `adgroup_ids` / `smart_plus_ad_ids`). `fields` is omitted:
+   * the endpoint documents it as optional, and the response then carries
+   * TikTok's full field set for the entity.
+   */
+  async getSmartPlusEntity(
+    entityType: SmartPlusEntityType,
+    entityId: string,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient);
+
+    const config = getSmartPlusEntityConfig(entityType);
+    const result = (await this.httpClient.get(
+      config.getPath,
+      {
+        page_size: "1",
+        filtering: JSON.stringify({ [config.idsField]: [entityId] }),
+      },
+      context
+    )) as { list?: Record<string, unknown>[] };
+
+    const list = result?.list ?? [];
+    if (list.length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${config.displayName} with ID ${entityId} not found`
+      );
+    }
+    return list[0];
+  }
+
+  /**
+   * POST `/smart_plus/{campaign,adgroup,ad}/create/`.
+   *
+   * `campaign/create/` and `adgroup/create/` require a `request_id` — "a string
+   * representation of a 64-bit integer" that is also TikTok's idempotency key
+   * ("if you retry requests with the same request ID multiple times, then only
+   * one will succeed"). A caller-supplied one is kept; otherwise one is made
+   * here, once per call, so the HTTP client's retries of a failed POST reuse it
+   * and cannot create the entity twice. `ad/create/` takes none.
+   */
+  async createSmartPlusEntity(
+    entityType: SmartPlusEntityType,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
+    const config = getSmartPlusEntityConfig(entityType);
+    const body =
+      config.requiresRequestId && data.request_id === undefined
+        ? { ...data, request_id: newSmartPlusRequestId() }
+        : data;
+
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+
+    return this.httpClient.post(config.createPath, body, context) as Promise<
+      Record<string, unknown>
+    >;
+  }
+
+  /**
+   * POST `/smart_plus/{campaign,adgroup,ad}/update/`. The entity id rides in the
+   * body (`campaign_id` / `adgroup_id` / `smart_plus_ad_id`); it is applied last
+   * so `data` cannot redirect the update to another entity.
+   */
+  async updateSmartPlusEntity(
+    entityType: SmartPlusEntityType,
+    entityId: string,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
+    const config = getSmartPlusEntityConfig(entityType);
+
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+
+    return this.httpClient.post(
+      config.updatePath,
+      { ...data, [config.idField]: entityId },
+      context
+    ) as Promise<Record<string, unknown>>;
+  }
+
+  /**
+   * POST `/smart_plus/{campaign,adgroup,ad}/status/update/` — enable, pause or
+   * delete (DELETE is irreversible). Ads take `smart_plus_ad_ids`.
+   */
+  async updateSmartPlusStatus(
+    entityType: SmartPlusEntityType,
+    entityIds: string[],
+    operationStatus: "ENABLE" | "DISABLE" | "DELETE",
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getSmartPlusEntityConfig(entityType);
+
+    await consumeTikTokQuota(this.rateLimiter, this.httpClient, TIKTOK_WRITE_TOKENS);
+
+    return this.httpClient.post(
+      config.statusUpdatePath,
+      { [config.idsField]: entityIds, operation_status: operationStatus },
       context
     );
   }

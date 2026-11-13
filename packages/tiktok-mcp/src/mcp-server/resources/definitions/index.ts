@@ -33,6 +33,12 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "tiktok_update_entity",
       "tiktok_delete_entity",
     ],
+    smartPlus: [
+      "tiktok_get_smart_plus_entity",
+      "tiktok_create_smart_plus_entity",
+      "tiktok_update_smart_plus_entity",
+      "tiktok_update_smart_plus_status",
+    ],
     reporting: [
       "tiktok_get_report",
       "tiktok_get_report_breakdowns",

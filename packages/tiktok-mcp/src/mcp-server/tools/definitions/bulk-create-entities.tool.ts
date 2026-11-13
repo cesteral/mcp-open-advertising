@@ -36,7 +36,9 @@ const TOOL_DESCRIPTION = `Batch create multiple TikTok Ads entities of the same 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Creates entities sequentially (with concurrency). Each item follows the same
-schema as \`tiktok_create_entity\`.
+schema as \`tiktok_create_entity\`, and goes to the same legacy create endpoints: from 2027-01-01
+those no longer create non-Search Sales, App Promotion or Lead Generation campaigns (or ad groups
+and ads under them); create those one at a time with \`tiktok_create_smart_plus_entity\`.
 
 Max 50 items per call. advertiser_id is automatically injected per item.`;
 
@@ -316,7 +318,7 @@ export const bulkCreateEntitiesTool = {
           },
           {
             campaign_name: "Campaign B",
-            objective_type: "APP_INSTALLS",
+            objective_type: "VIDEO_VIEWS",
             budget_mode: "BUDGET_MODE_DAY",
             budget: 200,
           },

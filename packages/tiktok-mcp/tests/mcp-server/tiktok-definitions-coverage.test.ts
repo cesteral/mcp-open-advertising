@@ -23,6 +23,10 @@ const tiktokService = {
   })),
   getEntity: vi.fn(async () => ({ campaign_id: "123" })),
   createEntity: vi.fn(async () => ({ campaign_id: "new" })),
+  getSmartPlusEntity: vi.fn(async () => ({ campaign_id: "123", operation_status: "ENABLE" })),
+  createSmartPlusEntity: vi.fn(async () => ({ campaign_id: "new", operation_status: "ENABLE" })),
+  updateSmartPlusEntity: vi.fn(async () => ({})),
+  updateSmartPlusStatus: vi.fn(async () => ({})),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
   listAdvertisers: vi.fn(async () => ({ list: [{ advertiser_id: "123" }] })),
@@ -117,7 +121,7 @@ describe("TikTok MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 31 : 25); // 24 business + 1 dynamic search_tools + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 35 : 29); // 28 business + 1 dynamic search_tools + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

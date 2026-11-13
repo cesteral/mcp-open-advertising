@@ -31,8 +31,10 @@ const TOOL_DESCRIPTION = `Create a new TikTok Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
+**Sales, App Promotion and Lead Generation (cutoff 2027-01-01):** from 2027-01-01 TikTok's legacy create endpoints used here no longer create non-Search campaigns, or ad groups and ads under them, for the \`WEB_CONVERSIONS\` (Sales), \`APP_PROMOTION\` and \`LEAD_GENERATION\` objectives. Use \`tiktok_create_smart_plus_entity\` for those; its payloads differ. This tool stays the path for the other objectives, such as \`TRAFFIC\`.
+
 **Key requirements by entity type:**
-- **campaign**: requires \`campaign_name\`, \`objective_type\` (for example \`TRAFFIC\` or \`APP_PROMOTION\`); \`budget_mode\` and \`budget\` are used for budgeted campaigns
+- **campaign**: requires \`campaign_name\`, \`objective_type\` (for example \`TRAFFIC\`); \`budget_mode\` and \`budget\` are used for budgeted campaigns
 - **adGroup**: requires \`campaign_id\`, \`adgroup_name\`; TikTok commonly also requires scheduling, pacing, and optimization fields depending on objective and promotion type
 - **ad**: requires \`adgroup_id\` and \`creatives\` per TikTok's \`AdCreateBody\`
 - Creatives are not a separate entity in TikTok v1.3: set them on the ad via \`creatives[]\` (upload assets with \`tiktok_upload_image\` / \`tiktok_upload_video\`)
