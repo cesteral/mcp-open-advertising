@@ -22,6 +22,7 @@
  * out of round-3 scope, so an `adGroup` snapshot carries no budget.
  */
 
+import { buildSnapshotParents } from "@cesteral/shared";
 import type {
   CanonicalEntityKind,
   CanonicalStatus,
@@ -101,6 +102,14 @@ export function buildTtdSnapshot(
 
   const nameField = entityKind === "campaign" ? "CampaignName" : "AdGroupName";
 
+  // An ad group names its campaign in `CampaignId`; a campaign's only ancestor
+  // is the advertiser, which is `accountId`. The read-back carries no campaign
+  // name, so none is sent.
+  const parents =
+    entityKind === "ad_group"
+      ? buildSnapshotParents([{ kind: "campaign", id: merged.CampaignId }])
+      : undefined;
+
   return {
     schemaVersion: 1,
     platform: "ttd",
@@ -118,6 +127,7 @@ export function buildTtdSnapshot(
         typeof merged.StartDateInclusiveUTC === "string" ? merged.StartDateInclusiveUTC : null,
       endAt: typeof merged.EndDateExclusiveUTC === "string" ? merged.EndDateExclusiveUTC : null,
     },
+    ...(parents ? { parents } : {}),
   };
 }
 

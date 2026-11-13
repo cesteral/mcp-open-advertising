@@ -72,6 +72,9 @@ describe("the shipped ledger", () => {
     ["tiktok.async_report_download_endpoint", "2026-09-30"],
     ["tiktok.async_task_statuses", "2026-09-30"],
     ["tiktok.async_report_create_options", "2026-09-30"],
+    ["tiktok.legacy_create_cutoff_2027", "2026-11-13"],
+    ["tiktok.smart_plus_objectives", "2026-11-13"],
+    ["tiktok.smart_plus_legacy_compat", "2026-11-13"],
     ["ttd.bulk_mutation_variable_binding", "2026-10-01"],
     ["ttd.bulk_job_poll_fields", "2026-10-01"],
     ["ttd.bulk_mutation_limits", "2026-10-01"],
@@ -96,6 +99,10 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_supply_forecasts_path", "2026-10-01"],
     ["linkedin.audience_counts_path", "2026-10-01"],
     ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
+    // Amazon Ads advertiser-accounts API: read from Amazon's docs and OpenAPI file, not called live.
+    ["amazon_dsp.advertiser_accounts_api", "2026-11-13"],
+    ["amazon_dsp.account_id_header_value", "2026-11-13"],
+    ["meta.v26_changes_apply_to_all_versions", "2026-11-13"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {

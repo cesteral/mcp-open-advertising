@@ -57,6 +57,26 @@ export interface ScheduleSnapshot {
   endAt: string | null;
 }
 
+/**
+ * Ancestor kinds a snapshot can name. An advertiser is `accountId`, and the
+ * level of the entity itself is `entityKind`, so only the levels strictly
+ * between them are ever parents: a campaign above an ad set / ad group, or an
+ * insertion order above a line item.
+ */
+export type SnapshotParentKind = "campaign" | "insertion_order";
+
+/**
+ * One ancestor of the snapshotted entity, as the platform's own read-back names
+ * it. `id` is in the form the connector uses as `platformEntityId` for that
+ * ancestor, so a consumer can compare it with a control scoped to the ancestor.
+ */
+export interface SnapshotParent {
+  kind: SnapshotParentKind;
+  id: string;
+  /** Omitted when the read-back did not carry a name; never invented. */
+  name?: string;
+}
+
 export interface NormalizedEntitySnapshot {
   /** Pinned at 1 so consumers can detect drift in the canonical state shape. */
   schemaVersion: 1;
@@ -68,6 +88,13 @@ export interface NormalizedEntitySnapshot {
   status: StatusSnapshot;
   budget: BudgetSnapshot;
   schedule: ScheduleSnapshot;
+  /**
+   * Ancestors the platform's read-back names, at most one per kind and at most
+   * 4. ABSENT means unknown, never "has none": the key is omitted, not sent
+   * empty, when the read-back names no parent. Only levels above the entity
+   * count (a campaign snapshot has no parents).
+   */
+  parents?: SnapshotParent[];
 }
 
 // =============================================================================
@@ -102,6 +129,12 @@ const scheduleSnapshotSchema = z.object({
   endAt: z.string().nullable(),
 });
 
+const snapshotParentSchema = z.object({
+  kind: z.enum(["campaign", "insertion_order"]),
+  id: z.string().min(1),
+  name: z.string().optional(),
+});
+
 // Annotated `z.ZodType<NormalizedEntitySnapshot>` so the emitted `.d.ts` exposes
 // the plain interface, not a zod-version-specific `ZodObject` — consumers on any
 // zod major resolve clean types (and `schema.safeParse().error.issues`) through
@@ -116,4 +149,5 @@ export const normalizedEntitySnapshotSchema: z.ZodType<NormalizedEntitySnapshot>
   status: statusSnapshotSchema,
   budget: budgetSnapshotSchema,
   schedule: scheduleSnapshotSchema,
+  parents: z.array(snapshotParentSchema).max(4).optional(),
 });

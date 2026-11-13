@@ -112,10 +112,12 @@ async function main() {
   {
     const r = await call(client, "amazon_dsp_list_advertisers", {});
     if (r.ok) {
-      const adv = (r.parsed as { advertisers?: Array<Record<string, unknown>> })?.advertisers ?? [];
-      advertiserId = (adv[0]?.advertiserId ?? adv[0]?.profileId ?? adv[0]?.id) as
-        | string
-        | undefined;
+      const adv =
+        (r.parsed as { advertiserAccounts?: Array<Record<string, unknown>> })?.advertiserAccounts ??
+        [];
+      // The DSP advertiser ID is a `dspAdvertiserId` in an account's `alternateIds`.
+      const alternateIds = (adv[0]?.alternateIds ?? []) as Array<{ dspAdvertiserId?: string }>;
+      advertiserId = alternateIds.find((alt) => alt.dspAdvertiserId)?.dspAdvertiserId;
       record({
         tool: "amazon_dsp_list_advertisers",
         scenario: "default",

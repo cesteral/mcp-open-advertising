@@ -166,7 +166,7 @@ export async function uploadVideoLogic(
  * axes are symbolic. Pure (no I/O: no download, no upload). */
 function buildUploadEffectDryRun(mediaUrl: string): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
-  let protocolOk = false;
+  let protocolOk: boolean;
   try {
     const parsed = new URL(mediaUrl);
     protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";

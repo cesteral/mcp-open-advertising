@@ -16,4 +16,6 @@ export type {
   BudgetSnapshot,
   BudgetSegmentSnapshot,
   MoneyAmount,
+  SnapshotParent,
+  SnapshotParentKind,
 } from "@cesteral/contract-schema";

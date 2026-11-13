@@ -377,18 +377,35 @@ describe("AmazonDspService (Unified API)", () => {
     });
   });
 
-  describe("legacy calls kept (no Unified equivalent)", () => {
-    it("lists advertisers via GET /dsp/advertisers", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ response: [{ advertiserId: "a1" }] });
-      const r = await service.listAdvertisers(0, 25);
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        "/dsp/advertisers",
-        { startIndex: "0", count: "25" },
+  describe("advertiser accounts", () => {
+    it("lists advertisers via POST /adsApi/v1/query/advertiserAccounts", async () => {
+      mockHttpClient.post.mockResolvedValueOnce({
+        advertiserAccounts: [{ advertiserAccountId: "amzn1.ads-account.g.a1" }],
+        nextToken: "tok-2",
+      });
+      const r = await service.listAdvertisers({ isGlobalAccount: false, maxResults: 10 });
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        "/adsApi/v1/query/advertiserAccounts",
+        { isGlobalAccountFilter: { include: [false] }, maxResults: 10 },
         undefined
       );
-      expect(r.pageInfo.totalResults).toBeUndefined();
+      expect(r.accounts).toHaveLength(1);
+      expect(r.nextToken).toBe("tok-2");
     });
 
+    it("sends an empty body by default and reads a last page without nextToken", async () => {
+      mockHttpClient.post.mockResolvedValueOnce({ advertiserAccounts: [] });
+      const r = await service.listAdvertisers();
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        "/adsApi/v1/query/advertiserAccounts",
+        {},
+        undefined
+      );
+      expect(r).toEqual({ accounts: [], nextToken: undefined });
+    });
+  });
+
+  describe("legacy calls kept (no Unified equivalent)", () => {
     it("URI-encodes the creative ID in the preview path", async () => {
       mockHttpClient.get.mockResolvedValueOnce({});
       await service.getAdPreviews("../../dsp/advertisers?x=1");

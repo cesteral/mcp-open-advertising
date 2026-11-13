@@ -131,11 +131,12 @@ const ENTITY_EXAMPLES: Record<MetaEntityType, string> = {
   "subtype": "LOOKALIKE",
   "lookalike_spec": {
     "origin": [{ "id": "SOURCE_AUDIENCE_ID", "type": "custom_audience" }],
-    "country": "US",
     "ratio": 0.01
   }
 }
-\`\`\``,
+\`\`\`
+
+Do not put \`country\` or \`location_spec\` in \`lookalike_spec\`: Meta rejects both from v27.0, and on earlier versions once its 90-day window after the v27.0 launch closes. A lookalike delivers to the locations in the ad set that uses it, so set \`targeting.geo_locations\` (for example \`{ "countries": ["US"] }\`) with \`custom_audiences: [{ "id": "LOOKALIKE_ID" }]\` on the ad set; an ad set without location targeting errors.`,
 };
 
 export const entityExampleResources: Resource[] = getSupportedEntityTypes().map((entityType) => ({

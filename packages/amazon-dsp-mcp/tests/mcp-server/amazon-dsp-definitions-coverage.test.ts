@@ -22,8 +22,14 @@ const amazonDspService = {
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({ mode: "unified_delete", entity: {} })),
   listAdvertisers: vi.fn(async () => ({
-    entities: [{ advertiserId: "adv_123", name: "Test Advertiser" }],
-    pageInfo: { startIndex: 0, count: 25, totalResults: 1 },
+    accounts: [
+      {
+        advertiserAccountId: "amzn1.ads-account.g.adv123",
+        displayName: "Test Advertiser",
+        alternateIds: [{ dspAdvertiserId: "123", region: "NA" }],
+      },
+    ],
+    nextToken: undefined,
   })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, _accountId: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),

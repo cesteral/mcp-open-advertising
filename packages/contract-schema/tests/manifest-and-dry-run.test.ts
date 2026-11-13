@@ -144,3 +144,52 @@ describe("effectDryRunResultSchema", () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe("normalizedEntitySnapshotSchema parents", () => {
+  const adGroup = { ...snapshot, entityKind: "ad_group" as const };
+
+  it("is optional, so a 2.2.0-shaped snapshot still parses", () => {
+    expect(normalizedEntitySnapshotSchema.safeParse(adGroup).success).toBe(true);
+  });
+
+  it("round-trips campaign / insertion_order parents with an optional name", () => {
+    const parents = [
+      { kind: "campaign" as const, id: "9", name: "Spring" },
+      { kind: "insertion_order" as const, id: "4" },
+    ];
+    const parsed = normalizedEntitySnapshotSchema.safeParse({ ...adGroup, parents });
+    expect(parsed.success && parsed.data.parents).toEqual(parents);
+  });
+
+  it("rejects more than four, an unknown kind and an empty id", () => {
+    const five = Array.from({ length: 5 }, (_, i) => ({ kind: "campaign", id: String(i) }));
+    expect(normalizedEntitySnapshotSchema.safeParse({ ...adGroup, parents: five }).success).toBe(
+      false
+    );
+    expect(
+      normalizedEntitySnapshotSchema.safeParse({
+        ...adGroup,
+        parents: [{ kind: "advertiser", id: "1" }],
+      }).success
+    ).toBe(false);
+    expect(
+      normalizedEntitySnapshotSchema.safeParse({
+        ...adGroup,
+        parents: [{ kind: "campaign", id: "" }],
+      }).success
+    ).toBe(false);
+  });
+
+  it("is carried through a dry run's expectedPostState", () => {
+    const parents = [{ kind: "campaign" as const, id: "9" }];
+    const parsed = dryRunResultSchema.safeParse({
+      wouldSucceed: true,
+      validationErrors: [],
+      expectedPostState: { ...adGroup, parents },
+      validationSource: "symbolic",
+      expectedStateSource: "server_symbolic_apply",
+      dispatchedCapability: "update",
+    });
+    expect(parsed.success && parsed.data.expectedPostState?.parents).toEqual(parents);
+  });
+});

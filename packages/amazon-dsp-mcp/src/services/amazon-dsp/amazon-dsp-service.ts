@@ -18,7 +18,10 @@ import {
   type AmazonDspEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { unifiedEntityPath, type AmazonDspEntityContract } from "./amazon-dsp-api-contract.js";
-import { AMAZON_ADS_V1_HEADERS } from "./amazon-dsp-v1-api-contract.js";
+import {
+  AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH,
+  AMAZON_ADS_V1_HEADERS,
+} from "./amazon-dsp-v1-api-contract.js";
 import {
   buildDuplicatePayload,
   buildQueryBody,
@@ -27,8 +30,8 @@ import {
   type UnifiedPayloadIssue,
 } from "./unified-payload.js";
 import type {
-  AmazonDspAdvertiser,
-  AmazonDspPageInfo,
+  AmazonDspAdvertiserAccount,
+  AmazonDspAdvertiserAccountPage,
   AmazonDspApiError,
   AmazonDspUnifiedEntity,
   AmazonDspUnifiedErrorIndex,
@@ -36,18 +39,12 @@ import type {
 } from "./types.js";
 
 export type {
-  AmazonDspAdvertiser,
-  AmazonDspPageInfo,
+  AmazonDspAdvertiserAccount,
+  AmazonDspAdvertiserAccountPage,
   AmazonDspApiError,
   AmazonDspUnifiedEntity,
   AmazonDspUnifiedPage,
 };
-
-/** Raw legacy list response shape (`GET /dsp/advertisers`). */
-interface AmazonDspRawListResponse {
-  [key: string]: unknown;
-  totalResults?: number;
-}
 
 /** How `deleteEntity` removed an entity. */
 export type AmazonDspRemovalMode = "unified_delete" | "legacy_archive";
@@ -128,8 +125,8 @@ export function unwrapSingleMultiStatus(
 
 /**
  * AmazonDspService — entity CRUD over the Amazon Ads **Unified API**
- * (`/adsApi/v1/*`, #234), plus the legacy calls that have no Unified
- * equivalent (advertiser listing, ad preview, order/line-item archive).
+ * (`/adsApi/v1/*`, #234) and the advertiser-account listing, plus the legacy
+ * calls that have no Unified equivalent (ad preview, order/line-item archive).
  *
  * Unified patterns (basis: amzn/ads-advanced-tools-docs @ e25aace0,
  * unified-api-dsp.json; see amazon-dsp-api-contract.ts):
@@ -421,41 +418,47 @@ export class AmazonDspService {
     );
   }
 
-  // ─── Advertiser Account (LEGACY — no Unified DSP equivalent) ────
+  // ─── Advertiser accounts ────────────────────────────────────────
 
   /**
-   * `GET /dsp/advertisers` — kept from before #234. unified-api-dsp.json has
-   * no advertiser listing; Amazon's Postman collection lists
-   * `query/advertiserAccounts` only under "Unified API — Beta", outside the
-   * DSP spec, so it is not adopted here.
+   * One page of `POST /adsApi/v1/query/advertiserAccounts`
+   * (`QueryAdvertiserAccount`), which replaces the deprecated
+   * `GET /dsp/advertisers` (Amazon release note 2026-07-20).
+   *
+   * basis: AdvertiserAccounts API 3.0 (see AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH).
+   * The request is `{ advertiserAccountIdFilter?, isGlobalAccountFilter?,
+   * maxResults (10..100, default 100), nextToken? }`; the call takes no
+   * `Amazon-Ads-AccountId` header. Omitting `isGlobalAccountFilter` returns
+   * only global accounts (the developer guide: "equivalent to include:
+   * [true]"); non-global accounts need `isGlobalAccount: false`. A page can be
+   * empty and still carry a `nextToken`.
    */
   async listAdvertisers(
-    startIndex = 0,
-    pageSize = 25,
+    params: { isGlobalAccount?: boolean; maxResults?: number; nextToken?: string } = {},
     context?: RequestContext
-  ): Promise<{ entities: AmazonDspAdvertiser[]; pageInfo: AmazonDspPageInfo }> {
-    const params: Record<string, string> = {
-      startIndex: String(startIndex),
-      count: String(pageSize),
-    };
+  ): Promise<AmazonDspAdvertiserAccountPage> {
+    const body: Record<string, unknown> = {};
+    if (params.isGlobalAccount !== undefined) {
+      body.isGlobalAccountFilter = { include: [params.isGlobalAccount] };
+    }
+    if (params.maxResults !== undefined) body.maxResults = params.maxResults;
+    if (params.nextToken) body.nextToken = params.nextToken;
+
     await this.rateLimiter.consume("amazon_dsp:read");
-    const result = (await this.httpClient.get(
-      "/dsp/advertisers",
-      params,
+    const result = (await this.httpClient.post(
+      AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH,
+      body,
       context
-    )) as AmazonDspRawListResponse;
+    )) as Record<string, unknown> | undefined;
 
-    const entities = (result?.response as AmazonDspAdvertiser[]) ?? [];
-    const totalResults = typeof result?.totalResults === "number" ? result.totalResults : undefined;
-
-    return {
-      entities,
-      pageInfo: {
-        startIndex,
-        count: pageSize,
-        totalResults,
-      },
-    };
+    const accounts = Array.isArray(result?.advertiserAccounts)
+      ? (result.advertiserAccounts as AmazonDspAdvertiserAccount[])
+      : [];
+    const nextToken =
+      typeof result?.nextToken === "string" && result.nextToken !== ""
+        ? result.nextToken
+        : undefined;
+    return { accounts, nextToken };
   }
 
   // ─── Ad Previews (LEGACY — no Unified DSP equivalent) ───────────

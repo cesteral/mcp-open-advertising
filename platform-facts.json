@@ -78,20 +78,19 @@
       "id": "meta.v26_changes_apply_to_all_versions",
       "package": "meta-mcp",
       "class": "behavioral-constraint",
-      "claim": "From 2026-10-27 three Marketing API v26.0 changes apply to every API version, so pinning an older version does not avoid them: (1) instagram_positions \"explore\" (the Instagram Explore Feed placement; explore_home is separate) is rejected with an error; (2) messenger_positions \"story\" is accepted but silently dropped, narrowing delivery without notice; (3) an ad set in the Housing, Employment or Financial Products and Services special ad categories must set targeting.targeting_automation.advantage_audience explicitly (1 or 0). meta-mcp sends targeting unchanged and warns about all three in the response text only of its ad-set write tools' dry runs and executes; no structured field or validationErrors entry changes (#229). No shipped example names either placement or puts an ad set in a special ad category (every campaign example sends special_ad_categories: []), so (1)-(3) as reported do not break an example; most ad-set examples omit targeting_automation, which matters only if the broader readings of (3) noted below are right (#229).",
+      "claim": "Meta's three Marketing API v26.0 changes reported in #229 do NOT share one scope. (1) Messenger Stories: the story value of messenger_positions is silently removed on versioned v26.0+ ad-set create/update calls, and on 2026-10-27 (90 days after the 2026-07-29 release) this applies to ALL Marketing API versions including unversioned calls; no dedicated error is returned. (2) Instagram Explore Feed: the placement is gone from v26.0+; a create/update of an ad set that explicitly specifies Explore returns an error. Meta states no extension to earlier versions and no 2026-10-27 date for it. (3) advantage_audience: starting v26.0, creating (and copying) a Housing, Employment or Financial Products and Services ad set with relaxable targeting in a non-broad setup must set targeting_automation.advantage_audience to 1 or 0, else Graph returns ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG; broad or default setups are unaffected and updating an existing ad set is not affected. It becomes mandatory for all versions only once v25.0 is deprecated, date TBD, not on 2026-10-27. meta-mcp sends targeting unchanged and warns about all three in the response text only of its ad-set write tools' dry runs and executes; no structured field or validationErrors entry changes (#229). No shipped example names either placement or puts an ad set in a special ad category (every campaign example sends special_ad_categories: []), so none of the three breaks an example.",
       "value": "2026-10-27",
-      "sourceUrl": "https://developers.facebook.com/blog/post/2026/07/29/introducing-graph-api-v26-and-marketing-api-v26/",
-      "status": "unverified",
-      "verifiedAt": null,
-      "verifyBy": "2026-10-27",
+      "sourceUrl": "https://developers.facebook.com/docs/graph-api/changelog/version26.0",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-12",
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": [
         "packages/meta-mcp/CLAUDE.md:5",
         "packages/meta-mcp/src/mcp-server/tools/utils/v26-targeting-warnings.ts:34"
       ],
-      "verificationBasis": "corroborated-secondary",
-      "note": "NOT confirmed by any Meta primary source reachable from here (checked 2026-09-30). Meta's generated specs cannot express any of the three: Targeting.instagram_positions and messenger_positions are list<string> with no enum, and the read-side AdCampaignPlacementGet_effective_instagram_positions / _effective_messenger_positions enums still list EXPLORE and MESSENGER_STORY at facebook-business-sdk-codegen 8420be6d5752c568a4f01dd608fa3cce6b2db960; TargetingAutomation.advantage_audience is an optional unsigned int and a conditional requirement has no spec form. No SDK CHANGELOG has a v26 entry. CORROBORATION ONLY, from third-party code on GitHub: jeffreywlai/meta-ads-mcp@fb7e1e83c528baa3f699ee69ff3ef0ae89408889 docs/v26_compatibility_audit.md (explore removed, Messenger Stories silently removed); byadsco/meta-ads-mcp@692fad75d5a875a7464f87438e1f757fd2581f87 src/meta/targeting-compat.ts (explore and messenger story removed in v26.0); mikusnuz/meta-ads-mcp@e9dfd7bfc84564492b894e146e69d897efd6130d src/tools/adsets.ts (HEC-F ad sets with relaxable targeting get ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG); yvfl/faceads-mcp-v2@91592c417756de82b7454c8c4f793f65947ff84f src/tools/shared.ts (all versions from 2026-10-27, citing Meta's v26 launch post). They disagree on scope for (3): byadsco dates an explicit-flag requirement for non-default targeting to v23.0, and fl100inc/extuitive-skill@caf0724cb79451305f8f7344f86f06b31f688188 says every ad set (subcode 1870227). Read Meta's v26 changelog and the Advantage+ audience reference before 2026-10-27; if confirmed, decide whether meta_create_entity / meta_update_entity / meta_bulk_* should refuse explore and messenger story rather than let Meta error or silently narrow delivery."
+      "note": "Read 2026-11-13 from Meta's own pages: the Graph API v26.0 changelog (rendered client-side, so read in a browser) and the v26 launch post https://developers.facebook.com/blog/post/2026/07/29/introducing-graph-api-v26-and-marketing-api-v26/ (static, readable with curl). The changelog marks Messenger Stories 'Applies to v26.0+. Applies to all Marketing API versions, including unversioned calls, on October 27, 2026.' It marks Explore 'Applies to v26.0+.' with no all-versions line, and advantage_audience 'Applies to v26.0+ at launch. Becomes mandatory for all versions once v25.0 is deprecated; date TBD.' The launch post adds that Explore errors on create/update, that Messenger story is removed silently, and that the advantage_audience rule is creation-only (POST /{ad-account-id}/adsets, /{adset-id}/copies). The earlier third-party reading that all three apply to every version on 2026-10-27 (#229) is therefore wrong for Explore and advantage_audience. The value 2026-10-27 now dates the Messenger Stories change only. packages/meta-mcp/src/mcp-server/tools/utils/v26-targeting-warnings.ts still words all three warnings as 'unconfirmed' and dates all three to 2026-10-27; that text is stale against this fact and is a follow-up, not changed here."
     },
     {
       "id": "meta.graph_v26_field_schema",
@@ -267,7 +266,7 @@
       "id": "sa360.reporting_api_is_read_only",
       "package": "sa360-mcp",
       "class": "behavioral-constraint",
-      "claim": "The Search Ads 360 Reporting API v0 is read-only for campaign entities — there are no campaign/ad-group/ad mutate operations, so the only governed writes are offline conversion upload/modify via the legacy v2 API.",
+      "claim": "The Search Ads 360 Reporting API v0 is read-only for campaign entities \u2014 there are no campaign/ad-group/ad mutate operations, so the only governed writes are offline conversion upload/modify via the legacy v2 API.",
       "value": null,
       "sourceUrl": null,
       "status": "unverified",
@@ -295,7 +294,7 @@
       "id": "dv360.line_items_require_archive_before_delete",
       "package": "dv360-mcp",
       "class": "behavioral-constraint",
-      "claim": "DV360 returns 400 when deleting a line item that has not been archived first, and archiving is itself irreversible — there is no unarchive.",
+      "claim": "DV360 returns 400 when deleting a line item that has not been archived first, and archiving is itself irreversible \u2014 there is no unarchive.",
       "value": null,
       "sourceUrl": null,
       "status": "unverified",
@@ -588,7 +587,44 @@
       "loadBearing": true,
       "codeRefs": ["packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:67"],
       "verificationBasis": "vendor-spec",
-      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. Operations used: DSPQueryCampaign/DSPCreateCampaign/DSPUpdateCampaign, DSPQueryAdGroup/DSPCreateAdGroup/DSPUpdateAdGroup, DSPQueryAd/DSPCreateAd/DSPUpdateAd, DSPQueryTarget/DSPCreateTarget/DSPDeleteTarget, and DSPQueryAdAssociation/DSPCreateAdAssociation/DSPUpdateAdAssociation/DSPDeleteAdAssociation. Conflict on the scope header: the spec declares only AccountIdHeader + ClientIdHeader and the DSP migration guide §2 says Amazon-Advertising-API-Scope is 'Not used ... Remove it', but the generic Unified Postman collection (postman/Amazon_Ads_Unified_API.postman_collection.json, same commit) sends it on every request; this server follows the spec and the DSP guide. Also unverified: that Amazon-Ads-AccountId takes the DSP advertiser ID from GET /dsp/advertisers (the value amazon_dsp_get_campaign_forecast already sends)."
+      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. Operations used: DSPQueryCampaign/DSPCreateCampaign/DSPUpdateCampaign, DSPQueryAdGroup/DSPCreateAdGroup/DSPUpdateAdGroup, DSPQueryAd/DSPCreateAd/DSPUpdateAd, DSPQueryTarget/DSPCreateTarget/DSPDeleteTarget, and DSPQueryAdAssociation/DSPCreateAdAssociation/DSPUpdateAdAssociation/DSPDeleteAdAssociation. Conflict on the scope header: the spec declares only AccountIdHeader + ClientIdHeader and the DSP migration guide \u00a72 says Amazon-Advertising-API-Scope is 'Not used ... Remove it', but the generic Unified Postman collection (postman/Amazon_Ads_Unified_API.postman_collection.json, same commit) sends it on every request; this server follows the spec and the DSP guide. Which ID goes in Amazon-Ads-AccountId is recorded in amazon_dsp.account_id_header_value; the advertiser listing that supplies it is amazon_dsp.advertiser_accounts_api."
+    },
+    {
+      "id": "amazon_dsp.advertiser_accounts_api",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Amazon's advertiser-account listing is POST /adsApi/v1/query/advertiserAccounts (QueryAdvertiserAccount). It replaces GET /dsp/advertisers, GET /dsp/advertisers/{advertiserId}, POST /adsAccounts, POST /adsAccounts/batch, GET /adsAccounts/{accountId} and POST /adsAccounts/list, which Amazon's release note of 2026-07-20 deprecates: from July 2026 they return Warning: 299 headers and new client integrations are blocked, and from July 2027 they return HTTP 404. The operation declares one header, Amazon-Ads-ClientId (no Amazon-Ads-AccountId, no Amazon-Advertising-API-Scope) and OAuth scope advertising::campaign_management; takes { advertiserAccountIdFilter, isGlobalAccountFilter { include: [boolean] }, maxResults 10..100 (default 100), nextToken }; and answers { advertiserAccounts[], nextToken? }. Omitting isGlobalAccountFilter returns global accounts only (non-global accounts need include: [false]); a page may be empty and still carry a nextToken; advertiserAccountIdFilter accepts global account IDs only. amazon-dsp-mcp uses it for session validation ({ maxResults: 10 }) and for amazon_dsp_list_advertisers.",
+      "value": "/adsApi/v1/query/advertiserAccounts",
+      "sourceUrl": "https://advertising.amazon.com/API/docs/en-us/release-notes/index",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-10",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-api-contract.ts:49"
+      ],
+      "verificationBasis": "vendor-docs",
+      "note": "Read 2026-11-13 on advertising.amazon.com (built-in browser, the pages are client-rendered): the release note 'Deprecation of legacy account management APIs' (2026-07-20) and 'Advertiser Account Management APIs now generally available' (2026-06-18); the QueryAdvertiserAccount developer guide (/guides/account-management/query-advertiser-accounts); and the AdvertiserAccounts API 3.0 OpenAPI file the API reference renders, https://d1y2lf8k3vrkfu.cloudfront.net/openapi/en-us/dest/AmazonAdsAPIALLAdvertiserAccountsContract_prod_3p.json (sha256 2640d5100f0aae1c0fc66870831a75279b59f1239971aa0c415ce1533eeefedd). This is a documentation check, not a live call: no request on Amazon's unified surface has ever succeeded against this server (see amazon_dsp.unified_entity_api). The deprecation note says new client integrations are blocked on the legacy endpoints, so an LwA app onboarded after July 2026 could not have used GET /dsp/advertisers at all."
+    },
+    {
+      "id": "amazon_dsp.account_id_header_value",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "On Amazon DSP requests the Amazon-Ads-AccountId header takes the DSP advertiser ID: the dspAdvertiserId (numeric string, one per region NA / EU / FE) in an advertiser account's alternateIds from POST /adsApi/v1/query/advertiserAccounts. Amazon's 'Getting started with Amazon Ads API v1' names two sources for the value, 'the advertiserId of the desired account' from the DSP Advertisers API or 'the dspAdvertiserId value of a linked account' from the Manager Accounts API. The advertiserAccountId the listing returns (global amzn1.ads-account.g.*, or non-global amzn1.ads1.aa1.<country>.<entityId>) is a different identifier. A global account ID is also accepted in the header on campaign-management queries, but then each query must carry an ID filter and no nextToken (HTTP 400 from 2026-11-18, unless marketplaceScopeFilter is GLOBAL), which would break amazon_dsp_list_entities; so the tools' accountId is the dspAdvertiserId. Not stated by Amazon: that the legacy advertiserId and the reporting path's {accountId} equal dspAdvertiserId (the guide offers them as alternative sources for the same header).",
+      "value": "dspAdvertiserId",
+      "sourceUrl": "https://advertising.amazon.com/API/docs/en-us/reference/amazon-ads/getting-started",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-10",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/types.ts:38",
+        "packages/amazon-dsp-mcp/src/mcp-server/tools/utils/account-id.ts:19"
+      ],
+      "verificationBasis": "vendor-docs",
+      "note": "Read 2026-11-13: 'Getting started with Amazon Ads API v1' (Required headers), the QueryAdvertiserAccount developer guide (alternateIds), the campaign-management overview ('Query requests for global accounts') and the release note of 2026-11-10 on the same. Documentation only: Amazon-Ads-AccountId has never been sent with a dspAdvertiserId to Amazon by this server, so whether the value is accepted is unproven live (see amazon_dsp.unified_entity_api)."
     },
     {
       "id": "amazon_dsp.unified_entity_gaps",
@@ -757,7 +793,7 @@
       "id": "meta.rate_limit_default",
       "package": "meta-mcp",
       "class": "behavioral-constraint",
-      "claim": "The per-process default of 20 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: full-access ads_management BUC ~100,000/hour per ad account (+40 x active ads); dev tier ~300/hour (~5/min) per ad account — below this default, so dev-tier apps should lower META_RATE_LIMIT_PER_MINUTE. Keys are per Graph user (the token's `/me` id): `meta:user:{id}:account:act_{n}` for calls on a named ad account and `meta:user:{id}` for the rest, so one process sends at most the default per user per ad account plus the default per user on the account-less bucket, and 10 instances at most 10x that; two users on one ad account are two buckets, since the account id is caller input. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
+      "claim": "The per-process default of 20 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: full-access ads_management BUC ~100,000/hour per ad account (+40 x active ads); dev tier ~300/hour (~5/min) per ad account \u2014 below this default, so dev-tier apps should lower META_RATE_LIMIT_PER_MINUTE. Keys are per Graph user (the token's `/me` id): `meta:user:{id}:account:act_{n}` for calls on a named ad account and `meta:user:{id}` for the rest, so one process sends at most the default per user per ad account plus the default per user on the account-less bucket, and 10 instances at most 10x that; two users on one ad account are two buckets, since the account id is caller input. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
       "value": "default(20)",
       "sourceUrl": "https://developers.facebook.com/docs/marketing-api/overview/rate-limiting",
       "status": "unverified",
@@ -920,6 +956,48 @@
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": ["packages/tiktok-mcp/src/services/tiktok/tiktok-reporting-service.ts:192"]
+    },
+    {
+      "id": "tiktok.legacy_create_cutoff_2027",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "From 2027-01-01 `/campaign/create/`, `/campaign/copy/task/create/`, `/adgroup/create/`, `/ad/create/` and `/ad/aco/create/` no longer create or copy non-Search Legacy Manual Flow campaigns, or create ad groups or ads under them, for the Sales, App Promotion and Lead Generation objectives; TikTok says to migrate to the Upgraded Smart+ APIs (`/smart_plus/*`). The notice names only those three objectives. Read in a rendered browser, 2026-11-13.",
+      "value": "2027-01-01",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs/whats-new/v1.3",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-12",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/mcp-server/tools/utils/smart-plus-mapping.ts:10"]
+    },
+    {
+      "id": "tiktok.smart_plus_objectives",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "`/smart_plus/campaign/create/` accepts objective_type APP_PROMOTION, WEB_CONVERSIONS and LEAD_GENERATION only (WEB_CONVERSIONS needs `sales_destination`, APP_PROMOTION needs `app_promotion_type`), so objectives such as TRAFFIC cannot be created through it and stay on the legacy endpoints. That WEB_CONVERSIONS is the cutoff notice's \"Sales\" objective is inferred: TikTok's page does not map the names. Read in a rendered browser, 2026-11-13.",
+      "value": "APP_PROMOTION",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs/create-an-upgraded-smart-campaign/v1.3",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-12",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/mcp-server/tools/utils/smart-plus-mapping.ts:37"]
+    },
+    {
+      "id": "tiktok.smart_plus_legacy_compat",
+      "package": "tiktok-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Upgraded Smart+ entities are addressed differently from legacy ones: the ad id is `smart_plus_ad_id` (create response, update body; `smart_plus_ad_ids` for status update), `campaign/create/` and `adgroup/create/` require a `request_id` (idempotency key), and the legacy `{campaign,adgroup,ad}/update/` endpoints cannot update Upgraded Smart+ entities (the legacy `get/` endpoints do return them by default). Campaign management needs the ad account allowlisted by TikTok. Source: TikTok's Upgraded Smart+ compatibility guide and create/status pages, read in a rendered browser 2026-11-13; field names also match the official SDK `yml_files/smart_plus_*.yml` at f809c39.",
+      "value": "smart_plus_ad_id",
+      "sourceUrl": "https://business-api.tiktok.com/portal/docs?id=1854112742370306",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-12",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/tiktok-mcp/src/mcp-server/tools/utils/smart-plus-mapping.ts:19"]
     },
     {
       "id": "ttd.rate_limit_default",

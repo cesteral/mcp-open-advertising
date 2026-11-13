@@ -43,6 +43,11 @@ export const tiktokWorkflowIdByToolName: Record<string, string> = {
   tiktok_create_entity: "mcp.execute.tiktok_entity_update",
   tiktok_update_entity: "mcp.execute.tiktok_entity_update",
   tiktok_delete_entity: "mcp.execute.tiktok_entity_update",
+  // Upgraded Smart+ (the create path for Sales / App Promotion / Lead Generation from 2027-01-01)
+  tiktok_get_smart_plus_entity: "mcp.execute.tiktok_entity_read",
+  tiktok_create_smart_plus_entity: "mcp.execute.tiktok_entity_update",
+  tiktok_update_smart_plus_entity: "mcp.execute.tiktok_entity_update",
+  tiktok_update_smart_plus_status: "mcp.execute.tiktok_entity_update",
   // Reporting
   tiktok_get_report: "mcp.execute.tiktok_reporting",
   tiktok_get_report_breakdowns: "mcp.execute.tiktok_reporting",

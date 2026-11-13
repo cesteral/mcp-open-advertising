@@ -16,13 +16,13 @@ The entity tools keep the pre-Unified entity-type names (`entityType` accepts ex
 | `target`              | `targets`        | `targetId`        | —   | ✅     | —      | ✅ `delete/targets`                        |
 | `creativeAssociation` | `adAssociations` | `adAssociationId` | ✅  | ✅     | ✅     | ✅ `delete/adAssociations`                 |
 
-- Every entity tool takes `accountId` — the DSP advertiser ID (`advertiserId` from `amazon_dsp_list_advertisers`), sent as the `Amazon-Ads-AccountId` header. The advertiser is no longer a body field.
+- Every entity tool takes `accountId` — the DSP advertiser ID (a `dspAdvertiserId` from an account's `alternateIds` in `amazon_dsp_list_advertisers`), sent as the `Amazon-Ads-AccountId` header. The advertiser is no longer a body field.
 - Payloads use Unified field names (`flights[]`, `budgets[]`, `optimizations`, `bid.baseBid`, `targetDetails`, `adType` + `creative`, …). `adProduct: "AMAZON_DSP"` is added for you. A few legacy names are mapped mechanically: `orderId` → `campaignId`, `lineItemId` → `adGroupId`, `creativeId` → `adId`, `country` → `countries[]`, a DAILY/LIFETIME `budget` → `budgets[]`; other legacy fields (`bidding`, order `startDateTime`, `creativeType`, `expression`, …) are refused with the Unified field to use.
 - Orders and line items can only be **created PAUSED** (the only create state Amazon accepts for DSP campaigns and ad groups); enable them with `amazon_dsp_bulk_update_status`.
 - `state` on update is `ENABLED` or `PAUSED` only — the Unified API has no ARCHIVED update state. Orders and line items are removed through the one legacy call this server still makes (`PUT /dsp/orders|lineItems/{id} { state: "ARCHIVED" }`, never verified live); creatives (ads) cannot be removed.
 - Targets have no Unified read-by-ID and no update: list them with `filters.adGroupId`, delete and recreate to change them.
 - Lists paginate with `nextToken`.
-- `amazon_dsp_list_advertisers` (`GET /dsp/advertisers`) and `amazon_dsp_get_ad_preview` (`GET /dsp/creatives/{id}/preview`) stay on legacy endpoints: the Unified DSP spec has no equivalent.
+- `amazon_dsp_list_advertisers` and the session-validation call use `POST /adsApi/v1/query/advertiserAccounts` (Amazon deprecated `GET /dsp/advertisers`: HTTP 404 from July 2027). It lists global accounts by default; `isGlobalAccount: false` lists non-global ones. The `accountId` the other tools take is a `dspAdvertiserId` from an account's `alternateIds`, not the `advertiserAccountId`. `amazon_dsp_get_ad_preview` (`GET /dsp/creatives/{id}/preview`) stays on a legacy endpoint: the Unified DSP spec has no equivalent.
 
 Commitments, commitment spend and campaign forecasts use the same Unified API family (`/adsApi/v1/*`).
 
@@ -35,7 +35,7 @@ DSP reporting uses DSP reports v3, scoped by the DSP advertiser ID in the URL pa
 - Body: `{ startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD", type, dimensions: [...], metrics: [...] }`
 - Status values: `IN_PROGRESS`, `SUCCESS`, `FAILURE`; on `SUCCESS` the status response carries a presigned S3 `location`
 
-`accountId` is the DSP advertiser ID (the `advertiserId` returned by `amazon_dsp_list_advertisers`), not the profile ID. The reporting tools (`amazon_dsp_submit_report`, `amazon_dsp_check_report_status`, `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`) all take it as an input.
+`accountId` is the DSP advertiser ID (a `dspAdvertiserId` from an account's `alternateIds` in `amazon_dsp_list_advertisers`), not the profile ID. The reporting tools (`amazon_dsp_submit_report`, `amazon_dsp_check_report_status`, `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`) all take it as an input.
 
 Downloaded reports are handled as raw JSON, with CSV-style fallback parsing for defensive compatibility.
 

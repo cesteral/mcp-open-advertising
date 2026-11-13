@@ -3,7 +3,6 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { nextAmazonDspStartIndex } from "../../../services/amazon-dsp/types.js";
 import {
   PaginationOutputSchema,
   buildPaginationOutput,
@@ -11,44 +10,57 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import type { AmazonDspAdvertiserAccount } from "../../../services/amazon-dsp/types.js";
 
 const TOOL_NAME = "amazon_dsp_list_advertisers";
 const TOOL_TITLE = "List AmazonDsp Advertisers";
-const TOOL_DESCRIPTION = `List AmazonDsp advertiser accounts accessible to the authenticated user.
+const TOOL_DESCRIPTION = `List the Amazon Ads advertiser accounts the authenticated credentials can access.
 
-Returns advertiser IDs, names, and account status information.
-Pass an \`advertiserId\` from the results as \`accountId\` to the entity tools (the Unified API's \`Amazon-Ads-AccountId\` header) and to the reporting tools.
-Uses the legacy \`GET /dsp/advertisers\` endpoint — the Unified DSP API has no advertiser listing.
+Calls \`POST /adsApi/v1/query/advertiserAccounts\` (Amazon deprecated the legacy \`GET /dsp/advertisers\`; it returns HTTP 404 from July 2027).
+Each account has an \`advertiserAccountId\` (global \`amzn1.ads-account.g.*\`, or non-global \`amzn1.ads1.aa1.<country>.<entityId>\`) and \`alternateIds\`. The DSP entries of \`alternateIds\` carry \`dspAdvertiserId\` and \`region\` (NA, EU, FE).
+Pass a \`dspAdvertiserId\` as \`accountId\` to the entity and reporting tools (it becomes the Unified API's \`Amazon-Ads-AccountId\` header; Amazon's getting-started guide names it as the value for ADSP requests). The \`advertiserAccountId\` is not the DSP advertiser ID, and a global \`amzn1.ads-account.g.*\` ID as \`accountId\` makes Amazon require an ID filter on every entity query. A global account lists one \`dspAdvertiserId\` per region; use the one whose region matches this server's configured Amazon host.
 
-Amazon DSP paginates by offset. When the response's \`pagination.nextCursor\` is non-null,
-call again with \`startIndex\` set to it to fetch the next page.`;
+By default Amazon returns **global accounts only**. Set \`isGlobalAccount: false\` to list non-global (single-marketplace) accounts; to see every account, run both.
+
+Pagination is cursor-based: when \`pagination.nextCursor\` is non-null, call again with \`nextToken\` set to it. A page can be empty and still carry a next cursor, so keep going until it is null.`;
 
 export const ListAdvertisersInputSchema = z
   .object({
-    startIndex: z
-      .number()
-      .int()
-      .min(0)
+    isGlobalAccount: z
+      .boolean()
       .optional()
-      .describe("Zero-based offset of the first advertiser to return (default 0)."),
+      .describe(
+        "true = global accounts, false = non-global accounts. Omit for Amazon's default, which is global accounts only."
+      ),
     pageSize: z
       .number()
       .int()
-      .min(1)
+      .min(10)
       .max(100)
       .optional()
-      .describe("Number of advertisers per page (default 25, max 100)."),
+      .describe(
+        "Maximum accounts per page (Amazon's maxResults: 10-100, default 100). A page may hold fewer."
+      ),
+    nextToken: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Cursor from the previous page's pagination.nextCursor."),
   })
-  .describe("Parameters for listing AmazonDsp advertisers");
+  .describe("Parameters for listing Amazon Ads advertiser accounts");
 
 export const ListAdvertisersOutputSchema = z
   .object({
-    advertisers: z.array(z.record(z.any())).describe("List of advertiser accounts"),
-    count: z.number().describe("Number of advertisers returned in this page"),
+    advertiserAccounts: z
+      .array(z.record(z.any()))
+      .describe(
+        "Advertiser accounts as Amazon returns them (advertiserAccountId, alternateIds, displayName, ...)"
+      ),
+    count: z.number().describe("Number of accounts returned in this page"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
-  .describe("Advertiser list result");
+  .describe("Advertiser account list result");
 
 type ListAdvertisersInput = z.infer<typeof ListAdvertisersInputSchema>;
 type ListAdvertisersOutput = z.infer<typeof ListAdvertisersOutputSchema>;
@@ -60,34 +72,49 @@ export async function listAdvertisersLogic(
 ): Promise<ListAdvertisersOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
-  const startIndex = input.startIndex ?? 0;
-  const pageSize = input.pageSize ?? 25;
-  const result = await amazonDspService.listAdvertisers(startIndex, pageSize, context);
-
-  const advertisers = result.entities as unknown as Record<string, unknown>[];
-  const totalResults = result.pageInfo.totalResults;
-  const nextStart = nextAmazonDspStartIndex(result.pageInfo, advertisers.length);
+  const page = await amazonDspService.listAdvertisers(
+    {
+      isGlobalAccount: input.isGlobalAccount,
+      maxResults: input.pageSize,
+      nextToken: input.nextToken,
+    },
+    context
+  );
 
   return {
-    advertisers,
-    count: advertisers.length,
+    advertiserAccounts: page.accounts as unknown as Record<string, unknown>[],
+    count: page.accounts.length,
     pagination: buildPaginationOutput({
-      nextCursor: nextStart !== null ? String(nextStart) : null,
-      pageSize: advertisers.length,
-      totalCount: totalResults,
-      nextPageInputKey: "startIndex",
+      nextCursor: page.nextToken ?? null,
+      pageSize: page.accounts.length,
+      nextPageInputKey: "nextToken",
     }),
     timestamp: new Date().toISOString(),
   };
 }
 
+/** One line per DSP advertiser ID: the value the model passes as `accountId`. */
+function dspAdvertiserLines(accounts: AmazonDspAdvertiserAccount[]): string[] {
+  const lines: string[] = [];
+  for (const account of accounts) {
+    for (const alt of account.alternateIds ?? []) {
+      if (!alt.dspAdvertiserId) continue;
+      const name = account.displayName ? ` — ${account.displayName}` : "";
+      lines.push(
+        `accountId ${alt.dspAdvertiserId} (region ${alt.region ?? "?"}, ${account.advertiserAccountId})${name}`
+      );
+    }
+  }
+  return lines;
+}
+
 export function listAdvertisersResponseFormatter(result: ListAdvertisersOutput): McpTextContent[] {
-  const { totalCount } = result.pagination;
-  const totalInfo = totalCount !== undefined ? ` (total: ${totalCount})` : "";
+  const lines = dspAdvertiserLines(result.advertiserAccounts as AmazonDspAdvertiserAccount[]);
+  const summary = lines.length > 0 ? `\nDSP advertiser IDs:\n${lines.join("\n")}\n` : "";
   return [
     {
       type: "text" as const,
-      text: `Found ${result.count} advertiser(s)${totalInfo}\n${JSON.stringify(result.advertisers, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Found ${result.count} advertiser account(s)\n${summary}\n${JSON.stringify(result.advertiserAccounts, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -106,18 +133,25 @@ export const listAdvertisersTool = {
   },
   inputExamples: [
     {
-      label: "List first page of advertisers",
+      label: "List global advertiser accounts (Amazon's default)",
       input: {},
     },
     {
+      label: "List non-global (single-marketplace) accounts",
+      input: { isGlobalAccount: false },
+    },
+    {
       label: "Fetch the next page",
-      input: { startIndex: 25, pageSize: 25 },
+      input: {
+        isGlobalAccount: false,
+        nextToken: "eyJsYXN0UmV0dXJuZWRWYWx1ZSI6...",
+      },
     },
   ],
   logic: listAdvertisersLogic,
   responseFormatter: listAdvertisersResponseFormatter,
   untrustedContent: {
-    structuredPaths: ["$.advertisers"],
+    structuredPaths: ["$.advertiserAccounts"],
     contentBlocks: [0],
   },
 };
