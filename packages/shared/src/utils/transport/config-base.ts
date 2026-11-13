@@ -127,7 +127,7 @@ export function parseConfigWithSchema<T extends z.ZodTypeAny>(
       error.errors.forEach((err) => {
         process.stderr.write(`[config]   - ${err.path.join(".")}: ${err.message}\n`);
       });
-      throw new Error("Invalid configuration");
+      throw new Error("Invalid configuration", { cause: error });
     }
     throw error;
   }
