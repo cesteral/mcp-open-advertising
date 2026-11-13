@@ -7,6 +7,12 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
+import { readPartnerSnapshotShape } from "@cesteral/shared";
+import {
+  buildDv360Snapshot,
+  ENTITY_KIND_MAP,
+  resolveDv360Currency,
+} from "../utils/capture-snapshot.js";
 import type {
   RequestContext,
   McpTextContent,
@@ -56,6 +62,10 @@ export const GetEntityOutputSchema = z
   .object({
     entity: z.record(z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
+    // The canonical snapshot of the entity, at the top level, for a governed
+    // entity kind: governance reads this tool as the read partner of the
+    // entity writes and parses `structuredContent` as a snapshot.
+    ...readPartnerSnapshotShape,
   })
   .describe("Entity retrieval result");
 
@@ -79,9 +89,25 @@ export async function getEntityLogic(
   // Fetch entity
   const entity = await dv360Service.getEntity(input.entityType, entityIds, context);
 
+  const record = entity as Record<string, any>;
+
+  // The canonical snapshot, for a governed kind only (campaign, insertion order,
+  // line item). The advertiser currency is read once, and degrades to the
+  // "unknown currency" code rather than failing the read.
+  const snapshot = ENTITY_KIND_MAP[input.entityType]
+    ? buildDv360Snapshot(
+        input.entityType,
+        entityIds,
+        record,
+        record,
+        await resolveDv360Currency(dv360Service, input.entityType, entityIds, context)
+      )
+    : null;
+
   return {
-    entity: entity as Record<string, any>,
+    entity: record,
     timestamp: new Date().toISOString(),
+    ...(snapshot ?? {}),
   };
 }
 
@@ -152,5 +178,8 @@ export const getEntityTool = {
   },
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
-  untrustedContent: { structuredPaths: ["$.entity"], contentBlocks: [0] },
+  untrustedContent: {
+    structuredPaths: ["$.entity", "$.displayName", "$.parents"],
+    contentBlocks: [0],
+  },
 };

@@ -67,6 +67,8 @@ export {
   type CanonicalStatus,
   type StatusSnapshot,
   type ScheduleSnapshot,
+  type SnapshotParent,
+  type SnapshotParentKind,
 } from "./snapshot.js";
 
 // Governed write response shapes

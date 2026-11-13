@@ -17,6 +17,7 @@
  * the governed scope (campaign / adGroup / campaignBudget) fall through.
  */
 
+import { buildSnapshotParents } from "@cesteral/shared";
 import type {
   CanonicalEntityKind,
   CanonicalStatus,
@@ -138,6 +139,20 @@ export function unwrapResource(
 }
 
 /**
+ * The campaign id inside a `customers/{cid}/campaigns/{campaignId}` resource
+ * name. A campaign's snapshot carries the bare numeric id as `platformEntityId`
+ * (it is the id every `gads_*` tool takes, and the one `buildGetByIdQuery`
+ * accepts), so an ad group's parent id must take that same form, not the
+ * resource name: a consumer matches a campaign-scoped control by comparing the
+ * two as strings. A value that is not a campaign resource name names no parent.
+ */
+export function campaignIdFromResourceName(resourceName: unknown): string | undefined {
+  if (typeof resourceName !== "string") return undefined;
+  const match = /^customers\/\d+\/campaigns\/(\d+)$/.exec(resourceName.trim());
+  return match?.[1];
+}
+
+/**
  * Pure builder: normalize a flat Google Ads resource object into the canonical
  * snapshot. `resource` is the un-nested entity (post-overlay for dry-run, or
  * the post-write read for `after`). `currency` is the customer's ISO 4217 code
@@ -169,6 +184,13 @@ export function buildGAdsSnapshot(
   const startAt = r.startDateTime ?? r.start_date_time;
   const endAt = r.endDateTime ?? r.end_date_time;
 
+  // An ad group names its campaign in `campaign` (a resource name); a campaign
+  // or budget has no ancestor between it and the customer, which is `accountId`.
+  const parents =
+    entityKind === "ad_group"
+      ? buildSnapshotParents([{ kind: "campaign", id: campaignIdFromResourceName(r.campaign) }])
+      : undefined;
+
   return {
     schemaVersion: 1,
     platform: "google_ads",
@@ -185,6 +207,7 @@ export function buildGAdsSnapshot(
       startAt: typeof startAt === "string" ? startAt : null,
       endAt: typeof endAt === "string" ? endAt : null,
     },
+    ...(parents ? { parents } : {}),
   };
 }
 

@@ -17,6 +17,7 @@
  * (creatives, ad groups) fall outside round 1.
  */
 
+import { buildSnapshotParents } from "@cesteral/shared";
 import type {
   CanonicalEntityKind,
   CanonicalStatus,
@@ -333,6 +334,23 @@ export function buildDv360Snapshot(
   const flightStart = merged?.flight?.dateRange?.startDate;
   const flightEnd = merged?.flight?.dateRange?.endDate;
 
+  // The ancestors the entity's own `campaignId` / `insertionOrderId` fields
+  // name (the overlay first, so a create payload counts; the current read-back
+  // otherwise). A line item sits under an insertion order under a campaign; an
+  // insertion order sits under a campaign; a campaign's only ancestor is the
+  // advertiser, which is `accountId`.
+  const ancestor = (field: "campaignId" | "insertionOrderId"): unknown =>
+    merged?.[field] ?? (current as Record<string, unknown>)?.[field];
+  const parents =
+    entityKind === "line_item"
+      ? buildSnapshotParents([
+          { kind: "campaign", id: ancestor("campaignId") },
+          { kind: "insertion_order", id: ancestor("insertionOrderId") },
+        ])
+      : entityKind === "insertion_order"
+        ? buildSnapshotParents([{ kind: "campaign", id: ancestor("campaignId") }])
+        : undefined;
+
   return {
     schemaVersion: 1,
     platform: "dv360",
@@ -366,6 +384,7 @@ export function buildDv360Snapshot(
         ? `${flightEnd.year}-${String(flightEnd.month).padStart(2, "0")}-${String(flightEnd.day).padStart(2, "0")}`
         : null,
     },
+    ...(parents ? { parents } : {}),
   };
 }
 

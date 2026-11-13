@@ -102,6 +102,12 @@ const logger = createLogger("component-name");
 const params = schema.parse(rawInput);
 ```
 
+## Entity Snapshots and `parents`
+
+The governance layer parses a governed write's read partner (`*_get_entity`) `structuredContent` as a `NormalizedEntitySnapshot`, so on the four hierarchical platforms (TTD, Google Ads, Meta, DV360) `*_get_entity` returns the snapshot at the top level beside `entity` / `timestamp` (`readPartnerSnapshotShape` in `@cesteral/shared`; an ungoverned entity kind returns neither). The same `build*Snapshot` builder feeds dry-run `expectedPostState` and the before/after of a real write.
+
+`parents` (`campaign` / `insertion_order`, at most 4) lets a campaign-scoped control decide an ad-set / ad-group / line-item write. Rules: only levels above the entity (an advertiser is `accountId`); **absent means unknown, never "none"** (omit the key, never send `[]`, never invent a name); the parent `id` is in the form the connector uses as that ancestor's `platformEntityId` (Google Ads: the numeric campaign id, not the resource name); build it with `buildSnapshotParents` from `@cesteral/shared`. It is an optional, additive field of the contract snapshot (contract 2.3.0).
+
 ## Server-Specific Notes
 
 Platform quirks that are easy to forget live next to the code, in `packages/<server>/CLAUDE.md`. Claude Code loads that file when you work in the package; read it before changing the package's tools or clients.

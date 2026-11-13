@@ -44,7 +44,11 @@ export type {
   BudgetSnapshot,
   BudgetSegmentSnapshot,
   MoneyAmount,
+  SnapshotParent,
+  SnapshotParentKind,
 } from "./types/normalized-entity-snapshot.js";
+export { readPartnerSnapshotShape } from "./schemas/read-partner-snapshot.js";
+export { buildSnapshotParents } from "./utils/mcp/snapshot-parents.js";
 export type {
   DryRunResult,
   DryRunValidationError,

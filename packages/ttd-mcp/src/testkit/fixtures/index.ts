@@ -173,6 +173,7 @@ export const pauseAdGroup: TtdWriteFixture = {
       lifetime: null,
     },
     schedule: { startAt: null, endAt: null },
+    parents: [{ kind: "campaign", id: "camp-REDACTED-2" }],
   },
   description: "pause: ad-group transition Available → Paused (budget out of scope)",
 };
@@ -211,6 +212,7 @@ export const resumeAdGroup: TtdWriteFixture = {
       lifetime: null,
     },
     schedule: { startAt: null, endAt: null },
+    parents: [{ kind: "campaign", id: "camp-REDACTED-3" }],
   },
   description: "resume: ad-group transition Paused → Available (budget out of scope)",
 };
@@ -263,6 +265,7 @@ export const createAdGroup: TtdWriteFixture = {
     entityId: "",
     data: {
       AdGroupName: "New Ad Group",
+      CampaignId: "camp-REDACTED-1",
       AdvertiserId: advertiserId,
       Availability: "Paused",
     },
@@ -278,6 +281,7 @@ export const createAdGroup: TtdWriteFixture = {
     status: { canonical: "paused", platformRaw: "Paused" },
     budget: { daily: null, lifetime: null },
     schedule: { startAt: null, endAt: null },
+    parents: [{ kind: "campaign", id: "camp-REDACTED-1" }],
   },
   description: "create: adGroup (would-be-created, no round-3-scoped budget)",
 };

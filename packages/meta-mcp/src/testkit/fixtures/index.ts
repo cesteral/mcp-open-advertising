@@ -386,6 +386,7 @@ export const createAdSet: MetaWriteFixture = {
     status: { canonical: "paused", platformRaw: "PAUSED" },
     budget: { daily: { amountMinor: 5000, currency: "USD" }, lifetime: null },
     schedule: { startAt: null, endAt: null },
+    parents: [{ kind: "campaign", id: "campaign-REDACTED-1" }],
   },
   description: "create: adSet (would-be-created, daily budget $50, status PAUSED)",
 };
