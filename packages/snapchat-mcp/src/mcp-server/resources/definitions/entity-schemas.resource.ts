@@ -112,7 +112,6 @@ const ENTITY_SCHEMA_CONTENT: Record<SnapchatEntityType, string> = {
                 enum: [
                   "INTERSTITIAL_USER",
                   "INTERSTITIAL_CONTENT",
-                  "INTERSTITIAL_SPOTLIGHT",
                   "INSTREAM",
                   "PUBLIC_STORIES_INSTREAM",
                   "CHAT_FEED",
