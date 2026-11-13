@@ -20,7 +20,10 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import { resolveSessionServicesFromStore } from "@cesteral/shared";
 const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
-import { listAdvertisersLogic } from "../../src/mcp-server/tools/definitions/list-advertisers.tool.js";
+import {
+  listAdvertisersLogic,
+  listAdvertisersResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/list-advertisers.tool.js";
 
 const mockListAdvertisers = vi.fn();
 
@@ -35,45 +38,77 @@ const ctx = { requestId: "req" } as any;
 const sdk = { sessionId: "s" } as any;
 
 describe("amazon_dsp_list_advertisers pagination", () => {
-  it("passes startIndex/pageSize and emits an offset cursor when more remain", async () => {
+  it("passes filter/pageSize/nextToken through and emits Amazon's cursor when more remain", async () => {
     mockListAdvertisers.mockResolvedValue({
-      entities: [{ advertiserId: "1" }, { advertiserId: "2" }],
-      pageInfo: { startIndex: 0, count: 2, totalResults: 5 },
+      accounts: [{ advertiserAccountId: "a1" }, { advertiserAccountId: "a2" }],
+      nextToken: "tok-2",
     });
 
-    const result = await listAdvertisersLogic({ startIndex: 0, pageSize: 2 }, ctx, sdk);
+    const result = await listAdvertisersLogic(
+      { isGlobalAccount: false, pageSize: 10, nextToken: "tok-1" },
+      ctx,
+      sdk
+    );
 
-    expect(mockListAdvertisers).toHaveBeenCalledWith(0, 2, ctx);
+    expect(mockListAdvertisers).toHaveBeenCalledWith(
+      { isGlobalAccount: false, maxResults: 10, nextToken: "tok-1" },
+      ctx
+    );
     expect(result.count).toBe(2);
-    expect(result.pagination.nextCursor).toBe("2");
+    expect(result.pagination.nextCursor).toBe("tok-2");
     expect(result.pagination.hasMore).toBe(true);
-    expect(result.pagination.totalCount).toBe(5);
-    expect(result.pagination.nextPageInputKey).toBe("startIndex");
+    expect(result.pagination.nextPageInputKey).toBe("nextToken");
   });
 
-  it("reports exhausted pagination on the last page", async () => {
+  it("reports exhausted pagination when Amazon sends no nextToken", async () => {
     mockListAdvertisers.mockResolvedValue({
-      entities: [{ advertiserId: "5" }],
-      pageInfo: { startIndex: 4, count: 25, totalResults: 5 },
+      accounts: [{ advertiserAccountId: "a5" }],
+      nextToken: undefined,
     });
 
-    const result = await listAdvertisersLogic({ startIndex: 4 }, ctx, sdk);
+    const result = await listAdvertisersLogic({}, ctx, sdk);
 
-    expect(mockListAdvertisers).toHaveBeenCalledWith(4, 25, ctx);
+    expect(mockListAdvertisers).toHaveBeenCalledWith(
+      { isGlobalAccount: undefined, maxResults: undefined, nextToken: undefined },
+      ctx
+    );
     expect(result.pagination.nextCursor).toBeNull();
     expect(result.pagination.hasMore).toBe(false);
   });
 
-  it("keeps paginating after a full page when Amazon omits totalResults (fleet review #13)", async () => {
-    mockListAdvertisers.mockResolvedValue({
-      entities: [{ advertiserId: "1" }, { advertiserId: "2" }],
-      pageInfo: { startIndex: 0, count: 2, totalResults: undefined },
-    });
+  it("keeps paginating through an empty page that carries a nextToken", async () => {
+    // Amazon: "The API may return advertiserAccounts: [] with a valid nextToken."
+    mockListAdvertisers.mockResolvedValue({ accounts: [], nextToken: "tok-empty" });
 
-    const result = await listAdvertisersLogic({ startIndex: 0, pageSize: 2 }, ctx, sdk);
+    const result = await listAdvertisersLogic({}, ctx, sdk);
 
-    expect(result.pagination.nextCursor).toBe("2");
+    expect(result.count).toBe(0);
+    expect(result.pagination.nextCursor).toBe("tok-empty");
     expect(result.pagination.hasMore).toBe(true);
-    expect(result.pagination.totalCount).toBeUndefined();
+  });
+});
+
+describe("amazon_dsp_list_advertisers formatter", () => {
+  it("lists every dspAdvertiserId so the model can pass one as accountId", () => {
+    const text = listAdvertisersResponseFormatter({
+      advertiserAccounts: [
+        {
+          advertiserAccountId: "amzn1.ads-account.g.abc",
+          displayName: "My Global Account",
+          alternateIds: [
+            { dspAdvertiserId: "581500279506501055", region: "NA" },
+            { countryCode: "US", entityId: "ENTITYTEST123", profileId: "1034391974246256" },
+          ],
+        },
+      ],
+      count: 1,
+      pagination: { nextCursor: null, hasMore: false, pageSize: 1, nextPageInputKey: "nextToken" },
+      timestamp: "2026-11-13T00:00:00.000Z",
+    })[0].text;
+
+    expect(text).toContain(
+      "accountId 581500279506501055 (region NA, amzn1.ads-account.g.abc) — My Global Account"
+    );
+    expect(text).not.toContain("accountId ENTITYTEST123");
   });
 });

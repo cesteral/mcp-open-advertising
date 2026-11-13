@@ -16,12 +16,16 @@ describe("AmazonDspAccessTokenAdapter", () => {
     vi.resetAllMocks();
   });
 
-  it("validates by calling GET /dsp/advertisers (not TikTok endpoint)", async () => {
+  it("validates by calling POST /adsApi/v1/query/advertiserAccounts (not the deprecated GET /dsp/advertisers)", async () => {
+    // basis: QueryAdvertiserAccount (AdvertiserAccounts API 3.0, https://advertising.amazon.com/API/docs/en-us/api-spec-v1-advertiseraccounts):
+    // POST, body { maxResults 10..100 }, 200 { advertiserAccounts: [{ advertiserAccountId, displayName, ... }], nextToken? }.
+    // The legacy GET /dsp/advertisers is deprecated (release note 2026-07-20).
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        response: [{ advertiserId: "adv_1", name: "Test Advertiser" }],
-        totalResults: 1,
+        advertiserAccounts: [
+          { advertiserAccountId: "amzn1.ads-account.g.abc", displayName: "Test Advertiser" },
+        ],
       }),
     });
     const adapter = new AmazonDspAccessTokenAdapter(
@@ -31,21 +35,18 @@ describe("AmazonDspAccessTokenAdapter", () => {
     );
     await adapter.validate();
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://advertising-api.amazon.com/dsp/advertisers?startIndex=0&count=1",
+      "https://advertising-api.amazon.com/adsApi/v1/query/advertiserAccounts",
       expect.any(Number),
       undefined,
-      expect.objectContaining({ method: "GET" })
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ maxResults: 10 }) })
     );
-    expect(adapter.userId).toBeTruthy();
+    expect(adapter.userId).toBe("Test Advertiser");
   });
 
   it("includes Amazon required headers in validation request", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({
-        response: [{ advertiserId: "adv_1", name: "Advertiser" }],
-        totalResults: 1,
-      }),
+      json: async () => ({ advertiserAccounts: [{ displayName: "Advertiser" }] }),
     });
     const adapter = new AmazonDspAccessTokenAdapter(
       "token123",
@@ -55,7 +56,11 @@ describe("AmazonDspAccessTokenAdapter", () => {
     );
     await adapter.validate();
     const callHeaders = mockFetch.mock.calls[0][3].headers;
-    expect(callHeaders["Amazon-Advertising-API-Scope"]).toBe("profile_123");
+    // The operation declares only ClientIdHeader (Amazon-Ads-ClientId); no scope header.
+    expect(callHeaders["Amazon-Ads-ClientId"]).toBe("my_client_id");
+    expect(callHeaders["Amazon-Advertising-API-Scope"]).toBeUndefined();
+    expect(callHeaders["Amazon-Advertising-API-ClientId"]).toBeUndefined();
+    expect(callHeaders.Authorization).toBe("Bearer token123");
   });
 
   it("throws on HTTP error", async () => {
@@ -83,7 +88,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ response: [{ name: "Advertiser" }], totalResults: 1 }),
+        json: async () => ({ advertiserAccounts: [{ displayName: "Advertiser" }] }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "client_id", appSecret: "client_secret", refreshToken: "amz_rt" },
@@ -102,7 +107,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ advertiserAccounts: [{ displayName: "A" }] }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "my_client_id", appSecret: "my_secret", refreshToken: "my_rt" },
@@ -125,7 +130,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ advertiserAccounts: [{ displayName: "A" }] }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "a", appSecret: "b", refreshToken: "c" },
@@ -147,7 +152,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
     await expect(adapter.getAccessToken()).rejects.toThrow("access_token");
   });
 
-  it("includes Amazon-Advertising-API headers in validation call", async () => {
+  it("sends Amazon-Ads-ClientId and no scope header in the validation call", async () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -155,7 +160,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ advertiserAccounts: [{ displayName: "A" }] }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "my_client", appSecret: "s", refreshToken: "r" },
@@ -164,8 +169,9 @@ describe("AmazonDspRefreshTokenAdapter", () => {
     await adapter.validate();
     // Validation call is the second fetch call
     const validationHeaders = mockFetch.mock.calls[1][3].headers;
-    expect(validationHeaders["Amazon-Advertising-API-ClientId"]).toBe("my_client");
-    expect(validationHeaders["Amazon-Advertising-API-Scope"]).toBe("profile_456");
+    expect(validationHeaders["Amazon-Ads-ClientId"]).toBe("my_client");
+    expect(validationHeaders["Amazon-Advertising-API-ClientId"]).toBeUndefined();
+    expect(validationHeaders["Amazon-Advertising-API-Scope"]).toBeUndefined();
   });
 
   it("classifies invalid_grant (expired/revoked refresh token) as Unauthorized", async () => {

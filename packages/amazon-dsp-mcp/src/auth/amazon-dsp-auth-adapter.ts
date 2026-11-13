@@ -10,7 +10,8 @@
  *    auto-refresh access tokens via Amazon LwA endpoint. Caching + single-flight
  *    refresh come from OAuth2RefreshAdapterBase in @cesteral/shared.
  *
- * Validates tokens by calling GET /dsp/advertisers?startIndex=0&count=1.
+ * Validates tokens by calling POST /adsApi/v1/query/advertiserAccounts
+ * (the legacy GET /dsp/advertisers is deprecated, HTTP 404 from July 2027).
  * Token refresh uses POST https://api.amazon.com/auth/o2/token (form-encoded).
  * Token is passed via Authorization: Bearer <token> header.
  */
@@ -24,13 +25,17 @@ import {
   McpError,
   OAuth2RefreshAdapterBase,
 } from "@cesteral/shared";
+import {
+  AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH,
+  AMAZON_ADS_V1_HEADERS,
+} from "../services/amazon-dsp/amazon-dsp-v1-api-contract.js";
 
 /**
- * Amazon DSP advertiser list response shape (success)
+ * `QueryAdvertiserAccount` 200 response, trimmed to what validation reads.
  */
-interface AmazonDspAdvertiserListResponse {
-  response: Array<{ advertiserId: string; name: string }>;
-  totalResults: number;
+interface AmazonDspAdvertiserAccountsResponse {
+  advertiserAccounts?: Array<{ advertiserAccountId?: string; displayName?: string }>;
+  nextToken?: string;
 }
 
 /**
@@ -45,28 +50,34 @@ export interface AmazonDspAuthAdapter {
 }
 
 /**
- * Validate an Amazon DSP access token against GET /dsp/advertisers and return
- * the first advertiser name (used as the user-id surrogate). Throws
- * Unauthorized on any non-2xx response.
+ * Validate an Amazon DSP access token against
+ * POST /adsApi/v1/query/advertiserAccounts and return the first account's
+ * display name (used as the user-id surrogate). Throws Unauthorized on any
+ * non-2xx response. An empty list is a valid answer: the call defaults to
+ * global accounts only, and a token that can see only non-global accounts
+ * still authenticates.
+ *
+ * basis: QueryAdvertiserAccount (AdvertiserAccounts API 3.0, read 2026-11-13):
+ * body `{ maxResults }` with maxResults 10..100, header `Amazon-Ads-ClientId`
+ * required, no scope header, security scope `advertising::campaign_management`.
  */
 async function fetchAmazonDspUserId(
   token: string,
   baseUrl: string,
-  profileId: string,
   clientId: string
 ): Promise<string> {
   const response = await fetchWithTimeout(
-    `${baseUrl}/dsp/advertisers?startIndex=0&count=1`,
+    `${baseUrl}${AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH}`,
     10_000,
     undefined,
     {
-      method: "GET",
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        ...(clientId && { "Amazon-Advertising-API-ClientId": clientId }),
-        "Amazon-Advertising-API-Scope": profileId,
+        ...(clientId && { [AMAZON_ADS_V1_HEADERS.clientId]: clientId }),
       },
+      body: JSON.stringify({ maxResults: 10 }),
     }
   );
 
@@ -78,13 +89,14 @@ async function fetchAmazonDspUserId(
     );
   }
 
-  const data = (await response.json()) as AmazonDspAdvertiserListResponse;
-  return data.response?.[0]?.name ?? "unknown";
+  const data = (await response.json()) as AmazonDspAdvertiserAccountsResponse;
+  const first = data.advertiserAccounts?.[0];
+  return first?.displayName ?? first?.advertiserAccountId ?? "unknown";
 }
 
 /**
  * Simple access token adapter — holds a pre-generated AmazonDsp access token.
- * Validates the token on first use by calling GET /dsp/advertisers.
+ * Validates the token on first use by calling POST /adsApi/v1/query/advertiserAccounts.
  */
 export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
   private validated = false;
@@ -115,12 +127,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
 
   async validate(): Promise<void> {
     if (this.validated) return;
-    this._userId = await fetchAmazonDspUserId(
-      this.accessToken,
-      this.baseUrl,
-      this._profileId,
-      this._clientId
-    );
+    this._userId = await fetchAmazonDspUserId(this.accessToken, this.baseUrl, this._clientId);
     this.validated = true;
   }
 }
@@ -205,12 +212,7 @@ export class AmazonDspRefreshTokenAdapter
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-    this._userId = await fetchAmazonDspUserId(
-      token,
-      this.baseUrl,
-      this._profileId,
-      this.credentials.appId
-    );
+    this._userId = await fetchAmazonDspUserId(token, this.baseUrl, this.credentials.appId);
   }
 }
 

@@ -95,7 +95,7 @@
       "contentBlocks": [0]
     },
     "amazon_dsp_list_advertisers": {
-      "structuredPaths": ["$.advertisers"],
+      "structuredPaths": ["$.advertiserAccounts"],
       "contentBlocks": [0]
     },
     "amazon_dsp_list_commitments": {

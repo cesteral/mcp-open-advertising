@@ -16,7 +16,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
     {
       name: "accountId",
       description:
-        "DSP advertiser ID (advertiserId from amazon_dsp_list_advertisers) — sent as Amazon-Ads-AccountId",
+        "DSP advertiser ID (a dspAdvertiserId from an account's alternateIds in amazon_dsp_list_advertisers) — sent as Amazon-Ads-AccountId",
       required: false,
     },
   ],

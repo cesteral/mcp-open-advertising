@@ -25,44 +25,41 @@ export interface AmazonDspUnifiedPage {
   nextToken: string | undefined;
 }
 
-// ─── Legacy advertiser listing (`GET /dsp/advertisers`) ─────────────────────
-
-export interface AmazonDspAdvertiser {
-  advertiserId: string;
-  name: string;
-  countryCode?: string;
-  currencyCode?: string;
-  timeZone?: string;
-}
-
-// ─── Offset pagination (legacy `/dsp/advertisers` only) ─────────────────────
-
-export interface AmazonDspPageInfo {
-  startIndex: number;
-  /** The page size that was *requested* — not the number of rows returned. */
-  count: number;
-  /** Amazon's `totalResults`, or `undefined` when the response omitted it. */
-  totalResults: number | undefined;
-}
+// ─── Advertiser accounts (`POST /adsApi/v1/query/advertiserAccounts`) ────────
 
 /**
- * Offset-pagination cursor for an Amazon DSP list page: the next `startIndex`,
- * or `null` on the last page.
- *
- * Advances by the rows actually returned. When Amazon reports `totalResults`
- * it decides; when it omits it, a full page means "there may be more" — an
- * absent total used to be read as 0, which silently ended pagination after
- * page 1 (fleet review amazon-dsp #13).
+ * One entry of `alternateIds` (spec `AlternateIdentifier`): the marketplace
+ * identifiers of an advertiser account. A DSP entry carries `dspAdvertiserId`
+ * + `region`; a Sponsored Ads entry carries `entityId`, `profileId` and
+ * `countryCode`.
  */
-export function nextAmazonDspStartIndex(
-  pageInfo: AmazonDspPageInfo,
-  returned: number
-): number | null {
-  if (returned === 0) return null;
-  const next = pageInfo.startIndex + returned;
-  const hasMore =
-    pageInfo.totalResults !== undefined ? next < pageInfo.totalResults : returned >= pageInfo.count;
-  return hasMore ? next : null;
+export interface AmazonDspAlternateId {
+  /** The regional DSP advertiser ID — the value for `Amazon-Ads-AccountId` on DSP calls. */
+  dspAdvertiserId?: string;
+  region?: "NA" | "EU" | "FE";
+  countryCode?: string;
+  entityId?: string;
+  profileId?: string;
+}
+
+/** Spec `AdvertiserAccount`, trimmed to the fields this server reads. */
+export interface AmazonDspAdvertiserAccount {
+  /**
+   * `amzn1.ads-account.g.*` for a global account, `amzn1.ads1.aa1.{country}.{entityId}`
+   * for a non-global one. NOT the DSP advertiser ID.
+   */
+  advertiserAccountId: string;
+  alternateIds?: AmazonDspAlternateId[];
+  displayName?: string;
+  isGlobalAccount?: boolean;
+  [key: string]: unknown;
+}
+
+/** One page of `query/advertiserAccounts`. */
+export interface AmazonDspAdvertiserAccountPage {
+  accounts: AmazonDspAdvertiserAccount[];
+  /** Amazon's `nextToken`; undefined on the last page. A page may be empty and still carry one. */
+  nextToken: string | undefined;
 }
 
 // ─── Error Type ──────────────────────────────────────────────────────────────

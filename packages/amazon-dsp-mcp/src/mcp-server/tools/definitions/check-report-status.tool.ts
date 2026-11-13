@@ -24,7 +24,7 @@ export const CheckReportStatusInputSchema = z
       .string()
       .min(1)
       .describe(
-        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Must match the accountId the report was submitted under. Distinct from the profile ID."
+        "DSP advertiser ID (a `dspAdvertiserId` from an account's `alternateIds` in amazon_dsp_list_advertisers). Must match the accountId the report was submitted under. Distinct from the profile ID."
       ),
     taskId: z.string().min(1).describe("Report task ID from amazon_dsp_submit_report"),
   })

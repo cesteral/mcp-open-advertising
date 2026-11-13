@@ -47,7 +47,7 @@ export const SubmitReportInputSchema = z
       .string()
       .min(1)
       .describe(
-        "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Used as the `{accountId}` segment of the report URL. Distinct from the profile ID."
+        "DSP advertiser ID (a `dspAdvertiserId` from an account's `alternateIds` in amazon_dsp_list_advertisers). Used as the `{accountId}` segment of the report URL. Distinct from the profile ID."
       ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
