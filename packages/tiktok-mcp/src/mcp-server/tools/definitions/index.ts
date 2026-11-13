@@ -4,7 +4,9 @@
 /**
  * Tool definitions barrel export
  *
- * 24 tools total:
+ * 28 tools total:
+ *   4 Upgraded Smart+: get, create, update, update status (the replacement for the legacy create path
+ *     for Sales, App Promotion and Lead Generation campaigns from 2027-01-01)
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -34,6 +36,10 @@ export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
+export { createSmartPlusEntityTool } from "./create-smart-plus-entity.tool.js";
+export { updateSmartPlusEntityTool } from "./update-smart-plus-entity.tool.js";
+export { updateSmartPlusStatusTool } from "./update-smart-plus-status.tool.js";
+export { getSmartPlusEntityTool } from "./get-smart-plus-entity.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
@@ -59,6 +65,10 @@ import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
+import { createSmartPlusEntityTool } from "./create-smart-plus-entity.tool.js";
+import { updateSmartPlusEntityTool } from "./update-smart-plus-entity.tool.js";
+import { updateSmartPlusStatusTool } from "./update-smart-plus-status.tool.js";
+import { getSmartPlusEntityTool } from "./get-smart-plus-entity.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
@@ -79,6 +89,11 @@ const productionTools: ToolDefinitionForFactory[] = [
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,
+  // ── Upgraded Smart+ ──
+  getSmartPlusEntityTool,
+  createSmartPlusEntityTool,
+  updateSmartPlusEntityTool,
+  updateSmartPlusStatusTool,
   // ── Account ──
   listAdvertisersTool,
   // ── Reporting ──
