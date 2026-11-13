@@ -8,21 +8,21 @@ Method: every pin in `platform-facts.json` and each `src/config/index.ts` was co
 
 **No pinned version is dead.** Every pin that could be checked is still supported. Several are one release behind, and two have dated changes coming that touch shipped examples or enums.
 
-| Server         | Pin in code    | Vendor state on 2026-11-13                                                          | Verdict                     |
-| -------------- | -------------- | ----------------------------------------------------------------------------------- | --------------------------- |
-| gads-mcp       | v25            | v25 sunsets Aug 2027; **v26 is latest** (14 Oct), v26.2 out 11 Nov                  | Supported, one behind       |
-| dv360-mcp      | v4             | v4 has no sunset date; **v5 is in public beta** (22 Oct)                            | Supported; do not move yet  |
-| dbm-mcp        | v2             | Release notes list v2 as latest, no v3 release                                      | Current                     |
-| cm360-mcp      | v5             | v4 sunset 26 Feb 2026; v5 has no announced sunset                                   | Current                     |
-| sa360-mcp      | v0 + legacy v2 | Reporting v0 notes run to 10 Mar 2026, no newer major                               | Current (v2 not re-checked) |
-| meta-mcp       | v26.0          | **v27.0 is latest** (4 Nov); v26.0 and v27.0 have no expiry; v24 expired 10 Nov     | Supported, one behind       |
-| linkedin-mcp   | 202608         | 202608 Active, sunset 17 Aug 2027; **202610 is latest**                             | Supported, two behind       |
-| msads-mcp      | v13            | Release notes cover only v13, no sunset announced; SDK 13.0.30 on 29 Sep 2026       | Current                     |
-| snapchat-mcp   | unversioned    | No version to check; one enum change dated 15 Feb 2027                              | Action needed (see below)   |
-| pinterest-mcp  | v5             | Still v5; several 2025–26 endpoint deprecations                                     | Not fully checked           |
-| ttd-mcp        | v3             | Not readable (client-rendered portal)                                               | Unverified                  |
+| Server         | Pin in code    | Vendor state on 2026-11-13                                                           | Verdict                     |
+| -------------- | -------------- | ------------------------------------------------------------------------------------ | --------------------------- |
+| gads-mcp       | v25            | v25 sunsets Aug 2027; **v26 is latest** (14 Oct), v26.2 out 11 Nov                   | Supported, one behind       |
+| dv360-mcp      | v4             | v4 has no sunset date; **v5 is in public beta** (22 Oct)                             | Supported; do not move yet  |
+| dbm-mcp        | v2             | Release notes list v2 as latest, no v3 release                                       | Current                     |
+| cm360-mcp      | v5             | v4 sunset 26 Feb 2026; v5 has no announced sunset                                    | Current                     |
+| sa360-mcp      | v0 + legacy v2 | Reporting v0 notes run to 10 Mar 2026, no newer major                                | Current (v2 not re-checked) |
+| meta-mcp       | v26.0          | **v27.0 is latest** (4 Nov); v26.0 and v27.0 have no expiry; v24 expired 10 Nov      | Supported, one behind       |
+| linkedin-mcp   | 202608         | 202608 Active, sunset 17 Aug 2027; **202610 is latest**                              | Supported, two behind       |
+| msads-mcp      | v13            | Release notes cover only v13, no sunset announced; SDK 13.0.30 on 29 Sep 2026        | Current                     |
+| snapchat-mcp   | unversioned    | No version to check; one enum change dated 15 Feb 2027                               | Action needed (see below)   |
+| pinterest-mcp  | v5             | Still v5; several 2025–26 endpoint deprecations                                      | Not fully checked           |
+| ttd-mcp        | v3             | Not readable (client-rendered portal)                                                | Unverified                  |
 | tiktok-mcp     | v1.3           | Not readable (client-rendered portal); no 1.3 deprecation found in secondary sources | Unverified                  |
-| amazon-dsp-mcp | unversioned    | Not readable (client-rendered portal)                                               | Unverified                  |
+| amazon-dsp-mcp | unversioned    | Not readable (client-rendered portal)                                                | Unverified                  |
 
 ## Findings that need action
 
@@ -54,12 +54,12 @@ Source: https://developers.snap.com/marketing-api/Ads-API/announcements
 
 ## Findings that are version drift only (no breakage today)
 
-| Server       | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| gads-mcp     | v26 breaking changes are Local Services Performance Max (`country_code`, `listing_id` now required), `enhanced_conversions_for_leads_enabled` removed from `ConversionTrackingSetting`, and hotel bid-modifier renames (`min_nights` to `min_days`, `HotelDateSelectionType` to `DateSelectionType`). None of these names appears in `packages/gads-mcp/src`, so a bump to v26 looks low-risk, but the notes were only read to the first 100,000 characters. |
+| Server       | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| gads-mcp     | v26 breaking changes are Local Services Performance Max (`country_code`, `listing_id` now required), `enhanced_conversions_for_leads_enabled` removed from `ConversionTrackingSetting`, and hotel bid-modifier renames (`min_nights` to `min_days`, `HotelDateSelectionType` to `DateSelectionType`). None of these names appears in `packages/gads-mcp/src`, so a bump to v26 looks low-risk, but the notes were only read to the first 100,000 characters.                                         |
 | dv360-mcp    | v5 removes `firstPartyAndPartnerAudiences` create/patch/`editCustomerMatchMembers`, all `inventorySources` mutating and read methods, `TARGETING_TYPE_INVENTORY_SOURCE`, and `audienceExpansionLevel`. The generated schemas still contain several of these. Staying on v4 is correct while v5 is beta. v4 itself changed on 22 Oct (`InsertionOrderType.OUT_OF_HOME`, `YoutubeAndPartnersSettings.relatedVideos` replacing `relatedVideoIds`), which needs a schema regeneration, not a pin change. |
-| linkedin-mcp | 202608 is Active until 17 Aug 2027. 202610 is the newest. The migrations page also warns 202511 sunsets 16 Nov 2026, which does not affect this pin.                                                                                                                                                                                                                                                                                                                  |
-| meta-mcp     | v26.0 is still available (no expiry date set). Bump to v27.0 only together with finding 1 and a regeneration of `tests/fixtures/graph-v26-spec.json`.                                                                                                                                                                                                                                                                                                                  |
+| linkedin-mcp | 202608 is Active until 17 Aug 2027. 202610 is the newest. The migrations page also warns 202511 sunsets 16 Nov 2026, which does not affect this pin.                                                                                                                                                                                                                                                                                                                                                 |
+| meta-mcp     | v26.0 is still available (no expiry date set). Bump to v27.0 only together with finding 1 and a regeneration of `tests/fixtures/graph-v26-spec.json`.                                                                                                                                                                                                                                                                                                                                                |
 
 ## Not verified (vendor page not readable)
 
