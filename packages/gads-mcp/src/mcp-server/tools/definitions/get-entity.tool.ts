@@ -6,6 +6,13 @@ import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import {
+  buildGAdsSnapshot,
+  ENTITY_KIND_MAP,
+  resolveGAdsCurrency,
+  unwrapResource,
+} from "../utils/capture-snapshot.js";
+import { readPartnerSnapshotShape } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
@@ -38,6 +45,10 @@ export const GetEntityOutputSchema = z
   .object({
     entity: z.record(z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
+    // The canonical snapshot of the entity, at the top level, for a governed
+    // entity kind: governance reads this tool as the read partner of the
+    // entity writes and parses `structuredContent` as a snapshot.
+    ...readPartnerSnapshotShape,
   })
   .describe("Entity retrieval result");
 
@@ -58,9 +69,30 @@ export async function getEntityLogic(
     context
   );
 
+  const row = entity as unknown as Record<string, any>;
+
+  // The canonical snapshot, for a governed kind only (not ad / keyword / asset).
+  // The row nests the resource under its type key; the account currency is read
+  // once, and degrades to the "unknown currency" code rather than failing the read.
+  let snapshot: ReturnType<typeof buildGAdsSnapshot> = null;
+  if (ENTITY_KIND_MAP[input.entityType]) {
+    const resource = unwrapResource(input.entityType, row);
+    if (resource) {
+      const currency = await resolveGAdsCurrency(gadsService, input.customerId, context);
+      snapshot = buildGAdsSnapshot(
+        input.entityType,
+        input.customerId,
+        input.entityId,
+        resource,
+        currency
+      );
+    }
+  }
+
   return {
-    entity: entity as unknown as Record<string, any>,
+    entity: row,
     timestamp: new Date().toISOString(),
+    ...(snapshot ?? {}),
   };
 }
 
@@ -128,7 +160,7 @@ export const getEntityTool = {
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
   untrustedContent: {
-    structuredPaths: ["$.entity"],
+    structuredPaths: ["$.entity", "$.displayName", "$.parents"],
     contentBlocks: [0],
   },
 };

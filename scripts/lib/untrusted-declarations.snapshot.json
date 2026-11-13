@@ -319,7 +319,7 @@
       "contentBlocks": [0]
     },
     "dv360_get_entity": {
-      "structuredPaths": ["$.entity"],
+      "structuredPaths": ["$.entity", "$.displayName", "$.parents"],
       "contentBlocks": [0]
     },
     "dv360_get_pacing_status": {
@@ -411,7 +411,7 @@
       "contentBlocks": [0]
     },
     "gads_get_entity": {
-      "structuredPaths": ["$.entity"],
+      "structuredPaths": ["$.entity", "$.displayName", "$.parents"],
       "contentBlocks": [0]
     },
     "gads_get_insights": {
@@ -613,7 +613,7 @@
       "contentBlocks": [0]
     },
     "meta_get_entity": {
-      "structuredPaths": ["$.entity"],
+      "structuredPaths": ["$.entity", "$.displayName", "$.parents"],
       "contentBlocks": [0]
     },
     "meta_get_insights": {
@@ -1374,7 +1374,7 @@
       "contentBlocks": [0]
     },
     "ttd_get_entity": {
-      "structuredPaths": ["$.entity"],
+      "structuredPaths": ["$.entity", "$.displayName", "$.parents"],
       "contentBlocks": [0]
     },
     "ttd_get_entity_report_types": {

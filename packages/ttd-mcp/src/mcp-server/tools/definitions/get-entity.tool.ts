@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import { buildTtdSnapshot } from "../utils/capture-snapshot.js";
+import { readPartnerSnapshotShape } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
@@ -24,6 +26,10 @@ export const GetEntityOutputSchema = z
   .object({
     entity: z.record(z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
+    // The canonical snapshot of the entity, at the top level, for a governed
+    // entity kind: governance reads this tool as the read partner of the
+    // entity writes and parses `structuredContent` as a snapshot.
+    ...readPartnerSnapshotShape,
   })
   .describe("Entity retrieval result");
 
@@ -43,9 +49,14 @@ export async function getEntityLogic(
     context
   );
 
+  const record = entity as unknown as Record<string, any>;
+  // Null for a type outside the governed kinds (advertiser, creative, ...).
+  const snapshot = buildTtdSnapshot(input.entityType, input.entityId, record, {});
+
   return {
-    entity: entity as unknown as Record<string, any>,
+    entity: record,
     timestamp: new Date().toISOString(),
+    ...(snapshot ?? {}),
   };
 }
 
@@ -110,7 +121,7 @@ export const getEntityTool = {
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
   untrustedContent: {
-    structuredPaths: ["$.entity"],
+    structuredPaths: ["$.entity", "$.displayName", "$.parents"],
     contentBlocks: [0],
   },
 };

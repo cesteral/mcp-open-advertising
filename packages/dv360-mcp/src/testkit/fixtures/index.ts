@@ -131,6 +131,7 @@ export const updateBudgetDecreaseLineItem: Dv360WriteFixture = {
   preState: {
     name: `advertisers/${advertiserId}/lineItems/li-REDACTED-1`,
     lineItemId: "li-REDACTED-1",
+    campaignId: "campaign-REDACTED-1",
     insertionOrderId: "io-REDACTED-1",
     displayName: "Sample Line Item",
     entityStatus: "ENTITY_STATUS_ACTIVE",
@@ -159,6 +160,10 @@ export const updateBudgetDecreaseLineItem: Dv360WriteFixture = {
       segments: null,
     },
     schedule: { startAt: null, endAt: null },
+    parents: [
+      { kind: "campaign", id: "campaign-REDACTED-1" },
+      { kind: "insertion_order", id: "io-REDACTED-1" },
+    ],
   },
   description:
     "update_budget: line-item maxAmount decrease $50 → $30 (lifetime 5,000 → 3,000 cents USD)",
@@ -182,6 +187,7 @@ export const pauseLineItemFromActive: Dv360WriteFixture = {
   preState: {
     name: `advertisers/${advertiserId}/lineItems/li-REDACTED-2`,
     lineItemId: "li-REDACTED-2",
+    campaignId: "campaign-REDACTED-1",
     insertionOrderId: "io-REDACTED-2",
     displayName: "Sample Line Item 2",
     entityStatus: "ENTITY_STATUS_ACTIVE",
@@ -196,6 +202,10 @@ export const pauseLineItemFromActive: Dv360WriteFixture = {
     status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
     budget: { daily: null, lifetime: null, segments: null },
     schedule: { startAt: null, endAt: null },
+    parents: [
+      { kind: "campaign", id: "campaign-REDACTED-1" },
+      { kind: "insertion_order", id: "io-REDACTED-2" },
+    ],
   },
   description: "pause: line-item ACTIVE → PAUSED",
 };
@@ -265,6 +275,7 @@ export const resumeLineItemFromPaused: Dv360WriteFixture = {
   preState: {
     name: `advertisers/${advertiserId}/lineItems/li-REDACTED-4`,
     lineItemId: "li-REDACTED-4",
+    campaignId: "campaign-REDACTED-1",
     insertionOrderId: "io-REDACTED-4",
     displayName: "Sample Line Item 4",
     entityStatus: "ENTITY_STATUS_PAUSED",
@@ -279,6 +290,10 @@ export const resumeLineItemFromPaused: Dv360WriteFixture = {
     status: { canonical: "active", platformRaw: "ENTITY_STATUS_ACTIVE" },
     budget: { daily: null, lifetime: null, segments: null },
     schedule: { startAt: null, endAt: null },
+    parents: [
+      { kind: "campaign", id: "campaign-REDACTED-1" },
+      { kind: "insertion_order", id: "io-REDACTED-4" },
+    ],
   },
   description: "resume: line-item PAUSED → ACTIVE",
 };

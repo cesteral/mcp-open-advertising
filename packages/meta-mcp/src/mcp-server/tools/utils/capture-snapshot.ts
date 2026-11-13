@@ -16,6 +16,7 @@
  * that surface is round-2.
  */
 
+import { buildSnapshotParents } from "@cesteral/shared";
 import type {
   CanonicalEntityKind,
   CanonicalStatus,
@@ -87,6 +88,15 @@ export function buildMetaSnapshot(
   const daily = toMoney(merged.daily_budget, currency);
   const lifetime = toMoney(merged.lifetime_budget, currency);
 
+  // An ad set names its campaign in `campaign_id` (the Graph API returns it only
+  // when requested, so an absent field leaves the ancestor unknown). A campaign
+  // has no ancestor but the account; an ad has none this model counts as a level
+  // (its ad set is not a campaign or insertion order).
+  const parents =
+    entityKind === "ad_set"
+      ? buildSnapshotParents([{ kind: "campaign", id: merged.campaign_id }])
+      : undefined;
+
   return {
     schemaVersion: 1,
     platform: "meta_ads",
@@ -108,6 +118,7 @@ export function buildMetaSnapshot(
       startAt: typeof merged.start_time === "string" ? merged.start_time : null,
       endAt: typeof merged.end_time === "string" ? merged.end_time : null,
     },
+    ...(parents ? { parents } : {}),
   };
 }
 
