@@ -17,6 +17,7 @@ export * from "./mcp/governed-dry-run.js";
 export * from "./mcp/pagination.js";
 export * from "./mcp/prompt-handler-factory.js";
 export * from "./mcp/raw-tool-args.js";
+export * from "./mcp/pacing-tool-factory.js";
 export * from "./mcp/resource-handler-factory.js";
 export * from "./mcp/schema-size-guard.js";
 export * from "./mcp/tool-examples-resource.js";

@@ -4,7 +4,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { GAdsService } from "../../src/services/gads/gads-service.js";
-import { getPacingStatusResponseFormatter } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+import { getPacingStatusTool } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+
+const { responseFormatter: getPacingStatusResponseFormatter } = getPacingStatusTool;
 
 const logger: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
