@@ -96,6 +96,7 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_supply_forecasts_path", "2026-10-01"],
     ["linkedin.audience_counts_path", "2026-10-01"],
     ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
+    ["meta.v26_changes_apply_to_all_versions", "2026-11-13"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
