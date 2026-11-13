@@ -56,6 +56,22 @@ variable "max_instances" {
   default     = 10
 }
 
+variable "request_timeout_seconds" {
+  description = <<-EOT
+    Cloud Run request timeout. The default of 300s is shorter than the longest
+    report poll in the fleet (TTD polls for about 10 minutes), so a polling tool
+    call was cut off mid-flight while the server kept going. Cloud Run allows at
+    most 3600.
+  EOT
+  type        = number
+  default     = 900
+
+  validation {
+    condition     = var.request_timeout_seconds >= 1 && var.request_timeout_seconds <= 3600
+    error_message = "request_timeout_seconds must be between 1 and 3600 (Cloud Run's limit)."
+  }
+}
+
 variable "cpu_limit" {
   description = "CPU limit for Cloud Run container"
   type        = string

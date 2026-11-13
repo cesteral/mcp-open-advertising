@@ -29,7 +29,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     registerToolsFromDefinitions: hoisted.registerTools,
     registerStaticResourcesFromDefinitions: hoisted.registerResources,
     registerPromptsFromDefinitions: hoisted.registerPrompts,
-    InteractionLogger: vi.fn().mockImplementation(() => ({ kind: "logger" })),
+    InteractionLogger: { shared: vi.fn().mockImplementation(() => ({ kind: "logger" })) },
     createTransportEntrypoints: vi.fn(() => ({
       createMcpHttpServer: hoisted.createHttpTransport,
       startHttpServer: hoisted.startHttpServer,

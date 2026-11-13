@@ -14,12 +14,14 @@ import {
 // ---------------------------------------------------------------------------
 
 const gcsFiles = new Map<string, string>();
+const gcsDownloads: string[] = [];
 
 vi.mock("@google-cloud/storage", () => ({
   Storage: vi.fn().mockImplementation(() => ({
     bucket: vi.fn().mockReturnValue({
       file: vi.fn().mockImplementation((objectPath: string) => ({
         download: vi.fn().mockImplementation(async () => {
+          gcsDownloads.push(objectPath);
           const content = gcsFiles.get(objectPath);
           if (!content) {
             const err: any = new Error("Not found");
@@ -49,6 +51,7 @@ afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
   }
   gcsFiles.clear();
+  gcsDownloads.length = 0;
 });
 
 describe("generateEntryId", () => {
@@ -320,7 +323,7 @@ describe("InteractionLogger", () => {
     // Instance-unique paths include a hex instanceId to prevent cross-instance races
     const [path, payload] = Array.from(gcsFiles.entries())[0] ?? [];
     expect(path).toMatch(
-      /^test-server\/interactions\/test-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}\.jsonl$/
+      /^test-server\/interactions\/test-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}-\d{6}\.jsonl$/
     );
     const lines = (payload ?? "")
       .trim()
@@ -406,5 +409,128 @@ describe("closeAllInteractionLoggers", () => {
 
     // closeAll after a was already closed should be a no-op and not throw
     await expect(closeAllInteractionLoggers()).resolves.toBeUndefined();
+  });
+});
+
+const quietLogger = () =>
+  ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+    level: "debug",
+  }) as any;
+
+const entry = (n: number) => ({
+  type: "tool_call" as const,
+  ts: `2026-02-19T21:00:0${n}.000Z`,
+  sessionId: "session-1",
+  tool: "tool_a",
+  params: { n },
+  success: true,
+  durationMs: 1,
+});
+
+describe("InteractionLogger GCS flush", () => {
+  it("writes each flush as its own object and never re-reads earlier ones", async () => {
+    const l = new InteractionLogger({
+      serverName: "flush-server",
+      logger: quietLogger(),
+      gcsBucket: "test-bucket",
+      flushIntervalMs: 5,
+    });
+
+    l.append(entry(1));
+    await new Promise((r) => setTimeout(r, 30));
+    l.append(entry(2));
+    await new Promise((r) => setTimeout(r, 30));
+    await l.close();
+
+    const paths = Array.from(gcsFiles.keys()).sort();
+    expect(paths).toHaveLength(2);
+    // The second object holds only the second flush, not the first one again.
+    for (const p of paths) {
+      expect(gcsFiles.get(p)!.trim().split("\n")).toHaveLength(1);
+    }
+    expect(gcsDownloads).toEqual([]);
+  });
+
+  it("keeps the entries buffered and retries under the same name when a write fails", async () => {
+    const { Storage } = await import("@google-cloud/storage");
+    const l = new InteractionLogger({
+      serverName: "retry-server",
+      logger: quietLogger(),
+      gcsBucket: "test-bucket",
+      flushIntervalMs: 60_000,
+    });
+    l.append(entry(1));
+
+    // First attempt fails: make the next Storage handle's save reject once.
+    const bucket = (Storage as any).mock.results.at(-1)?.value.bucket();
+    const realFile = bucket.file;
+    let failed = false;
+    (await (l as any).getBucket()).file = (path: string) => {
+      const f = realFile(path);
+      const save = f.save;
+      f.save = async (...args: unknown[]) => {
+        if (!failed) {
+          failed = true;
+          throw new Error("boom");
+        }
+        return save(...args);
+      };
+      return f;
+    };
+
+    await (l as any).flushBuffer();
+    expect(gcsFiles.size).toBe(0);
+    await l.close();
+    expect(Array.from(gcsFiles.keys())).toEqual([
+      expect.stringMatching(/retry-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}-000000\.jsonl$/),
+    ]);
+  });
+});
+
+describe("InteractionLogger.shared", () => {
+  it("returns one logger per server name, however many sessions ask", async () => {
+    const dir = createTempDir();
+    const a = InteractionLogger.shared({
+      serverName: "shared-s",
+      logger: quietLogger(),
+      dataDir: dir,
+    });
+    const b = InteractionLogger.shared({
+      serverName: "shared-s",
+      logger: quietLogger(),
+      dataDir: dir,
+    });
+    const other = InteractionLogger.shared({
+      serverName: "shared-t",
+      logger: quietLogger(),
+      dataDir: dir,
+    });
+    expect(b).toBe(a);
+    expect(other).not.toBe(a);
+    await closeAllInteractionLoggers();
+  });
+
+  it("builds a fresh logger after the shared one is closed", async () => {
+    const dir = createTempDir();
+    const a = InteractionLogger.shared({
+      serverName: "shared-u",
+      logger: quietLogger(),
+      dataDir: dir,
+    });
+    await a.close();
+    const b = InteractionLogger.shared({
+      serverName: "shared-u",
+      logger: quietLogger(),
+      dataDir: dir,
+    });
+    expect(b).not.toBe(a);
+    await b.close();
   });
 });

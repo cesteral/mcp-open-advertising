@@ -11,6 +11,7 @@
 import pino from "pino";
 import type { Logger } from "pino";
 import { closeAllInteractionLoggers } from "../observability/interaction-logger.js";
+import { trackInFlightRequests, type RequestEmitter } from "./in-flight-requests.js";
 import { shutdownOpenTelemetry } from "../observability/telemetry.js";
 import { initializeGovernanceRuntime } from "../../governance/runtime.js";
 
@@ -75,7 +76,7 @@ export function createServerLogger(
 // ---------------------------------------------------------------------------
 
 export interface HttpServerResult {
-  server: { close(cb?: (err?: Error) => void): void };
+  server: { close(cb?: (err?: Error) => void): void } & RequestEmitter;
   shutdown: () => Promise<void>;
 }
 
@@ -129,6 +130,12 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
    */
   tools?: readonly { annotations?: unknown }[];
 }
+
+/**
+ * How long a SIGTERM waits for in-flight requests before closing sessions anyway.
+ * Cloud Run gives a service 10s between SIGTERM and SIGKILL.
+ */
+const SHUTDOWN_DRAIN_TIMEOUT_MS = 7_000;
 
 /**
  * Main bootstrap function that orchestrates server startup.
@@ -191,6 +198,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
       logger.info("Starting in HTTP mode with Streamable HTTP transport");
 
       const { server: httpServer, shutdown } = await opts.startHttp(opts.config, logger);
+      const inFlight = trackInFlightRequests(httpServer);
 
       // Graceful shutdown for HTTP mode
       let shuttingDown = false;
@@ -209,23 +217,38 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
           }
         });
 
-        // 2. Clean up sessions and resources
+        // 2. Let running requests finish. Tearing sessions down first would sever a
+        //    tool call mid-write, and the client's retry carries a fresh decision
+        //    token that jti replay protection cannot match to the original. The
+        //    deadline stays under Cloud Run's 10s SIGTERM grace so cleanup and the
+        //    telemetry flush below still run before SIGKILL.
+        const inFlightAtSignal = inFlight.count();
+        if (inFlightAtSignal > 0) {
+          logger.info({ inFlight: inFlightAtSignal }, "Waiting for in-flight requests to finish");
+          const drained = await inFlight.drain(SHUTDOWN_DRAIN_TIMEOUT_MS);
+          if (!drained) {
+            logger.warn(
+              { inFlight: inFlight.count(), timeoutMs: SHUTDOWN_DRAIN_TIMEOUT_MS },
+              "Shutdown drain timed out — closing sessions with requests still running"
+            );
+          }
+        }
+
+        // 3. Clean up sessions and resources
         await shutdown();
         opts.onShutdown?.();
 
-        // 3. Drain buffered interaction-log entries (GCS mode would otherwise
+        // 4. Drain buffered interaction-log entries (GCS mode would otherwise
         //    lose anything in the in-memory buffer between the last 5s flush
         //    and SIGTERM).
         await closeAllInteractionLoggers();
 
-        // 4. Flush pending OTEL traces/metrics before exiting
+        // 5. Flush pending OTEL traces/metrics before exiting
         await shutdownOpenTelemetry(logger);
 
-        // 5. Allow brief window for in-flight requests to complete, then exit
-        setTimeout(() => {
-          logger.info("Shutdown complete – exiting");
-          process.exit(0);
-        }, 5_000);
+        // 6. In-flight work was drained above, so there is nothing left to wait for.
+        logger.info("Shutdown complete – exiting");
+        process.exit(0);
       };
 
       process.on("SIGTERM", () => handleHttpShutdown("SIGTERM"));

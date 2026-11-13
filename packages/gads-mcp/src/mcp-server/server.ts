@@ -87,7 +87,7 @@ export async function createMcpServer(
   );
 
   // Interaction logger for persisting tool execution data
-  const interactionLogger = new InteractionLogger({
+  const interactionLogger = InteractionLogger.shared({
     serverName: GADS_PACKAGE_NAME,
     logger,
     gcsBucket,
