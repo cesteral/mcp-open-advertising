@@ -30,7 +30,7 @@ export async function fetchWithTimeout(
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       const displayUrl = sanitizeUrlForErrors ? sanitizeUrlForErrors(url) : url;
-      throw new Error(`Request timeout after ${timeoutMs}ms: ${displayUrl}`);
+      throw new Error(`Request timeout after ${timeoutMs}ms: ${displayUrl}`, { cause: error });
     }
     throw error;
   } finally {
