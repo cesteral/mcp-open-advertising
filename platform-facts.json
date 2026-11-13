@@ -267,7 +267,7 @@
       "id": "sa360.reporting_api_is_read_only",
       "package": "sa360-mcp",
       "class": "behavioral-constraint",
-      "claim": "The Search Ads 360 Reporting API v0 is read-only for campaign entities — there are no campaign/ad-group/ad mutate operations, so the only governed writes are offline conversion upload/modify via the legacy v2 API.",
+      "claim": "The Search Ads 360 Reporting API v0 is read-only for campaign entities \u2014 there are no campaign/ad-group/ad mutate operations, so the only governed writes are offline conversion upload/modify via the legacy v2 API.",
       "value": null,
       "sourceUrl": null,
       "status": "unverified",
@@ -295,7 +295,7 @@
       "id": "dv360.line_items_require_archive_before_delete",
       "package": "dv360-mcp",
       "class": "behavioral-constraint",
-      "claim": "DV360 returns 400 when deleting a line item that has not been archived first, and archiving is itself irreversible — there is no unarchive.",
+      "claim": "DV360 returns 400 when deleting a line item that has not been archived first, and archiving is itself irreversible \u2014 there is no unarchive.",
       "value": null,
       "sourceUrl": null,
       "status": "unverified",
@@ -588,7 +588,44 @@
       "loadBearing": true,
       "codeRefs": ["packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-api-contract.ts:67"],
       "verificationBasis": "vendor-spec",
-      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. Operations used: DSPQueryCampaign/DSPCreateCampaign/DSPUpdateCampaign, DSPQueryAdGroup/DSPCreateAdGroup/DSPUpdateAdGroup, DSPQueryAd/DSPCreateAd/DSPUpdateAd, DSPQueryTarget/DSPCreateTarget/DSPDeleteTarget, and DSPQueryAdAssociation/DSPCreateAdAssociation/DSPUpdateAdAssociation/DSPDeleteAdAssociation. Conflict on the scope header: the spec declares only AccountIdHeader + ClientIdHeader and the DSP migration guide §2 says Amazon-Advertising-API-Scope is 'Not used ... Remove it', but the generic Unified Postman collection (postman/Amazon_Ads_Unified_API.postman_collection.json, same commit) sends it on every request; this server follows the spec and the DSP guide. Also unverified: that Amazon-Ads-AccountId takes the DSP advertiser ID from GET /dsp/advertisers (the value amazon_dsp_get_campaign_forecast already sends)."
+      "note": "Read 2026-09-30 off Amazon's machine-readable Unified DSP spec, amzn/ads-advanced-tools-docs @ e25aace0ec07997c113dac48f333298472243558 (2026-09-30), unified-campaign-management-migration-skills/api-specs/unified-api-dsp.json (OpenAPI 3.0.1, 'Amazon Ads API DSP Merged' 3.0), and the DSP migration guide beside it (skills/unified-dsp-cm-migration/SKILL.md). The spec is a vendor-published artifact, not the API reference on advertising.amazon.com (blocked by this repo's egress policy), and nothing here has been called against Amazon: no request on this surface has ever succeeded live. Operations used: DSPQueryCampaign/DSPCreateCampaign/DSPUpdateCampaign, DSPQueryAdGroup/DSPCreateAdGroup/DSPUpdateAdGroup, DSPQueryAd/DSPCreateAd/DSPUpdateAd, DSPQueryTarget/DSPCreateTarget/DSPDeleteTarget, and DSPQueryAdAssociation/DSPCreateAdAssociation/DSPUpdateAdAssociation/DSPDeleteAdAssociation. Conflict on the scope header: the spec declares only AccountIdHeader + ClientIdHeader and the DSP migration guide \u00a72 says Amazon-Advertising-API-Scope is 'Not used ... Remove it', but the generic Unified Postman collection (postman/Amazon_Ads_Unified_API.postman_collection.json, same commit) sends it on every request; this server follows the spec and the DSP guide. Which ID goes in Amazon-Ads-AccountId is recorded in amazon_dsp.account_id_header_value; the advertiser listing that supplies it is amazon_dsp.advertiser_accounts_api."
+    },
+    {
+      "id": "amazon_dsp.advertiser_accounts_api",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "Amazon's advertiser-account listing is POST /adsApi/v1/query/advertiserAccounts (QueryAdvertiserAccount). It replaces GET /dsp/advertisers, GET /dsp/advertisers/{advertiserId}, POST /adsAccounts, POST /adsAccounts/batch, GET /adsAccounts/{accountId} and POST /adsAccounts/list, which Amazon's release note of 2026-07-20 deprecates: from July 2026 they return Warning: 299 headers and new client integrations are blocked, and from July 2027 they return HTTP 404. The operation declares one header, Amazon-Ads-ClientId (no Amazon-Ads-AccountId, no Amazon-Advertising-API-Scope) and OAuth scope advertising::campaign_management; takes { advertiserAccountIdFilter, isGlobalAccountFilter { include: [boolean] }, maxResults 10..100 (default 100), nextToken }; and answers { advertiserAccounts[], nextToken? }. Omitting isGlobalAccountFilter returns global accounts only (non-global accounts need include: [false]); a page may be empty and still carry a nextToken; advertiserAccountIdFilter accepts global account IDs only. amazon-dsp-mcp uses it for session validation ({ maxResults: 10 }) and for amazon_dsp_list_advertisers.",
+      "value": "/adsApi/v1/query/advertiserAccounts",
+      "sourceUrl": "https://advertising.amazon.com/API/docs/en-us/release-notes/index",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-10",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-api-contract.ts:49"
+      ],
+      "verificationBasis": "vendor-docs",
+      "note": "Read 2026-11-13 on advertising.amazon.com (built-in browser, the pages are client-rendered): the release note 'Deprecation of legacy account management APIs' (2026-07-20) and 'Advertiser Account Management APIs now generally available' (2026-06-18); the QueryAdvertiserAccount developer guide (/guides/account-management/query-advertiser-accounts); and the AdvertiserAccounts API 3.0 OpenAPI file the API reference renders, https://d1y2lf8k3vrkfu.cloudfront.net/openapi/en-us/dest/AmazonAdsAPIALLAdvertiserAccountsContract_prod_3p.json (sha256 2640d5100f0aae1c0fc66870831a75279b59f1239971aa0c415ce1533eeefedd). This is a documentation check, not a live call: no request on Amazon's unified surface has ever succeeded against this server (see amazon_dsp.unified_entity_api). The deprecation note says new client integrations are blocked on the legacy endpoints, so an LwA app onboarded after July 2026 could not have used GET /dsp/advertisers at all."
+    },
+    {
+      "id": "amazon_dsp.account_id_header_value",
+      "package": "amazon-dsp-mcp",
+      "class": "behavioral-constraint",
+      "claim": "On Amazon DSP requests the Amazon-Ads-AccountId header takes the DSP advertiser ID: the dspAdvertiserId (numeric string, one per region NA / EU / FE) in an advertiser account's alternateIds from POST /adsApi/v1/query/advertiserAccounts. Amazon's 'Getting started with Amazon Ads API v1' names two sources for the value, 'the advertiserId of the desired account' from the DSP Advertisers API or 'the dspAdvertiserId value of a linked account' from the Manager Accounts API. The advertiserAccountId the listing returns (global amzn1.ads-account.g.*, or non-global amzn1.ads1.aa1.<country>.<entityId>) is a different identifier. A global account ID is also accepted in the header on campaign-management queries, but then each query must carry an ID filter and no nextToken (HTTP 400 from 2026-11-18, unless marketplaceScopeFilter is GLOBAL), which would break amazon_dsp_list_entities; so the tools' accountId is the dspAdvertiserId. Not stated by Amazon: that the legacy advertiserId and the reporting path's {accountId} equal dspAdvertiserId (the guide offers them as alternative sources for the same header).",
+      "value": "dspAdvertiserId",
+      "sourceUrl": "https://advertising.amazon.com/API/docs/en-us/reference/amazon-ads/getting-started",
+      "status": "verified",
+      "verifiedAt": "2026-11-13",
+      "verifyBy": "2027-05-10",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/amazon-dsp-mcp/src/services/amazon-dsp/types.ts:38",
+        "packages/amazon-dsp-mcp/src/mcp-server/tools/utils/account-id.ts:19"
+      ],
+      "verificationBasis": "vendor-docs",
+      "note": "Read 2026-11-13: 'Getting started with Amazon Ads API v1' (Required headers), the QueryAdvertiserAccount developer guide (alternateIds), the campaign-management overview ('Query requests for global accounts') and the release note of 2026-11-10 on the same. Documentation only: Amazon-Ads-AccountId has never been sent with a dspAdvertiserId to Amazon by this server, so whether the value is accepted is unproven live (see amazon_dsp.unified_entity_api)."
     },
     {
       "id": "amazon_dsp.unified_entity_gaps",
@@ -757,7 +794,7 @@
       "id": "meta.rate_limit_default",
       "package": "meta-mcp",
       "class": "behavioral-constraint",
-      "claim": "The per-process default of 20 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: full-access ads_management BUC ~100,000/hour per ad account (+40 x active ads); dev tier ~300/hour (~5/min) per ad account — below this default, so dev-tier apps should lower META_RATE_LIMIT_PER_MINUTE. Keys are per Graph user (the token's `/me` id): `meta:user:{id}:account:act_{n}` for calls on a named ad account and `meta:user:{id}` for the rest, so one process sends at most the default per user per ad account plus the default per user on the account-less bucket, and 10 instances at most 10x that; two users on one ad account are two buckets, since the account id is caller input. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
+      "claim": "The per-process default of 20 requests/min stays within the platform's API quota across the fleet's assumed 10 instances. Corroboration only: full-access ads_management BUC ~100,000/hour per ad account (+40 x active ads); dev tier ~300/hour (~5/min) per ad account \u2014 below this default, so dev-tier apps should lower META_RATE_LIMIT_PER_MINUTE. Keys are per Graph user (the token's `/me` id): `meta:user:{id}:account:act_{n}` for calls on a named ad account and `meta:user:{id}` for the rest, so one process sends at most the default per user per ad account plus the default per user on the account-less bucket, and 10 instances at most 10x that; two users on one ad account are two buckets, since the account id is caller input. Recorded 2026-09-24 from a quota sweep that found no primary source (vendor doc hosts blocked); the figures below are CORROBORATION ONLY (search snippets / third-party mirrors) and the default was deliberately NOT raised on them. Re-verify on the vendor page before changing the default.",
       "value": "default(20)",
       "sourceUrl": "https://developers.facebook.com/docs/marketing-api/overview/rate-limiting",
       "status": "unverified",

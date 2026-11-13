@@ -16,5 +16,5 @@ export const AccountIdSchema = z
   .string()
   .min(1)
   .describe(
-    "DSP advertiser ID (the `advertiserId` from amazon_dsp_list_advertisers). Sent as the `Amazon-Ads-AccountId` header, which the Unified API requires on every entity call. Distinct from `profileId`."
+    "DSP advertiser ID (a `dspAdvertiserId` from an account's `alternateIds` in amazon_dsp_list_advertisers). Sent as the `Amazon-Ads-AccountId` header, which the Unified API requires on every entity call. Distinct from `profileId`."
   );

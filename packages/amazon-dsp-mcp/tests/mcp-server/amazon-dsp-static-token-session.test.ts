@@ -42,7 +42,7 @@ describe("jwt/none static-token session (AMAZON_DSP_ACCESS_TOKEN)", () => {
   it("carries AMAZON_DSP_CLIENT_ID into the session adapter", async () => {
     hoisted.mockFetch.mockReset();
     hoisted.mockFetch.mockResolvedValue(
-      okJson({ response: [{ advertiserId: "adv_1" }], totalResults: 1 })
+      okJson({ advertiserAccounts: [{ advertiserAccountId: "amzn1.ads-account.g.adv1" }] })
     );
 
     const appConfig = {
@@ -67,16 +67,12 @@ describe("jwt/none static-token session (AMAZON_DSP_ACCESS_TOKEN)", () => {
 
     // validate() on session establishment
     const validateHeaders = hoisted.mockFetch.mock.calls[0][3].headers;
-    expect(validateHeaders["Amazon-Advertising-API-ClientId"]).toBe(
-      "amzn1.application-oa2-client.static"
-    );
+    expect(validateHeaders["Amazon-Ads-ClientId"]).toBe("amzn1.application-oa2-client.static");
 
     // …and every tool call made through the session's HTTP client
-    hoisted.mockFetch.mockResolvedValueOnce(okJson({ response: [], totalResults: 0 }));
-    await result.services.amazonDspService.listAdvertisers(0, 1);
+    hoisted.mockFetch.mockResolvedValueOnce(okJson({ advertiserAccounts: [] }));
+    await result.services.amazonDspService.listAdvertisers({ maxResults: 10 });
     const callHeaders = hoisted.mockFetch.mock.calls.at(-1)![3].headers;
-    expect(callHeaders["Amazon-Advertising-API-ClientId"]).toBe(
-      "amzn1.application-oa2-client.static"
-    );
+    expect(callHeaders["Amazon-Ads-ClientId"]).toBe("amzn1.application-oa2-client.static");
   });
 });

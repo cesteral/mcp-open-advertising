@@ -34,6 +34,20 @@ export const AMAZON_ADS_V1_HEADERS = {
   accountId: "Amazon-Ads-AccountId",
 } as const;
 
+/**
+ * `POST /adsApi/v1/query/advertiserAccounts` (`QueryAdvertiserAccount`) —
+ * lists the advertiser accounts the credentials can see. It replaces the
+ * legacy `GET /dsp/advertisers`, deprecated by Amazon's release note of
+ * 2026-07-20 (`Warning: 299` headers now, HTTP 404 from July 2027).
+ *
+ * Source: AdvertiserAccounts API 3.0, the spec behind
+ * https://advertising.amazon.com/API/docs/en-us/api-spec-v1-advertiseraccounts
+ * (https://d1y2lf8k3vrkfu.cloudfront.net/openapi/en-us/dest/AmazonAdsAPIALLAdvertiserAccountsContract_prod_3p.json),
+ * read 2026-11-13. The operation declares one header parameter,
+ * `Amazon-Ads-ClientId` — no `Amazon-Ads-AccountId`, no scope header.
+ */
+export const AMAZON_ADS_V1_ADVERTISER_ACCOUNTS_QUERY_PATH = "/adsApi/v1/query/advertiserAccounts";
+
 /** Legacy client-id header, still documented for `/dsp/*` and DSP reporting. */
 export const AMAZON_LEGACY_CLIENT_ID_HEADER = "Amazon-Advertising-API-ClientId";
 

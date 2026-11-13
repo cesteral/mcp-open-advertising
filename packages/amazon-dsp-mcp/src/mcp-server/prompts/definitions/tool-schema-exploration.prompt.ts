@@ -93,7 +93,7 @@ Fetch these resources for detailed schema information:
 
 ## Recommended Exploration Order
 
-1. Start with \`amazon_dsp_list_advertisers\` to find the \`advertiserId\` you pass as \`accountId\`
+1. Start with \`amazon_dsp_list_advertisers\` to find the \`dspAdvertiserId\` (in an account's \`alternateIds\`) you pass as \`accountId\`
 2. Fetch \`entity-hierarchy://amazonDsp/all\` for API patterns
 3. Fetch \`entity-schema://amazonDsp/{type}\` for field details
 4. Fetch \`entity-examples://amazonDsp/{type}\` for payload templates

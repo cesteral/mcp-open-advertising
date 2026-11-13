@@ -599,7 +599,7 @@ export const AMAZON_DSP_REPORTING_CONTRACT = {
   ],
   notes: [
     "POST /accounts/{accountId}/dsp/reports body shape: { startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), type (one of reportTypes), dimensions?: string[], metrics?: string[], timeUnit?: 'DAILY' | 'SUMMARY' }.",
-    "`accountId` in the path is the DSP advertiser ID (`advertiserId` from amazon_dsp_list_advertisers) — not the profile ID sent in Amazon-Advertising-API-Scope.",
+    "`accountId` in the path is the DSP advertiser ID (`dspAdvertiserId` from amazon_dsp_list_advertisers) — not the profile ID sent in Amazon-Advertising-API-Scope.",
     "Send Accept: application/vnd.dspcreatereports.v3+json on submit and Accept: application/vnd.dspgetreports.v3+json on status; Content-Type is plain application/json.",
     "Returns 202 with { reportId, type, format:'JSON', status:'IN_PROGRESS', location:'', expiration } — poll GET /accounts/{accountId}/dsp/reports/{reportId} until status === 'SUCCESS' (returns presigned S3 download `location`) or 'FAILURE'.",
     "`timeUnit` does not appear in Amazon's Postman DSP report examples; this server sends DAILY unless SUMMARY is requested.",
