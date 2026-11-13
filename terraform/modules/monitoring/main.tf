@@ -179,6 +179,114 @@ resource "google_monitoring_alert_policy" "error_rate" {
 }
 
 # ============================================================================
+# ALERT: MCP tool failures (application-level)
+# ============================================================================
+#
+# The Cloud Run 5xx alert above cannot see tool failures: an MCP tool error is
+# returned as a JSON-RPC error / isError result inside an HTTP 200. An upstream
+# platform 429, 5xx or auth failure therefore never trips the Cloud Run alerts.
+# These policies read the OpenTelemetry counters the servers export through the
+# Google Cloud Monitoring exporter (packages/shared/src/utils/observability/
+# metrics.ts), which publishes them as custom metrics under
+# `workload.googleapis.com/`. The exporter cannot write Cloud Run resource
+# types, so the series sit on `generic_task`, where `job` is the OTEL
+# service.name; the per-server grouping below relies on that label.
+
+resource "google_monitoring_alert_policy" "tool_error_rate" {
+  display_name = "Cesteral MCP tool error rate > ${var.tool_error_rate_threshold}% (${var.environment})"
+  project      = var.project_id
+  combiner     = "OR"
+
+  conditions {
+    display_name = "MCP tool calls with status=error, as a share of all calls (per server)"
+
+    condition_threshold {
+      filter = <<-EOT
+        metric.type = "workload.googleapis.com/mcp.tool.execution.count"
+        AND metric.labels.status = "error"
+      EOT
+
+      denominator_filter = <<-EOT
+        metric.type = "workload.googleapis.com/mcp.tool.execution.count"
+      EOT
+
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.tool_error_rate_threshold / 100
+      duration        = "600s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_RATE"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.labels.job"]
+      }
+
+      denominator_aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_RATE"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.labels.job"]
+      }
+    }
+  }
+
+  notification_channels = local.effective_channels
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  documentation {
+    content   = <<-EOT
+      More than ${var.tool_error_rate_threshold}% of MCP tool calls on a server ended in an error for 10 minutes in ${var.environment}. These return HTTP 200, so the Cloud Run 5xx alert does not fire for them.
+
+      Find the cause in the `tool_failure` records (see docs/architecture/tool-failure-logging.md): the redacted upstream request trail shows whether it was an upstream 429/5xx or an auth failure. The failing server is the `job` label on the incident.
+    EOT
+    mime_type = "text/markdown"
+  }
+}
+
+resource "google_monitoring_alert_policy" "rate_limit_hits" {
+  display_name = "Cesteral MCP rate-limit hits > ${var.rate_limit_hit_threshold} per 5m (${var.environment})"
+  project      = var.project_id
+  combiner     = "OR"
+
+  conditions {
+    display_name = "MCP server-side rate-limit rejections (per server)"
+
+    condition_threshold {
+      filter = <<-EOT
+        metric.type = "workload.googleapis.com/mcp.rate_limit.hit.count"
+      EOT
+
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.rate_limit_hit_threshold
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.labels.job"]
+      }
+    }
+  }
+
+  notification_channels = local.effective_channels
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  documentation {
+    content   = <<-EOT
+      More than ${var.rate_limit_hit_threshold} requests were rejected by an MCP server's own rate limiter in 5 minutes in ${var.environment}. This is the server throttling a caller, returned to the client as a tool error inside an HTTP 200. The `key_pattern` label on the metric says which limiter. An upstream platform's 429 is counted in the tool error-rate alert, not here.
+    EOT
+    mime_type = "text/markdown"
+  }
+}
+
+# ============================================================================
 # ALERT: P99 Latency
 # ============================================================================
 

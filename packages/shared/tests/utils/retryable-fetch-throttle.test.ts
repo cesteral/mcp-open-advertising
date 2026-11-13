@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import pino from "pino";
 import { executeWithRetry } from "../../src/utils/http/retryable-fetch.js";
 import type { RetryConfig, FetchWithTimeoutFn } from "../../src/utils/http/retryable-fetch.js";
@@ -31,7 +31,15 @@ const throttled =
     new Response(body, { status: 429, statusText: "Too Many Requests", headers });
 const ok = () => new Response(JSON.stringify({ ok: true }), { status: 200 });
 
-afterEach(() => vi.useRealTimers());
+// Waits are jittered upward; pin the draw to 0 so these tests assert the exact
+// platform-named wait. Jitter itself is covered in retryable-fetch-jitter.test.ts.
+beforeEach(() => {
+  vi.spyOn(Math, "random").mockReturnValue(0);
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("executeWithRetry — platform-named waits", () => {
   // The old behaviour capped Retry-After at maxBackoffMs, so a platform saying
