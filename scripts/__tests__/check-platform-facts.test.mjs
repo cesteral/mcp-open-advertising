@@ -78,6 +78,7 @@ describe("the shipped ledger", () => {
     ["ttd.bulk_mutation_variable_binding", "2026-10-01"],
     ["ttd.bulk_job_poll_fields", "2026-10-01"],
     ["ttd.bulk_mutation_limits", "2026-10-01"],
+    ["google_ads.api_version", "2026-11-13"],
     ["linkedin.api_version", "2026-10-01"],
     ["linkedin.rest_is_the_versioned_surface", "2026-10-01"],
     ["linkedin.campaigns_are_account_scoped", "2026-10-01"],
