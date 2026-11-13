@@ -353,6 +353,13 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts DELETE, which the tool documents as irreversible. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
+          },
+          {
+            "tool": "tiktok_update_smart_plus_status",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Accepts DELETE for Upgraded Smart+ campaigns, ad groups and ads, which is irreversible on TikTok. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
         ]
       },

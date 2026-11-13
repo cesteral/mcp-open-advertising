@@ -46,6 +46,8 @@ tiktok_create_entity({
 })
 \`\`\`
 
+**Upgraded Smart+:** from 2027-01-01 TikTok's legacy create endpoints no longer create non-Search WEB_CONVERSIONS (Sales), APP_PROMOTION or LEAD_GENERATION campaigns, ad groups or ads. For those, create with \`tiktok_create_smart_plus_entity\` (campaign, then ad group, then ad; the payloads differ from the legacy ones), and edit with \`tiktok_update_smart_plus_entity\`, \`tiktok_update_smart_plus_status\` and \`tiktok_get_smart_plus_entity\`. Other objectives keep using \`tiktok_create_entity\`.
+
 **Campaign Objectives:** TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS, ENGAGEMENT, VIDEO_VIEWS, LEAD_GENERATION, PRODUCT_SALES
 
 ## Step 2: Create Ad Group

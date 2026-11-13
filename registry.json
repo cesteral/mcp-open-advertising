@@ -599,7 +599,11 @@
         "tiktok_upload_image",
         "tiktok_upload_video",
         "tiktok_search_tools",
-        "tiktok_get_pacing_status"
+        "tiktok_get_pacing_status",
+        "tiktok_create_smart_plus_entity",
+        "tiktok_get_smart_plus_entity",
+        "tiktok_update_smart_plus_entity",
+        "tiktok_update_smart_plus_status"
       ],
       "resources": [
         "entity-hierarchy://tiktok/all",
@@ -646,6 +650,11 @@
             "tool": "tiktok_bulk_update_status",
             "operations": ["bulk_job"],
             "note": "Accepts DELETE, which the tool documents as irreversible. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
+          },
+          {
+            "tool": "tiktok_update_smart_plus_status",
+            "operations": ["bulk_job"],
+            "note": "Accepts DELETE for Upgraded Smart+ campaigns, ad groups and ads, which is irreversible on TikTok. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
         ]
       }

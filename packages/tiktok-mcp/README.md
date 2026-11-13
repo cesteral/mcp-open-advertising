@@ -268,6 +268,38 @@ Download an image or video from a URL and upload it to the advertiser's asset
 library (`file/image/ad/upload/`, `file/video/ad/upload/`, multipart with the
 required MD5 signature). Reference the returned IDs in an ad's `creatives[]`.
 
+### Upgraded Smart+
+
+From **2027-01-01** TikTok's legacy `/campaign/create/`, `/adgroup/create/` and `/ad/create/` no longer
+create non-Search campaigns, or ad groups and ads under them, for the **Sales** (`WEB_CONVERSIONS`),
+**App Promotion** (`APP_PROMOTION`) and **Lead Generation** (`LEAD_GENERATION`) objectives; the replacement
+is the Upgraded Smart+ API under `/smart_plus/`. Other objectives (for example `TRAFFIC`) are not offered
+by it and stay on the legacy tools. The legacy update endpoints cannot edit Upgraded Smart+ entities, so
+these four tools cover create, update, status and read. The ad account must be allowlisted by TikTok for
+Upgraded Smart+ campaign management.
+
+#### 26. `tiktok_create_smart_plus_entity`
+
+Create a campaign, ad group or ad via `/smart_plus/{campaign,adgroup,ad}/create/`. Same parameters as
+`tiktok_create_entity` (`entityType`, `advertiserId`, `data`, `dry_run`) but the payload shapes differ
+(ad groups need `promotion_type` and `targeting_spec`; ads take `creative_list`). A `request_id`
+(TikTok's idempotency key) is generated unless `data.request_id` is given. An ad is returned as
+`smart_plus_ad_id`.
+
+#### 27. `tiktok_update_smart_plus_entity`
+
+Update via `/smart_plus/{campaign,adgroup,ad}/update/`. Parameters: `entityType`, `advertiserId`, `entityId`,
+`data`, `dry_run`. Status changes go through the status tool.
+
+#### 28. `tiktok_update_smart_plus_status`
+
+Enable, pause or delete 1-20 entities via `/smart_plus/{campaign,adgroup,ad}/status/update/`. Parameters:
+`entityType`, `advertiserId`, `entityIds`, `operationStatus` (`ENABLE` / `DISABLE` / `DELETE`), `dry_run`.
+
+#### 29. `tiktok_get_smart_plus_entity`
+
+Read one entity via `/smart_plus/{campaign,adgroup,ad}/get/`. Parameters: `entityType`, `advertiserId`, `entityId`.
+
 ### Client-side helpers
 
 #### 24. `tiktok_get_pacing_status`

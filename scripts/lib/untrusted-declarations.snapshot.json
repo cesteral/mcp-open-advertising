@@ -1173,6 +1173,10 @@
       "structuredPaths": ["$.entity", "$.after"],
       "contentBlocks": [0]
     },
+    "tiktok_create_smart_plus_entity": {
+      "structuredPaths": ["$.entity", "$.after"],
+      "contentBlocks": [0]
+    },
     "tiktok_delete_entity": {
       "structuredPaths": [],
       "contentBlocks": []
@@ -1227,6 +1231,10 @@
       ],
       "contentBlocks": [0]
     },
+    "tiktok_get_smart_plus_entity": {
+      "structuredPaths": ["$.entity"],
+      "contentBlocks": [0]
+    },
     "tiktok_get_targeting_options": {
       "structuredPaths": ["$.options"],
       "contentBlocks": [0]
@@ -1254,6 +1262,14 @@
     "tiktok_update_entity": {
       "structuredPaths": ["$.dryRun", "$.before", "$.after"],
       "contentBlocks": []
+    },
+    "tiktok_update_smart_plus_entity": {
+      "structuredPaths": ["$.dryRun", "$.before", "$.after"],
+      "contentBlocks": []
+    },
+    "tiktok_update_smart_plus_status": {
+      "structuredPaths": ["$.results"],
+      "contentBlocks": [0]
     },
     "tiktok_upload_image": {
       "structuredPaths": [],
