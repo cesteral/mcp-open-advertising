@@ -117,8 +117,13 @@ resource "google_storage_bucket" "gcs_persistence" {
     managed_by  = "terraform"
   }
 
+  # Interaction logs hold tool-call parameters and upstream error bodies, which
+  # can include free text supplied by end users, so they are treated as personal
+  # data. Expiry is the erasure mechanism: 28 days keeps passive deletion inside
+  # the one-month limit of GDPR Art. 12(3) even with about a day of lifecycle
+  # lag (issue cesteral/cesteral-governance-layer#855).
   lifecycle_rule {
-    condition { age = 90 }
+    condition { age = 28 }
     action { type = "Delete" }
   }
 }
