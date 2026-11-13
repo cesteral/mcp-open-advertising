@@ -11,11 +11,6 @@
       "tool_prefix": "dbm",
       "platform_key": "dbm",
       "type": "reporting",
-      "contract": {
-        "exceptions": [
-          { "requirement": "search_tools", "reason": "To be added (#273 decision 6)." }
-        ]
-      },
       "governed": false,
       "title": "Bid Manager MCP Server",
       "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
@@ -29,7 +24,8 @@
         "dbm_get_historical_metrics",
         "dbm_get_pacing_status",
         "dbm_run_custom_query",
-        "dbm_run_custom_query_async"
+        "dbm_run_custom_query_async",
+        "dbm_search_tools"
       ],
       "resources": [
         "metric-types://all",
@@ -333,11 +329,6 @@
       "tool_prefix": "gads",
       "platform_key": "google_ads",
       "type": "management",
-      "contract": {
-        "exceptions": [
-          { "requirement": "search_tools", "reason": "To be added (#273 decision 6)." }
-        ]
-      },
       "governed": true,
       "title": "Google Ads MCP Server",
       "description": "Google Ads management — campaign writes, GAQL reporting, bulk mutate, validation, and previews",
@@ -363,7 +354,8 @@
         "gads_get_pacing_status",
         "gads_duplicate_entity",
         "gads_upload_image",
-        "gads_upload_video"
+        "gads_upload_video",
+        "gads_search_tools"
       ],
       "resources": [
         "entity-hierarchy://gads",
@@ -893,11 +885,6 @@
       "tool_prefix": "sa360",
       "platform_key": "sa360",
       "type": "reporting_conversions",
-      "contract": {
-        "exceptions": [
-          { "requirement": "search_tools", "reason": "To be added (#273 decision 6)." }
-        ]
-      },
       "governed": true,
       "title": "Search Ads 360 MCP Server",
       "description": "Search Ads 360 — reporting via query language, insights, and offline conversion upload",
@@ -922,7 +909,8 @@
         "sa360_download_report",
         "sa360_get_change_history",
         "sa360_list_report_columns",
-        "sa360_get_pacing_status"
+        "sa360_get_pacing_status",
+        "sa360_search_tools"
       ],
       "resources": [
         "entity-hierarchy://all",

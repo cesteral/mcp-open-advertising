@@ -54,7 +54,7 @@ Each tool is a single file in `src/mcp-server/tools/definitions/` exporting thre
 
 Register by importing the tool definition in `tools/definitions/index.ts` and adding to the `allTools` array. `registerToolsFromDefinitions()` picks it up automatically — no switch statements or transport changes. Handlers focus on business logic; errors propagate to the factory's try/catch wrapper.
 
-Most servers also include an auto-generated `*_search_tools` discovery tool registered via `createToolSearchTool({ platform, getTools })` in the same array.
+Every server also includes an auto-generated `*_search_tools` discovery tool registered via `createToolSearchTool({ platform, getTools })` in the same array (a SHOULD for every server type; `scripts/lib/contract-tiers.mjs`).
 
 ### Session Service Pattern
 

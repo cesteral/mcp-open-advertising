@@ -119,17 +119,11 @@ describe("eval corpus", () => {
   });
 
   it("covers a meaningful share of the fleet's search-enabled servers", () => {
-    // 10 of 13 servers register a search tool; dbm-mcp, gads-mcp and sa360-mcp
-    // do NOT, so "one case per server" from the issue is unachievable for three
-    // of them. Asserted so a future reader does not go looking for the missing
-    // three, and so deleting coverage is visible.
+    // Every server registers a search tool since #273 decision 6 added them to
+    // dbm-mcp, gads-mcp and sa360-mcp. Those three have no cases yet; the floor
+    // makes deleting coverage visible.
     const servers = new Set(corpus.cases.map((c) => c.server));
     expect(servers.size).toBeGreaterThanOrEqual(8);
-    for (const absent of ["dbm-mcp", "gads-mcp", "sa360-mcp"]) {
-      expect(servers.has(absent), `${absent} has no search tool — it cannot be covered`).toBe(
-        false
-      );
-    }
   });
 
   it("has enough cases to be worth running", () => {

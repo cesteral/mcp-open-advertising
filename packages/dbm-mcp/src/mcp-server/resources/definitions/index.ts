@@ -28,6 +28,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     delivery: ["dbm_get_campaign_delivery", "dbm_get_pacing_status"],
     performance: ["dbm_get_performance_metrics", "dbm_get_historical_metrics"],
     custom: ["dbm_run_custom_query", "dbm_run_custom_query_async"],
+    discovery: ["dbm_search_tools"],
   },
   commonWorkflows: ["delivery_troubleshooting", "custom_query", "large_report_task"],
   discoveryFlow: [

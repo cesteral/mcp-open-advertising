@@ -51,8 +51,13 @@ describe("sa360 review #19: pacing points at a budget amount that exists", () =>
 });
 
 describe("sa360 review #22: every tool that calls the SA360 API is open-world", () => {
-  // The two client-side tools never leave the process.
-  const CLIENT_SIDE = new Set(["sa360_get_pacing_status", "sa360_validate_conversion"]);
+  // The client-side tools never leave the process. sa360_search_tools only
+  // ranks this server's own tool registry.
+  const CLIENT_SIDE = new Set([
+    "sa360_get_pacing_status",
+    "sa360_validate_conversion",
+    "sa360_search_tools",
+  ]);
 
   it.each(allTools.filter((t) => !CLIENT_SIDE.has(t.name)).map((t) => [t.name, t] as const))(
     "%s",

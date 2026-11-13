@@ -263,6 +263,10 @@
         "$.warnings"
       ],
       "contentBlocks": [0]
+    },
+    "dbm_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
     }
   },
   "dv360-mcp": {
@@ -439,6 +443,10 @@
     "gads_remove_entity": {
       "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
       "contentBlocks": [0]
+    },
+    "gads_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
     },
     "gads_update_entity": {
       "structuredPaths": ["$.mutateResult", "$.dryRun", "$.before", "$.after"],
@@ -1014,6 +1022,10 @@
     "sa360_search_fields": {
       "structuredPaths": ["$.fields"],
       "contentBlocks": [0]
+    },
+    "sa360_search_tools": {
+      "structuredPaths": [],
+      "contentBlocks": []
     },
     "sa360_submit_report": {
       "structuredPaths": [],

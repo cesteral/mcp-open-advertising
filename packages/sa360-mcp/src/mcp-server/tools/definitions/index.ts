@@ -50,7 +50,11 @@ import { submitReportTool } from "./submit-report.tool.js";
 import { checkReportStatusTool } from "./check-report-status.tool.js";
 import { downloadReportTool } from "./download-report.tool.js";
 import { getChangeHistoryTool } from "./get-change-history.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Read Tools ──
@@ -74,7 +78,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Validation Tools ──
   validateConversionTool,
   // ── Audit Tools ──
-  getChangeHistoryTool,
+  getChangeHistoryTool, // ── Discovery ──
+  createToolSearchTool({ platform: "sa360", getTools: () => allTools }),
 ];
 
 /**

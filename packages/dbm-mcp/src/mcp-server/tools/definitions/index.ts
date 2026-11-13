@@ -17,14 +17,19 @@ import { getPerformanceMetricsTool } from "./get-performance-metrics.tool.js";
 import { getHistoricalMetricsTool } from "./get-historical-metrics.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { runCustomQueryTool } from "./run-custom-query.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   getCampaignDeliveryTool,
   getPerformanceMetricsTool,
   getHistoricalMetricsTool,
   getPacingStatusTool,
-  runCustomQueryTool,
+  runCustomQueryTool, // ── Discovery ──
+  createToolSearchTool({ platform: "dbm", getTools: () => allTools }),
 ];
 
 /**
