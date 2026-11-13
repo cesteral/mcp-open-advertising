@@ -82,7 +82,7 @@ snapchat_create_entity({
 
 **Optimization Goals:** IMPRESSIONS, SWIPES, APP_INSTALLS, VIDEO_VIEWS, PIXEL_PURCHASE (see the \`snapchat_validate_entity\` tool and \`entity-schema://snapchat/adGroup\` for more)
 **Bid Strategies:** AUTO_BID, LOWEST_COST_WITH_MAX_BID, TARGET_COST (\`bid_micro\` is required for the last two)
-**Placement (\`placement_v2\`, required):** \`config\` is AUTOMATIC or CUSTOM; \`snapchat_positions\` (INTERSTITIAL_USER, INTERSTITIAL_CONTENT, INTERSTITIAL_SPOTLIGHT, INSTREAM, PUBLIC_STORIES_INSTREAM, CHAT_FEED, FEED, CAMERA, POST_CAPTURE_CAROUSEL) only with CUSTOM.
+**Placement (\`placement_v2\`, required):** \`config\` is AUTOMATIC or CUSTOM; \`snapchat_positions\` (INTERSTITIAL_USER, INTERSTITIAL_CONTENT, INSTREAM, PUBLIC_STORIES_INSTREAM, CHAT_FEED, FEED, CAMERA, POST_CAPTURE_CAROUSEL) only with CUSTOM. INTERSTITIAL_CONTENT now covers what INTERSTITIAL_SPOTLIGHT did: Snap merges the two on 2027-02-15, maps new ad squads that send INTERSTITIAL_SPOTLIGHT to INTERSTITIAL_CONTENT with a deprecation warning, and stops delivery for an existing ad squad whose only position was one of the two until it is updated. CHAT_FEED cannot be the only position.
 
 ⚠️ **GOTCHA: The legacy \`placement\` attribute (SNAP_ADS / AUDIENCE_NETWORK / BOTH) is rejected** — every ad squad must use \`placement_v2\`.
 
