@@ -16,11 +16,9 @@ import { loadDotEnv } from "../../src/utils/transport/config-base.js";
  */
 describe("loadDotEnv keeps stdout clean", () => {
   let dir: string;
-  let cwd: string;
   let stdoutWrites: string[];
 
   beforeEach(() => {
-    cwd = process.cwd();
     dir = mkdtempSync(join(tmpdir(), "load-dotenv-"));
     stdoutWrites = [];
     vi.spyOn(process.stdout, "write").mockImplementation(((chunk: unknown) => {
@@ -35,11 +33,12 @@ describe("loadDotEnv keeps stdout clean", () => {
     vi.spyOn(process.stderr, "write").mockImplementation(
       (() => true) as typeof process.stderr.write
     );
-    process.chdir(dir);
+    // `process.chdir` is not available in vitest workers; loadDotEnv only
+    // reads `process.cwd()`.
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
   });
 
   afterEach(() => {
-    process.chdir(cwd);
     rmSync(dir, { recursive: true, force: true });
     vi.restoreAllMocks();
     delete process.env.LOAD_DOTENV_TEST_VALUE;
