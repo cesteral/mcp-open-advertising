@@ -39,7 +39,9 @@ describe("TtdTokenAuthStrategy", () => {
     };
 
     (TtdDirectTokenAuthAdapter as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      () => mockAdapterInstance
+      function () {
+        return mockAdapterInstance;
+      }
     );
 
     (parseTtdDirectTokenFromHeaders as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
