@@ -147,7 +147,7 @@ describe("createEntityLogic governance contract", () => {
 });
 
 // gads #12: a version literal in a governed description makes every API
-// version bump move that tool's definitionHash (v23 → v25 did, in #255).
+// version bump move that tool's definitionHash (v23 → v25 did, in #255; a literal there would again on v26).
 describe("governed gads tool descriptions", () => {
   it("name no Google Ads API version", () => {
     const governed = allTools.filter(

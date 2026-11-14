@@ -5,6 +5,7 @@
 # Usage:
 #   ./scripts/publish-all.sh              # Publish everything (npm + MCP Registry)
 #   ./scripts/publish-all.sh --npm-only   # Publish to npm only
+#   ./scripts/publish-all.sh --registry-only  # Publish to the MCP Registry only
 #   ./scripts/publish-all.sh --dry-run    # Show what would be published without doing it
 
 set -euo pipefail
@@ -14,6 +15,7 @@ cd "$REPO_ROOT"
 
 DRY_RUN=false
 NPM_ONLY=false
+REGISTRY_ONLY=false
 PROVENANCE=false
 CONTRACTS_ONLY=false
 
@@ -21,12 +23,18 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run)    DRY_RUN=true ;;
     --npm-only)   NPM_ONLY=true ;;
+    --registry-only) REGISTRY_ONLY=true ;;
     --provenance) PROVENANCE=true ;;
     --contracts-only) CONTRACTS_ONLY=true ;;
     --help|-h)
-      echo "Usage: $0 [--dry-run] [--npm-only] [--provenance] [--contracts-only]"
+      echo "Usage: $0 [--dry-run] [--npm-only | --registry-only] [--provenance] [--contracts-only]"
       echo "  --dry-run         Show what would be published without doing it"
       echo "  --npm-only        Skip MCP Registry publishing"
+      echo "  --registry-only   Publish to the MCP Registry ONLY: no build, no npm"
+      echo "                    credentials needed. The release workflow runs this"
+      echo "                    as its own step so the downloaded mcp-publisher"
+      echo "                    binary never runs with the npm token (#299). The"
+      echo "                    packages must already be on npm."
       echo "  --provenance      Publish npm packages with build provenance attestation"
       echo "  --contracts-only  Publish ONLY the two contract libraries, then stop."
       echo "                    Used by the 'contract-v*' release lane so a"
@@ -42,6 +50,11 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+if [ "$REGISTRY_ONLY" = true ] && { [ "$NPM_ONLY" = true ] || [ "$CONTRACTS_ONLY" = true ]; }; then
+  echo "--registry-only cannot be combined with --npm-only or --contracts-only"
+  exit 1
+fi
 
 # The server list comes from registry.json (scripts/fleet.mjs). Captured
 # before splitting so `set -e` stops the script if the lookup fails.
@@ -62,7 +75,7 @@ command -v node >/dev/null 2>&1 || err "node is not installed (required for tarb
 # mcp-publisher check below) is what makes `--dry-run` usable as the preview it
 # is documented to be — otherwise you cannot rehearse a release without first
 # holding credentials for it.
-if [ "$DRY_RUN" = false ]; then
+if [ "$DRY_RUN" = false ] && [ "$REGISTRY_ONLY" = false ]; then
   npm whoami >/dev/null 2>&1 || err "Not logged in to npm. Run: npm login"
 fi
 
@@ -74,6 +87,59 @@ fi
 # could not catch it: DRY_RUN=true already skipped this check.
 if [ "$NPM_ONLY" = false ] && [ "$DRY_RUN" = false ] && [ "$CONTRACTS_ONLY" = false ]; then
   command -v mcp-publisher >/dev/null 2>&1 || err "mcp-publisher is not installed. Run: brew install mcp-publisher"
+fi
+
+# --- Publish to MCP Registry ---
+# mcp-publisher resolves the npm tarball during publish, so this only makes
+# sense once every npm publish has succeeded or was tolerable.
+#
+# Like the npm side, a "version already published" response is tolerable, not
+# a failure: only servers whose version changed have anything to publish, so a
+# routine release re-runs the whole loop and most servers are already live.
+# The MCP Registry returns HTTP 400 with `cannot publish duplicate version`
+# for that case — positively identify it (mirroring the npm conflict regex)
+# and continue. Every other non-zero exit (expired JWT, network, validation)
+# stays a hard failure. Without this, the first release after the initial
+# publish always exits non-zero on the unchanged servers — defeating the
+# documented idempotency of a re-run.
+publish_to_registry() {
+  local failures=()
+  local server mcp_out mcp_exit f
+  log "Publishing to MCP Registry..."
+  for server in "${SERVERS[@]}"; do
+    log "  Publishing $server to MCP Registry..."
+    if [ "$DRY_RUN" = true ]; then
+      echo "  (dry-run) cd packages/$server && mcp-publisher publish"
+    else
+      set +e
+      mcp_out=$(cd "packages/$server" && mcp-publisher publish 2>&1)
+      mcp_exit=$?
+      set -e
+      echo "$mcp_out"
+      if [ "$mcp_exit" -eq 0 ]; then
+        : # published cleanly
+      elif grep -qF 'cannot publish duplicate version' <<<"$mcp_out"; then
+        log "  Note: @cesteral/$server already published at this version — continuing."
+      else
+        echo "  FAIL @cesteral/$server: mcp-publisher exited $mcp_exit" >&2
+        failures+=("@cesteral/$server")
+      fi
+    fi
+  done
+
+  if [ "${#failures[@]}" -gt 0 ]; then
+    echo "" >&2
+    echo "MCP Registry publish failed for ${#failures[@]} package(s):" >&2
+    for f in "${failures[@]}"; do echo "  - $f" >&2; done
+    err "Run mcp-publisher publish manually in the affected package(s) to inspect the error."
+  fi
+}
+
+# `--registry-only`: nothing to build or pack, and no npm credentials involved.
+if [ "$REGISTRY_ONLY" = true ]; then
+  publish_to_registry
+  log "Done! MCP Registry entries published."
+  exit 0
 fi
 
 # --- Build ---
@@ -307,52 +373,10 @@ if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
   err "Aborting before MCP Registry step. Re-run after fixing the failures above."
 fi
 
-# --- Publish to MCP Registry ---
-# mcp-publisher resolves the npm tarball during publish, so we only reach
-# this step once every npm publish above either succeeded or was tolerable.
-#
-# Like the npm side, a "version already published" response is tolerable, not
-# a failure: only servers whose version changed have anything to publish, so a
-# routine release re-runs the whole loop and most servers are already live.
-# The MCP Registry returns HTTP 400 with `cannot publish duplicate version`
-# for that case — positively identify it (mirroring the npm conflict regex)
-# and continue. Every other non-zero exit (expired JWT, network, validation)
-# stays a hard failure. Without this, the first release after the initial
-# publish always exits non-zero on the unchanged servers — defeating the
-# documented idempotency of a re-run.
-MCP_REGISTRY_FAILURES=()
-
 if [ "$NPM_ONLY" = true ]; then
   log "Skipping MCP Registry publishing (--npm-only)"
 else
-  log "Publishing to MCP Registry..."
-  for server in "${SERVERS[@]}"; do
-    log "  Publishing $server to MCP Registry..."
-    if [ "$DRY_RUN" = true ]; then
-      echo "  (dry-run) cd packages/$server && mcp-publisher publish"
-    else
-      set +e
-      mcp_out=$(cd "packages/$server" && mcp-publisher publish 2>&1)
-      mcp_exit=$?
-      set -e
-      echo "$mcp_out"
-      if [ "$mcp_exit" -eq 0 ]; then
-        : # published cleanly
-      elif grep -qF 'cannot publish duplicate version' <<<"$mcp_out"; then
-        log "  Note: @cesteral/$server already published at this version — continuing."
-      else
-        echo "  FAIL @cesteral/$server: mcp-publisher exited $mcp_exit" >&2
-        MCP_REGISTRY_FAILURES+=("@cesteral/$server")
-      fi
-    fi
-  done
-fi
-
-if [ "${#MCP_REGISTRY_FAILURES[@]}" -gt 0 ]; then
-  echo "" >&2
-  echo "MCP Registry publish failed for ${#MCP_REGISTRY_FAILURES[@]} package(s):" >&2
-  for f in "${MCP_REGISTRY_FAILURES[@]}"; do echo "  - $f" >&2; done
-  err "Run mcp-publisher publish manually in the affected package(s) to inspect the error."
+  publish_to_registry
 fi
 
 log "Done! All packages published."

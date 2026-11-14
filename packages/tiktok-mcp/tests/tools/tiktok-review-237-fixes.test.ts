@@ -15,12 +15,13 @@ import {
   getTargetingOptionsLogic,
 } from "../../src/mcp-server/tools/definitions/get-targeting-options.tool.js";
 import { bulkUpdateStatusLogic } from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
-import {
-  GetPacingStatusInputSchema,
-  getPacingStatusLogic,
-  getPacingStatusResponseFormatter,
-  getPacingStatusTool,
-} from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+import { getPacingStatusTool } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+
+const {
+  inputSchema: GetPacingStatusInputSchema,
+  logic: getPacingStatusLogic,
+  responseFormatter: getPacingStatusResponseFormatter,
+} = getPacingStatusTool;
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;

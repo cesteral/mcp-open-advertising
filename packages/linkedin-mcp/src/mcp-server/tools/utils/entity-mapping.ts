@@ -54,12 +54,20 @@ export interface LinkedInEntityConfig {
   /** True when {@link collectionPath} embeds an ad account id in the PATH. */
   accountScoped: boolean;
   /**
-   * Legacy `/v2/` query parameter that scopes a list to an ad account.
-   *
-   * Only meaningful while `apiSurface === "legacy-v2"`. Under `/rest/` the
-   * account is in the path instead, which is the whole structural change.
+   * Query parameter that scopes a list to an ad account, for entities whose
+   * collection is not account-scoped in the path (`creative` on legacy `/v2/`,
+   * `conversionRule` on `/rest/`). Where the account is in the path
+   * (`accountScoped`), this is unset.
    */
   listScopingParam?: { name: "accounts"; list: true } | { name: "account"; list: false };
+  /**
+   * The finder a list call names in `q`, and whether it takes `start`/`count`.
+   * Absent means `q=search` with offset paging, which is what the account-scoped
+   * campaign and campaign-group collections and the legacy `/v2/` ones accept.
+   * LinkedIn names finders per resource, and a wrong name 404s with "No virtual
+   * resource found" (#301).
+   */
+  listFinder?: { name: string; paged: boolean };
   /** Whether this entity has been migrated to the versioned `/rest/` surface. */
   apiSurface: LinkedInApiSurface;
   /** Display name for messages */
@@ -140,17 +148,29 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       "Creatives API uses a simplified schema, not just a new path — needs a payload/field rewrite (#210)",
   },
   conversionRule: {
-    // NOT migrated. #210 lists /v2/conversions -> /rest/conversions as "confirm",
-    // and nothing corroborates either the path or how the account scoping is
-    // expressed there. Moving it on the strength of the prefix pattern alone
-    // would be a guess wearing the costume of a migration.
-    collectionPath: () => "/v2/conversions",
+    // list and create are on /rest/conversions (#301). get/update/delete are NOT:
+    // LinkedIn's item path is `/rest/conversions/{id}?account={accountUrn}`, so
+    // like campaigns they need an account parameter a URN call does not carry,
+    // and they keep the legacy item path until the account parameter lands (#210).
+    collectionPath: () => "/rest/conversions",
+    legacyCollectionPath: "/v2/conversions",
     accountScoped: false,
+    // Find Conversion Rules by Ad Account: `GET /rest/conversions?q=account&account={urn}`.
+    // The `account` finder takes no paging parameters (a `pageSize` is rejected
+    // 400 QUERY_PARAM_NOT_ALLOWED) and the response carries no `paging`.
     listScopingParam: { name: "account", list: false },
-    apiSurface: "legacy-v2",
+    listFinder: { name: "account", paged: false },
+    apiSurface: "rest",
     displayName: "Conversion Rule",
-    defaultFields: ["id", "name", "type", "account", "status", "urlRules"],
-    migrationBlockedBy: "/rest/conversions path and account-scoping shape unconfirmed (#210)",
+    defaultFields: [
+      "id",
+      "name",
+      "type",
+      "account",
+      "enabled",
+      "conversionMethod",
+      "attributionType",
+    ],
   },
 };
 

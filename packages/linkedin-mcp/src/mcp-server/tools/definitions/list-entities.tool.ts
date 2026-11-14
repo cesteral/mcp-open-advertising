@@ -77,8 +77,13 @@ export async function listEntitiesLogic(
   const total = result.total;
   const currentStart = result.start ?? 0;
   const requestedCount = input.count ?? 25;
+  // A finder with no start/count returns everything; a cursor would be ignored.
   const hasMore =
-    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
+    result.paged === false
+      ? false
+      : total !== undefined
+        ? currentStart + pageSize < total
+        : pageSize >= requestedCount;
   const nextStart = currentStart + pageSize;
 
   return {

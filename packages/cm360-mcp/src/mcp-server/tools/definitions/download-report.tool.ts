@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { stripCm360ReportPreamble } from "../utils/report-csv.js";
 import {
   appendComputedMetricsToRows,
   ComputedMetricsFlagSchema,
@@ -74,7 +75,7 @@ export async function downloadReportLogic(
   }
 
   const csvText = await response.text();
-  const { headers, rows } = parseCSV(csvText);
+  const { headers, rows } = parseCSV(stripCm360ReportPreamble(csvText));
 
   if (headers.length === 0 && rows.length === 0) {
     return {

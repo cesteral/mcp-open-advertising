@@ -30,7 +30,7 @@ Ad Account (urn:li:sponsoredAccount:XXXXXXXXX)
 | **campaignGroup** | \`/rest/adAccounts/{accountId}/adCampaignGroups\` | Campaign Group |
 | **campaign** | \`/rest/adAccounts/{accountId}/adCampaigns\` | Campaign |
 | **creative** | \`/v2/adCreatives\` *(not yet migrated — schema rewrite, #210)* | Creative |
-| **conversionRule** | \`/v2/conversions\` *(not yet migrated, #210)* | Conversion Rule |
+| **conversionRule** | \`/rest/conversions\` (list, create); get/update/delete on legacy \`/v2/conversions\` *(#210)* | Conversion Rule |
 
 ## Key Concepts
 
@@ -79,7 +79,7 @@ Response contains \`elements\` array and \`paging\` object.
 
 Entities not yet migrated still scope by query parameter:
 - \`accounts=List(urn%3Ali%3AsponsoredAccount%3A123)\` — creatives (\`/v2/adCreatives\`; Rest.li 2.0 list syntax)
-- \`account\` — conversion rules (\`/v2/conversions\`)
+- \`account\` — conversion rules (\`/rest/conversions?q=account&account={urn}\`, no paging)
 
 Campaigns and campaign groups no longer use a scoping parameter: the account is part of their path.
 

@@ -22,7 +22,7 @@
  * this, and every adapter takes the version as a required constructor argument
  * so nothing can silently fall back to a stale literal.
  */
-export const LINKEDIN_API_VERSION = "202608";
+export const LINKEDIN_API_VERSION = "202610";
 
 /**
  * When {@link LINKEDIN_API_VERSION} was last ASSESSED.
@@ -37,7 +37,7 @@ export const LINKEDIN_API_VERSION = "202608";
  *
  * Source: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/migrations
  */
-export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-10-01";
+export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-11-13";
 
 /**
  * How {@link LINKEDIN_API_VERSION} was established, and therefore how much the
@@ -47,12 +47,14 @@ export const LINKEDIN_API_VERSION_VERIFIED_AT = "2026-10-01";
  * - `inferred`  — derived from LinkedIn's documented monthly-release cadence and
  *                 one-year support window WITHOUT reading that list.
  *
- * `confirmed`. On 2026-10-01 LinkedIn's migrations page was read directly (it is
+ * `confirmed`. On 2026-11-13 LinkedIn's migrations page was read directly (it is
  * server-rendered and fetchable; the earlier note here that it was unreachable
  * was true of the review sandbox, not of a developer machine). It lists version
- * 202608 as Active with a sunset of 2027-08-17, and 202609 as Active until
- * 2027-09-15 (the latest). The versioning page states the one-year floor and that
- * a sunset or missing `Linkedin-Version` header returns an error.
+ * 202610 (the latest) as Active until 2027-10-15. The versioning page states the
+ * one-year floor and that a sunset or missing `Linkedin-Version` header returns an
+ * error. The 202609 and 202610 sections of LinkedIn's recent-changes page list no
+ * breaking change at those versions; the one breaking change they announce
+ * (required `surface` on publisher lists) takes effect at 202611.
  *
  * What `confirmed` does NOT mean: nothing here has called the live API, so it
  * says the version is supported on LinkedIn's published list, not that every

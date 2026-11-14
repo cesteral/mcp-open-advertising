@@ -17,6 +17,7 @@ export * from "./mcp/governed-dry-run.js";
 export * from "./mcp/pagination.js";
 export * from "./mcp/prompt-handler-factory.js";
 export * from "./mcp/raw-tool-args.js";
+export * from "./mcp/pacing-tool-factory.js";
 export * from "./mcp/resource-handler-factory.js";
 export * from "./mcp/schema-size-guard.js";
 export * from "./mcp/tool-examples-resource.js";
@@ -29,6 +30,7 @@ export * from "./mcp/zod-helpers.js";
 // Transport, server bootstrap and sessions
 export * from "./transport/config-base.js";
 export * from "./transport/deployment-identity.js";
+export * from "./transport/in-flight-requests.js";
 export * from "./transport/mcp-http-transport-factory.js";
 export * from "./transport/mcp-transport-helpers.js";
 export * from "./transport/operational-envelope.js";

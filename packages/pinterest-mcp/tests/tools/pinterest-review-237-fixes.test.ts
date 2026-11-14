@@ -29,13 +29,15 @@ import { deleteEntityLogic } from "../../src/mcp-server/tools/definitions/delete
 import { bulkUpdateStatusLogic } from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
 import { adjustBidsLogic } from "../../src/mcp-server/tools/definitions/adjust-bids.tool.js";
 import { ListAdvertisersInputSchema } from "../../src/mcp-server/tools/definitions/list-ad-accounts.tool.js";
-import {
-  GetPacingStatusInputSchema,
-  getPacingStatusLogic,
-  getPacingStatusResponseFormatter,
-} from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+import { getPacingStatusTool } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
 import { buildReportRequestBody } from "../../src/services/pinterest/pinterest-reporting-service.js";
 import { PinterestService } from "../../src/services/pinterest/pinterest-service.js";
+
+const {
+  inputSchema: GetPacingStatusInputSchema,
+  logic: getPacingStatusLogic,
+  responseFormatter: getPacingStatusResponseFormatter,
+} = getPacingStatusTool;
 
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;

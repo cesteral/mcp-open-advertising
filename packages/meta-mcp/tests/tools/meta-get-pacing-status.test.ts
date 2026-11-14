@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import {
-  GetPacingStatusInputSchema,
-  getPacingStatusLogic,
-  getPacingStatusResponseFormatter,
-  getPacingStatusTool,
-} from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+import { getPacingStatusTool } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
+
+const {
+  inputSchema: GetPacingStatusInputSchema,
+  logic: getPacingStatusLogic,
+  responseFormatter: getPacingStatusResponseFormatter,
+} = getPacingStatusTool;
 
 const ctx = { requestId: "r" } as any;
 
