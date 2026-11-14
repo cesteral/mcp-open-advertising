@@ -74,7 +74,7 @@ describe("resolveAnalyticsFields", () => {
 });
 
 describe("pivots", () => {
-  it("accepts every pivot LinkedIn documents for the analytics finder at 202608", () => {
+  it("accepts every pivot LinkedIn documents for the analytics finder at 202610", () => {
     for (const pivot of [
       "COMPANY",
       "ACCOUNT",
@@ -103,11 +103,11 @@ describe("pivots", () => {
     }
   });
 
-  it("rejects the removed geo pivots and the one that needs 202609", () => {
+  it("rejects the removed geo pivots and the one that needs a Nielsen DMA notice", () => {
     for (const pivot of ["MEMBER_COUNTRY", "MEMBER_REGION", "MEMBER_GEO_COUNTRY"]) {
       expect(LINKEDIN_ANALYTICS_PIVOTS as readonly string[], pivot).not.toContain(pivot);
     }
-    // Available only from 202609; this server pins 202608.
+    // Exists from 202609 (this server pins 202610) but its results must carry Nielsen's DMA notice.
     expect(LINKEDIN_ANALYTICS_PIVOTS as readonly string[]).not.toContain(
       "MEMBER_DESIGNATED_MARKET_AREA"
     );

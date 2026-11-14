@@ -38,6 +38,27 @@ variable "error_rate_threshold" {
   }
 }
 
+variable "tool_error_rate_threshold" {
+  type        = number
+  description = <<-EOT
+    Percentage (0-100) of MCP tool calls ending in status="error", per server,
+    sustained for 10 minutes, that raises an alert. Deliberately higher than
+    error_rate_threshold: a tool failure includes caller mistakes (invalid
+    arguments, entity not found), not only server faults.
+  EOT
+  default     = 25
+  validation {
+    condition     = var.tool_error_rate_threshold >= 0 && var.tool_error_rate_threshold <= 100
+    error_message = "tool_error_rate_threshold must be between 0 and 100."
+  }
+}
+
+variable "rate_limit_hit_threshold" {
+  type        = number
+  description = "Number of server-side rate-limit rejections (mcp.rate_limit.hit.count), per server, within 5 minutes that raises an alert"
+  default     = 50
+}
+
 variable "latency_p99_threshold_ms" {
   type        = number
   description = "P99 latency threshold in milliseconds"
