@@ -86,6 +86,51 @@ describe("downloadReportLogic", () => {
     expect(result.truncated).toBe(false);
   });
 
+  // basis: CM360 report files carry a metadata block ending in a `Report Fields`
+  // line before the header row, and a trailing `Grand Total:` row (#296).
+  it("skips the CM360 preamble and drops the Grand Total row", async () => {
+    const csv = [
+      "Report,My report",
+      "Date/Time Generated,2026/10/16 10:00:00",
+      "Report Time Zone,(GMT+00:00) UTC",
+      "Account ID,123456",
+      "Date Range,2026/10/01 - 2026/10/02",
+      "",
+      "Report Fields",
+      "Date,Campaign,Impressions,Clicks",
+      "2026-10-01,Spring,1000,50",
+      "2026-10-02,Spring,2000,100",
+      "Grand Total:,,3000,150",
+      "",
+    ].join("\r\n");
+    mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
+      mockContext
+    );
+
+    expect(result.headers).toEqual(["Date", "Campaign", "Impressions", "Clicks"]);
+    expect(result.rows).toEqual([
+      { Date: "2026-10-01", Campaign: "Spring", Impressions: "1000", Clicks: "50" },
+      { Date: "2026-10-02", Campaign: "Spring", Impressions: "2000", Clicks: "100" },
+    ]);
+    expect(result.totalRows).toBe(2);
+  });
+
+  it("returns the header and no rows when only the preamble and totals are present", async () => {
+    const csv = "Report,R\nAccount ID,1\n\nReport Fields\nDate,Impressions\nGrand Total:,0\n";
+    mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
+      mockContext
+    );
+
+    expect(result.headers).toEqual(["Date", "Impressions"]);
+    expect(result.totalRows).toBe(0);
+  });
+
   it("empty report returns empty arrays", async () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(""));
 

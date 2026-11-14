@@ -19,11 +19,14 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "contract-v[0-9]+.[0-9]+.[0-9]+"
 
-# id-token: npm provenance attestation + mcp-publisher GitHub OIDC login.
-# contents: write: creating the GitHub Release.
+# Read-only by default; each job asks for what it needs (#299).
+#   id-token: write  - npm provenance attestation, and the mcp-publisher GitHub
+#                      OIDC login. Only the two publish jobs have it.
+#   contents: write  - creating the GitHub Release. Only the two small
+#                      `github-release*` jobs have it, and they run no
+#                      repository code and see no npm token.
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 # Serialize releases: a second tag pushed mid-release queues rather than
 # racing the first. Never cancel an in-progress publish.
@@ -38,13 +41,16 @@ jobs:
     if: ${{ !startsWith(github.ref_name, 'contract-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: pnpm
@@ -96,25 +102,54 @@ jobs:
       - name: Contract-schema published parity
         run: node scripts/check/check-contract-schema-published-parity.mjs
 
-      - name: Install mcp-publisher
+      # npm first, and the only step that sees the npm token. `--npm-only` skips
+      # the MCP Registry, which runs below with a downloaded binary and no token.
+      - name: Publish to npm (with provenance)
+        run: ./scripts/publish-all.sh --provenance --npm-only
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # #299: a fixed release, checked against the sha256 of the archive before
+      # it is unpacked. It used to fetch whatever release was newest and pipe it
+      # straight into tar.
+      # The hash is the linux_amd64 line of the release's own
+      # `registry_<version>_checksums.txt`. Bump both values together, in a
+      # reviewed PR, after reading the release notes.
+      - name: Install mcp-publisher (pinned, checksum-verified)
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
         run: |
-          set -eo pipefail
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
-            | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+          set -euo pipefail
+          archive="$RUNNER_TEMP/mcp-publisher_linux_amd64.tar.gz"
+          curl -fsSL -o "$archive" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" mcp-publisher
+          sudo install -m 0755 "$RUNNER_TEMP/mcp-publisher" /usr/local/bin/mcp-publisher
           mcp-publisher --help > /dev/null
 
       - name: Authenticate mcp-publisher (GitHub OIDC)
         run: mcp-publisher login github-oidc
 
-      - name: Publish (npm with provenance + MCP Registry)
-        run: ./scripts/publish-all.sh --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # No NODE_AUTH_TOKEN here: the downloaded binary never runs with the npm token.
+      - name: Publish to the MCP Registry
+        run: ./scripts/publish-all.sh --registry-only
 
+  github-release:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # No checkout: `gh` is pointed at the repository explicitly, so no
+      # repository code runs in the one job that can write to it.
       - name: Create GitHub Release
         run: gh release create "${{ github.ref_name }}" --generate-notes --verify-tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
 
   release-contracts:
     # Contract-library lane: `contract-v*` tags publish ONLY the two leaf
@@ -122,13 +157,16 @@ jobs:
     if: ${{ startsWith(github.ref_name, 'contract-v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: pnpm
@@ -165,7 +203,15 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  github-release-contracts:
+    needs: release-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
       - name: Create GitHub Release
         run: gh release create "${{ github.ref_name }}" --generate-notes --verify-tag --title "${{ github.ref_name }} (contract libraries)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

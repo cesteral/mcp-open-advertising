@@ -98,7 +98,7 @@ export async function createMcpServer(
     }
   );
 
-  const interactionLogger = new InteractionLogger({
+  const interactionLogger = InteractionLogger.shared({
     serverName: MSADS_PACKAGE_NAME,
     logger,
     gcsBucket,

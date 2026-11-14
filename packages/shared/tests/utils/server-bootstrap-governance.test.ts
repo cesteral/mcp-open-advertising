@@ -35,7 +35,7 @@ function bootstrapOpts(overrides: Record<string, unknown> = {}) {
     createMcpServer: vi.fn(),
     runStdio: vi.fn(),
     startHttp: vi.fn(async () => ({
-      server: { close: (cb?: () => void) => cb?.() },
+      server: { close: (cb?: () => void) => cb?.(), on: () => undefined },
       shutdown: async () => {},
     })),
     ...overrides,

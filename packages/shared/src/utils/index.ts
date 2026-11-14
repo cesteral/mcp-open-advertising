@@ -30,6 +30,7 @@ export * from "./mcp/zod-helpers.js";
 // Transport, server bootstrap and sessions
 export * from "./transport/config-base.js";
 export * from "./transport/deployment-identity.js";
+export * from "./transport/in-flight-requests.js";
 export * from "./transport/mcp-http-transport-factory.js";
 export * from "./transport/mcp-transport-helpers.js";
 export * from "./transport/operational-envelope.js";

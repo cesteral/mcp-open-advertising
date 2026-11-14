@@ -1,6 +1,6 @@
 # @cesteral/gads-mcp
 
-Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v25.
+Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v26.
 
 ## Purpose
 
@@ -181,7 +181,7 @@ Dry-run validate an entity payload via the Google Ads API with `validateOnly: tr
 
 **Phase: Production-Ready**
 
-All tools are implemented against the Google Ads REST API v25, with request shapes checked against Google's Discovery document in hermetic tests. No tool has been exercised against a live account (every tool is at `declared` verification). `googleAds:search` never sends `pageSize` (v25 rejects it with `PAGE_SIZE_NOT_SUPPORTED`); results are bounded client-side and paged with `pageToken`.
+All tools are implemented against the Google Ads REST API v26, with request shapes checked against Google's Discovery document in hermetic tests. No tool has been exercised against a live account (every tool is at `declared` verification). `googleAds:search` never sends `pageSize` (v26 rejects it with `PAGE_SIZE_NOT_SUPPORTED`); results are bounded client-side and paged with `pageToken`.
 
 ## Development
 
@@ -220,7 +220,7 @@ pnpm run test
 
 ### Key Components
 
-- **`GAdsHttpClient`** - HTTP client for Google Ads API v25 with retry logic and error parsing
+- **`GAdsHttpClient`** - HTTP client for Google Ads API v26 with retry logic and error parsing
 - **`GAdsService`** - GAQL queries, account listing, and generic CRUD via :mutate API
 - **`GAdsRefreshTokenAuthAdapter`** - OAuth2 token caching with mutex for concurrent requests
 - **`GAdsHeadersAuthStrategy`** - Reads credentials from request headers

@@ -5,33 +5,43 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ---------------------------------------------------------------------------
 
 vi.mock("../../src/services/sa360/sa360-http-client.js", () => ({
-  SA360HttpClient: vi.fn().mockImplementation(() => ({
-    fetch: vi.fn(),
-  })),
+  SA360HttpClient: vi.fn().mockImplementation(function () {
+    return {
+      fetch: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("../../src/services/sa360-v2/sa360-v2-http-client.js", () => ({
-  SA360V2HttpClient: vi.fn().mockImplementation(() => ({
-    fetch: vi.fn(),
-  })),
+  SA360V2HttpClient: vi.fn().mockImplementation(function () {
+    return {
+      fetch: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("../../src/services/sa360/sa360-service.js", () => ({
-  SA360Service: vi.fn().mockImplementation(() => ({
-    search: vi.fn(),
-  })),
+  SA360Service: vi.fn().mockImplementation(function () {
+    return {
+      search: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("../../src/services/sa360-v2/conversion-service.js", () => ({
-  ConversionService: vi.fn().mockImplementation(() => ({
-    insertConversions: vi.fn(),
-  })),
+  ConversionService: vi.fn().mockImplementation(function () {
+    return {
+      insertConversions: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("../../src/services/sa360-v2/reporting-service.js", () => ({
-  SA360ReportingService: vi.fn().mockImplementation(() => ({
-    submitReport: vi.fn(),
-  })),
+  SA360ReportingService: vi.fn().mockImplementation(function () {
+    return {
+      submitReport: vi.fn(),
+    };
+  }),
 }));
 
 import { sessionServiceStore, createSessionServices } from "../../src/services/session-services.js";

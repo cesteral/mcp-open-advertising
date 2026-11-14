@@ -101,7 +101,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     supportedMutateOps: ALL_MUTATE_OPS,
   },
   asset: {
-    // v25 Discovery AssetOperation has `create`, `update` and `updateMask` (no
+    // v26 Discovery AssetOperation has `create`, `update` and `updateMask` (no
     // `remove`). Only create is offered here: allowing `update` would put
     // `asset` under gads_update_entity's governed entity kinds, which is a
     // governance decision (gads #9).

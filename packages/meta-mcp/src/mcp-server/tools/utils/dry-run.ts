@@ -79,36 +79,26 @@ export async function readParentSpecialAdCategories(
 }
 
 /**
- * The v26 warnings (#229) for an ad set's update or duplicate dry run.
- * `adSet` is the ad set as the dry run already read it (undefined when it was
- * not read). Check 3 needs the parent campaign's categories, so the campaign
- * is read only when the targeting omits advantage_audience; check 3 is
- * skipped for a type that is neither an ad set nor untyped.
+ * The v26 warnings (#229) for an ad set's duplicate dry run. `source` is the
+ * source ad set as the dry run already read it; a copy carries its targeting
+ * into a new ad set under the same campaign. Check 3 needs the parent
+ * campaign's categories, so the campaign is read only when the targeting omits
+ * advantage_audience.
  */
-async function metaV26DryRunWarnings(
-  rawTargeting: unknown,
-  location: string,
-  targetingPath: string | null,
-  entityType: string | undefined,
-  adSet: Record<string, unknown> | undefined,
+async function metaV26DuplicateDryRunWarnings(
+  source: Record<string, unknown>,
   metaService: MetaServiceLike,
   context: RequestContext
 ): Promise<MetaV26Warning[]> {
+  const rawTargeting = source.targeting;
   if (rawTargeting === undefined) return [];
-  let specialAdCategories: SpecialAdCategoriesKnowledge | undefined;
-  if (
-    (entityType === "adSet" || entityType === undefined) &&
-    needsSpecialAdCategories(rawTargeting)
-  ) {
-    specialAdCategories =
-      entityType === undefined
-        ? { unknown: "entityType was not given, so the ad set and its campaign were not read" }
-        : await readParentSpecialAdCategories(metaService, adSet?.campaign_id, context);
-  }
+  const specialAdCategories = needsSpecialAdCategories(rawTargeting)
+    ? await readParentSpecialAdCategories(metaService, source.campaign_id, context)
+    : undefined;
   return metaV26TargetingWarnings(rawTargeting, {
-    targetingPath,
+    targetingPath: null,
     fallbackField: "entityId",
-    location,
+    location: "copied from the source ad set",
     ...(specialAdCategories ? { specialAdCategories } : {}),
   });
 }
@@ -232,18 +222,15 @@ export async function runMetaUpdateDryRun(
   }
 
   // v26 warnings (#229), text only. `targeting` replaces the ad set's
-  // targeting wholesale, so only the targeting in `data` is checked.
+  // targeting wholesale, so only the targeting in `data` is checked. Check 3
+  // (advantage_audience) is for creating and copying an ad set, not updating
+  // one, so an update reads no campaign.
   if (warningsOut) {
     warningsOut.push(
-      ...(await metaV26DryRunWarnings(
-        input.data.targeting,
-        "in data.targeting",
-        "data.targeting",
-        input.entityType,
-        current,
-        metaService,
-        context
-      ))
+      ...metaV26TargetingWarnings(input.data.targeting, {
+        targetingPath: "data.targeting",
+        location: "in data.targeting",
+      })
     );
   }
 
@@ -469,17 +456,7 @@ export async function runMetaDuplicateDryRun(
       // targeting into a new ad set under the same campaign. A campaign copy
       // has no children (no deep_copy), so only an ad set is checked.
       if (warningsOut && entityType === "adSet") {
-        warningsOut.push(
-          ...(await metaV26DryRunWarnings(
-            source.targeting,
-            "copied from the source ad set",
-            null,
-            entityType,
-            source,
-            metaService,
-            context
-          ))
-        );
+        warningsOut.push(...(await metaV26DuplicateDryRunWarnings(source, metaService, context)));
       }
     }
   }

@@ -45,7 +45,7 @@ export function getEntityUpdateWorkflowMessage(args?: Record<string, string>): s
 - Customer ID: \`${customerId}\`
 - Entity Type: \`${entityType}\`
 - Entity ID: \`${entityId}\`
-- Platform: Google Ads API v25
+- Platform: Google Ads API v26
 
 ---
 

@@ -162,6 +162,12 @@ export function sanitizeParams(input: unknown, depth = 0): unknown {
 // the last flush and exit are silently dropped on Cloud Run cold-stop.
 const liveLoggers = new Set<InteractionLogger>();
 
+// Process-wide logger per server name, handed out by `InteractionLogger.shared`.
+// `createMcpServer` runs once per session; constructing a logger there leaked a
+// flush timer, buffer and GCS client for every session until the process died,
+// and (in gcs mode) fanned the day's records out over one object per session.
+const sharedLoggers = new Map<string, InteractionLogger>();
+
 /**
  * Close every live InteractionLogger. Idempotent and safe to call multiple
  * times — each `close()` removes its instance from the registry. Failures in
@@ -204,6 +210,7 @@ export function resolveInteractionLogMode(options: {
 export class InteractionLogger {
   private readonly dataDir: string;
   private readonly serverName: string;
+  private readonly serverNameKey: string;
   private readonly maxFileSizeBytes: number;
   private readonly logger: Logger;
   private readonly gcsBucket?: string;
@@ -221,9 +228,28 @@ export class InteractionLogger {
   private buffer: string[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private flushing = false;
+  /** Number of GCS objects this instance has written; names the next one. */
+  private flushSeq = 0;
   private bucketPromise: Promise<any> | null = null;
 
+  /**
+   * Process-wide logger for `options.serverName`: the first call constructs it,
+   * later calls (one per MCP session) return the same instance. Use this from
+   * per-session code. `close()` drops it from the cache, so the next call after
+   * a close builds a fresh one.
+   *
+   * Options from the first call win; later calls' options are ignored.
+   */
+  static shared(options: InteractionLoggerOptions): InteractionLogger {
+    const existing = sharedLoggers.get(options.serverName);
+    if (existing) return existing;
+    const created = new InteractionLogger(options);
+    sharedLoggers.set(options.serverName, created);
+    return created;
+  }
+
   constructor(options: InteractionLoggerOptions) {
+    this.serverNameKey = options.serverName;
     this.dataDir = options.dataDir ?? join(homedir(), ".cesteral", "interactions");
     this.serverName = options.serverName;
     this.maxFileSizeBytes = options.maxFileSizeBytes ?? 10 * 1024 * 1024; // 10 MB
@@ -332,6 +358,9 @@ export class InteractionLogger {
    */
   async close(): Promise<void> {
     liveLoggers.delete(this);
+    if (sharedLoggers.get(this.serverNameKey) === this) {
+      sharedLoggers.delete(this.serverNameKey);
+    }
 
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
@@ -366,9 +395,17 @@ export class InteractionLogger {
       const lines = this.buffer.slice(0);
       const payload = lines.join("");
       const today = new Date().toISOString().slice(0, 10);
-      // Instance-unique path prevents read-modify-write races between Cloud Run instances
-      const filePath = `interactions/${this.serverName}-${this.instanceId}-${today}.jsonl`;
-      await this.appendToGcs(filePath, payload);
+      // One object per flush. The old layout appended to a single per-day object
+      // by downloading it and re-uploading everything, which is O(n^2) in log
+      // size. The instance id keeps names unique across Cloud Run instances and
+      // the sequence number across flushes; the sequence only advances after a
+      // successful write, so a retried flush overwrites its own failed attempt
+      // instead of leaving a gap. Every object still matches
+      // `<server>/interactions/*.jsonl`, the glob the BigQuery table reads.
+      const seq = String(this.flushSeq).padStart(6, "0");
+      const filePath = `interactions/${this.serverName}-${this.instanceId}-${today}-${seq}.jsonl`;
+      await this.writeToGcs(filePath, payload);
+      this.flushSeq++;
       this.buffer.splice(0, lines.length);
     } catch (error) {
       this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to GCS");
@@ -395,20 +432,10 @@ export class InteractionLogger {
     return this.gcsPrefix ? `${this.gcsPrefix}/${path}` : path;
   }
 
-  private async appendToGcs(path: string, content: string): Promise<void> {
+  private async writeToGcs(path: string, content: string): Promise<void> {
     const bucket = await this.getBucket();
     const file = bucket.file(this.gcsObjectPath(path));
-    // Instance-unique paths eliminate cross-instance races; the flushing
-    // flag prevents concurrent flushes within the same instance.
-    let existing = "";
-    try {
-      const [data] = await file.download();
-      existing = data.toString("utf-8");
-    } catch (err: any) {
-      if (err.code !== 404) throw err;
-      // File doesn't exist yet — start fresh
-    }
-    await file.save(existing + content, {
+    await file.save(content, {
       contentType: "text/plain; charset=utf-8",
       resumable: false,
     });

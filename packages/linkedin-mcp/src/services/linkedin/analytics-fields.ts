@@ -42,12 +42,14 @@ export const DEFAULT_ANALYTICS_METRICS = [
 ] as const;
 
 /**
- * `pivot` values for the `q=analytics` finder at the pinned version (202608), from
+ * `pivot` values for the `q=analytics` finder at the pinned version (202610), from
  * the schema page's `pivot.value` enum. Notes:
  * - The geo pivots are the `_V2` ones. `MEMBER_COUNTRY` / `MEMBER_REGION` are not
  *   in the enum; `MEMBER_GEO_COUNTRY` never was.
  * - `MEMBER_DESIGNATED_MARKET_AREA` is "available starting with the 202609
- *   version" and needs a Nielsen DMA notice, so it is left out until the pin moves.
+ *   version", so it exists at the pinned 202610, but any display of its results must
+ *   carry Nielsen's DMA registration notice, which this server cannot guarantee, so
+ *   it stays out.
  * - `MEMBER_COUNTY` is not in the enum but has a documented sample request.
  * - `q=statistics` (up to three pivots) takes none of the `MEMBER_*` pivots, so
  *   it is not used here.

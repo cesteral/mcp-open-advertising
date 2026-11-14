@@ -1,6 +1,6 @@
 # Cross-Server Contract
 
-**Last Updated:** 2026-07-14
+**Last Updated:** 2026-11-13
 
 Standards that all MCP servers in this repository should follow for consistent AI agent orchestration.
 
@@ -24,32 +24,28 @@ Standards that all MCP servers in this repository should follow for consistent A
 
 ## Required Tool Categories
 
-Every management server MUST provide these tool categories:
+What a server must ship depends on its `type` in `registry.json` (`management`, `reporting` or `reporting_conversions`). `scripts/lib/contract-tiers.mjs` checks every server against its tier on each PR; the tiers were decided in [the platform-key and contract decision record](plans/2026-10-11-platform-keys-and-contract-decisions.md).
 
-### Core CRUD (5 tools)
+| Requirement                                                                                               | `management` | `reporting` | `reporting_conversions` |
+| --------------------------------------------------------------------------------------------------------- | ------------ | ----------- | ----------------------- |
+| `{prefix}_list_entities`, `_get_entity`                                                                   | MUST         | —           | MUST                    |
+| `{prefix}_create_entity`, `_update_entity`, `_delete_entity` (or `_remove_entity`)                        | MUST         | —           | —                       |
+| `{prefix}_bulk_update_status`, `_validate_entity` (client-side or server-side)                            | MUST         | —           | —                       |
+| `{prefix}_get_pacing_status`                                                                              | MUST         | MUST        | MUST                    |
+| A reporting tool (`get_report`, `submit_report`, `get_insights`, `get_analytics`, `run_custom_query`)     | SHOULD       | MUST        | MUST                    |
+| `{prefix}_insert_conversions`                                                                             | —            | —           | MUST                    |
+| `{prefix}_duplicate_entity` (get + create under the hood; no native platform "duplicate" API is required) | SHOULD       | —           | —                       |
+| `{prefix}_adjust_bids` (or `_adjust_line_item_bids`)                                                      | SHOULD       | —           | —                       |
+| Account discovery (`list_accounts`, `list_ad_accounts`, `list_advertisers` or `list_user_profiles`)       | SHOULD       | —           | —                       |
+| `{prefix}_search_tools`                                                                                   | SHOULD       | SHOULD      | SHOULD                  |
 
-- `{prefix}_list_entities` — List entities with filters and pagination
-- `{prefix}_get_entity` — Get a single entity by type and ID
-- `{prefix}_create_entity` — Create a new entity
-- `{prefix}_update_entity` — Update an existing entity
-- `{prefix}_delete_entity` (or `{prefix}_remove_entity`) — Delete/remove an entity
+**A MUST has no exceptions.** A SHOULD a server does not ship is recorded with its reason in that server's `contract.exceptions` in `registry.json`, and the check fails for an unrecorded gap or for an exception the server no longer needs. To list the current ones:
 
-### Bulk Operations
+```bash
+node -e 'for (const s of require("./registry.json").servers) for (const e of s.contract?.exceptions ?? []) console.log(s.package, e.requirement, "-", e.reason)'
+```
 
-- `{prefix}_bulk_update_status` — Batch status updates
-
-### Bid Management
-
-- `{prefix}_adjust_bids` or `{prefix}_adjust_line_item_bids` — Batch bid adjustments
-
-### Validation
-
-- `{prefix}_validate_entity` — Validate entity payloads (client-side or server-side)
-
-### Entity duplication
-
-- `{prefix}_duplicate_entity` — Clone an existing entity (get + create under the hood; no native platform "duplicate" API is required). Shipped on **10 of the 11** write servers: dv360, ttd, gads, meta, linkedin, tiktok, pinterest, snapchat, amazon-dsp, msads.
-- **cm360 does not expose `duplicate_entity`.** This is the sole write-platform gap; it is a coverage omission, not an API limitation (the get+create clone pattern the siblings use needs no native support). Documented here so enumeration code does not assume fleet-wide coverage; adding it later is a pure add (new tool → new `definitionHash`, no change to existing tools).
+Names stay as they are: `gads_remove_entity` and `dv360_adjust_line_item_bids` are accepted variants, because renaming a tool changes its name, its `definitionHash` and, for a governed tool, its contract identity.
 
 ### Derived analysis tools (client-side)
 
@@ -63,11 +59,6 @@ The strictness of the `data:` / `items:` payload validation differs by server, b
 
 - **dv360** carries a generated **per-entity schema registry** (`getEntitySchemaForOperation`). `create_entity` / `bulk_create_entities` validate each payload against the per-entity **create** schema on the dry-run (symbolic preview) path, and `update_entity` validates the merged post-state against the **update** schema. Execute mirrors the platform: the DV360 API is the final validator, so a bulk batch keeps partial success.
 - **Every other server** accepts write bodies as `z.record(...)` at the tool-input layer and applies **symbolic validation** on the write paths (status-enum / empty-payload guards, added fleet-wide in the create-path and update-path hardening) rather than a full typed per-entity schema. Those platforms have **no equivalent generated per-entity schema source** to validate against, so porting dv360's registry pattern is a per-platform schema-authoring effort, not a mechanical change — tracked as a known limitation rather than a uniform contract guarantee. The platform API remains the authoritative validator on execute.
-
-### Exceptions
-
-- **dbm-mcp**: Reporting only — provides query tools, not CRUD. No management tools required.
-- **sa360-mcp**: Reporting + conversion upload — provides query/insights tools and conversion insert/update. No entity CRUD required.
 
 ## Intentional Naming Differences
 
