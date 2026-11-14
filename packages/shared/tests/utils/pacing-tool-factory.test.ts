@@ -119,7 +119,10 @@ describe("createPacingTool", () => {
       advertiserId: "6987654321098765432",
       campaignId: "1798765432109876",
     });
-    expect(meta.inputExamples?.[1]?.input).toMatchObject({ adAccountId: "act_2", campaignId: "22" });
+    expect(meta.inputExamples?.[1]?.input).toMatchObject({
+      adAccountId: "act_2",
+      campaignId: "22",
+    });
   });
 
   it("echoes the account id under its own field name and computes the budget block", async () => {
