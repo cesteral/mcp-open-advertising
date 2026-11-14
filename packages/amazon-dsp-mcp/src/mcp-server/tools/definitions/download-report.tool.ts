@@ -99,7 +99,7 @@ export async function downloadReportLogic(
     sessionId: sdkContext?.sessionId,
     reportCsvStore,
     spillBodyToGcs,
-    spillServer: "amazonDsp",
+    spillServer: "amazon_dsp",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: AMAZON_DSP_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>

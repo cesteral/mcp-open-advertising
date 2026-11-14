@@ -3,20 +3,24 @@
 
 import { JsonRpcErrorCode, McpError } from "../mcp-errors.js";
 
-/** Platforms whose reporting errors are normalized through {@link mapReportingError}. */
+/**
+ * Platforms whose reporting errors are normalized through {@link mapReportingError}.
+ * Values are the servers' registry `platform_key`s (#273 decision 4);
+ * scripts/lib/platform-keys.test.mjs keeps them in step.
+ */
 export type ReportingPlatform =
   | "ttd"
   | "meta"
-  | "google"
+  | "google_ads"
   | "dbm"
   | "cm360"
   | "sa360"
   | "tiktok"
-  | "linkedin"
+  | "linkedin_ads"
   | "pinterest"
   | "snapchat"
-  | "amazonDsp"
-  | "microsoft";
+  | "amazon_dsp"
+  | "msads";
 
 export interface ReportingErrorData {
   platform: ReportingPlatform;
@@ -86,7 +90,7 @@ export function mapReportingError(err: unknown, platform: ReportingPlatform): Re
       if (typeof e.error?.code === "number") upstreamCode = e.error.code;
       if (e.error?.message) msg = e.error.message;
     } else if (
-      platform === "google" ||
+      platform === "google_ads" ||
       platform === "dbm" ||
       platform === "cm360" ||
       platform === "sa360"
@@ -94,7 +98,7 @@ export function mapReportingError(err: unknown, platform: ReportingPlatform): Re
       const e = body as { error?: { status?: string; message?: string } };
       if (e.error?.status) upstreamCode = e.error.status;
       if (e.error?.message) msg = e.error.message;
-    } else if (platform === "microsoft") {
+    } else if (platform === "msads") {
       const e = body as { Errors?: Array<{ Code?: string; Message?: string }> };
       const first = e.Errors?.[0];
       if (first?.Code) upstreamCode = first.Code;

@@ -32,6 +32,8 @@ export const ANNOTATION_PLATFORM_DIFFERS = {
   },
 };
 
+import { meets } from "./contract-tiers.mjs";
+
 const KEY_PATTERN = /^[a-z0-9_]{1,40}$/;
 
 /** Registry-level rules: key format, uniqueness, key = prefix, no stale legacy entries. */
@@ -95,6 +97,58 @@ export function checkGovernedTools(server, tools) {
   }
   if (legacy && !legacyUsed) {
     violations.push(`${pkg}: ANNOTATION_PLATFORM_DIFFERS entry is no longer needed; remove it`);
+  }
+  return violations;
+}
+
+/**
+ * The names outside definitionHash also use the key (#273 decision 4): each
+ * server's telemetry `platform` (the `mcp.platform` span attribute and the
+ * interaction-log `platform` field) and the shared reporting enums, which list
+ * the key of every server with a reporting tool. Read from
+ * source, since neither is on the MCP wire.
+ */
+export function checkPlatformNames(registry, readSource) {
+  const violations = [];
+  for (const { package: pkg, platform_key: key } of registry.servers) {
+    const path = `packages/${pkg}/src/mcp-server/server.ts`;
+    const text = readSource(path);
+    const passed = text.match(/^\s+platform: ([A-Z0-9_]+),$/m)?.[1];
+    const value = passed && text.match(new RegExp(`const ${passed} = "([^"]+)";`))?.[1];
+    if (!value) {
+      violations.push(`${path}: no \`platform: <CONST>\` with a string const to check`);
+    } else if (value !== key) {
+      violations.push(`${path}: telemetry platform "${value}" must equal platform_key "${key}"`);
+    }
+  }
+  // Only servers that ship a reporting tool appear in the reporting enums
+  // (dv360's reporting is dbm-mcp).
+  const keys = registry.servers
+    .filter((s) => meets(s, "reporting"))
+    .map((s) => s.platform_key)
+    .sort();
+  const enums = [
+    {
+      path: "packages/shared/src/utils/reporting/report-errors.ts",
+      block: /export type ReportingPlatform =([^;]+);/,
+    },
+    {
+      path: "packages/shared/src/schemas/report-schedule.ts",
+      block: /platform: z\.enum\(\[([^\]]+)\]\)/,
+    },
+  ];
+  for (const { path, block } of enums) {
+    const body = readSource(path).match(block)?.[1];
+    if (!body) {
+      violations.push(`${path}: reporting platform enum not found (moved? update this check)`);
+      continue;
+    }
+    const values = [...body.matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
+    if (JSON.stringify(values) !== JSON.stringify(keys)) {
+      violations.push(
+        `${path}: reporting platforms ${JSON.stringify(values)} must equal the platform_keys of the servers that ship a reporting tool ${JSON.stringify(keys)}`
+      );
+    }
   }
   return violations;
 }
