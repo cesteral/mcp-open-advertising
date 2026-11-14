@@ -1054,9 +1054,7 @@ describe("linkedin_list_entities → conversionRule", () => {
     const [req] = apiRequests();
     expect(apiRequests()).toHaveLength(1);
     expect(req!.method).toBe("GET");
-    expect(req!.url).toBe(
-      `${API_BASE_URL}/rest/conversions?q=account&account=${enc(ACCOUNT_URN)}`
-    );
+    expect(req!.url).toBe(`${API_BASE_URL}/rest/conversions?q=account&account=${enc(ACCOUNT_URN)}`);
     expect(out.entities).toHaveLength(1);
     // An unpaged finder must not hand back a cursor the next call would ignore.
     expect(out.pagination.nextCursor).toBeNull();
