@@ -179,7 +179,7 @@ describe("ttd report template tools", () => {
   it("uses GraphQL pagination when no legacy offset is provided", async () => {
     mockTtdService.graphqlQuery.mockResolvedValueOnce({
       data: {
-        myReportsReportTemplates: {
+        reportingTemplates: {
           totalCount: 2,
           pageInfo: { hasNextPage: true, endCursor: "cursor-2" },
           nodes: [{ id: "tpl-1", name: "Template 1", format: "EXCEL" }],
@@ -194,7 +194,7 @@ describe("ttd report template tools", () => {
     );
 
     expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
-      expect.stringContaining("myReportsReportTemplates"),
+      expect.stringContaining("reportingTemplates"),
       { first: 10, after: undefined },
       expect.any(Object)
     );

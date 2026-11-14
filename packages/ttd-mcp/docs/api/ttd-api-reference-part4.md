@@ -206,9 +206,9 @@ Returns information about a specific report type ID.
 
 Create a new report template.
 
-### GQL `myReportsReportTemplates` Query
+### GQL `reportingTemplates` Query
 
-Query for existing report templates.
+Retrieve all reporting templates (suggested and user-generated) accessible by the current user. Replaces `myReportsReportTemplates`, renamed on 2026-05-22 (the old name still works; TTD gives no removal date). Arguments: `first`/`last` (max 100), `after`, `before`, `where: ReportTemplatesFilterInput`, `order: [ReportTemplatesSortInput!]`. Returns `ReportingTemplatesConnection` (`edges`, `nodes: [MyReportsTemplate!]`, `pageInfo`, `totalCount`); node fields include `id`, `name`, `format`, `userGenerated`, `createdBy`, `lastUpdatedAt`. The default sort is not documented.
 
 ### GQL `myReportsTemplateUpdate` Mutation
 

@@ -13,7 +13,7 @@ import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/
 
 const TOOL_NAME = "ttd_list_report_templates";
 const TOOL_TITLE = "List TTD Report Templates (GraphQL)";
-const TOOL_DESCRIPTION = `List report template headers from TTD MyReports via GraphQL (\`myReportsReportTemplates\`).
+const TOOL_DESCRIPTION = `List report template headers from TTD MyReports via GraphQL (\`reportingTemplates\`). Includes TTD's suggested templates as well as user-generated ones.
 
 This is the docs-aligned way to discover template IDs before retrieving structure with \`ttd_get_report_template\` or scheduling runs with \`ttd_create_template_schedule\`.
 
@@ -45,7 +45,7 @@ type ListReportTemplatesInput = z.infer<typeof ListReportTemplatesInputSchema>;
 type ListReportTemplatesOutput = z.infer<typeof ListReportTemplatesOutputSchema>;
 
 const LIST_REPORT_TEMPLATES_QUERY = `query GetReportTemplates($first: Int, $after: String) {
-  myReportsReportTemplates(first: $first, after: $after) {
+  reportingTemplates(first: $first, after: $after) {
     pageInfo {
       startCursor
       hasNextPage
@@ -80,8 +80,7 @@ export async function listReportTemplatesLogic(
   });
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
-  const connection =
-    (gqlData.myReportsReportTemplates as Record<string, unknown> | undefined) ?? {};
+  const connection = (gqlData.reportingTemplates as Record<string, unknown> | undefined) ?? {};
   const pageInfo = (connection.pageInfo as Record<string, unknown> | undefined) ?? {};
 
   const nodes = (connection.nodes as Array<Record<string, unknown>>) ?? [];
