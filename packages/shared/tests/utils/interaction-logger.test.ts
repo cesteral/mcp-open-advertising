@@ -15,27 +15,34 @@ import {
 
 const gcsFiles = new Map<string, string>();
 const gcsDownloads: string[] = [];
+let failNextGcsSave = false;
 
 vi.mock("@google-cloud/storage", () => ({
-  Storage: vi.fn().mockImplementation(() => ({
-    bucket: vi.fn().mockReturnValue({
-      file: vi.fn().mockImplementation((objectPath: string) => ({
-        download: vi.fn().mockImplementation(async () => {
-          gcsDownloads.push(objectPath);
-          const content = gcsFiles.get(objectPath);
-          if (!content) {
-            const err: any = new Error("Not found");
-            err.code = 404;
-            throw err;
-          }
-          return [Buffer.from(content)];
-        }),
-        save: vi.fn().mockImplementation(async (content: string) => {
-          gcsFiles.set(objectPath, content);
-        }),
-      })),
-    }),
-  })),
+  Storage: vi.fn().mockImplementation(function () {
+    return {
+      bucket: vi.fn().mockReturnValue({
+        file: vi.fn().mockImplementation((objectPath: string) => ({
+          download: vi.fn().mockImplementation(async () => {
+            gcsDownloads.push(objectPath);
+            const content = gcsFiles.get(objectPath);
+            if (!content) {
+              const err: any = new Error("Not found");
+              err.code = 404;
+              throw err;
+            }
+            return [Buffer.from(content)];
+          }),
+          save: vi.fn().mockImplementation(async (content: string) => {
+            if (failNextGcsSave) {
+              failNextGcsSave = false;
+              throw new Error("boom");
+            }
+            gcsFiles.set(objectPath, content);
+          }),
+        })),
+      }),
+    };
+  }),
 }));
 
 const tempDirs: string[] = [];
@@ -52,6 +59,7 @@ afterEach(() => {
   }
   gcsFiles.clear();
   gcsDownloads.length = 0;
+  failNextGcsSave = false;
 });
 
 describe("generateEntryId", () => {
@@ -459,7 +467,6 @@ describe("InteractionLogger GCS flush", () => {
   });
 
   it("keeps the entries buffered and retries under the same name when a write fails", async () => {
-    const { Storage } = await import("@google-cloud/storage");
     const l = new InteractionLogger({
       serverName: "retry-server",
       logger: quietLogger(),
@@ -467,23 +474,7 @@ describe("InteractionLogger GCS flush", () => {
       flushIntervalMs: 60_000,
     });
     l.append(entry(1));
-
-    // First attempt fails: make the next Storage handle's save reject once.
-    const bucket = (Storage as any).mock.results.at(-1)?.value.bucket();
-    const realFile = bucket.file;
-    let failed = false;
-    (await (l as any).getBucket()).file = (path: string) => {
-      const f = realFile(path);
-      const save = f.save;
-      f.save = async (...args: unknown[]) => {
-        if (!failed) {
-          failed = true;
-          throw new Error("boom");
-        }
-        return save(...args);
-      };
-      return f;
-    };
+    failNextGcsSave = true;
 
     await (l as any).flushBuffer();
     expect(gcsFiles.size).toBe(0);

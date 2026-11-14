@@ -193,6 +193,8 @@ describe("TtdHttpClient", () => {
 
   describe("retry on 429", () => {
     it("respects Retry-After header on 429 responses", async () => {
+      // Waits are jittered upward (never shorter); pin the draw so the wait is exactly 3s.
+      const random = vi.spyOn(Math, "random").mockReturnValue(0);
       mockFetchWithTimeout
         .mockResolvedValueOnce(fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }))
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
@@ -207,6 +209,7 @@ describe("TtdHttpClient", () => {
 
       // Verify the warning log was called
       expect(logger.warn).toHaveBeenCalled();
+      random.mockRestore();
     });
 
     // TTD says to honour Retry-After; re-sending after a capped 10s (the old
