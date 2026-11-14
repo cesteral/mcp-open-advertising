@@ -28,10 +28,12 @@ const linkedInService = {
   bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "urn:li:test:new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityUrn: string }>) => ({
-    results: items.map((item) => ({ entityUrn: item.entityUrn, success: true })),
-  })),
-  adjustBids: vi.fn(async (adjustments: Array<{ campaignUrn: string }>) => ({
+  bulkUpdateEntities: vi.fn(
+    async (_entityType: string, _adAccountUrn: string, items: Array<{ entityUrn: string }>) => ({
+      results: items.map((item) => ({ entityUrn: item.entityUrn, success: true })),
+    })
+  ),
+  adjustBids: vi.fn(async (_adAccountUrn: string, adjustments: Array<{ campaignUrn: string }>) => ({
     results: adjustments.map((a) => ({ campaignUrn: a.campaignUrn, success: true })),
   })),
   getTargetingEntities: vi.fn(async () => ({ elements: [{ urn: "urn:li:industry:1" }] })),

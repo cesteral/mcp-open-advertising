@@ -95,13 +95,16 @@ export class LinkedInHttpClient {
   /**
    * Make an authenticated PATCH request to the LinkedIn API.
    * Used for partial updates with X-Restli-Method: PARTIAL_UPDATE.
+   * `params` are Rest.li 2.0 query parameters, as for `get` (a conversion rule's
+   * item path takes `account`).
    */
   async patch(
     path: string,
     data?: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    params?: RestliQueryParams
   ): Promise<unknown> {
-    const url = this.buildUrl(path);
+    const url = this.buildUrl(path, params);
     return this.request(url, context, {
       method: "POST",
       headers: {
@@ -114,10 +117,21 @@ export class LinkedInHttpClient {
 
   /**
    * Make an authenticated DELETE request.
+   *
+   * Sends `X-RestLi-Method: DELETE`: LinkedIn's Creatives page says the header
+   * "must be included" on a creative delete (read 2026-11-14), and LinkedIn's
+   * official clients send it on every delete.
    */
-  async delete(path: string, context?: RequestContext): Promise<unknown> {
-    const url = this.buildUrl(path);
-    return this.request(url, context, { method: "DELETE" });
+  async delete(
+    path: string,
+    context?: RequestContext,
+    params?: RestliQueryParams
+  ): Promise<unknown> {
+    const url = this.buildUrl(path, params);
+    return this.request(url, context, {
+      method: "DELETE",
+      headers: { "X-Restli-Method": "DELETE" },
+    });
   }
 
   /**

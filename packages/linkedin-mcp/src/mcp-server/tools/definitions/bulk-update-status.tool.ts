@@ -10,6 +10,7 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
 import {
   elicitBulkStatusChangeConfirmation,
   assertGovernedEffectDryRun,
@@ -38,8 +39,9 @@ const TOOL_DESCRIPTION = `Batch update status for multiple LinkedIn Ads entities
 **Valid statuses:** ACTIVE, PAUSED, DRAFT, ARCHIVED, CANCELED
 
 **Gotchas:**
-- ARCHIVED entities cannot be reactivated.
-- Campaign groups must be paused before archiving.
+- Every entity must belong to the one ad account named by \`adAccountUrn\` (required for every type except adAccount).
+- For creatives the status is sent as \`intendedStatus\`, LinkedIn's field for it.
+- ARCHIVED is reversible: set ACTIVE or PAUSED again.
 - Max 50 entities per call.
 - Each update consumes 3x rate limit tokens (write operation).`;
 
@@ -47,6 +49,7 @@ export const BulkUpdateStatusInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     entityUrns: z.array(z.string()).min(1).max(50).describe("Entity URNs to update (max 50)"),
+    adAccountUrn: adAccountUrnSchema,
     status: z.enum(["ACTIVE", "PAUSED", "DRAFT", "ARCHIVED", "CANCELED"]).describe("Target status"),
     dry_run: z
       .boolean()
@@ -56,6 +59,7 @@ export const BulkUpdateStatusInputSchema = z
         "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk status change) without prompting for confirmation or calling the LinkedIn API. No statuses are changed."
       ),
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for bulk status update");
 
 export const BulkUpdateStatusOutputSchema = z
@@ -146,6 +150,7 @@ export async function bulkUpdateStatusLogic(
   const result = await linkedInService.bulkUpdateStatus(
     input.entityType as LinkedInEntityType,
     input.entityUrns,
+    input.adAccountUrn,
     input.status,
     context
   );
@@ -289,6 +294,7 @@ export const bulkUpdateStatusTool = {
       input: {
         entityType: "campaign",
         entityUrns: ["urn:li:sponsoredCampaign:111111111", "urn:li:sponsoredCampaign:222222222"],
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         status: "PAUSED",
       },
     },

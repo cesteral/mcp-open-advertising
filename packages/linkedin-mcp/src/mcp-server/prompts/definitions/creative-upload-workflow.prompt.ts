@@ -93,7 +93,8 @@ linkedin_create_entity({
 linkedin_update_entity({
   "entityType": "creative",
   "entityUrn": "{creativeUrn}",
-  "data": { "status": "ACTIVE" }
+  "adAccountUrn": "${adAccountUrn}",
+  "data": { "intendedStatus": "ACTIVE" }
 })
 \`\`\`
 

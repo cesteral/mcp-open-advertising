@@ -10,7 +10,11 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
+import { creativeStatusFieldError } from "../utils/dry-run.js";
 import {
+  McpError,
+  JsonRpcErrorCode,
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
   hasSensitiveBulkField,
@@ -40,6 +44,8 @@ Each item must include \`entityUrn\` and \`data\` to update.
 Updates are applied individually with concurrency (max 5 concurrent).
 
 **Gotchas:**
+- Every item must belong to the one ad account named by \`adAccountUrn\` (required for every type except adAccount).
+- A creative's status field is \`intendedStatus\`; \`status\` is refused for creatives.
 - Max 50 items per call.
 - Partial failures are allowed — check results for individual errors.`;
 
@@ -48,6 +54,7 @@ const EFFECT_KIND = "entities_updated";
 export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    adAccountUrn: adAccountUrnSchema,
     items: z
       .array(
         z.object({
@@ -66,6 +73,7 @@ export const BulkUpdateEntitiesInputSchema = z
         "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk update) without prompting for confirmation or calling the LinkedIn API. No entities are updated."
       ),
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for bulk entity updates");
 
 export const BulkUpdateEntitiesOutputSchema = z
@@ -130,6 +138,19 @@ export async function bulkUpdateEntitiesLogic(
   // and before the first write. One 3-token linkedin:default PATCH per item.
   assertLinkedInBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
+  // A payload the dry-run reports as failing must not execute either.
+  const creativeStatusError = input.items
+    .map((item, i) =>
+      creativeStatusFieldError(input.entityType, item.data ?? {}, `items.${i}.data.status`)
+    )
+    .find((e) => e !== undefined);
+  if (creativeStatusError) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `${creativeStatusError.message} (${creativeStatusError.field})`
+    );
+  }
+
   const payloads = input.items.map((it) => it.data ?? {});
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
@@ -155,6 +176,7 @@ export async function bulkUpdateEntitiesLogic(
 
   const result = await linkedInService.bulkUpdateEntities(
     input.entityType as LinkedInEntityType,
+    input.adAccountUrn,
     input.items,
     context
   );
@@ -193,6 +215,12 @@ export async function bulkUpdateEntitiesLogic(
 function buildBulkEffectDryRun(input: BulkUpdateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
+    const creativeStatusError = creativeStatusFieldError(
+      input.entityType,
+      item.data ?? {},
+      `items.${i}.data.status`
+    );
+    if (creativeStatusError) validationErrors.push(creativeStatusError);
     if (!item.entityUrn || item.entityUrn.trim().length === 0) {
       validationErrors.push({
         code: "INVALID_ENTITY_URN",
@@ -299,6 +327,7 @@ export const bulkUpdateEntitiesTool = {
       label: "Update daily budgets for multiple campaigns",
       input: {
         entityType: "campaign",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         items: [
           {
             entityUrn: "urn:li:sponsoredCampaign:111111111",

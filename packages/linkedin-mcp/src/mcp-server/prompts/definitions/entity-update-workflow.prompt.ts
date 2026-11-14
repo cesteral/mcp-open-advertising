@@ -20,6 +20,12 @@ export const linkedInEntityUpdateWorkflowPrompt: Prompt = {
       required: true,
     },
     {
+      name: "adAccountUrn",
+      description:
+        "URN of the ad account that owns the entity (required for every type except adAccount)",
+      required: false,
+    },
+    {
       name: "entityUrn",
       description: "URN of the entity to update (e.g., urn:li:sponsoredCampaign:123)",
       required: true,
@@ -30,6 +36,7 @@ export const linkedInEntityUpdateWorkflowPrompt: Prompt = {
 export function getLinkedInEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityUrn = args?.entityUrn || "{entityUrn}";
+  const adAccountUrn = args?.adAccountUrn || "{adAccountUrn}";
 
   return `# LinkedIn Ads Entity Update Workflow
 
@@ -47,7 +54,8 @@ Before updating, always read the entity's current configuration:
   "tool": "linkedin_get_entity",
   "params": {
     "entityType": "${entityType}",
-    "entityUrn": "${entityUrn}"
+    "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}"
   }
 }
 \`\`\`
@@ -70,6 +78,7 @@ LinkedIn uses PATCH semantics — only include the fields you want to change. Un
   "params": {
     "entityType": "campaignGroup",
     "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "name": "Updated Campaign Group Name",
       "status": "ACTIVE",
@@ -87,6 +96,7 @@ LinkedIn uses PATCH semantics — only include the fields you want to change. Un
   "params": {
     "entityType": "campaign",
     "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "dailyBudget": { "amount": "150.00", "currencyCode": "USD" },
       "unitCost": { "amount": "15.00", "currencyCode": "USD" },
@@ -104,8 +114,9 @@ LinkedIn uses PATCH semantics — only include the fields you want to change. Un
   "params": {
     "entityType": "creative",
     "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
-      "status": "ACTIVE"
+      "intendedStatus": "ACTIVE"
     }
   }
 }
@@ -122,7 +133,8 @@ After the update call succeeds, verify the changes:
   "tool": "linkedin_get_entity",
   "params": {
     "entityType": "${entityType}",
-    "entityUrn": "${entityUrn}"
+    "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}"
   }
 }
 \`\`\`
@@ -136,7 +148,8 @@ Compare the returned values with what you set in Step 2.
 - **URN format required**: All entity IDs must be full URNs (e.g., \`urn:li:sponsoredCampaign:123\`), not bare numeric IDs.
 - **Budget format**: Use CurrencyAmount objects: \`{ "amount": "100.00", "currencyCode": "USD" }\`. The amount is a string, not a number.
 - **Targeting replaces entirely**: When updating \`targetingCriteria\`, the entire object is replaced. Always include all criteria you want to keep.
-- **Status values**: \`ACTIVE\`, \`PAUSED\`, \`ARCHIVED\`, \`DRAFT\`. Archiving is irreversible.
+- **Status values**: \`ACTIVE\`, \`PAUSED\`, \`ARCHIVED\`, \`DRAFT\`, \`CANCELED\`, \`PENDING_DELETION\`. ARCHIVED is reversible. A creative's field is \`intendedStatus\`, not \`status\`.
+- **Account required**: pass the owning \`adAccountUrn\` for every entity type except adAccount; LinkedIn addresses entities under their account.
 - **Creative review lag**: Status changes to creatives may trigger re-review (24-48h).
 - **PATCH semantics**: Only send fields you want to change. Unspecified fields are preserved.
 
@@ -152,6 +165,7 @@ If an update causes issues, reverse it by sending the original values:
   "params": {
     "entityType": "${entityType}",
     "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "field_that_was_changed": "{original_value}"
     }
