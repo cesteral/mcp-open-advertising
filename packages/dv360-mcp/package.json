@@ -69,6 +69,6 @@
     "openapi-zod-client": "^1.18.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^1.6.0"
+    "vitest": "^5.1.0"
   }
 }

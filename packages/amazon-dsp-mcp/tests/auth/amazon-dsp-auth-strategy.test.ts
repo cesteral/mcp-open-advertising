@@ -6,20 +6,24 @@ vi.mock("../../src/auth/amazon-dsp-auth-adapter.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/auth/amazon-dsp-auth-adapter.js")>();
   return {
     ...actual,
-    AmazonDspAccessTokenAdapter: vi.fn().mockImplementation(() => ({
-      validate: mockValidate,
-      userId: "test-advertiser",
-      profileId: "profile_123",
-      clientId: "",
-      getAccessToken: vi.fn().mockResolvedValue("token123"),
-    })),
-    AmazonDspRefreshTokenAdapter: vi.fn().mockImplementation(() => ({
-      validate: mockValidate,
-      userId: "refresh-advertiser",
-      profileId: "profile_456",
-      clientId: "app123",
-      getAccessToken: vi.fn().mockResolvedValue("refreshed_token"),
-    })),
+    AmazonDspAccessTokenAdapter: vi.fn().mockImplementation(function () {
+      return {
+        validate: mockValidate,
+        userId: "test-advertiser",
+        profileId: "profile_123",
+        clientId: "",
+        getAccessToken: vi.fn().mockResolvedValue("token123"),
+      };
+    }),
+    AmazonDspRefreshTokenAdapter: vi.fn().mockImplementation(function () {
+      return {
+        validate: mockValidate,
+        userId: "refresh-advertiser",
+        profileId: "profile_456",
+        clientId: "app123",
+        getAccessToken: vi.fn().mockResolvedValue("refreshed_token"),
+      };
+    }),
   };
 });
 

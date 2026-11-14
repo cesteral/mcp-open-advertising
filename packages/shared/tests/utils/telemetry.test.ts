@@ -2,10 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock OTEL dependencies — all mocks inline in factory
 vi.mock("@google-cloud/opentelemetry-cloud-trace-exporter", () => ({
-  TraceExporter: vi.fn().mockImplementation(() => ({ type: "gcp-trace" })),
+  TraceExporter: vi.fn().mockImplementation(function () {
+    return { type: "gcp-trace" };
+  }),
 }));
 vi.mock("@google-cloud/opentelemetry-cloud-monitoring-exporter", () => ({
-  MetricExporter: vi.fn().mockImplementation(() => ({ type: "gcp-metrics" })),
+  MetricExporter: vi.fn().mockImplementation(function () {
+    return { type: "gcp-metrics" };
+  }),
 }));
 vi.mock("@opentelemetry/api", () => {
   const span = {

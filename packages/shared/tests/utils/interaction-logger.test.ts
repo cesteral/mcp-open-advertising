@@ -16,24 +16,26 @@ import {
 const gcsFiles = new Map<string, string>();
 
 vi.mock("@google-cloud/storage", () => ({
-  Storage: vi.fn().mockImplementation(() => ({
-    bucket: vi.fn().mockReturnValue({
-      file: vi.fn().mockImplementation((objectPath: string) => ({
-        download: vi.fn().mockImplementation(async () => {
-          const content = gcsFiles.get(objectPath);
-          if (!content) {
-            const err: any = new Error("Not found");
-            err.code = 404;
-            throw err;
-          }
-          return [Buffer.from(content)];
-        }),
-        save: vi.fn().mockImplementation(async (content: string) => {
-          gcsFiles.set(objectPath, content);
-        }),
-      })),
-    }),
-  })),
+  Storage: vi.fn().mockImplementation(function () {
+    return {
+      bucket: vi.fn().mockReturnValue({
+        file: vi.fn().mockImplementation((objectPath: string) => ({
+          download: vi.fn().mockImplementation(async () => {
+            const content = gcsFiles.get(objectPath);
+            if (!content) {
+              const err: any = new Error("Not found");
+              err.code = 404;
+              throw err;
+            }
+            return [Buffer.from(content)];
+          }),
+          save: vi.fn().mockImplementation(async (content: string) => {
+            gcsFiles.set(objectPath, content);
+          }),
+        })),
+      }),
+    };
+  }),
 }));
 
 const tempDirs: string[] = [];
