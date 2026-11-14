@@ -4,10 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
 import {
   runLinkedInUpdateDryRun,
   resolveLinkedInDispatchedCapability,
   symbolicValidate,
+  creativeStatusFieldError,
 } from "../utils/dry-run.js";
 import { captureLinkedInSnapshot, snapshotFromLinkedInEntity } from "../utils/capture-snapshot.js";
 import {
@@ -29,8 +31,10 @@ const TOOL_DESCRIPTION = `Update an existing LinkedIn Ads entity via PATCH (part
 Uses X-Restli-Method: PARTIAL_UPDATE semantics — only provided fields are updated.
 
 **Gotchas:**
+- Pass the owning ad account as \`adAccountUrn\` for every type except adAccount.
 - LinkedIn PATCH uses a \`patch.$set\` wrapper internally; just provide the fields to update.
-- Status values: ACTIVE, PAUSED, DRAFT, ARCHIVED, CANCELED
+- Status values: ACTIVE, PAUSED, DRAFT, ARCHIVED, CANCELED, PENDING_DELETION. ARCHIVED is reversible (set ACTIVE or PAUSED again). PENDING_DELETION is how LinkedIn deletes anything that is not DRAFT.
+- A creative's status field is \`intendedStatus\`, not \`status\`; \`status\` is refused for a creative.
 - Budget changes are applied immediately.
 - Writes are rate-limited at 3x read cost.`;
 
@@ -41,6 +45,7 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity URN to update (e.g., urn:li:sponsoredCampaign:123)"),
+    adAccountUrn: adAccountUrnSchema,
     data: z.record(z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
@@ -50,6 +55,7 @@ export const UpdateEntityInputSchema = z
         "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the LinkedIn API. The underlying entity is never modified."
       ),
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for updating a LinkedIn Ads entity");
 
 export const UpdateEntityOutputSchema = z
@@ -89,7 +95,12 @@ export async function updateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runLinkedInUpdateDryRun(
-      { entityType: input.entityType, entityUrn: input.entityUrn, data: input.data },
+      {
+        entityType: input.entityType,
+        entityUrn: input.entityUrn,
+        adAccountUrn: input.adAccountUrn,
+        data: input.data,
+      },
       linkedInService,
       context
     );
@@ -113,6 +124,8 @@ export async function updateEntityLogic(
     );
   }
   const updateValidationErrors = symbolicValidate(input.data);
+  const creativeStatusError = creativeStatusFieldError(input.entityType, input.data);
+  if (creativeStatusError) updateValidationErrors.push(creativeStatusError);
   if (updateValidationErrors.length > 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
@@ -126,12 +139,14 @@ export async function updateEntityLogic(
     linkedInService,
     input.entityType,
     input.entityUrn,
+    input.adAccountUrn,
     context
   );
 
   const updated = await linkedInService.updateEntity(
     input.entityType as LinkedInEntityType,
     input.entityUrn,
+    input.adAccountUrn,
     input.data,
     context
   );
@@ -148,6 +163,7 @@ export async function updateEntityLogic(
       linkedInService,
       input.entityType,
       input.entityUrn,
+      input.adAccountUrn,
       context
     );
   }
@@ -215,7 +231,11 @@ export const updateEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
+        argMap: {
+          entityType: "entityType",
+          entityUrn: "entityUrn",
+          adAccountUrn: "adAccountUrn",
+        },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.update_entity.v1",
@@ -237,6 +257,7 @@ export const updateEntityTool = {
       input: {
         entityType: "campaign",
         entityUrn: "urn:li:sponsoredCampaign:123456789",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         data: { status: "PAUSED" },
       },
     },
@@ -245,6 +266,7 @@ export const updateEntityTool = {
       input: {
         entityType: "campaign",
         entityUrn: "urn:li:sponsoredCampaign:123456789",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         data: {
           dailyBudget: { amount: "100.00", currencyCode: "USD" },
         },

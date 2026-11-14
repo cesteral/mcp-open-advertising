@@ -181,6 +181,7 @@ describe("mcp transport error propagation (LinkedIn)", () => {
         arguments: {
           entityType: "campaign",
           entityUrn: "urn:li:sponsoredCampaign:999",
+          adAccountUrn: "urn:li:sponsoredAccount:9",
         },
       },
     });

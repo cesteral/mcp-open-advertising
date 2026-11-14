@@ -81,6 +81,24 @@ export function symbolicValidate(data: Record<string, unknown>): DryRunValidatio
  * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
  * mirrors what the dry-run handler does in-tool.
  */
+/**
+ * A creative's status field on LinkedIn's Creatives API is `intendedStatus`
+ * (Creatives page, read 2026-11-14); a `status` key would be sent and
+ * rejected. Returns the error for a creative payload that names `status`.
+ */
+export function creativeStatusFieldError(
+  entityType: string,
+  data: Record<string, unknown>,
+  field = "data.status"
+): DryRunValidationError | undefined {
+  if (entityType !== "creative" || !("status" in data)) return undefined;
+  return {
+    code: "CREATIVE_USES_INTENDED_STATUS",
+    message: "A creative's status field is `intendedStatus`, not `status`",
+    field,
+  };
+}
+
 export function applyLinkedInPatch(
   entityType: string,
   entityUrn: string,
@@ -137,14 +155,16 @@ export function resolveLinkedInDeleteCapability(entityType: string): DispatchedC
 export interface LinkedInDeleteDryRunArgs {
   entityType: string;
   entityUrn: string;
+  adAccountUrn?: string;
 }
 
 /**
  * Symbolic dry-run for `linkedin_delete_entity`. Validation is symbolic; the
  * expected post-state is the current entity with status `REMOVED` (canonical
- * `deleted`). LinkedIn rejects deleting an ACTIVE campaign (must be paused
- * first), so a governed dry-run surfaces that rather than approving a delete
- * the real API will reject.
+ * `deleted`). LinkedIn's DELETE removes only a DRAFT campaign; any other is
+ * deleted by setting `status: PENDING_DELETION` (Campaigns page, read
+ * 2026-11-14), so a governed dry-run surfaces that rather than approving a
+ * delete the real API will reject.
  */
 export async function runLinkedInDeleteDryRun(
   args: LinkedInDeleteDryRunArgs,
@@ -156,15 +176,19 @@ export async function runLinkedInDeleteDryRun(
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
   if (ENTITY_KIND_MAP[args.entityType] && service.getEntity) {
-    const current = (await service.getEntity(args.entityType, args.entityUrn, context)) as Record<
-      string,
-      unknown
-    >;
+    const current = (await service.getEntity(
+      args.entityType,
+      args.entityUrn,
+      args.adAccountUrn,
+      context
+    )) as Record<string, unknown>;
     if (current && typeof current === "object") {
-      if (current.status === "ACTIVE") {
+      if (current.status !== "DRAFT") {
         validationErrors.push({
-          code: "ACTIVE_NOT_DELETABLE",
-          message: "ACTIVE campaigns must be paused before deletion",
+          code: "NOT_DRAFT_NOT_DELETABLE",
+          message:
+            `LinkedIn deletes only DRAFT campaigns (this one is ${String(current.status)}). ` +
+            "Delete any other by setting its status to PENDING_DELETION with linkedin_update_entity.",
           field: "status",
         });
       }
@@ -246,6 +270,7 @@ export async function runLinkedInCreateDryRun(
 export interface LinkedInDryRunArgs {
   entityType: string;
   entityUrn: string;
+  adAccountUrn?: string;
   data: Record<string, unknown>;
 }
 
@@ -255,6 +280,8 @@ export async function runLinkedInUpdateDryRun(
   context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
+  const creativeStatusError = creativeStatusFieldError(input.entityType, input.data);
+  if (creativeStatusError) validationErrors.push(creativeStatusError);
 
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
@@ -263,9 +290,12 @@ export async function runLinkedInUpdateDryRun(
   // fail the call (see assertGovernedDryRunResult below), not swallow the
   // error and return an incomplete payload the governance layer would reject.
   if (ENTITY_KIND_MAP[input.entityType] && service.getEntity) {
-    const current = (await service.getEntity(input.entityType, input.entityUrn, context)) as
-      | Record<string, unknown>
-      | undefined;
+    const current = (await service.getEntity(
+      input.entityType,
+      input.entityUrn,
+      input.adAccountUrn,
+      context
+    )) as Record<string, unknown> | undefined;
     if (current && typeof current === "object") {
       const snapshot = buildLinkedInSnapshot(
         input.entityType,
@@ -308,6 +338,8 @@ export interface LinkedInDuplicateDryRunArgs {
   entityType: string;
   /** URN of the SOURCE entity being duplicated. */
   entityUrn: string;
+  /** The source's ad account (the copy is created there). */
+  adAccountUrn?: string;
   /** Custom name for the copy; defaults to `Copy of {source name}`. */
   newName?: string;
 }
@@ -332,9 +364,12 @@ export async function runLinkedInDuplicateDryRun(
 
   const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
   if (inScope && service.getEntity) {
-    const source = (await service.getEntity(args.entityType, args.entityUrn, context)) as
-      | Record<string, unknown>
-      | undefined;
+    const source = (await service.getEntity(
+      args.entityType,
+      args.entityUrn,
+      args.adAccountUrn,
+      context
+    )) as Record<string, unknown> | undefined;
     if (source && typeof source === "object") {
       // The tool renames the copy before creating it (mirror that here).
       const sourceName = typeof source.name === "string" ? source.name : undefined;

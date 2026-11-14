@@ -330,37 +330,43 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:98"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:99"],
       "note": "Read 2026-10-01: every endpoint page under learn.microsoft.com/en-us/linkedin/marketing documents https://api.linkedin.com/rest/... and the migrations table lists the unversioned Marketing APIs as Deprecated (sunset 2024-12-16)."
     },
     {
       "id": "linkedin.campaigns_are_account_scoped",
       "package": "linkedin-mcp",
       "class": "behavioral-constraint",
-      "claim": "Campaigns are an account-scoped sub-resource at /rest/adAccounts/{accountId}/adCampaigns for create, list, get, partial update AND delete. No account-less item path is documented, so get/update/delete cannot be built from the campaign URN alone (#210). Read from LinkedIn's Campaigns page, 2026-10-01.",
-      "value": "/adCampaigns`",
+      "claim": "Campaigns are an account-scoped sub-resource at /rest/adAccounts/{accountId}/adCampaigns for create, list, get, partial update AND delete. No account-less item path is documented, so the item tools take the owning adAccountUrn (#210). Read from LinkedIn's Campaigns page, 2026-10-01.",
+      "value": "/adCampaigns",
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaigns",
       "status": "verified",
       "verifiedAt": "2026-10-01",
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:114"],
+      "codeRefs": [
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:130",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:133"
+      ],
       "note": "Read 2026-10-01 from the Campaigns page: get is GET /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID}; the only account-less /rest/adCampaigns appears in a generic header illustration on the versioning page, which the Campaigns page contradicts."
     },
     {
       "id": "linkedin.campaign_groups_are_account_scoped",
       "package": "linkedin-mcp",
       "class": "behavioral-constraint",
-      "claim": "Campaign groups are an account-scoped sub-resource at /rest/adAccounts/{accountId}/adCampaignGroups for create, list, get, partial update AND delete; no account-less item path is documented (#210). Read from LinkedIn's Campaign Groups page, 2026-10-01.",
-      "value": "/adCampaignGroups`",
+      "claim": "Campaign groups are an account-scoped sub-resource at /rest/adAccounts/{accountId}/adCampaignGroups for create, list, get, partial update AND delete; no account-less item path is documented, so the item tools take the owning adAccountUrn (#210). Read from LinkedIn's Campaign Groups page, 2026-10-01.",
+      "value": "/adCampaignGroups",
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaigns",
       "status": "verified",
       "verifiedAt": "2026-10-01",
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:106"],
+      "codeRefs": [
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:119",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:122"
+      ],
       "note": "Read 2026-10-01 from the Campaign Groups page."
     },
     {
@@ -390,7 +396,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:463"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:491"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string and no account. Not exercised against a live account."
     },
     {
@@ -405,7 +411,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:517"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:545"],
       "note": "Not exercised against a live account."
     },
     {
@@ -480,7 +486,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:615"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:652"],
       "note": "The page's samples write the range both as timeRange.start=... and as timeRange=(start:...,end:...); the record form is sent. Not exercised against a live account."
     },
     {
@@ -495,7 +501,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:523"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:551"],
       "note": "The page's samples show no Linkedin-Version header; the client sends it on every request. Not exercised against a live account."
     },
     {
@@ -526,8 +532,8 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:138"],
-      "note": "Read 2026-10-01: 'The Creatives API replaces the adCreativesV2 API.'"
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:156"],
+      "note": "Read 2026-10-01: 'The Creatives API replaces the adCreativesV2 API.' List and create are still on /v2/adCreatives; item get/update/delete moved to /rest/adAccounts/{id}/creatives/{encoded URN} with intendedStatus (#210)."
     },
     {
       "id": "linkedin.conversions_are_listed_by_account_finder",
@@ -541,8 +547,26 @@
       "verifyBy": "2027-05-12",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:155"],
-      "note": "Item get/update/delete still use the legacy /v2/conversions/{urn} path because the /rest/ item path needs the account, which a URN call does not carry (#210)."
+      "codeRefs": [
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:179",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:181"
+      ],
+      "note": "Item get/update use /rest/conversions/{id}?account={sponsoredAccountUrn}, the account coming from the tools' adAccountUrn (#210). No delete is documented for a conversion rule, so linkedin_delete_entity does not offer one."
+    },
+    {
+      "id": "linkedin.only_draft_is_deletable",
+      "package": "linkedin-mcp",
+      "class": "behavioral-constraint",
+      "claim": "HTTP DELETE on a campaign, campaign group or ad account item removes it only while it is DRAFT, and a creative only while it is DRAFT, its campaign is DRAFT, or it is a video whose processing failed; anything else is deleted by a partial update setting status (a creative's intendedStatus) to PENDING_DELETION. ARCHIVED is not terminal (described as hidden until un-archived). A creative DELETE must carry X-RestLi-Method: DELETE. Read from LinkedIn's Campaigns, Campaign Groups and Creatives pages, 2026-11-14.",
+      "value": "PENDING_DELETION",
+      "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaigns",
+      "status": "verified",
+      "verifiedAt": "2026-11-14",
+      "verifyBy": "2027-05-13",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/dry-run.ts:191"],
+      "note": "linkedin_delete_entity's dry-run reports a non-DRAFT campaign as not deletable and points at PENDING_DELETION. Whether PENDING_DELETION can be reversed is not documented and has not been tried against a live account."
     },
     {
       "id": "linkedin.ad_previews_existing_creative_is_a_get",
@@ -556,7 +580,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:623"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:660"],
       "note": "Replaces linkedin.ad_previews_is_an_action, whose claim (that the versioned equivalent is only the livePreviewForCreative action) was REFUTED for existing creatives by the Ad Preview page. Not exercised against a live account."
     },
     {
@@ -741,7 +765,7 @@
       "claim": "X-Restli-Protocol-Version: 2.0.0 must be sent to use Rest.li 2.0 query syntax (List(...), (k:v)); without it a call defaults to protocol 1.0, which LinkedIn plans to deprecate. Read from LinkedIn's Protocol Version page, 2026-10-01.",
       "value": "2.0.0",
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/shared/api-guide/concepts/protocol-version",
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-http-client.ts:171"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-http-client.ts:185"],
       "status": "verified",
       "verifiedAt": "2026-10-01",
       "verifyBy": "2027-03-30",

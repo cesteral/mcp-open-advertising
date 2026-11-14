@@ -112,6 +112,7 @@ linkedin_list_entities({
 \`\`\`json
 linkedin_bulk_update_entities({
   "entityType": "campaign",
+  "adAccountUrn": "${adAccountUrn}",
   "items": [
     {
       "entityUrn": "urn:li:sponsoredCampaign:111111111",
@@ -129,6 +130,7 @@ linkedin_bulk_update_entities({
 \`\`\`json
 linkedin_bulk_update_status({
   "entityType": "campaign",
+  "adAccountUrn": "${adAccountUrn}",
   "entityUrns": [
     "urn:li:sponsoredCampaign:111111111",
     "urn:li:sponsoredCampaign:222222222"
@@ -143,6 +145,7 @@ linkedin_bulk_update_status({
 
 \`\`\`json
 linkedin_adjust_bids({
+  "adAccountUrn": "${adAccountUrn}",
   "adjustments": [
     {
       "campaignUrn": "urn:li:sponsoredCampaign:111111111",

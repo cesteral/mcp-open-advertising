@@ -54,6 +54,7 @@ const cases: Case[] = [
     run: (n, dry_run = false) =>
       adjustBidsLogic(
         {
+          adAccountUrn: ACCOUNT,
           adjustments: urns(n).map((campaignUrn) => ({
             campaignUrn,
             amount: "10.00",
@@ -69,7 +70,13 @@ const cases: Case[] = [
     tool: "linkedin_bulk_update_status",
     run: (n, dry_run = false) =>
       bulkUpdateStatusLogic(
-        { entityType: "campaign", entityUrns: urns(n), status: "PAUSED", dry_run } as any,
+        {
+          entityType: "campaign",
+          adAccountUrn: ACCOUNT,
+          entityUrns: urns(n),
+          status: "PAUSED",
+          dry_run,
+        } as any,
         ctx,
         sdk
       ),
@@ -80,6 +87,7 @@ const cases: Case[] = [
       bulkUpdateEntitiesLogic(
         {
           entityType: "campaign",
+          adAccountUrn: ACCOUNT,
           items: urns(n).map((entityUrn) => ({ entityUrn, data: { name: "x" } })),
           dry_run,
         } as any,

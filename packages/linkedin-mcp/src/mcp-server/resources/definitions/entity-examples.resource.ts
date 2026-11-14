@@ -34,6 +34,7 @@ const ENTITY_EXAMPLES: Record<string, string> = {
 {
   "entityType": "campaignGroup",
   "entityUrn": "urn:li:sponsoredCampaignGroup:987654321",
+  "adAccountUrn": "urn:li:sponsoredAccount:123456789",
   "data": { "status": "PAUSED" }
 }
 \`\`\`
