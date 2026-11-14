@@ -71,7 +71,7 @@ export async function createMcpServer(
     buildServerInfo("gads-mcp", {
       version: packageJson.version,
       description:
-        "Google Ads campaign management and reporting via Google Ads REST API v25. " +
+        "Google Ads campaign management and reporting via Google Ads REST API v26. " +
         "Supports GAQL queries, account listing, and full CRUD for 6 entity types " +
         "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
     }),
@@ -80,7 +80,7 @@ export async function createMcpServer(
         logging: {},
       },
       instructions:
-        "Google Ads campaign management and reporting server. Supports GAQL queries and full CRUD for 6 entity types via Google Ads REST API v25. " +
+        "Google Ads campaign management and reporting server. Supports GAQL queries and full CRUD for 6 entity types via Google Ads REST API v26. " +
         "Use gads_list_accounts to discover accounts, gads_gaql_search for flexible queries. " +
         "See MCP Resources for GAQL syntax reference and entity schema details.",
     }
