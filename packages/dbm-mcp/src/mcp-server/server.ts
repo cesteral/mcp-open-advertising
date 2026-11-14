@@ -25,7 +25,7 @@ import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
 
 const DBM_PACKAGE_NAME = "dbm-mcp";
-const DBM_PLATFORM = "dv360-reporting";
+const DBM_PLATFORM = "dbm";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the

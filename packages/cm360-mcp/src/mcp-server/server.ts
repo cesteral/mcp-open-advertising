@@ -25,7 +25,7 @@ import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
 
 const CM360_PACKAGE_NAME = "cm360-mcp";
-const CM360_PLATFORM = "cm360-management";
+const CM360_PLATFORM = "cm360";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the

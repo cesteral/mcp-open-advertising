@@ -74,7 +74,7 @@ export async function downloadReportLogic(
     sessionId: sdkContext?.sessionId,
     reportCsvStore,
     spillBodyToGcs,
-    spillServer: "microsoft",
+    spillServer: "msads",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: MSADS_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>

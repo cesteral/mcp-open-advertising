@@ -25,7 +25,7 @@ import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
 
 const DV360_PACKAGE_NAME = "dv360-mcp";
-const DV360_PLATFORM = "dv360-management";
+const DV360_PLATFORM = "dv360";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the

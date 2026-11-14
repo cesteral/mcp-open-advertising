@@ -50,7 +50,11 @@ import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Read Tools ──
@@ -76,7 +80,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   getPacingStatusTool,
   // ── Assets ──
   uploadImageTool,
-  uploadVideoTool,
+  uploadVideoTool, // ── Discovery ──
+  createToolSearchTool({ platform: "gads", getTools: () => allTools }),
 ];
 
 /**

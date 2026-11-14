@@ -78,9 +78,9 @@ export const reportCsvStore = new ReportCsvStore({
 });
 
 // On session close, sweep this session's GCS spill objects and clear its
-// in-memory report-csv entries. Note: slug "amazonDsp" matches the
+// in-memory report-csv entries. Note: slug "amazon_dsp" matches the
 // canonical ReportingPlatform value used by the spill helper.
 sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("amazonDsp", sessionId);
+  void deleteSpilledObjectsForSession("amazon_dsp", sessionId);
   reportCsvStore.clearForSession(sessionId);
 });

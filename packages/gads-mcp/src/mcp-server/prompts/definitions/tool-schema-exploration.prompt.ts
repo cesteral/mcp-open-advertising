@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (18 tools)
+## Available Tools Summary (19 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -102,6 +102,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_get_entity\` | Get a single entity by type/ID | Returns full entity |
 | \`gads_list_entities\` | List entities with optional GAQL filters | Supports pagination |
 | \`gads_get_insights\` | Performance insights with preset params | Convenience wrapper |
+| \`gads_search_tools\` | Find this server's tools by natural-language query | Ranks by name, title and description |
 
 ### Write Tools
 | Tool | Purpose | Notes |

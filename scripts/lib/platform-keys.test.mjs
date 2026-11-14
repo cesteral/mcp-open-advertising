@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
-import { checkGovernedTools, checkRegistryKeys } from "./platform-keys.mjs";
+import { checkGovernedTools, checkPlatformNames, checkRegistryKeys } from "./platform-keys.mjs";
 
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
 
@@ -75,6 +75,31 @@ describe("platform keys: governed tools carry the key", () => {
     const server = { package: "meta-mcp", platform_key: "meta" };
     expect(checkGovernedTools(server, [governed("meta_update_entity", "meta", "meta")])).toEqual([
       "meta-mcp: ANNOTATION_PLATFORM_DIFFERS entry is no longer needed; remove it",
+    ]);
+  });
+});
+
+describe("platform keys: names outside the hash", () => {
+  const read = (path) => readFileSync(join(ROOT, path), "utf8");
+
+  it("telemetry platform and the reporting enums use the platform_key", () => {
+    expect(checkPlatformNames(registry, read)).toEqual([]);
+  });
+
+  it("a server whose telemetry platform differs from its key fails", () => {
+    const reg = {
+      servers: [
+        { package: "zz-mcp", platform_key: "zz", tool_prefix: "zz", tools: ["zz_get_report"] },
+      ],
+    };
+    const fake = (path) =>
+      path.endsWith("server.ts")
+        ? 'const ZZ_PLATFORM = "zz-management";\n    platform: ZZ_PLATFORM,\n'
+        : path.endsWith("report-errors.ts")
+          ? 'export type ReportingPlatform =\n  | "zz";'
+          : 'platform: z.enum(["zz"])';
+    expect(checkPlatformNames(reg, fake)).toEqual([
+      'packages/zz-mcp/src/mcp-server/server.ts: telemetry platform "zz-management" must equal platform_key "zz"',
     ]);
   });
 });

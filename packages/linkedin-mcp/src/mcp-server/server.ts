@@ -25,7 +25,7 @@ import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
 
 const LINKEDIN_PACKAGE_NAME = "linkedin-mcp";
-const LINKEDIN_PLATFORM = "linkedin";
+const LINKEDIN_PLATFORM = "linkedin_ads";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the

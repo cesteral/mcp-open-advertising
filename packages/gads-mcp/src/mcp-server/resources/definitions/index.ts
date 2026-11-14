@@ -34,6 +34,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     write: ["gads_create_entity", "gads_update_entity", "gads_remove_entity"],
     bulk: ["gads_bulk_mutate", "gads_bulk_update_status", "gads_adjust_bids"],
     validation: ["gads_validate_entity"],
+    discovery: ["gads_search_tools"],
   },
   commonWorkflows: ["campaign_setup", "performance_analysis", "bulk_status_update"],
   startHere: "gads_list_accounts",
