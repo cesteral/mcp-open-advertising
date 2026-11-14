@@ -2,15 +2,16 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * #229: the three Marketing API v26.0 changes third-party sources report apply
- * to every API version from 2026-10-27 (platform-facts
- * `meta.v26_changes_apply_to_all_versions`) get a TEXT-ONLY warning, never a
- * refusal and never a structured entry:
+ * #229: three Marketing API v26.0 changes (platform-facts
+ * `meta.v26_changes_apply_to_all_versions`, read from Meta's changelog) get a
+ * TEXT-ONLY warning, never a refusal and never a structured entry:
  *
  * 1. `targeting.instagram_positions` containing "explore";
  * 2. `targeting.messenger_positions` containing "story";
- * 3. an ad set in a Housing / Employment / Financial special ad category
- *    without an explicit `targeting.targeting_automation.advantage_audience`.
+ * 3. an ad set CREATED or COPIED in a Housing / Employment / Financial special
+ *    ad category without an explicit
+ *    `targeting.targeting_automation.advantage_audience` (updating an ad set is
+ *    unaffected, so no update path checks it).
  *
  * Each dry run's structured `dryRun` is asserted EQUAL to the same call with
  * harmless targeting, so `validationErrors` and `wouldSucceed` never change;
@@ -97,7 +98,7 @@ const CLEAN_TARGETING = {
   targeting_automation: { advantage_audience: 0 },
 };
 
-const BLOCK_HEADER = "Warnings (non-blocking, unconfirmed by Meta):";
+const BLOCK_HEADER = "Warnings (non-blocking):";
 
 let stub: FetchStub;
 let session: WireSession;
@@ -149,8 +150,10 @@ function warningCodes(text: string): string[] {
 
 function expectBlock(text: string) {
   expect(text).toContain(BLOCK_HEADER);
-  expect(text).toContain("third-party sources");
-  expect(text).toContain("2026-10-27");
+  expect(text).toContain("Meta's Marketing API v26.0 changelog documents these");
+  expect(text).not.toContain("unconfirmed");
+  expect(text).not.toContain("third-party");
+  expect(text).not.toContain("reportedly");
   expect(text).toContain(META_V26_FACT_ID);
   expect(text).toContain("#229");
   expect(text).toContain("sent unchanged");
@@ -196,6 +199,17 @@ describe("the checks (pure)", () => {
     expect(unknown[0]!.message).toContain("were not checked (x)");
   });
 
+  it("each message states its own scope (they are not one all-versions change)", () => {
+    const [explore, story] = metaV26TargetingWarnings(RISKY_TARGETING, opts);
+    expect(explore!.message).toContain("removed the Explore placement in v26.0");
+    expect(explore!.message).not.toContain("2026-10-27");
+    expect(story!.message).toContain("every API version since 2026-10-27");
+    const [aa] = metaV26TargetingWarnings({}, { ...opts, specialAdCategories: ["HOUSING"] });
+    expect(aa!.message).toContain("creating or copying");
+    expect(aa!.message).toContain("ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG");
+    expect(aa!.message).not.toContain("2026-10-27");
+  });
+
   it("reads a JSON-string targeting, as Graph accepts", () => {
     expect(codes(metaV26TargetingWarnings(JSON.stringify(RISKY_TARGETING), opts))).toEqual([
       CODES.instagramExplore,
@@ -203,7 +217,7 @@ describe("the checks (pure)", () => {
     ]);
   });
 
-  it("the text block names the fact, the date and that Meta has not confirmed it", () => {
+  it("the text block names the fact and says Meta's changelog documents the changes", () => {
     expect(formatMetaV26Warnings([])).toBe("");
     const text = formatMetaV26Warnings(
       metaV26TargetingWarnings(RISKY_TARGETING, { ...opts, specialAdCategories: ["EMPLOYMENT"] })
@@ -246,7 +260,7 @@ describe("dry runs: identical structured result, warnings in text only", () => {
     expect(createEntityResponseFormatter(clean)[0]!.text).not.toContain(BLOCK_HEADER);
   });
 
-  it("meta_update_entity (adSet): one campaign read through the limiter; check 3 applies", async () => {
+  it("meta_update_entity (adSet): checks 1-2 only; reads no campaign, even in a HEC-F one", async () => {
     routeAdSetAndCampaign({}, ["HOUSING"]);
     const run = (targeting: unknown) =>
       updateEntityLogic(
@@ -261,42 +275,41 @@ describe("dry runs: identical structured result, warnings in text only", () => {
       );
     const risky = await run(RISKY_TARGETING);
     expect(writes()).toEqual([]);
-    expect(campaignReads()).toHaveLength(1);
-    expect(campaignReads()[0]!.path.endsWith(`/${CAMPAIGN_ID}`)).toBe(true);
-    // The ad set read plus the campaign read, both on the session's user bucket.
-    expect(rateLimiter.getRemainingTokens(USER_KEY)).toBe(LIMIT - 2 * META_READ_TOKENS);
+    // basis: Meta's v26.0 changelog: the advantage_audience rule is for creating
+    // and copying an ad set; "existing ad-set updates are unaffected". So the
+    // update dry run does not read the campaign to check it.
+    expect(campaignReads()).toEqual([]);
+    expect(rateLimiter.getRemainingTokens(USER_KEY)).toBe(LIMIT - META_READ_TOKENS);
 
     const clean = await run(CLEAN_TARGETING);
-    expect(campaignReads()).toHaveLength(1); // explicit flag: no second campaign read
     expect(risky.dryRun).toEqual(clean.dryRun);
     expect(risky.success).toBe(clean.success);
 
     const text = updateEntityResponseFormatter(risky)[0]!.text;
     expectBlock(text);
-    expect(warningCodes(text)).toEqual([
-      CODES.instagramExplore,
-      CODES.messengerStory,
-      CODES.advantageAudience,
-    ]);
-    expect(text).toContain("special_ad_categories includes HOUSING");
+    expect(warningCodes(text)).toEqual([CODES.instagramExplore, CODES.messengerStory]);
     expect(updateEntityResponseFormatter(clean)[0]!.text).not.toContain(BLOCK_HEADER);
   });
 
-  it("meta_update_entity: NONE category is silent; a failed read says not checked", async () => {
-    routeAdSetAndCampaign({}, ["NONE"]);
-    const input = UpdateEntityInputSchema.parse({
-      entityType: "adSet",
-      entityId: ADSET_ID,
-      data: { targeting: { geo_locations: { countries: ["US"] } } },
-      dry_run: true,
-    });
-    const none = await updateEntityLogic(input, ctx, sdk);
-    expect(updateEntityResponseFormatter(none)[0]!.text).not.toContain(BLOCK_HEADER);
+  it("meta_duplicate_entity: a NONE category is silent; a failed campaign read says not checked", async () => {
+    const run = () =>
+      duplicateEntityLogic(
+        DuplicateEntityInputSchema.parse({
+          entityType: "adSet",
+          entityId: ADSET_ID,
+          dry_run: true,
+        }),
+        ctx,
+        sdk
+      );
+    routeAdSetAndCampaign({ geo_locations: { countries: ["US"] } }, ["NONE"]);
+    const none = await run();
+    expect(duplicateEntityResponseFormatter(none)[0]!.text).not.toContain(BLOCK_HEADER);
 
-    routeAdSetAndCampaign({}, "error");
-    const failed = await updateEntityLogic(input, ctx, sdk);
+    routeAdSetAndCampaign({ geo_locations: { countries: ["US"] } }, "error");
+    const failed = await run();
     expect(failed.dryRun).toEqual(none.dryRun);
-    const text = updateEntityResponseFormatter(failed)[0]!.text;
+    const text = duplicateEntityResponseFormatter(failed)[0]!.text;
     expect(warningCodes(text)).toEqual([CODES.advantageAudienceUnchecked]);
     expect(text).toContain("reading the parent campaign failed");
   });
@@ -380,7 +393,7 @@ describe("dry runs: identical structured result, warnings in text only", () => {
     expect(apiRequests()).toEqual([]);
     const text = bulkUpdateEntitiesResponseFormatter(risky)[0]!.text;
     expect(text).toContain("items.1.data.targeting.messenger_positions");
-    expect(warningCodes(text)).toEqual([CODES.messengerStory, CODES.advantageAudienceUnchecked]);
+    expect(warningCodes(text)).toEqual([CODES.messengerStory]);
   });
 });
 
@@ -433,11 +446,7 @@ describe("execute: the targeting is sent unchanged and the text warns", () => {
     const text = updateEntityResponseFormatter(out)[0]!.text;
     expect(text).toContain("updated successfully");
     expectBlock(text);
-    expect(warningCodes(text)).toEqual([
-      CODES.instagramExplore,
-      CODES.messengerStory,
-      CODES.advantageAudienceUnchecked,
-    ]);
+    expect(warningCodes(text)).toEqual([CODES.instagramExplore, CODES.messengerStory]);
   });
 
   it("meta_bulk_create_entities: the risky item is POSTed", async () => {
