@@ -104,7 +104,7 @@ LinkedIn returns only \`impressions\` and \`clicks\` unless \`fields\` names met
 | MEMBER_COUNTY | By county |
 | MEMBER_COMPANY | By company |
 
-Also valid: CONVERSATION_NODE, CONVERSATION_NODE_OPTION_INDEX, CARD_INDEX, EVENT_STAGE. The geo pivots are the \`_V2\` ones; \`MEMBER_COUNTRY\` and \`MEMBER_REGION\` are not accepted. \`MEMBER_DESIGNATED_MARKET_AREA\` needs API version 202609 and is not available at the pinned 202608.
+Also valid: CONVERSATION_NODE, CONVERSATION_NODE_OPTION_INDEX, CARD_INDEX, EVENT_STAGE. The geo pivots are the \`_V2\` ones; \`MEMBER_COUNTRY\` and \`MEMBER_REGION\` are not accepted. \`MEMBER_DESIGNATED_MARKET_AREA\` exists from API version 202609, so it is available at the pinned 202610, but any display of its results must carry Nielsen's DMA registration notice, so it is not offered.
 
 Demographic (\`MEMBER_*\`) pivots return only the top 100 values per creative per day, drop values with fewer than 3 events, and exclude conversionValueInLocalCurrency and approximateMemberReach. Demographic metrics can lag 12 to 24 hours.
 

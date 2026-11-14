@@ -10,11 +10,15 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-  McpServer: vi.fn().mockImplementation(() => ({ connect: hoisted.connect })),
+  McpServer: vi.fn().mockImplementation(function () {
+    return { connect: hoisted.connect };
+  }),
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
-  StdioServerTransport: vi.fn().mockImplementation(() => ({ kind: "stdio" })),
+  StdioServerTransport: vi.fn().mockImplementation(function () {
+    return { kind: "stdio" };
+  }),
 }));
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
@@ -25,7 +29,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     registerToolsFromDefinitions: hoisted.registerTools,
     registerStaticResourcesFromDefinitions: hoisted.registerResources,
     registerPromptsFromDefinitions: hoisted.registerPrompts,
-    InteractionLogger: vi.fn().mockImplementation(() => ({ kind: "logger" })),
+    InteractionLogger: vi.fn().mockImplementation(function () {
+      return { kind: "logger" };
+    }),
     createTransportEntrypoints: vi.fn(() => ({
       createMcpHttpServer: hoisted.createHttpTransport,
       startHttpServer: hoisted.startHttpServer,

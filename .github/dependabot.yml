@@ -1,0 +1,14 @@
+# Every workflow action is pinned to a full commit SHA (#299), so a new version
+# arrives only as a reviewed PR from here. Dependabot rewrites the SHA and the
+# trailing `# vX.Y.Z` comment together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(ci)"

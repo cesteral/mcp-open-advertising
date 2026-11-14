@@ -207,12 +207,12 @@ describe("dv360_list_entities", () => {
       expect(result.pagination.hasMore).toBe(true);
     });
 
-    it("throws when session services cannot be resolved", () => {
+    it("throws when session services cannot be resolved", async () => {
       mockResolveSessionServices.mockImplementation(() => {
         throw new Error("No session found for sessionId: unknown");
       });
 
-      expect(() =>
+      await expect(() =>
         listEntitiesLogic(
           { entityType: "campaign", advertiserId: "adv-1" } as any,
           createMockContext(),

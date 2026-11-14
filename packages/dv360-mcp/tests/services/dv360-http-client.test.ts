@@ -212,6 +212,8 @@ describe("DV360HttpClient", () => {
 
   describe("retry on 429", () => {
     it("respects Retry-After header on 429 responses", async () => {
+      // Waits are jittered upward (never shorter); pin the draw so the wait is exactly 3s.
+      const random = vi.spyOn(Math, "random").mockReturnValue(0);
       // 429 with Retry-After: 3 seconds, then 200
       mockFetchWithTimeout
         .mockResolvedValueOnce(fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }))
@@ -227,6 +229,7 @@ describe("DV360HttpClient", () => {
 
       // Verify the warning log was called
       expect(logger.warn).toHaveBeenCalled();
+      random.mockRestore();
     });
 
     // Re-sending after a capped 10s (the old behaviour) comes before Google

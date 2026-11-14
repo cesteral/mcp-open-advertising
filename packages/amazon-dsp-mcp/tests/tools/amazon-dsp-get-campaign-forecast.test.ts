@@ -20,7 +20,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { resolveSessionServicesFromStore } from "@cesteral/shared";
+import { resolveSessionServicesFromStore, measureSchemaSizes } from "@cesteral/shared";
 const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
 import {
@@ -28,6 +28,7 @@ import {
   getCampaignForecastTool,
   getCampaignForecastResponseFormatter,
   GetCampaignForecastInputSchema,
+  GetCampaignForecastOutputSchema,
 } from "../../src/mcp-server/tools/definitions/get-campaign-forecast.tool.js";
 
 const mockRetrieveForecast = vi.fn();
@@ -152,5 +153,62 @@ describe("amazon_dsp_get_campaign_forecast", () => {
       timestamp: "2026-05-28T12:00:00.000Z",
     } as never);
     expect(out[0].text).toMatch(/^0 succeeded, 0 failed/);
+  });
+
+  describe("compact outputSchema", () => {
+    it("stays small (the generated vendor schema was ~50 KB)", () => {
+      const { perToolOutput } = measureSchemaSizes([
+        {
+          name: "t",
+          inputSchema: GetCampaignForecastInputSchema,
+          outputSchema: GetCampaignForecastOutputSchema,
+        },
+      ]);
+      expect(perToolOutput[0]!.sizeBytes).toBeLessThan(4 * 1024);
+    });
+
+    it("passes forecast detail the schema does not name through unchanged", () => {
+      const payload = {
+        response: {
+          success: [
+            {
+              index: 0,
+              campaignForecast: {
+                campaignDisplayName: "x",
+                flightForecasts: [
+                  {
+                    flightId: "fl-1",
+                    warnings: [{ code: "W1", message: "first" }],
+                    metrics: { impressions: { mean: 1000 } },
+                  },
+                ],
+                insights: [{ kind: "BUDGET" }],
+              },
+            },
+          ],
+          error: [{ index: 0, errors: [{ code: "BAD", message: "nope" }] }],
+        },
+        timestamp: "2026-05-28T12:00:00.000Z",
+      };
+      expect(GetCampaignForecastOutputSchema.parse(payload)).toEqual(payload);
+    });
+
+    it("accepts an empty multi-status response", () => {
+      expect(
+        GetCampaignForecastOutputSchema.safeParse({
+          response: {},
+          timestamp: "2026-05-28T12:00:00.000Z",
+        }).success
+      ).toBe(true);
+    });
+
+    it("rejects a malformed envelope", () => {
+      expect(
+        GetCampaignForecastOutputSchema.safeParse({
+          response: { success: "nope" },
+          timestamp: "2026-05-28T12:00:00.000Z",
+        }).success
+      ).toBe(false);
+    });
   });
 });

@@ -294,26 +294,75 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Parse a `Retry-After` header into milliseconds.
+ *
+ * RFC 9110 §10.2.3 allows two forms: a non-negative integer number of seconds,
+ * or an HTTP-date. Only the first was honoured before, so a date-form header
+ * was ignored and the client fell back to its own (shorter) backoff and
+ * re-sent before the platform allowed it. A date in the past yields 0.
+ *
+ * Returns `undefined` when the header is absent or not parseable in either form.
+ *
+ * @param now Injectable clock (ms since epoch) for tests.
+ */
+export function parseRetryAfterMs(
+  header: string | null | undefined,
+  now: number = Date.now()
+): number | undefined {
+  if (!header) return undefined;
+  const value = header.trim();
+  if (value === "") return undefined;
+  if (/^\d+$/.test(value)) return parseInt(value, 10) * 1000;
+  // Date.parse is lenient ("-5" and "1 2" both parse as years), so require the
+  // day/month names every HTTP-date form carries before trusting it.
+  if (!/[A-Za-z]{3}/.test(value)) return undefined;
+  const date = Date.parse(value);
+  if (Number.isNaN(date)) return undefined;
+  return Math.max(0, date - now);
+}
+
+/**
+ * Jitter for a computed exponential backoff ("equal jitter"): a uniform draw
+ * from [delay/2, delay]. Without it every instance that saw the same 429
+ * retries at exactly the same instant, and the burst re-trips the limit.
+ * Keeping half the delay as a floor preserves the backoff's growth; the draw
+ * never exceeds the delay, so `maxBackoffMs` stays a true cap.
+ */
+export function applyBackoffJitter(delayMs: number, random: () => number = Math.random): number {
+  return Math.round(delayMs / 2 + random() * (delayMs / 2));
+}
+
+/** Fraction of a platform-named wait that may be added as jitter. */
+const REQUIRED_WAIT_JITTER_FRACTION = 0.2;
+
+/**
+ * Jitter for a wait the platform named (`Retry-After`, documented throttle).
+ * Upward only: a draw from [wait, wait * 1.2]. Re-sending before the platform
+ * said to only extends the throttle, so this can never shorten the wait, but
+ * instances that were told the same wait no longer return in lockstep.
+ */
+export function applyRequiredWaitJitter(
+  waitMs: number,
+  random: () => number = Math.random
+): number {
+  return Math.round(waitMs + random() * waitMs * REQUIRED_WAIT_JITTER_FRACTION);
+}
+
 function calculateBackoff(
   attempt: number,
   initialBackoffMs: number,
   maxBackoffMs: number,
   response: Response
 ): number {
-  let delayMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
-
-  // Respect Retry-After header on any retryable response (429, 5xx, or custom)
-  {
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      const retryAfterSeconds = parseInt(retryAfter, 10);
-      if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-      }
-    }
+  // Respect Retry-After on any retryable response (429, 5xx, or custom),
+  // in either integer-seconds or HTTP-date form.
+  const retryAfterMs = parseRetryAfterMs(response.headers.get("Retry-After"));
+  if (retryAfterMs !== undefined) {
+    return applyRequiredWaitJitter(Math.min(retryAfterMs, maxBackoffMs));
   }
 
-  return delayMs;
+  return applyBackoffJitter(Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs));
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +372,8 @@ function calculateBackoff(
 /**
  * Execute a fetch request with exponential backoff retry on transient errors.
  *
- * Retries on HTTP 429 and 5xx. Respects `Retry-After` header for 429s.
+ * Retries on HTTP 429 and 5xx. Respects `Retry-After` (integer seconds or
+ * HTTP-date). Backoff is jittered so instances don't retry in lockstep.
  * Returns parsed JSON on success, or `{}` for 204 No Content. With
  * `rawResponse: true` it returns the successful `Response` unread instead.
  *
@@ -531,11 +581,9 @@ export async function executeWithRetry(
       errorMessage += `\n\nAction required: ${config.tokenExpiryHint}`;
     }
 
-    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterMs = parseRetryAfterMs(response.headers.get("Retry-After"));
     const retryAfterSeconds =
-      retryAfterHeader && !isNaN(parseInt(retryAfterHeader, 10))
-        ? parseInt(retryAfterHeader, 10)
-        : undefined;
+      retryAfterMs !== undefined ? Math.ceil(retryAfterMs / 1000) : undefined;
     const defaultNextAction = ErrorHandler.defaultNextActionForStatus(response.status, {
       retryAfterSeconds,
       tokenExpiryHint: config.tokenExpiryHint,
@@ -548,9 +596,7 @@ export async function executeWithRetry(
     // The wait the platform asked for, if it named one: the Retry-After header,
     // else the platform's documented throttle wait.
     const requiredDelayMs =
-      retryAfterSeconds !== undefined
-        ? retryAfterSeconds * 1000
-        : throttleDelayMs?.(response.status, errorBody);
+      retryAfterMs !== undefined ? retryAfterMs : throttleDelayMs?.(response.status, errorBody);
 
     const mcpError = new McpError(errorCode, errorMessage, {
       requestId: context?.requestId,
@@ -598,7 +644,9 @@ export async function executeWithRetry(
     lastError = mcpError;
 
     const delayMs =
-      requiredDelayMs ?? calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
+      requiredDelayMs !== undefined
+        ? applyRequiredWaitJitter(requiredDelayMs)
+        : calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
 
     logger.warn(
       {

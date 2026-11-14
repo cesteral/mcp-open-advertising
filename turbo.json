@@ -6,6 +6,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "build/**"]
     },
+    "@cesteral/shared#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/registry.json",
+        "$TURBO_ROOT$/scripts/generate/sync-registry-data.mjs"
+      ],
+      "outputs": ["dist/**", "build/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "outputs": []

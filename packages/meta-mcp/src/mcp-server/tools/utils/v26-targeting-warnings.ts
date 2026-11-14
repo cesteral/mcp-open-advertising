@@ -2,18 +2,24 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Text-only warnings for the three Marketing API v26.0 changes that
- * third-party sources report apply to every API version from 2026-10-27
- * (#229, platform-facts `meta.v26_changes_apply_to_all_versions`):
+ * Text-only warnings for three Marketing API v26.0 changes (#229, platform-facts
+ * `meta.v26_changes_apply_to_all_versions`, read from Meta's v26.0 changelog and
+ * launch post on 2026-11-13). Their scopes differ:
  *
- * 1. `targeting.instagram_positions` containing `"explore"` errors.
- * 2. `targeting.messenger_positions` containing `"story"` is silently dropped.
- * 3. An ad set in a Housing, Employment or Financial (credit) special ad
- *    category must set `targeting.targeting_automation.advantage_audience`
- *    explicitly.
+ * 1. `targeting.instagram_positions` containing `"explore"`: the placement is
+ *    gone from v26.0 and an ad set that names it errors. Not extended to
+ *    earlier versions.
+ * 2. `targeting.messenger_positions` containing `"story"`: silently dropped on
+ *    v26.0+, and on every version, unversioned calls included, since 2026-10-27.
+ * 3. An ad set in a Housing, Employment or Financial special ad category must
+ *    set `targeting.targeting_automation.advantage_audience` explicitly when it
+ *    is CREATED or COPIED (v26.0+). Updating an existing ad set is unaffected,
+ *    so no update path checks it. It reaches older versions only once v25.0 is
+ *    deprecated.
  *
- * None of this is confirmed by Meta's published specs, so the decision (#229)
- * is to WARN, never refuse: the targeting is still sent unchanged.
+ * meta-mcp is pinned to v26.0, so all three apply to its calls today. The
+ * decision (#229) is to WARN, never refuse: the targeting is still sent
+ * unchanged.
  *
  * The warnings are TEXT ONLY. They never enter a structured result: not
  * `validationErrors` (a governance consumer may treat any entry there as
@@ -30,8 +36,11 @@
 /** The platform-facts ledger entry these warnings rest on. */
 export const META_V26_FACT_ID = "meta.v26_changes_apply_to_all_versions";
 
-/** The date third-party sources give for the change (the fact's `value`). */
+/** The date the Messenger Stories change reached every API version (the fact's `value`). */
 export const META_V26_EFFECTIVE_DATE = "2026-10-27";
+
+/** The Graph error for a missing explicit advantage_audience (launch post, 2026-11-13). */
+const ADVANTAGE_AUDIENCE_ERROR = "ADS_TARGETING__REQUIRE_EXPLICIT_ADVANTAGE_AUDIENCE_FLAG";
 
 export const META_V26_WARNING_CODES = {
   instagramExplore: "META_V26_INSTAGRAM_EXPLORE",
@@ -156,7 +165,8 @@ export function metaV26TargetingWarnings(
       field: fieldFor("instagram_positions"),
       message:
         `targeting.instagram_positions ${opts.location} includes "explore" (the Instagram Explore ` +
-        `feed; "explore_home" is a separate placement). Meta reportedly rejects it with an error.`,
+        `feed; "explore_home" is a separate placement). Meta removed the Explore placement in ` +
+        `v26.0 and rejects an ad set that names it with an error.`,
     });
   }
 
@@ -166,7 +176,8 @@ export function metaV26TargetingWarnings(
       field: fieldFor("messenger_positions"),
       message:
         `targeting.messenger_positions ${opts.location} includes "story" (Messenger Stories). ` +
-        `Meta reportedly accepts it but silently drops the placement, narrowing delivery without notice.`,
+        `Meta accepts it but silently drops the placement, narrowing delivery without notice: ` +
+        `on v26.0+, and on every API version since ${META_V26_EFFECTIVE_DATE}.`,
     });
   }
 
@@ -181,8 +192,9 @@ export function metaV26TargetingWarnings(
         message:
           `${subject}, and the parent campaign's special ad categories were not checked ` +
           `(${known.unknown}). If its special_ad_categories includes any of ` +
-          `${META_V26_HEC_F_CATEGORIES.join(", ")}, Meta reportedly requires advantage_audience ` +
-          `to be set explicitly (1 or 0).`,
+          `${META_V26_HEC_F_CATEGORIES.join(", ")} and the targeting is constrained, v26.0 requires ` +
+          `advantage_audience to be set explicitly (1 or 0) when creating or copying the ad set; ` +
+          `Graph otherwise returns ${ADVANTAGE_AUDIENCE_ERROR}.`,
       });
     } else {
       const hecf = known.filter((c) => META_V26_HEC_F_CATEGORIES.includes(c));
@@ -192,8 +204,10 @@ export function metaV26TargetingWarnings(
           field,
           message:
             `${subject}, and the parent campaign's special_ad_categories includes ` +
-            `${hecf.join(", ")}. Meta reportedly requires advantage_audience to be set explicitly ` +
-            `(1 or 0) for an ad set in a Housing, Employment or Financial special ad category.`,
+            `${hecf.join(", ")}. v26.0 requires advantage_audience to be set explicitly (1 or 0) ` +
+            `when creating or copying an ad set with constrained targeting in a Housing, ` +
+            `Employment or Financial special ad category; Graph otherwise returns ` +
+            `${ADVANTAGE_AUDIENCE_ERROR}. Broad or default targeting is unaffected.`,
         });
       }
     }
@@ -226,12 +240,11 @@ export function metaV26CreateWarnings(
 }
 
 /**
- * The v26 warnings for an update payload (single or bulk item) on a path that
- * does not read the ad set's campaign: every execute, and the bulk update dry
- * run. For an ad set or an untyped update, check 3 says it was not checked.
+ * The v26 warnings for an update payload (single or bulk item). Checks 1 and 2
+ * only: the advantage_audience rule applies to creating and copying an ad set,
+ * not to updating one, so no update path reads a campaign or checks it.
  */
 export function metaV26UpdateWarnings(
-  entityType: string | undefined,
   data: Record<string, unknown> | undefined,
   dataPath: string
 ): MetaV26Warning[] {
@@ -239,9 +252,6 @@ export function metaV26UpdateWarnings(
   return metaV26TargetingWarnings(data.targeting, {
     targetingPath: `${dataPath}.targeting`,
     location: `in ${dataPath}.targeting`,
-    ...(entityType === "adSet" || entityType === undefined
-      ? { specialAdCategories: { unknown: "this path does not read the ad set's campaign" } }
-      : {}),
   });
 }
 
@@ -265,15 +275,14 @@ export function metaV26WarningsOf(result: object): readonly MetaV26Warning[] {
 
 /**
  * The response-text block (empty string when there are no warnings). It names
- * the fact id and the reported date, says the change is unconfirmed by Meta,
- * and that nothing was blocked or changed.
+ * the fact id, says the changes are in Meta's v26.0 changelog, and that nothing
+ * was blocked or changed.
  */
 export function formatMetaV26Warnings(warnings: readonly MetaV26Warning[]): string {
   if (warnings.length === 0) return "";
   return (
-    `\n\nWarnings (non-blocking, unconfirmed by Meta): third-party sources report these ` +
-    `Marketing API v26.0 changes apply to every API version from ${META_V26_EFFECTIVE_DATE}; ` +
-    `Meta's published API specs do not confirm them. The targeting is sent unchanged. ` +
+    `\n\nWarnings (non-blocking): Meta's Marketing API v26.0 changelog documents these ` +
+    `changes, and meta-mcp calls v26.0. The targeting is sent unchanged. ` +
     `See platform-facts ${META_V26_FACT_ID} (#229).\n` +
     warnings.map((w) => `  - [${w.code}] ${w.field}: ${w.message}`).join("\n")
   );
