@@ -2,7 +2,7 @@
 
 Audit date: 2026-11-13. Question: are the API versions and platform facts pinned in each server out of date?
 
-Method: every pin in `platform-facts.json` and each `src/config/index.ts` was compared with the vendor's own page, fetched on the audit date. Where a vendor page is rendered client-side and could not be read, the row says so. No code was changed and no live call was made. Nothing here moves a ledger entry to `verified`; that needs a deliberate `verifiedAt` edit per [platform-facts-ledger.md](../architecture/platform-facts-ledger.md).
+Method: every pin in `platform-facts.json` and each `src/config/index.ts` was compared with the vendor's own page, fetched on the audit date. Where a vendor page is rendered client-side and could not be read, the row says so. No live call was made. The audit itself changed no code; the fixes it prompted are listed under "Findings that need action". Nothing here moves a ledger entry to `verified`; that needs a deliberate `verifiedAt` edit per [platform-facts-ledger.md](../architecture/platform-facts-ledger.md).
 
 ## Summary
 
@@ -21,12 +21,12 @@ Method: every pin in `platform-facts.json` and each `src/config/index.ts` was co
 | snapchat-mcp   | unversioned    | No version to check; one enum change dated 15 Feb 2027                          | Action needed (see below)   |
 | pinterest-mcp  | v5             | Still v5; several 2025–26 endpoint deprecations                                 | Not fully checked           |
 | ttd-mcp        | v3             | REST `/v3` still current (read in browser); deprecations dated to Feb 2027      | Supported; items below      |
-| tiktok-mcp     | v1.3           | v1.3 still current; legacy create endpoints restricted from 1 Jan 2027          | **Action needed (below)**   |
-| amazon-dsp-mcp | unversioned    | `/dsp/advertisers` returns 404 from July 2027; refresh-token policy confirmed   | **Action needed (below)**   |
+| tiktok-mcp     | v1.3           | v1.3 still current; legacy create endpoints restricted from 1 Jan 2027          | Fixed in #314 (finding 4)   |
+| amazon-dsp-mcp | unversioned    | `/dsp/advertisers` returns 404 from July 2027; refresh-token policy confirmed   | Fixed in #313 (finding 5)   |
 
 ## Findings that need action
 
-Findings 1 and 2 were fixed in the same change as this report (see each).
+Findings 1 and 2 were fixed in the same change as this report. Findings 4 and 5 were fixed afterwards in their own PRs (#314 and #313); finding 3 is open. See each.
 
 ### 1. meta-mcp: the lookalike example uses a field v27.0 rejects
 
@@ -54,6 +54,8 @@ Source: https://developers.snap.com/marketing-api/Ads-API/announcements
 
 ### 4. tiktok-mcp: legacy create endpoints stop serving three objectives on 1 Jan 2027
 
+**Fixed in [#314](https://github.com/cesteral/mcp-open-advertising/pull/314):** four new tools (`tiktok_create_smart_plus_entity`, `tiktok_update_smart_plus_entity`, `tiktok_update_smart_plus_status`, `tiktok_get_smart_plus_entity`) call the Upgraded Smart+ endpoints, with wire tests and three ledger facts. They were built as new tools rather than routing inside `tiktok_create_entity` because the request shapes differ and TikTok's legacy `update/` endpoints cannot change Smart+ entities. Smart+ campaign create accepts only `APP_PROMOTION`, `WEB_CONVERSIONS` and `LEAD_GENERATION`; that `WEB_CONVERSIONS` is the notice's "Sales" is inferred. Not run against a live account, which also needs TikTok to allowlist the ad account. Smart+ copy is not wrapped. The text below describes the state before the fix.
+
 TikTok's docs banner and What's New page say that from 1 Jan 2027 `/campaign/create/`, `/campaign/copy/task/create/`, `/adgroup/create/`, `/ad/create/` and `/ad/aco/create/` no longer create or copy non-Search "Legacy Manual Flow" campaigns, or create ad groups or ads under them, for the Sales, App Promotion and Lead Generation objectives. The replacement is the Upgraded Smart+ API (`/smart_plus/campaign|adgroup|ad/...`), which TikTok has been extending through November 2026.
 
 [`entity-mapping.ts`](../../packages/tiktok-mcp/src/mcp-server/tools/utils/entity-mapping.ts) builds only the legacy `campaign|adgroup|ad/create/` paths, and `grep` finds no `/smart_plus/` call in `packages/tiktok-mcp/src`. The shipped bulk-create example uses `objective_type: "APP_INSTALLS"`. After 1 Jan 2027 `tiktok_create_entity` and the bulk tool will be refused for those objectives. Traffic-style objectives are not named in the notice. This is a feature gap, not a one-line fix: it needs new Upgraded Smart+ create tools or a routing change.
@@ -61,6 +63,8 @@ TikTok's docs banner and What's New page say that from 1 Jan 2027 `/campaign/cre
 Source: https://business-api.tiktok.com/portal/docs/whats-new/v1.3
 
 ### 5. amazon-dsp-mcp: `GET /dsp/advertisers` is deprecated and returns 404 from July 2027
+
+**Fixed in [#313](https://github.com/cesteral/mcp-open-advertising/pull/313):** session validation and `amazon_dsp_list_advertisers` now use `POST /adsApi/v1/query/advertiserAccounts`. The ID for the `Amazon-Ads-AccountId` header is the `dspAdvertiserId` in an account's `alternateIds`, not the listing's global `advertiserAccountId`, per Amazon's getting-started page; two new ledger facts record this. `amazon_dsp_list_advertisers`'s input and output changed, and validation now needs an LwA token carrying `advertising::campaign_management`. Not run against a live account. The text below describes the state before the fix.
 
 Amazon's 20 Jul 2026 release note deprecates `/dsp/advertisers` and `/dsp/advertisers/{advertiserId}` (and the `/adsAccounts` endpoints) in favour of `POST /adsApi/v1/query/advertiserAccounts` and `POST /adsApi/v1/create/advertiserAccounts`. Since July 2026 they return `Warning: 299` deprecation headers and new client integrations are blocked; from July 2027 they return 404.
 

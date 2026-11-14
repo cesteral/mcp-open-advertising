@@ -12,9 +12,11 @@ vi.mock("../../src/auth/sa360-auth-adapter.js", () => ({
   parseSA360CredentialsFromHeaders: (...args: unknown[]) =>
     mockParseSA360CredentialsFromHeaders(...args),
   getSA360CredentialFingerprint: (...args: unknown[]) => mockGetSA360CredentialFingerprint(...args),
-  SA360RefreshTokenAuthAdapter: vi.fn().mockImplementation(() => ({
-    getAccessToken: mockGetAccessToken,
-  })),
+  SA360RefreshTokenAuthAdapter: vi.fn().mockImplementation(function () {
+    return {
+      getAccessToken: mockGetAccessToken,
+    };
+  }),
 }));
 
 import { SA360HeadersAuthStrategy } from "../../src/auth/sa360-auth-strategy.js";

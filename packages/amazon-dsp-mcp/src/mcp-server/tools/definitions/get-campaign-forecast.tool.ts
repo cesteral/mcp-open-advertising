@@ -6,7 +6,6 @@ import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/share
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { assertAccountScope } from "@cesteral/shared";
 import {
-  DSPCampaignForecastMultiStatusResponseSchema,
   DSPSelectedForecastMetricSchema,
   type DSPCampaignForecastMultiStatusResponseT,
 } from "../../../services/amazon-dsp/v1-schemas.js";
@@ -67,11 +66,58 @@ export const GetCampaignForecastInputSchema = z
   })
   .describe("Parameters for retrieving a campaign forecast");
 
+// Compact published outputSchema. The generated
+// `DSPCampaignForecastMultiStatusResponseSchema` is ~50 KB once serialized
+// (nearly half of this server's `tools/list`), but a client only needs the
+// envelope shape and the fields this tool's formatter reads. Everything else
+// in the forecast (metrics, curves, insights, ...) still passes through
+// unchanged — every object here is `.passthrough()` — so the service keeps
+// validating against the full generated schema and the response is not trimmed.
+const ForecastWarningSchema = z
+  .object({ code: z.string().optional(), message: z.string().optional() })
+  .passthrough();
+
+const FlightForecastSchema = z
+  .object({
+    flightId: z.string().optional(),
+    forecastStartDateTime: z.string().optional(),
+    forecastEndDateTime: z.string().optional(),
+    warnings: z.array(ForecastWarningSchema).optional(),
+  })
+  .passthrough();
+
+const ForecastSuccessSchema = z
+  .object({
+    index: z.number().int().optional(),
+    campaignForecast: z
+      .object({
+        campaignDisplayName: z.string().optional(),
+        flightForecasts: z.array(FlightForecastSchema).optional(),
+      })
+      .passthrough()
+      .optional()
+      .describe(
+        "Forecast detail (metrics, curve, insights, flights); passed through as Amazon returns it"
+      ),
+  })
+  .passthrough();
+
+const ForecastErrorSchema = z
+  .object({
+    index: z.number().int().optional(),
+    errors: z.array(ForecastWarningSchema).max(20).optional(),
+  })
+  .passthrough();
+
 export const GetCampaignForecastOutputSchema = z
   .object({
-    response: DSPCampaignForecastMultiStatusResponseSchema.describe(
-      "Multi-status response (success[].campaignForecast + error[].errors[])"
-    ),
+    response: z
+      .object({
+        success: z.array(ForecastSuccessSchema).max(1).optional(),
+        error: z.array(ForecastErrorSchema).max(1).optional(),
+      })
+      .passthrough()
+      .describe("Multi-status response (success[].campaignForecast + error[].errors[])"),
     timestamp: z.string().datetime(),
   })
   .describe("Campaign forecast result");
