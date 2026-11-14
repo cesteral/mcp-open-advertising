@@ -35,7 +35,7 @@ export const ManageAdExtensionsInputSchema = z
     operation: z
       .enum(["setAssociations", "deleteAssociations", "getAssociations"])
       .describe("Operation to perform"),
-    data: z.record(z.unknown()).describe("Operation data (varies by operation)"),
+    data: z.record(z.string(), z.unknown()).describe("Operation data (varies by operation)"),
     dry_run: z
       .boolean()
       .optional()
@@ -48,7 +48,7 @@ export const ManageAdExtensionsInputSchema = z
 
 export const ManageAdExtensionsOutputSchema = z
   .object({
-    result: z.record(z.any()).optional(),
+    result: z.record(z.string(), z.any()).optional(),
     operation: z.string(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(

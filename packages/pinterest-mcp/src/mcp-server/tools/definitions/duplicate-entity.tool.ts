@@ -42,7 +42,7 @@ export const DuplicateEntityInputSchema = z
     adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe(
         "Optional Pinterest fields to set on the copy (e.g. name). A status here is ignored: the copy is always PAUSED."
@@ -59,7 +59,7 @@ export const DuplicateEntityInputSchema = z
 
 export const DuplicateEntityOutputSchema = z
   .object({
-    newEntity: z.record(z.any()).describe("Newly created duplicate entity data"),
+    newEntity: z.record(z.string(), z.any()).describe("Newly created duplicate entity data"),
     sourceEntityId: z.string(),
     entityType: z.string(),
     timestamp: z.string().datetime(),

@@ -44,7 +44,10 @@ const EFFECT_KIND = "entities_created";
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
-    items: z.array(z.record(z.unknown())).min(1).describe("Array of entity data objects to create"),
+    items: z
+      .array(z.record(z.string(), z.unknown()))
+      .min(1)
+      .describe("Array of entity data objects to create"),
     ...parentIdInputFields,
     dry_run: z
       .boolean()
@@ -58,7 +61,7 @@ export const BulkCreateEntitiesInputSchema = z
 
 export const BulkCreateEntitiesOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     entityType: z.string(),
     totalItems: z.number(),
     timestamp: z.string().datetime(),
@@ -171,7 +174,7 @@ export async function bulkCreateEntitiesLogic(
 
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.unknown())`
+ * (every item must be a non-empty entity object — Zod's `z.record(z.string(), z.unknown())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). Microsoft Ads has no native bulk validate, so both axes are
  * symbolic. Pure (no I/O).

@@ -69,7 +69,11 @@ export const ValidateTargetingConfigInputSchema = z
         "Specific targeting types to check. Defaults to common types: CHANNEL, GEO_REGION, KEYWORD, URL, DIGITAL_CONTENT_LABEL_EXCLUSION, SENSITIVE_CATEGORY_EXCLUSION"
       ),
   })
-  .refine(hasAnyEntityIds, getEntityIdsValidationError)
+  .superRefine((input, ctx) => {
+    if (!hasAnyEntityIds(input)) {
+      ctx.addIssue({ code: "custom", ...getEntityIdsValidationError() });
+    }
+  })
   .describe("Parameters for validating targeting configuration");
 
 /**

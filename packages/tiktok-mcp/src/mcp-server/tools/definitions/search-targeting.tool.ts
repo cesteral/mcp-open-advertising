@@ -68,7 +68,9 @@ export const SearchTargetingInputSchema = z
 
 export const SearchTargetingOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())).describe("Targeting options matching the query"),
+    results: z
+      .array(z.record(z.string(), z.any()))
+      .describe("Targeting options matching the query"),
     count: z.number().describe("Number of results returned"),
     targetingType: z.string(),
     timestamp: z.string().datetime(),

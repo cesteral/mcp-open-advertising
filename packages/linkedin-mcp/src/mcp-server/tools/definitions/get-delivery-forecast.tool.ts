@@ -108,7 +108,7 @@ export const GetDeliveryForecastInputSchema = z
 
 export const GetDeliveryForecastOutputSchema = z
   .object({
-    forecast: z.record(z.any()).describe("Forecast data from LinkedIn API"),
+    forecast: z.record(z.string(), z.any()).describe("Forecast data from LinkedIn API"),
     adAccountUrn: z.string(),
     timestamp: z.string().datetime(),
   })

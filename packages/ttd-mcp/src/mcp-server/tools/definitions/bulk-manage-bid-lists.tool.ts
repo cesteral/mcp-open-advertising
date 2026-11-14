@@ -47,7 +47,7 @@ export const BidListBulkInputSchema = z
       .optional()
       .describe("Required for batch_get; array of bid list IDs (max 50)"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .optional()
@@ -90,7 +90,7 @@ export const BidListBulkOutputSchema = z
     totalItems: z.number(),
     succeeded: z.number(),
     failed: z.number(),
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No bid lists were changed."

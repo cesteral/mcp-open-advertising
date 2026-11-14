@@ -31,7 +31,9 @@ export const GetEntityInputSchema = z
 
 export const GetEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Retrieved entity as the Unified API returns it"),
+    entity: z
+      .record(z.string(), z.any())
+      .describe("Retrieved entity as the Unified API returns it"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity retrieval result");

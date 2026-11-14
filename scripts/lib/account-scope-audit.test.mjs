@@ -141,7 +141,7 @@ export interface SessionServices {
 const COMMITMENT_SHAPE = `
 const inputSchema = z.object({
   profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
 });
 export async function createCommitmentLogic(input, context, sdkContext) {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);

@@ -68,7 +68,11 @@ export const DeleteAssignedTargetingInputSchema = z
         "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the targeting option would be deleted) without prompting for confirmation or calling the DV360 API. Nothing is deleted."
       ),
   })
-  .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine((input, ctx) => {
+    if (!validateTargetingInput(input)) {
+      ctx.addIssue({ code: "custom", ...getTargetingValidationError(input) });
+    }
+  })
   .superRefine((input, ctx) => addTargetingTypeForParentIssue("delete", input, ctx))
   .describe("Parameters for deleting an assigned targeting option");
 

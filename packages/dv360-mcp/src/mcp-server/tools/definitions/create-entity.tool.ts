@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { z, type ZodRawShape } from "zod";
+import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
@@ -75,7 +75,7 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
     requiredPreview.join(", ") || "See schema"
   }${previewSuffix}.\n${relationshipDescription}`;
 
-  const shape: ZodRawShape = {
+  const shape: Record<string, z.ZodTypeAny> = {
     entityType: z.literal(entityType).describe("Type of entity to create"),
   };
 
@@ -93,7 +93,7 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
   return z.object(shape).passthrough();
 }
 
-function createInputSchema(): z.ZodTypeAny {
+function createInputSchema(): z.ZodType<any> {
   const variants = getSupportedEntityTypesDynamic().map((entityType) =>
     buildEntitySpecificInputSchema(entityType)
   );
@@ -115,14 +115,17 @@ function createInputSchema(): z.ZodTypeAny {
       variants as [EntityVariantSchema, EntityVariantSchema, ...EntityVariantSchema[]]
     )
     .superRefine((input, ctx) => {
+      // The variants are built from a loose, index-signature shape, so zod 4
+      // types `entityType` as unknown even though every variant is a literal.
+      const entityType = input.entityType as string;
       const mergedData = mergeIdsIntoData(
-        input.entityType,
+        entityType,
         input.data as Record<string, unknown>,
         input as Record<string, unknown>
       );
 
       addIdValidationIssues(ctx, {
-        entityType: input.entityType,
+        entityType,
         input: input as Record<string, unknown>,
         data: mergedData,
         operation: "create",
@@ -130,7 +133,7 @@ function createInputSchema(): z.ZodTypeAny {
       });
 
       const missingRelationships = validateEntityRelationships(
-        input.entityType,
+        entityType,
         mergedData as Record<string, any>
       );
 
@@ -171,7 +174,7 @@ export const CreateEntityInputSchema = createSimplifiedCreateEntityInputSchema()
  */
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data"),
+    entity: z.record(z.string(), z.any()).describe("Created entity data"),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entity was created."

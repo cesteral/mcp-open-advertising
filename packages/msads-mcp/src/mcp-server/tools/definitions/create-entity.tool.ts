@@ -69,7 +69,9 @@ function extractCreatedId(result: Record<string, unknown>): string {
 export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
-    data: z.record(z.unknown()).describe("Entity data payload following Microsoft Ads API format"),
+    data: z
+      .record(z.string(), z.unknown())
+      .describe("Entity data payload following Microsoft Ads API format"),
     dry_run: z
       .boolean()
       .optional()
@@ -82,7 +84,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    result: z.record(z.any()).describe("API response with created entity IDs"),
+    result: z.record(z.string(), z.any()).describe("API response with created entity IDs"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

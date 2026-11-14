@@ -23,16 +23,18 @@ const MAX_FIELD_DEPTH = 5;
 function unwrapSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
   let current = schema;
   while (true) {
-    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
-      current = (current as z.ZodOptional<any> | z.ZodNullable<any>)._def.innerType;
+    if (
+      current instanceof z.ZodOptional ||
+      current instanceof z.ZodNullable ||
+      current instanceof z.ZodDefault
+    ) {
+      current = (current as z.ZodOptional<any>).def.innerType as z.ZodTypeAny;
       continue;
     }
-    if (current instanceof z.ZodDefault) {
-      current = (current as z.ZodDefault<any>)._def.innerType;
-      continue;
-    }
-    if (current instanceof z.ZodEffects) {
-      current = (current as z.ZodEffects<any>)._def.schema;
+    // `.transform()` / `.pipe()` produce a ZodPipe in zod 4; `.refine()` no
+    // longer wraps the schema, so only the input side needs unwrapping.
+    if (current instanceof z.ZodPipe) {
+      current = (current as z.ZodPipe<any, any>).def.in as z.ZodTypeAny;
       continue;
     }
     break;
@@ -117,19 +119,19 @@ function extractNestedFields(
   }
 
   if (concrete instanceof z.ZodArray) {
-    const elementSchema = (concrete as z.ZodArray<any>)._def.type;
+    const elementSchema = (concrete as z.ZodArray<any>).def.element as z.ZodTypeAny;
     return extractFieldsFromSchema(elementSchema, `${prefix}[]`, depth, maxDepth, visited);
   }
 
   if (concrete instanceof z.ZodUnion) {
-    const options = (concrete as z.ZodUnion<any>)._def.options as z.ZodTypeAny[];
+    const options = (concrete as z.ZodUnion<any>).def.options as z.ZodTypeAny[];
     return options.flatMap((option) =>
       extractFieldsFromSchema(option, prefix, depth, maxDepth, visited)
     );
   }
 
   if (concrete instanceof z.ZodLazy) {
-    const next = (concrete as z.ZodLazy<any>)._def.getter();
+    const next = (concrete as z.ZodLazy<any>).def.getter() as z.ZodTypeAny;
     return extractFieldsFromSchema(next, prefix, depth, maxDepth, visited);
   }
 
@@ -142,19 +144,15 @@ function unwrapWithOptional(schema: z.ZodTypeAny): { schema: z.ZodTypeAny; optio
   while (true) {
     if (current instanceof z.ZodOptional) {
       optional = true;
-      current = (current as z.ZodOptional<any>)._def.innerType;
+      current = (current as z.ZodOptional<any>).def.innerType as z.ZodTypeAny;
       continue;
     }
-    if (current instanceof z.ZodNullable) {
-      current = (current as z.ZodNullable<any>)._def.innerType;
+    if (current instanceof z.ZodNullable || current instanceof z.ZodDefault) {
+      current = (current as z.ZodNullable<any>).def.innerType as z.ZodTypeAny;
       continue;
     }
-    if (current instanceof z.ZodDefault) {
-      current = (current as z.ZodDefault<any>)._def.innerType;
-      continue;
-    }
-    if (current instanceof z.ZodEffects) {
-      current = (current as z.ZodEffects<any>)._def.schema;
+    if (current instanceof z.ZodPipe) {
+      current = (current as z.ZodPipe<any, any>).def.in as z.ZodTypeAny;
       continue;
     }
     break;
@@ -181,21 +179,21 @@ function getZodTypeName(schema: z.ZodTypeAny): string {
   if (concrete instanceof z.ZodNumber) return "number";
   if (concrete instanceof z.ZodBoolean) return "boolean";
   if (concrete instanceof z.ZodArray) {
-    const inner = (concrete as z.ZodArray<any>)._def.type;
+    const inner = (concrete as z.ZodArray<any>).def.element as z.ZodTypeAny;
     return `array<${getZodTypeName(inner)}>`;
   }
   if (concrete instanceof z.ZodObject) return "object";
   if (concrete instanceof z.ZodEnum) return "enum";
   if (concrete instanceof z.ZodUnion) {
-    const options = (concrete as z.ZodUnion<any>)._def.options as z.ZodTypeAny[];
+    const options = (concrete as z.ZodUnion<any>).def.options as z.ZodTypeAny[];
     return `union<${options.map((opt) => getZodTypeName(opt)).join("|")}>`;
   }
   if (concrete instanceof z.ZodLiteral) {
-    return `literal<${JSON.stringify((concrete as z.ZodLiteral<any>)._def.value)}>`;
+    return `literal<${(concrete as z.ZodLiteral<any>).def.values.map((v: unknown) => JSON.stringify(v)).join("|")}>`;
   }
   if (concrete instanceof z.ZodRecord) return "record";
   if (concrete instanceof z.ZodLazy) {
-    const next = (concrete as z.ZodLazy<any>)._def.getter();
+    const next = (concrete as z.ZodLazy<any>).def.getter() as z.ZodTypeAny;
     return getZodTypeName(next);
   }
   return "unknown";
@@ -204,14 +202,12 @@ function getZodTypeName(schema: z.ZodTypeAny): string {
 function getSchemaFormat(schema: z.ZodTypeAny): string | undefined {
   const concrete = unwrapSchema(schema);
   if (concrete instanceof z.ZodString) {
-    const checks = (concrete as z.ZodString)._def.checks;
-    for (const check of checks) {
-      if (check.kind === "datetime") return "datetime";
-      if (check.kind === "email") return "email";
-      if (check.kind === "url") return "url";
-      if (check.kind === "uuid") return "uuid";
-      if (check.kind === "regex") return "pattern";
+    // zod 4 reports the string's format on the schema itself.
+    const format = (concrete as z.ZodString).format;
+    if (format === "datetime" || format === "email" || format === "url" || format === "uuid") {
+      return format;
     }
+    if (format === "regex") return "pattern";
   }
   return undefined;
 }
@@ -241,7 +237,7 @@ export function getEntitySchemaByType(entityType: string): z.ZodTypeAny {
   if (schema) return schema;
 
   // Fallback to generic record
-  return z.record(z.any());
+  return z.record(z.string(), z.any());
 }
 
 /**
@@ -250,10 +246,10 @@ export function getEntitySchemaByType(entityType: string): z.ZodTypeAny {
 export function extractEnumValues(schema: z.ZodTypeAny): string[] | null {
   const concrete = unwrapSchema(schema);
   if (concrete instanceof z.ZodEnum) {
-    return (concrete as z.ZodEnum<any>)._def.values;
+    return [...(concrete as z.ZodEnum<any>).options] as string[];
   }
   if (concrete instanceof z.ZodLiteral) {
-    return [JSON.stringify((concrete as z.ZodLiteral<any>)._def.value)];
+    return (concrete as z.ZodLiteral<any>).def.values.map((v: unknown) => JSON.stringify(v));
   }
   return null;
 }
@@ -275,11 +271,11 @@ function walkSchemaPath(schema: z.ZodTypeAny, parts: string[], index: number): z
   const concrete = unwrapSchema(schema);
 
   if (concrete instanceof z.ZodLazy) {
-    return walkSchemaPath((concrete as z.ZodLazy<any>)._def.getter(), parts, index);
+    return walkSchemaPath((concrete as z.ZodLazy<any>).def.getter() as z.ZodTypeAny, parts, index);
   }
 
   if (concrete instanceof z.ZodUnion) {
-    for (const option of (concrete as z.ZodUnion<any>)._def.options as z.ZodTypeAny[]) {
+    for (const option of (concrete as z.ZodUnion<any>).def.options as z.ZodTypeAny[]) {
       const result = walkSchemaPath(option, parts, index);
       if (result) {
         return result;
@@ -292,7 +288,11 @@ function walkSchemaPath(schema: z.ZodTypeAny, parts: string[], index: number): z
     if (token !== "[]") {
       return null;
     }
-    return walkSchemaPath((concrete as z.ZodArray<any>)._def.type, parts, index + 1);
+    return walkSchemaPath(
+      (concrete as z.ZodArray<any>).def.element as z.ZodTypeAny,
+      parts,
+      index + 1
+    );
   }
 
   if (concrete instanceof z.ZodObject) {

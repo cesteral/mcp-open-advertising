@@ -47,7 +47,7 @@ export const BulkCreateEntitiesInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     customerId: CustomerIdSchema,
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe(
@@ -231,7 +231,7 @@ function extractResourceName(result: Record<string, unknown> | undefined): strin
 
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
+ * (every item must be a non-empty entity object — Zod's `z.record(z.string(), z.any())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). Google Ads has no native bulk validate here, so both axes are
  * symbolic. Pure (no I/O).

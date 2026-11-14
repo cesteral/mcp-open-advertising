@@ -24,7 +24,7 @@ export const GetEntityInputSchema = z
 
 export const GetEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Retrieved entity data"),
+    entity: z.record(z.string(), z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity retrieval result");

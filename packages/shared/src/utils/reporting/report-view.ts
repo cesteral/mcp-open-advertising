@@ -55,7 +55,7 @@ export const ReportViewInputSchema = z.object({
       "Group rows by these column values before pagination. Non-grouping columns are aggregated per group. totalRows reflects the post-aggregation row count."
     ),
   aggregateMetrics: z
-    .record(ReportViewAggregationFnSchema)
+    .record(z.string(), ReportViewAggregationFnSchema)
     .optional()
     .describe(
       "Aggregation function per non-grouping column (sum/avg/count/min/max). Columns not listed default to sum. Non-numeric values are treated as 0 with a warning."
@@ -74,10 +74,13 @@ export const ReportViewOutputSchema = z.object({
   selectedColumns: z.array(z.string()).describe("Columns included in returned row payloads"),
   mode: ReportViewModeSchema.describe("Return mode used for this response"),
   previewRows: z
-    .array(z.record(z.any()))
+    .array(z.record(z.string(), z.any()))
     .optional()
     .describe("Small parsed row preview for summary mode"),
-  rows: z.array(z.record(z.any())).optional().describe("Parsed data rows for rows mode"),
+  rows: z
+    .array(z.record(z.string(), z.any()))
+    .optional()
+    .describe("Parsed data rows for rows mode"),
   warnings: z
     .array(z.string())
     .describe("Non-fatal warnings about projection, caps, or pagination"),

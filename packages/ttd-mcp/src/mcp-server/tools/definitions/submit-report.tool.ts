@@ -92,7 +92,7 @@ export const SubmitReportInputSchema = z
         "(legacy/ignored when ReportTemplateId is set) Report metrics — TTD now requires a template."
       ),
     additionalConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Additional report configuration fields (merged last)"),
     dry_run: z

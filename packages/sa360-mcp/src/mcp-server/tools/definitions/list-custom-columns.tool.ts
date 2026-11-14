@@ -23,7 +23,7 @@ export const ListCustomColumnsInputSchema = z
 
 export const ListCustomColumnsOutputSchema = z
   .object({
-    customColumns: z.array(z.record(z.any())).describe("Custom column definitions"),
+    customColumns: z.array(z.record(z.string(), z.any())).describe("Custom column definitions"),
     totalCount: z.number().describe("Number of custom columns"),
     timestamp: z.string().datetime(),
   })

@@ -61,7 +61,7 @@ export const SubmitReportInputSchema = z
       .optional()
       .describe("Criteria for CROSS_MEDIA_REACH reports"),
     additionalConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Additional report configuration fields"),
     dry_run: z

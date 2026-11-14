@@ -23,7 +23,9 @@ export const GetAdPreviewInputSchema = z
 
 export const GetAdPreviewOutputSchema = z
   .object({
-    previews: z.array(z.record(z.any())).describe("Preview data (includes iframe HTML)"),
+    previews: z
+      .array(z.record(z.string(), z.any()))
+      .describe("Preview data (includes iframe HTML)"),
     timestamp: z.string().datetime(),
   })
   .describe("Ad preview result");

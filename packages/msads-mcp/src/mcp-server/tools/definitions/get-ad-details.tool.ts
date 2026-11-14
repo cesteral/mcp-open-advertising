@@ -19,7 +19,7 @@ export const GetAdDetailsInputSchema = z
 
 export const GetAdDetailsOutputSchema = z
   .object({
-    ads: z.array(z.record(z.any())),
+    ads: z.array(z.record(z.string(), z.any())),
     timestamp: z.string().datetime(),
   })
   .describe("Ad details result");

@@ -61,12 +61,12 @@ export const ListReportColumnsOutputSchema = z
     resource: z.string().nullable(),
     source: z.enum(["live", "catalog"]),
     fields: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .describe(
         "Field objects. Live results carry name/category/data_type/selectable; catalog results carry {name}."
       ),
     fieldGroups: z
-      .record(z.array(z.string()))
+      .record(z.string(), z.array(z.string()))
       .optional()
       .describe("Static catalog grouping (only present when `source: 'catalog'`)"),
     notes: z.array(z.string()),

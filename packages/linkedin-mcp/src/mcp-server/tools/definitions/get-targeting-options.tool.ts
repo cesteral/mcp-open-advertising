@@ -20,7 +20,7 @@ export const GetTargetingOptionsInputSchema = z
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
-    facets: z.array(z.record(z.any())).describe("Targeting facet descriptors"),
+    facets: z.array(z.record(z.string(), z.any())).describe("Targeting facet descriptors"),
     count: z.number(),
     timestamp: z.string().datetime(),
   })

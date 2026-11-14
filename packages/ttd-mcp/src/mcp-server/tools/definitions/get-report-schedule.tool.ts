@@ -27,7 +27,7 @@ export const GetReportScheduleOutputSchema = z
       "Canonical ReportScheduleSummary for the requested schedule"
     ),
     raw: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .describe("Raw TTD schedule envelope (kept for platform-specific debugging)"),
     timestamp: z.string().datetime(),
   })

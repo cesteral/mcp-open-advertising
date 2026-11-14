@@ -45,7 +45,9 @@ export const CreateEntityInputSchema = z
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
     campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
-    data: z.record(z.any()).describe("Entity data to create (fields vary by entity type)"),
+    data: z
+      .record(z.string(), z.any())
+      .describe("Entity data to create (fields vary by entity type)"),
     strictMode: z
       .boolean()
       .optional()
@@ -84,7 +86,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data"),
+    entity: z.record(z.string(), z.any()).describe("Created entity data"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

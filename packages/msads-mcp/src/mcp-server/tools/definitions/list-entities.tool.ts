@@ -24,7 +24,10 @@ export const ListEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Parent entity ID (e.g., CampaignId for adGroups, AdGroupId for ads/keywords)"),
-    filters: z.record(z.unknown()).optional().describe("Additional filters to pass to the API"),
+    filters: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("Additional filters to pass to the API"),
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "campaign" && !data.accountId) {
@@ -47,7 +50,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     entityType: z.string(),
     count: z.number(),
     timestamp: z.string().datetime(),

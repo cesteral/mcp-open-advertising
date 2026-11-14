@@ -52,7 +52,7 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(
         z.object({
           entityId: z.string().min(1).describe("Entity ID to update"),
-          data: z.record(z.any()).describe("Entity data fields to update"),
+          data: z.record(z.string(), z.any()).describe("Entity data fields to update"),
         })
       )
       .min(1)

@@ -30,7 +30,7 @@ export const ValidateEntityInputSchema = z
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode — create requires more fields than update"),
-    data: z.record(z.unknown()).describe("Entity data payload to validate"),
+    data: z.record(z.string(), z.unknown()).describe("Entity data payload to validate"),
   })
   .describe("Parameters for validating a Microsoft Ads entity");
 

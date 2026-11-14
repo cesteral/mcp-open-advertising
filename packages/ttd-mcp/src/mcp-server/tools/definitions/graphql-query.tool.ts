@@ -45,7 +45,10 @@ Refer to the TTD Partner Portal GraphQL documentation for the full schema.`;
 export const GraphqlQueryInputSchema = z
   .object({
     query: z.string().min(1).describe("GraphQL query or mutation string"),
-    variables: z.record(z.any()).optional().describe("GraphQL variables (key-value object)"),
+    variables: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("GraphQL variables (key-value object)"),
     betaFeatures: z
       .string()
       .optional()
@@ -68,7 +71,7 @@ const SpillSchema = z
 export const GraphqlQueryOutputSchema = z
   .object({
     data: z.any().describe("GraphQL response data"),
-    errors: z.array(z.record(z.any())).optional().describe("GraphQL errors, if any"),
+    errors: z.array(z.record(z.string(), z.any())).optional().describe("GraphQL errors, if any"),
     spill: SpillSchema.optional().describe(
       "Spill metadata when the response was too large to inline. Set when REPORT_SPILL_BUCKET is configured and the body exceeds the byte threshold."
     ),

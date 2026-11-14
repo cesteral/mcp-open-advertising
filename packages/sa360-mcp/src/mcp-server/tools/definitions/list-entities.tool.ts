@@ -26,7 +26,7 @@ export const ListEntitiesInputSchema = z
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
     filters: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe(
         "Filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"
@@ -45,7 +45,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

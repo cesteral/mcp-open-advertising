@@ -43,7 +43,7 @@ export const ListReportSchedulesOutputSchema = z
       .array(ReportScheduleSummarySchema)
       .describe("Canonical ReportScheduleSummary entries"),
     raw: z
-      .array(z.record(z.unknown()))
+      .array(z.record(z.string(), z.unknown()))
       .optional()
       .describe("Raw CM360 report envelopes (kept for platform-specific debugging)"),
     pagination: PaginationOutputSchema,

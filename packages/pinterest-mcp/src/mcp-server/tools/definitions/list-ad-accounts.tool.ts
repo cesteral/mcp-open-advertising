@@ -40,7 +40,7 @@ export const ListAdvertisersInputSchema = z
 
 export const ListAdvertisersOutputSchema = z
   .object({
-    advertisers: z.array(z.record(z.any())).describe("List of advertiser accounts"),
+    advertisers: z.array(z.record(z.string(), z.any())).describe("List of advertiser accounts"),
     count: z.number().describe("Number of advertisers returned in this page"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),

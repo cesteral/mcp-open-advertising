@@ -73,7 +73,7 @@ type ReportRequestInput = {
   additionalConfig?: Record<string, unknown>;
 } & Partial<Record<CriteriaField, ReportCriteriaValue>>;
 
-export const genericCriteriaSchema = z.record(z.any());
+export const genericCriteriaSchema = z.record(z.string(), z.any());
 
 export function validateTypedCriteriaUsage(
   input: {

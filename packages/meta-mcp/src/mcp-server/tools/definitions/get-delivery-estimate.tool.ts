@@ -17,7 +17,7 @@ export const GetDeliveryEstimateInputSchema = z
   .object({
     adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
     targetingSpec: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Targeting specification (must include geo_locations or custom_audiences)"),
     optimizationGoal: z
       .string()
@@ -28,7 +28,7 @@ export const GetDeliveryEstimateInputSchema = z
 
 export const GetDeliveryEstimateOutputSchema = z
   .object({
-    estimate: z.record(z.any()).describe("Delivery estimate data"),
+    estimate: z.record(z.string(), z.any()).describe("Delivery estimate data"),
     timestamp: z.string().datetime(),
   })
   .describe("Delivery estimate result");

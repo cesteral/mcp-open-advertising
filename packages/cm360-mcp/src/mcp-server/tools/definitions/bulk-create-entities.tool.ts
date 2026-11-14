@@ -37,7 +37,7 @@ export const BulkCreateEntitiesInputSchema = z
     profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),
@@ -60,7 +60,7 @@ export const BulkCreateEntitiesOutputSchema = z
         z.object({
           index: z.number(),
           success: z.boolean(),
-          entity: z.record(z.any()).optional(),
+          entity: z.record(z.string(), z.any()).optional(),
           error: z.string().optional(),
         })
       )
@@ -175,7 +175,7 @@ export async function bulkCreateEntitiesLogic(
 
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
+ * (every item must be a non-empty entity object — Zod's `z.record(z.string(), z.any())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). CM360 has no native bulk validate, so both axes are symbolic.
  * `extraErrors` carries the dry-run-only rate-limit capacity finding (the

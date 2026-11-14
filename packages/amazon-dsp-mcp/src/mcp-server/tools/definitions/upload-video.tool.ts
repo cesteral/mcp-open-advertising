@@ -66,7 +66,7 @@ export const UploadVideoOutputSchema = z
       .describe(
         "The registered assetId, referenced by DSP video creatives. Absent on a dry_run (nothing was registered)."
       ),
-    asset: z.record(z.any()).optional().describe("Raw /assets/register response."),
+    asset: z.record(z.string(), z.any()).optional().describe("Raw /assets/register response."),
     uploadedAt: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. Nothing was uploaded or registered."

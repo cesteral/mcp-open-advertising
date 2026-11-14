@@ -51,7 +51,7 @@ export const GetAdPreviewOutputSchema = z
       .optional()
       .describe("VAST tag URL (third-party VAST video/audio creatives only)"),
     reviewStatus: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("DV360 review status (approvalStatus, policy and exchange review statuses)"),
     previewUrl: z.null().describe("Always null: DV360's API has no preview URL for creatives"),

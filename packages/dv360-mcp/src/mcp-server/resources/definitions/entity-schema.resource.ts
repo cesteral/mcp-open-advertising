@@ -6,7 +6,7 @@
  * Provides full JSON Schema for DV360 entity types with metadata
  */
 
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { toJSONSchema } from "zod";
 import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   getEntityConfigDynamic,
@@ -53,11 +53,7 @@ async function readEntitySchema(params: Record<string, string>): Promise<Resourc
   const zodSchema = getEntitySchemaForOperation(entityType, "update");
 
   // Convert to JSON Schema with rich descriptions
-  const jsonSchema = zodToJsonSchema(zodSchema, {
-    target: "jsonSchema7",
-    markdownDescription: true,
-    errorMessages: true,
-  });
+  const jsonSchema = toJSONSchema(zodSchema, { target: "draft-7", unrepresentable: "any" });
 
   // Extract required fields for different operations
   const requiredFields = getRequiredFieldsFromSchema(entityType);

@@ -42,7 +42,7 @@ export const ValidateEntityInputSchema = z
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),
-    data: z.record(z.any()).describe("Entity data payload to validate"),
+    data: z.record(z.string(), z.any()).describe("Entity data payload to validate"),
     advertiserId: z
       .string()
       .optional()

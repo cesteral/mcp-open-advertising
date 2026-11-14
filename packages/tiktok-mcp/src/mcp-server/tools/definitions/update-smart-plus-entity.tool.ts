@@ -52,7 +52,7 @@ export const UpdateSmartPlusEntityInputSchema = z
       .string()
       .min(1)
       .describe("The campaign_id, adgroup_id or smart_plus_ad_id to update"),
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()

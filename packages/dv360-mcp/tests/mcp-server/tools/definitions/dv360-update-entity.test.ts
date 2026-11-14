@@ -40,7 +40,7 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () =
   generateRelationshipDescription: vi.fn().mockReturnValue(""),
   validateEntityRelationships: vi.fn().mockReturnValue([]),
   getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "lineItem"]),
-  getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.any())),
+  getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.string(), z.any())),
   getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName"]),
 }));
 
@@ -120,7 +120,7 @@ vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
       lineItemId: z.string().optional(),
       adGroupId: z.string().optional(),
       creativeId: z.string().optional(),
-      data: z.record(z.any()),
+      data: z.record(z.string(), z.any()),
       updateMask: z.string(),
       reason: z.string().optional(),
     })

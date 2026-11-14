@@ -70,7 +70,7 @@ describe("isOpen recognises every open JSON Schema shape", () => {
   const closed = { type: "object", properties: { id: { type: "string" } } };
   it.each([
     ["z.any()", {}],
-    ["z.record(z.any())", { type: "object", additionalProperties: {} }],
+    ["z.record(z.string(), z.any())", { type: "object", additionalProperties: {} }],
     ["an object with no properties", { type: "object" }],
     ["array of any", { type: "array" }],
     ["array of records", { type: "array", items: { type: "object", additionalProperties: {} } }],

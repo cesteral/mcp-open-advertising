@@ -6,7 +6,7 @@ import { z } from "zod";
 /** Single item result in a bulk operation */
 export const BulkOperationResultSchema = z.object({
   success: z.boolean(),
-  entity: z.record(z.any()).optional(),
+  entity: z.record(z.string(), z.any()).optional(),
   error: z.string().optional(),
 });
 

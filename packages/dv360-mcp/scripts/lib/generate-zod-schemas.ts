@@ -141,10 +141,10 @@ function convertObjectToZod(
     // Empty object or object with additionalProperties
     if (schema.additionalProperties) {
       if (typeof schema.additionalProperties === "boolean") {
-        return schema.additionalProperties ? "z.record(z.unknown())" : "z.object({})";
+        return schema.additionalProperties ? "z.record(z.string(), z.unknown())" : "z.object({})";
       } else {
         const valueSchema = convertSchemaToZod(schema.additionalProperties, allSchemas, depth + 1);
-        return `z.record(${valueSchema})`;
+        return `z.record(z.string(), ${valueSchema})`;
       }
     }
     return "z.object({})";

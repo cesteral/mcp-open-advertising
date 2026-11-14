@@ -120,7 +120,7 @@ export const ManageBudgetScheduleOutputSchema = z
     declineReason: z.string().optional(),
     operation: z.string(),
     campaignId: z.string(),
-    result: z.record(z.any()).describe("API response data"),
+    result: z.record(z.string(), z.any()).describe("API response data"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No budget schedule was created."

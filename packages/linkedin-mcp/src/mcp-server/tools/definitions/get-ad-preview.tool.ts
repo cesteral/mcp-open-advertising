@@ -29,7 +29,7 @@ export const GetAdPreviewInputSchema = z
 
 export const GetAdPreviewOutputSchema = z
   .object({
-    preview: z.record(z.any()).describe("Preview data from LinkedIn API"),
+    preview: z.record(z.string(), z.any()).describe("Preview data from LinkedIn API"),
     creativeUrn: z.string(),
     timestamp: z.string().datetime(),
   })

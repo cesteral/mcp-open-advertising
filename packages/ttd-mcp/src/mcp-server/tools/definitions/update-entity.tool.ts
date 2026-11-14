@@ -44,7 +44,7 @@ export const UpdateEntityInputSchema = z
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
     campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
-    data: z.record(z.any()).describe("Entity data fields to update"),
+    data: z.record(z.string(), z.any()).describe("Entity data fields to update"),
     strictMode: z
       .boolean()
       .optional()
@@ -71,7 +71,7 @@ export const UpdateEntityInputSchema = z
 
 export const UpdateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Updated entity data").optional(),
+    entity: z.record(z.string(), z.any()).describe("Updated entity data").optional(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. The mutation was NOT applied."

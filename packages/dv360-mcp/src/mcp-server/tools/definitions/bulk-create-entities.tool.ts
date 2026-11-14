@@ -56,7 +56,7 @@ export const BulkCreateEntitiesInputSchema = z
       .min(1)
       .describe("Advertiser ID (required for advertiser-scoped entities)"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe(
@@ -230,7 +230,7 @@ export async function bulkCreateEntitiesLogic(
 }
 
 /**
- * Empty-item guard (finding M4). Zod's `z.record(z.any())` admits `{}`, so an
+ * Empty-item guard (finding M4). Zod's `z.record(z.string(), z.any())` admits `{}`, so an
  * empty/degenerate item must be caught explicitly. Shared by the execute
  * preflight (which gates on empty items only) and the per-item dry-run
  * validator (which additionally applies the full schema).

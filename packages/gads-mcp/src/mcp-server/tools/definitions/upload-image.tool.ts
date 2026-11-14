@@ -75,7 +75,7 @@ export const UploadImageOutputSchema = z
       .describe(
         "Asset resource name (customers/{id}/assets/{assetId}) for use in image ads/extensions. Absent on a dry_run (nothing was created)."
       ),
-    result: z.record(z.any()).optional().describe("Raw AssetService mutate response."),
+    result: z.record(z.string(), z.any()).optional().describe("Raw AssetService mutate response."),
     uploadedAt: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No asset was created."

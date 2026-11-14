@@ -37,7 +37,7 @@ export const ImportFromGoogleInputSchema = z
       .enum(["create", "getStatus", "getResults"])
       .describe("Import operation to perform"),
     data: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .describe(
         'Operation data — for create: { ImportJobs: [GoogleImportJob] }; for getStatus/getResults: { ImportJobIds, ImportType: "GoogleImportJob" }'
       ),
@@ -53,7 +53,7 @@ export const ImportFromGoogleInputSchema = z
 
 export const ImportFromGoogleOutputSchema = z
   .object({
-    result: z.record(z.any()).optional(),
+    result: z.record(z.string(), z.any()).optional(),
     operation: z.string(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(

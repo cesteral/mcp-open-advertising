@@ -50,7 +50,7 @@ export const GetEntityInputSchema = z
       .optional()
       .describe("AdExtensionType. Required for adExtension (GetAdExtensionsByIds)"),
     additionalParams: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe("Additional parameters such as ReturnAdditionalFields"),
   })
@@ -59,7 +59,10 @@ export const GetEntityInputSchema = z
 
 export const GetEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).nullable().describe("Retrieved entity data, or null if not found"),
+    entity: z
+      .record(z.string(), z.any())
+      .nullable()
+      .describe("Retrieved entity data, or null if not found"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
   })

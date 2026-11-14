@@ -65,7 +65,7 @@ export const GraphqlQueryBulkInputSchema = z
       .min(1)
       .describe("GraphQL query string. Without `variables`, write the IDs into the query itself."),
     variables: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .optional()
       .describe(

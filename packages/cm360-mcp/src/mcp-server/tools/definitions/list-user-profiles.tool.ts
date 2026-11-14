@@ -16,7 +16,7 @@ export const ListUserProfilesInputSchema = z.object({}).describe("No parameters 
 
 export const ListUserProfilesOutputSchema = z
   .object({
-    profiles: z.array(z.record(z.any())).describe("List of user profiles"),
+    profiles: z.array(z.record(z.string(), z.any())).describe("List of user profiles"),
     totalCount: z.number().describe("Number of profiles returned"),
     timestamp: z.string().datetime(),
   })

@@ -46,7 +46,7 @@ export const BulkCreateEntitiesInputSchema = z
       .describe("Advertiser ID for all items (required for campaign/adGroup)"),
     campaignId: z.string().optional().describe("Campaign ID for all items (required for adGroup)"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),
@@ -183,7 +183,7 @@ export async function bulkCreateEntitiesLogic(
 
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
+ * (every item must be a non-empty entity object — Zod's `z.record(z.string(), z.any())`
  * admits `{}`) and projects the would-be effect (an N-item create of one
  * entity kind). TTD has no native bulk validate, so both axes are symbolic.
  * Pure (no I/O).

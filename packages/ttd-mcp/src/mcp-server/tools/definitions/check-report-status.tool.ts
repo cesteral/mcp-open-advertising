@@ -26,7 +26,7 @@ export const CheckReportStatusInputSchema = z
 export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   reportScheduleId: z.string().describe("Report schedule ID"),
   isComplete: z.boolean().describe("Whether the report is complete"),
-  execution: z.record(z.any()).describe("Full execution details"),
+  execution: z.record(z.string(), z.any()).describe("Full execution details"),
   timestamp: z.string().datetime(),
 }).describe("Report status check result");
 

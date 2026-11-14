@@ -48,7 +48,7 @@ export const BulkUpdateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     items: z
-      .array(z.record(z.unknown()))
+      .array(z.record(z.string(), z.unknown()))
       .min(1)
       .describe("Array of entity data objects with Id and fields to update"),
     ...parentIdInputFields,
@@ -66,7 +66,7 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     entityType: z.string(),
     totalItems: z.number(),
     timestamp: z.string().datetime(),

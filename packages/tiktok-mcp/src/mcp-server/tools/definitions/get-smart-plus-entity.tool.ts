@@ -32,7 +32,7 @@ export const GetSmartPlusEntityInputSchema = z
 
 export const GetSmartPlusEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Retrieved entity data"),
+    entity: z.record(z.string(), z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
   })
   .describe("Upgraded Smart+ entity retrieval result");

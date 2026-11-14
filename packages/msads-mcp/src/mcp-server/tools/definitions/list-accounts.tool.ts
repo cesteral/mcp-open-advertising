@@ -46,7 +46,7 @@ export const ListAccountsInputSchema = z
 
 export const ListAccountsOutputSchema = z
   .object({
-    accounts: z.array(z.record(z.any())),
+    accounts: z.array(z.record(z.string(), z.any())),
     count: z.number(),
     timestamp: z.string().datetime(),
   })

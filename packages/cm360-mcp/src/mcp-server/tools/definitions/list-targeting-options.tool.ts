@@ -41,7 +41,7 @@ export const ListTargetingOptionsInputSchema = z
     profileId: Cm360ProfileIdSchema,
     targetingType: z.enum(TARGETING_TYPES).describe("Type of targeting options to list"),
     filters: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe(
         "Optional filter parameters. Only cities (countryDartIds, dartIds, namePrefix, regionDartIds) and contentCategories (ids, searchString, sortField, sortOrder) accept any"
@@ -53,7 +53,7 @@ export const ListTargetingOptionsInputSchema = z
 
 export const ListTargetingOptionsOutputSchema = z
   .object({
-    options: z.array(z.record(z.any())).describe("Targeting options"),
+    options: z.array(z.record(z.string(), z.any())).describe("Targeting options"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

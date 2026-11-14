@@ -533,7 +533,9 @@ export class DV360Service {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+          body: JSON.stringify(
+            withoutWriteScopeFields(config, validated as Record<string, unknown>)
+          ),
         },
         ...writeTimeoutArgs("create", entityType)
       );
@@ -614,7 +616,9 @@ export class DV360Service {
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(withoutWriteScopeFields(config, validated)),
+          body: JSON.stringify(
+            withoutWriteScopeFields(config, validated as Record<string, unknown>)
+          ),
         },
         ...writeTimeoutArgs("patch", entityType)
       );

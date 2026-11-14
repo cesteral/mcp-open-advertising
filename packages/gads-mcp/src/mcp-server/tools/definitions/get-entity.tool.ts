@@ -43,7 +43,7 @@ export const GetEntityInputSchema = z
 
 export const GetEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Retrieved entity data"),
+    entity: z.record(z.string(), z.any()).describe("Retrieved entity data"),
     timestamp: z.string().datetime(),
     // The canonical snapshot of the entity, at the top level, for a governed
     // entity kind: governance reads this tool as the read partner of the

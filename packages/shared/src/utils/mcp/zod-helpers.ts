@@ -18,13 +18,15 @@ import { z } from "zod";
  * stripping caused incoming args to fail validation with
  * `invalid_union_discriminator` before reaching the tool handler.
  *
- * Unwraps `ZodEffects` (e.g. `.refine()`, `.transform()`) to find the
- * underlying schema first.
+ * Unwraps `ZodPipe` (what `.transform()` produces in zod 4) to its input side
+ * to find the underlying schema first. `.refine()` / `.superRefine()` no longer
+ * wrap the schema in zod 4 (they add checks to the same instance), so a refined
+ * object is already a `ZodObject` here.
  */
 export function extractZodShape(schema: z.ZodTypeAny): z.ZodRawShape | z.ZodTypeAny {
-  let current = schema;
-  while (current instanceof z.ZodEffects) {
-    current = current._def.schema;
+  let current: z.ZodTypeAny = schema;
+  while (current instanceof z.ZodPipe) {
+    current = current.def.in as z.ZodTypeAny;
   }
   if (current instanceof z.ZodObject) {
     return current.shape;

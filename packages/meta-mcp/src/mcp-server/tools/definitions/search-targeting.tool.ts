@@ -48,7 +48,7 @@ export const SearchTargetingInputSchema = z
 
 export const SearchTargetingOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())).describe("Matching targeting options"),
+    results: z.array(z.record(z.string(), z.any())).describe("Matching targeting options"),
     totalCount: z.number().describe("Number of targeting options returned in this page"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),

@@ -115,7 +115,7 @@ export const SearchTargetingOutputSchema = z
   .object({
     finder: z.enum(FINDER_VALUES),
     facet: z.string().optional().describe("Facet URN searched; absent for a urns lookup"),
-    elements: z.array(z.record(z.any())),
+    elements: z.array(z.record(z.string(), z.any())),
     returned: z.number().int(),
     totalFromLinkedIn: z
       .number()

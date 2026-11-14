@@ -55,7 +55,7 @@ export const UpdateEntityInputSchema = z
         "Type of entity to update (optional — for informational purposes only, not used in API call)"
       ),
     entityId: z.string().min(1).describe("The entity ID to update"),
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()
@@ -126,7 +126,7 @@ export async function updateEntityLogic(
 
   // Fail fast on an empty or invalid update payload before hitting the Graph
   // API, applying the same symbolic validation the dry-run path uses (finding
-  // M3). Without this, `data: z.record(z.any())` let any shape through on the
+  // M3). Without this, `data: z.record(z.string(), z.any())` let any shape through on the
   // execute path while dry_run validated more strictly — a payload the tool
   // reports "would FAIL" under dry-run would otherwise execute for real.
   if (Object.keys(input.data).length === 0) {

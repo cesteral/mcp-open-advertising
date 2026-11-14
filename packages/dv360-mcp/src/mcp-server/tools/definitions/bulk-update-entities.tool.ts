@@ -57,7 +57,9 @@ export const BulkUpdateEntitiesInputSchema = z
       .array(
         z.object({
           entityId: z.string().min(1).describe("ID of the entity to update"),
-          data: z.record(z.any()).describe("Partial payload containing only the fields to update"),
+          data: z
+            .record(z.string(), z.any())
+            .describe("Partial payload containing only the fields to update"),
           updateMask: z
             .string()
             .min(1)

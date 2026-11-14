@@ -53,7 +53,7 @@ export const CreateEntityInputSchema = z
       .describe(
         "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
       ),
-    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()
@@ -66,7 +66,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data (includes entity ID)"),
+    entity: z.record(z.string(), z.any()).describe("Created entity data (includes entity ID)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

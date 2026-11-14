@@ -62,7 +62,7 @@ export const RemoveEntityOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    mutateResult: z.record(z.any()).describe("Mutate operation result"),
+    mutateResult: z.record(z.string(), z.any()).describe("Mutate operation result"),
     entityType: z.string(),
     entityId: z.string(),
     timestamp: z.string().datetime(),

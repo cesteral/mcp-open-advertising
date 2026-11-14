@@ -40,7 +40,7 @@ export const DeleteEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
     entityIds: z.array(z.string()).min(1).describe("Array of entity IDs to delete"),
     additionalParams: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe("Additional parameters (e.g., AccountId)"),
     dry_run: z
@@ -57,7 +57,7 @@ export const DeleteEntityOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.any()),
+    result: z.record(z.string(), z.any()),
     entityType: z.string(),
     deletedCount: z
       .number()

@@ -41,7 +41,11 @@ export const GetAssignedTargetingInputSchema = z
       .describe("Targeting type"),
     assignedTargetingOptionId: z.string().describe("The assigned targeting option ID to retrieve"),
   })
-  .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine((input, ctx) => {
+    if (!validateTargetingInput(input)) {
+      ctx.addIssue({ code: "custom", ...getTargetingValidationError(input) });
+    }
+  })
   .describe("Parameters for getting an assigned targeting option");
 
 /**
@@ -49,7 +53,9 @@ export const GetAssignedTargetingInputSchema = z
  */
 export const GetAssignedTargetingOutputSchema = z
   .object({
-    assignedTargetingOption: z.record(z.any()).describe("The assigned targeting option"),
+    assignedTargetingOption: z
+      .record(z.string(), z.any())
+      .describe("The assigned targeting option"),
     parentType: z.string().describe("Parent entity type"),
     targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),

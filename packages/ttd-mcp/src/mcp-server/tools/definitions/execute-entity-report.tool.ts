@@ -71,7 +71,7 @@ export const ExecuteEntityReportOutputSchema = z
       .array(z.object({ field: z.string(), message: z.string() }))
       .optional()
       .describe("Validation errors from TTD"),
-    rawResponse: z.record(z.unknown()).optional(),
+    rawResponse: z.record(z.string(), z.unknown()).optional(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No report was executed."

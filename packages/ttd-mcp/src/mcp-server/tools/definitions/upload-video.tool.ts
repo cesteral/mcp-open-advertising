@@ -78,7 +78,7 @@ export const UploadVideoOutputSchema = z
       .describe(
         "The created CreativeId, for attaching to ad groups (GraphQL `creativeAdGroupAssociate`, or the ad group's `RTBAttributes.CreativeIds`). Absent on a dry_run."
       ),
-    creative: z.record(z.any()).optional().describe("Raw POST /v3/creative response."),
+    creative: z.record(z.string(), z.any()).optional().describe("Raw POST /v3/creative response."),
     uploadedAt: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. Nothing was uploaded or created."

@@ -67,7 +67,7 @@ export const ValidateEntityInputSchema = z
       .describe("Advertiser ID (merged into data before validation, mirrors create/update tools)"),
     campaignId: z.string().optional().describe("Campaign ID (merged into data before validation)"),
     adGroupId: z.string().optional().describe("Ad group ID (merged into data before validation)"),
-    data: z.record(z.any()).describe("Entity payload to validate"),
+    data: z.record(z.string(), z.any()).describe("Entity payload to validate"),
   })
   .describe("Parameters for validating a TTD entity payload");
 

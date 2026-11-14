@@ -36,7 +36,7 @@ export const DuplicateEntityInputSchema = z
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Optional copy overrides (e.g., a new CampaignName)"),
     dry_run: z
@@ -51,7 +51,7 @@ export const DuplicateEntityInputSchema = z
 
 export const DuplicateEntityOutputSchema = z
   .object({
-    newEntity: z.record(z.any()).describe("Newly created duplicate entity data"),
+    newEntity: z.record(z.string(), z.any()).describe("Newly created duplicate entity data"),
     sourceEntityId: z.string(),
     entityType: z.string(),
     timestamp: z.string().datetime(),

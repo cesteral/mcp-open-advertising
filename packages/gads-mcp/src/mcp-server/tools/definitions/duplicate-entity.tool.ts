@@ -67,7 +67,7 @@ export const DuplicateEntityInputSchema = z
     customerId: CustomerIdSchema,
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe(
         "Optional copy overrides (e.g., a new name, a future endDateTime, or a bidding scheme). A null value removes the field. A status here is ignored: the copy is always PAUSED."
@@ -84,7 +84,7 @@ export const DuplicateEntityInputSchema = z
 
 export const DuplicateEntityOutputSchema = z
   .object({
-    result: z.record(z.any()).describe("Mutate response for the created copy"),
+    result: z.record(z.string(), z.any()).describe("Mutate response for the created copy"),
     sourceEntityId: z.string(),
     entityType: z.string(),
     timestamp: z.string().datetime(),

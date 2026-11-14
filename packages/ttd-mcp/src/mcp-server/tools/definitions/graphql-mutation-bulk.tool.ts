@@ -108,7 +108,7 @@ export const GraphqlMutationBulkInputSchema = z
   .object({
     mutation: z.string().min(1).describe("GraphQL mutation string"),
     inputs: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(MAX_MUTATION_BULK_INPUTS)
       .describe(`Array of input objects, one per entity (max ${MAX_MUTATION_BULK_INPUTS})`),

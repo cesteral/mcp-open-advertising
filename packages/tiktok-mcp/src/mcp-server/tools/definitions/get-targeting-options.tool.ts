@@ -66,7 +66,7 @@ export const GetTargetingOptionsInputSchema = z
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
-    options: z.record(z.any()).describe("Available targeting options"),
+    options: z.record(z.string(), z.any()).describe("Available targeting options"),
     timestamp: z.string().datetime(),
   })
   .describe("Targeting options result");

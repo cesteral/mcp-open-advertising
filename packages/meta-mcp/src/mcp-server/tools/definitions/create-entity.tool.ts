@@ -55,7 +55,7 @@ export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
-    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()
@@ -68,7 +68,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity (returns id at minimum)"),
+    entity: z.record(z.string(), z.any()).describe("Created entity (returns id at minimum)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
@@ -117,7 +117,7 @@ export async function createEntityLogic(
 
   // Fail fast on an empty or invalid create payload before hitting the Graph API,
   // applying the same symbolic validation the dry-run path uses (finding 6.20).
-  // Without this, `data: z.record(z.any())` let any shape through to the API on
+  // Without this, `data: z.record(z.string(), z.any())` let any shape through to the API on
   // the execute path while dry_run silently validated more strictly.
   if (Object.keys(input.data).length === 0) {
     throw new McpError(

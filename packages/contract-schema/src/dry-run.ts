@@ -111,7 +111,7 @@ export interface EffectResult {
 
 export const effectResultSchema: z.ZodType<EffectResult> = z.object({
   effectKind: z.string().min(1),
-  summary: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  summary: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
 });
 
 /**

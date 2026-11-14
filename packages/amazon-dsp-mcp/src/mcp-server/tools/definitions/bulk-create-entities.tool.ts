@@ -51,7 +51,7 @@ export const BulkCreateEntitiesInputSchema = z
     profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
     accountId: AccountIdSchema,
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),
@@ -180,7 +180,7 @@ export async function bulkCreateEntitiesLogic(
 
 /**
  * Symbolic effect dry-run for `bulk_create_entities`. Validates the batch
- * (every item must be a non-empty entity object — Zod's `z.record(z.any())`
+ * (every item must be a non-empty entity object — Zod's `z.record(z.string(), z.any())`
  * admits `{}` — and must pass the same Unified create translation execute
  * runs) and projects the would-be effect (an N-item create of one entity
  * kind). The Unified create operations declare no validate-only mode, so both

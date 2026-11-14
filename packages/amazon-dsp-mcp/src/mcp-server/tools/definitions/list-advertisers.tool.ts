@@ -52,7 +52,7 @@ export const ListAdvertisersInputSchema = z
 export const ListAdvertisersOutputSchema = z
   .object({
     advertiserAccounts: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .describe(
         "Advertiser accounts as Amazon returns them (advertiserAccountId, alternateIds, displayName, ...)"
       ),

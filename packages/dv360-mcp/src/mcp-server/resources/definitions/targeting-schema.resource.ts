@@ -6,7 +6,7 @@
  * Provides JSON Schema for specific targeting option detail types
  */
 
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { toJSONSchema } from "zod";
 import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   ALL_TARGETING_TYPES,
@@ -123,11 +123,7 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
 
   if (zodSchema) {
     try {
-      jsonSchema = zodToJsonSchema(zodSchema, {
-        target: "jsonSchema7",
-        markdownDescription: true,
-        errorMessages: true,
-      });
+      jsonSchema = toJSONSchema(zodSchema, { target: "draft-7", unrepresentable: "any" });
     } catch (e) {
       schemaError = e instanceof Error ? e.message : "Failed to convert schema";
     }

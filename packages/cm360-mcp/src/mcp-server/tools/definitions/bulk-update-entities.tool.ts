@@ -42,7 +42,7 @@ export const BulkUpdateEntitiesInputSchema = z
         z.object({
           entityId: cm360EntityIdSchema("Entity ID to update"),
           data: z
-            .record(z.any())
+            .record(z.string(), z.any())
             .describe("Fields to change (PATCH semantics — omitted fields are preserved)"),
         })
       )
@@ -70,7 +70,7 @@ export const BulkUpdateEntitiesOutputSchema = z
         z.object({
           entityId: z.string(),
           success: z.boolean(),
-          entity: z.record(z.any()).optional(),
+          entity: z.record(z.string(), z.any()).optional(),
           error: z.string().optional(),
         })
       )

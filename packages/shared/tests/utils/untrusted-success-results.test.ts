@@ -55,7 +55,7 @@ function createLogger(): Logger {
 }
 
 const listSchema = z.object({
-  entities: z.array(z.record(z.any())),
+  entities: z.array(z.record(z.string(), z.any())),
   totalCount: z.number(),
 });
 
