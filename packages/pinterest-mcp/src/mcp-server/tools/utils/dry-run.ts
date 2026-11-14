@@ -6,7 +6,7 @@
  *
  * Pinterest exposes NO native validate / preview / draft mode for entity
  * mutations — campaign / ad-group / ad updates are plain PATCH endpoints, and
- * `/v5/ad_accounts/{id}/ads/previews` (`getAdPreviews`) is a creative-render
+ * `/v5/ad_accounts/{id}/ad_previews` (`ad_previews/create`) is a creative-render
  * preview, not a mutation simulator. So both axes here are SYMBOLIC:
  *
  * - **Validation** runs a small set of business rules (status enum, budget
