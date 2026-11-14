@@ -149,6 +149,27 @@ OPTIONS (format='JSON',
 Then schedule the queries above into Looker / Looker Studio / your dashboard
 of choice. There is no separate vendor relationship to procure.
 
+### Retention
+
+Interaction records include tool parameters and upstream error bodies, which can
+carry free text supplied by end users, and redaction covers secrets only. Treat
+the records as personal data and bound how long you keep them.
+
+- **`gcs` mode (this repository's Terraform).** The persistence bucket deletes
+  objects after 28 days, which keeps passive expiry inside the one-month limit of
+  GDPR Art. 12(3) even with about a day of lifecycle lag. Spilled report CSVs
+  live in a separate bucket and expire after 1 day. If you create a native
+  BigQuery copy of the records (a load job or a scheduled query), set a table
+  expiry of 28 days or less on it; the `EXTERNAL TABLE` above holds no copy of its
+  own.
+- **`file` mode (self-host default).** Files under `~/.cesteral/interactions/`
+  rotate but have no retention bound. Set one, for example with `logrotate`
+  (`maxage 28`) or a scheduled `find ... -mtime +28 -delete`.
+- **`stdout` mode.** Retention is whatever your log pipeline applies. Set it to
+  28 days or less.
+- **Controller.** If you self-host, you control these logs and are responsible
+  for the retention you choose; nothing here can reach them for you.
+
 ---
 
 ## Trust posture
