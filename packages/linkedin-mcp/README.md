@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202608`; some calls still on legacy `/v2/`, see Current Status).
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; some calls still on legacy `/v2/`, see Current Status).
 
 ## Purpose
 
@@ -279,7 +279,7 @@ pnpm run typecheck
 - `MCP_AUTH_MODE`: Authentication mode - `linkedin-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `LINKEDIN_API_BASE_URL`: LinkedIn API base URL (default: `https://api.linkedin.com`)
-- `LINKEDIN_API_VERSION`: API version header override (default: the pin in `src/config/api-version.ts`, currently `202608`)
+- `LINKEDIN_API_VERSION`: API version header override (default: the pin in `src/config/api-version.ts`, currently `202610`)
 - `LINKEDIN_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 10)
 - `LINKEDIN_ACCESS_TOKEN`: Access token for stdio mode
 
@@ -297,7 +297,7 @@ pnpm run typecheck
 ### Key Gotchas
 
 - Entity identifiers use **URN format** (e.g., `urn:li:sponsoredCampaign:123`)
-- `LinkedIn-Version` (pinned to `202608`) and `X-Restli-Protocol-Version: 2.0.0` headers are **required on all API requests** and injected automatically
+- `LinkedIn-Version` (pinned to `202610`) and `X-Restli-Protocol-Version: 2.0.0` headers are **required on all API requests** and injected automatically
 - Updates use **Rest.li partial update format** via `X-Restli-Method: PARTIAL_UPDATE`
 - Budget values are `CurrencyAmount` objects with `currencyCode` and `amount` (amount is in **cents**)
 - `ARCHIVED` status is **permanent** and cannot be reversed

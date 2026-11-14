@@ -160,11 +160,20 @@ describe("LinkedInService", () => {
       expect(Object.keys(params)).not.toContain("accounts[0]");
     });
 
-    it("scopes conversion rules with a scalar `account`", async () => {
+    it("lists conversion rules with the `account` finder and no paging parameters", async () => {
       mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
-      await service.listEntities("conversionRule", "urn:li:sponsoredAccount:7");
-      const [, params] = mockHttpClient.get.mock.calls[0];
-      expect(params.account).toBe("urn:li:sponsoredAccount:7");
+      await service.listEntities("conversionRule", "urn:li:sponsoredAccount:7", 0, 50);
+      const [path, params] = mockHttpClient.get.mock.calls[0];
+      expect(path).toBe("/rest/conversions");
+      expect(params).toEqual({ q: "account", account: "urn:li:sponsoredAccount:7" });
+    });
+
+    it("leaves the item path on legacy /v2/ (a /rest/ item needs ?account=, which a URN lacks)", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({});
+      await service.getEntity("conversionRule", "urn:li:llaPartnerConversion:9");
+      expect(mockHttpClient.get.mock.calls[0][0]).toBe(
+        "/v2/conversions/urn%3Ali%3AllaPartnerConversion%3A9"
+      );
     });
   });
 

@@ -1,8 +1,8 @@
 {
   "name": "@cesteral/gads-mcp",
   "mcpName": "io.github.cesteral/gads-mcp",
-  "version": "1.3.0",
-  "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v25",
+  "version": "1.4.0",
+  "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v26",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -62,6 +62,6 @@
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^1.6.0"
+    "vitest": "^5.1.0"
   }
 }

@@ -9,12 +9,12 @@
  * full request: HTTP method, URL and the exact JSON body.
  *
  * Expected shapes come from Google's Discovery document, fetched 2026-09-30:
- *   https://googleads.googleapis.com/$discovery/rest?version=v25
- *   revision 20260929 (re-checked on the move from v23 to v25), rootUrl `https://googleads.googleapis.com/`.
- * Schema names below drop the `GoogleAdsGoogleadsV25` prefix (the same
+ *   https://googleads.googleapis.com/$discovery/rest?version=v26
+ *   revision 20261110 (re-checked on the moves from v23 to v25 and v25 to v26), rootUrl `https://googleads.googleapis.com/`.
+ * Schema names below drop the `GoogleAdsGoogleadsV26` prefix (the same
  * convention as `tests/fixtures/google-ads-discovery-extract.json`).
  * Every `:mutate` method is `httpMethod: POST`, path
- * `v25/customers/{+customerId}/<collection>:mutate`, request
+ * `v26/customers/{+customerId}/<collection>:mutate`, request
  * `Services__Mutate<Collection>Request` = { operations[], partialFailure,
  * validateOnly, responseContentType }, each operation one of
  * `create` / `update` (+ `updateMask`, format `google-fieldmask`) / `remove`
@@ -93,8 +93,8 @@ import {
   type WireSession,
 } from "../helpers/wire.js";
 
-/** Discovery rootUrl `https://googleads.googleapis.com/` + path prefix `v25/`. */
-const API = "https://googleads.googleapis.com/v25";
+/** Discovery rootUrl `https://googleads.googleapis.com/` + path prefix `v26/`. */
+const API = "https://googleads.googleapis.com/v26";
 const CID = "1234567890";
 const ctx = { requestId: "wire-req" } as any;
 
@@ -165,7 +165,7 @@ function routeSearch(results: unknown[], currencyCode = "USD") {
   stub.route({
     method: "POST",
     host: GADS_HOST,
-    path: `/v25/customers/${CID}/googleAds:search`,
+    path: `/v26/customers/${CID}/googleAds:search`,
     response: (req: WireRequest) =>
       (req.body as { query?: string })?.query === CURRENCY_QUERY
         ? { results: [{ customer: { resourceName: `customers/${CID}`, currencyCode } }] }
@@ -181,7 +181,7 @@ function routeMutate(collection: string, response: unknown) {
   stub.route({
     method: "POST",
     host: GADS_HOST,
-    path: `/v25/customers/${CID}/${collection}:mutate`,
+    path: `/v26/customers/${CID}/${collection}:mutate`,
     response,
   });
 }
@@ -224,7 +224,7 @@ describe("gads_create_entity → customers.<collection>.mutate (create)", () => 
 
     const req = onlyExecutingMutate();
     // basis: discovery `customers.campaigns.mutate` — httpMethod POST, path
-    // `v25/customers/{+customerId}/campaigns:mutate`; request
+    // `v26/customers/{+customerId}/campaigns:mutate`; request
     // `Services__MutateCampaignsRequest.operations[]` of `Services__CampaignOperation`,
     // whose `create` is a `Resources__Campaign` ("No resource name is expected").
     // Field names/enums from `Resources__Campaign`: name, status (PAUSED),
@@ -253,7 +253,7 @@ describe("gads_create_entity → customers.<collection>.mutate (create)", () => 
 
     const req = onlyExecutingMutate();
     // basis: discovery `customers.campaignBudgets.mutate` — POST
-    // `v25/customers/{+customerId}/campaignBudgets:mutate`; `Resources__CampaignBudget`
+    // `v26/customers/{+customerId}/campaignBudgets:mutate`; `Resources__CampaignBudget`
     // amountMicros (int64 → JSON string), deliveryMethod enum STANDARD.
     expect(req.method).toBe("POST");
     expect(req.url).toBe(`${API}/customers/${CID}/campaignBudgets:mutate`);
@@ -302,7 +302,7 @@ describe("gads_update_entity → customers.<collection>.mutate (update + updateM
 
     const req = onlyExecutingMutate();
     // basis: discovery `customers.adGroups.mutate` — POST
-    // `v25/customers/{+customerId}/adGroups:mutate`; `Services__AdGroupOperation`
+    // `v26/customers/{+customerId}/adGroups:mutate`; `Services__AdGroupOperation`
     // `update` ("expected to have a valid resource name") + `updateMask`
     // (format google-fieldmask → proto3 JSON: comma-separated lowerCamelCase
     // paths). `Resources__AdGroup.resourceName` has the form
@@ -950,7 +950,7 @@ describe("gads_upload_image → download, then assets.mutate (create ImageAsset)
 
     const req = onlyExecutingMutate();
     // basis: discovery `customers.assets.mutate` — POST
-    // `v25/customers/{+customerId}/assets:mutate`; `Services__AssetOperation.create`
+    // `v26/customers/{+customerId}/assets:mutate`; `Services__AssetOperation.create`
     // is a `Resources__Asset` { name, type enum IMAGE, imageAsset }, and
     // `Common__ImageAsset.data` is `format: byte` (base64; "This field is mutate
     // only"), `mimeType` enum IMAGE_PNG. Note the Discovery document flags
@@ -1042,7 +1042,7 @@ describe("reads are POSTs too: customers.googleAds.search", () => {
     stub.route({
       method: "POST",
       host: GADS_HOST,
-      path: `/v25/customers/${CID}/googleAds:search`,
+      path: `/v26/customers/${CID}/googleAds:search`,
       response: (req) =>
         (req.body as { pageToken?: string }).pageToken
           ? { results: [{ campaign: { id: "2" } }] }
@@ -1053,7 +1053,7 @@ describe("reads are POSTs too: customers.googleAds.search", () => {
 
     const reqs = searches();
     // basis: discovery `customers.googleAds.search` — POST
-    // `v25/customers/{+customerId}/googleAds:search`, request
+    // `v26/customers/{+customerId}/googleAds:search`, request
     // `Services__SearchGoogleAdsRequest` { query (required), pageToken ("Use
     // the value obtained from next_page_token"), … }; `pageSize` — "Google Ads
     // API returns a PAGE_SIZE_NOT_SUPPORTED error if this field is set".

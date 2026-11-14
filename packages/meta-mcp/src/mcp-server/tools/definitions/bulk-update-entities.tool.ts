@@ -124,7 +124,7 @@ export async function bulkUpdateEntitiesLogic(
   // v26 targeting warnings (#229) per item: response text only, never
   // structured content. From the input; no read on any path.
   const v26Warnings = input.items.flatMap((item, i) =>
-    metaV26UpdateWarnings(input.entityType, item.data, `items.${i}.data`)
+    metaV26UpdateWarnings(item.data, `items.${i}.data`)
   );
 
   // Symbolic dry-run: validate the batch and project the would-be effect. No

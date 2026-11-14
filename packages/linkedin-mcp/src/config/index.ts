@@ -30,7 +30,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   linkedinApiVersion: z
     .string()
     .refine(isValidLinkedInApiVersion, {
-      message: "LINKEDIN_API_VERSION must be a YYYYMM version moniker, e.g. 202608",
+      message: "LINKEDIN_API_VERSION must be a YYYYMM version moniker, e.g. 202610",
     })
     .default(LINKEDIN_API_VERSION),
   // Conservative default: platform_quota / max_instances (10).

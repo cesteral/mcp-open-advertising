@@ -102,8 +102,7 @@ export async function updateEntityLogic(
   const dispatchedCapability = resolveMetaDispatchedCapability(input.entityType, input.data);
 
   if (input.dry_run === true) {
-    // v26 targeting warnings (#229): response text only. The dry run reads the
-    // ad set's campaign for check 3 when it needs to.
+    // v26 targeting warnings (#229): response text only, from the input.
     const v26Warnings: MetaV26Warning[] = [];
     const dryRun = await runMetaUpdateDryRun(
       { entityType: input.entityType, entityId: input.entityId, data: input.data },
@@ -158,8 +157,7 @@ export async function updateEntityLogic(
     ? await captureMetaSnapshot(metaService, input.entityType, input.entityId, context)
     : undefined;
 
-  // v26 targeting warnings (#229): response text only, from the input (an
-  // execute adds no read, so check 3 says the category was not checked).
+  // v26 targeting warnings (#229): response text only, from the input.
   return attachMetaV26Warnings(
     {
       success,
@@ -170,7 +168,7 @@ export async function updateEntityLogic(
       ...(after ? { after } : {}),
       dispatchedCapability,
     },
-    metaV26UpdateWarnings(input.entityType, input.data, "data")
+    metaV26UpdateWarnings(input.data, "data")
   );
 }
 
