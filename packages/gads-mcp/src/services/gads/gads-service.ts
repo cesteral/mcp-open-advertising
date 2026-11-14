@@ -68,7 +68,7 @@ export function decodeGaqlCursor(cursor: string | undefined): GaqlCursor {
 
 /**
  * Google Ads Service — GAQL queries, account listing, and generic CRUD
- * via the Google Ads REST API v25.
+ * via the Google Ads REST API v26.
  *
  * Read operations use GAQL via POST /customers/{customerId}/googleAds:search
  * Write operations use POST /customers/{customerId}/{resources}:mutate
@@ -90,8 +90,8 @@ export class GAdsService {
    *
    * basis: `Resources__Customer.currencyCode` ("Immutable. The currency in
    * which the account operates. A subset of the currency codes from the ISO
-   * 4217 standard is supported."), Google Ads API v25 Discovery document
-   * (googleads.googleapis.com/$discovery/rest?version=v25, revision 20260929;
+   * 4217 standard is supported."), Google Ads API v26 Discovery document
+   * (googleads.googleapis.com/$discovery/rest?version=v26, revision 20261110;
    * also in tests/fixtures/google-ads-discovery-extract.json). Immutable, so
    * one read per customer is enough. Read with GAQL
    * `SELECT customer.currency_code FROM customer`.
@@ -147,7 +147,7 @@ export class GAdsService {
   /**
    * Execute a GAQL query against the Google Ads API via `googleAds:search`.
    *
-   * **Never sends `pageSize`.** The Discovery document (v23 through v25) for
+   * **Never sends `pageSize`.** The Discovery document (v23 through v26) for
    * `SearchGoogleAdsRequest.pageSize` reads: "Google Ads API returns a
    * `PAGE_SIZE_NOT_SUPPORTED` error if this field is set in the request body."
    * The API returns fixed pages of up to 10,000 rows, so `maxRows` is applied

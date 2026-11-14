@@ -2,10 +2,10 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Google Ads REST API v25 entity type definitions
+ * Google Ads REST API v26 entity type definitions
  * Hand-crafted from the Google Ads API reference. The status, channel-type,
- * bidding-strategy, match-type and ad-type unions are the v25 Discovery enums
- * (https://googleads.googleapis.com/$discovery/rest?version=v25), in its order.
+ * bidding-strategy, match-type and ad-type unions are the v26 Discovery enums
+ * (https://googleads.googleapis.com/$discovery/rest?version=v26), in its order.
  *
  * Note: Google Ads API uses resource names as IDs:
  * customers/{customerId}/campaigns/{campaignId}

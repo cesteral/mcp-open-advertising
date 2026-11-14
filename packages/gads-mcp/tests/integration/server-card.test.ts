@@ -40,7 +40,7 @@ const config: any = {
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: entry.auth.modes[0],
   mcpAllowedOrigins: "*",
-  gadsApiBaseUrl: "https://googleads.googleapis.com/v25",
+  gadsApiBaseUrl: "https://googleads.googleapis.com/v26",
 };
 
 describe("/.well-known/mcp/server-card.json (gads-mcp)", () => {
