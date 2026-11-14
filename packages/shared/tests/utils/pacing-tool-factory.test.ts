@@ -6,7 +6,7 @@ import { NO_UNTRUSTED_CONTENT } from "../../src/utils/mcp/untrusted-content.js";
 const ctx = { requestId: "r" } as never;
 
 const tiktok = createPacingTool({
-  platform: "tiktok",
+  toolName: "tiktok_get_pacing_status",
   accountId: { field: "advertiserId", schema: z.string().min(1).describe("TikTok Advertiser ID") },
   campaignIdSchema: z.string().min(1).describe("TikTok Campaign ID to check pacing for"),
   platformApi: "the TikTok API",
@@ -18,7 +18,7 @@ const tiktok = createPacingTool({
 });
 
 const meta = createPacingTool({
-  platform: "meta",
+  toolName: "meta_get_pacing_status",
   // Deliberately no `.min(1)`: the factory publishes whatever schema it is handed.
   accountId: { field: "adAccountId", schema: z.string().describe("Meta Ad Account ID") },
   campaignIdSchema: z.string().describe("Meta Campaign ID"),
@@ -43,7 +43,7 @@ const baseInput = {
 };
 
 describe("createPacingTool", () => {
-  it("names the tool from the platform slug and keeps the shared title", () => {
+  it("uses the given tool name and keeps the shared title", () => {
     expect(tiktok.name).toBe("tiktok_get_pacing_status");
     expect(tiktok.title).toBe("Calculate Campaign Pacing (Client-Side)");
   });

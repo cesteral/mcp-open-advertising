@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "sa360",
+  toolName: "sa360_get_pacing_status",
   accountId: {
     field: "customerId",
     schema: z.string().min(1).describe("SA360 Customer ID (no dashes)"),

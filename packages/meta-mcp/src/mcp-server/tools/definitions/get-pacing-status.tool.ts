@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "meta",
+  toolName: "meta_get_pacing_status",
   accountId: {
     field: "adAccountId",
     schema: z.string().describe("Meta Ad Account ID (e.g. act_123456789)"),

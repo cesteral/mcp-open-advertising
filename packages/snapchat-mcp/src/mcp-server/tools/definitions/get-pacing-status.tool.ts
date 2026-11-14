@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "snapchat",
+  toolName: "snapchat_get_pacing_status",
   accountId: { field: "adAccountId", schema: z.string().min(1).describe("Snapchat Ad Account ID") },
   campaignIdSchema: z.string().min(1).describe("Snapchat Campaign ID to check pacing for"),
   platformApi: "the Snapchat API",

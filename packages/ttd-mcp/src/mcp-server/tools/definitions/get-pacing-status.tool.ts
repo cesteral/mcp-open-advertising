@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "ttd",
+  toolName: "ttd_get_pacing_status",
   accountId: {
     field: "advertiserId",
     schema: z.string().min(1).describe("The Trade Desk Advertiser ID"),

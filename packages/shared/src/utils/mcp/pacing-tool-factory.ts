@@ -77,8 +77,12 @@ type PacingToolRawInput<K extends string> = Record<K, string> &
   Omit<PacingInputFields, "currency"> & { currency?: string | undefined };
 
 export interface PacingToolOptions<K extends string> {
-  /** Platform slug; the tool is named `${platform}_get_pacing_status`. */
-  platform: string;
+  /**
+   * Full tool name, e.g. `tiktok_get_pacing_status`. Spelled out (not derived
+   * from a slug) so `scripts/generate/sync-registry-tools.mjs`, which reads
+   * tool names from source, can see it.
+   */
+  toolName: string;
   /**
    * The platform's account-id input and its schema (name, `.min(1)` and
    * `.describe(...)` are all part of the published schema, so the server
@@ -217,7 +221,7 @@ export function createPacingTool<K extends string>(opts: PacingToolOptions<K>): 
   }
 
   return {
-    name: `${opts.platform}_get_pacing_status`,
+    name: opts.toolName,
     title: TOOL_TITLE,
     description:
       `Client-side pacing calculator — does NOT call ${opts.platformApi}. ` +

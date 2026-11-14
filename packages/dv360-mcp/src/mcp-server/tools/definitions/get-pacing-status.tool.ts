@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "dv360",
+  toolName: "dv360_get_pacing_status",
   accountId: { field: "advertiserId", schema: z.string().min(1).describe("DV360 Advertiser ID") },
   campaignIdSchema: z.string().min(1).describe("DV360 Campaign ID"),
   platformApi: "the DV360 API",

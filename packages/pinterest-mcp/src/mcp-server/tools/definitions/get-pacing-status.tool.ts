@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "pinterest",
+  toolName: "pinterest_get_pacing_status",
   accountId: {
     field: "adAccountId",
     schema: z.string().min(1).describe("Pinterest Ad Account ID"),

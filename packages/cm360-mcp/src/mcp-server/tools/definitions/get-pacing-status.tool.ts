@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "cm360",
+  toolName: "cm360_get_pacing_status",
   accountId: { field: "advertiserId", schema: z.string().min(1).describe("CM360 Advertiser ID") },
   campaignIdSchema: z.string().min(1).describe("CM360 campaign ID to check pacing for"),
   platformApi: "the Campaign Manager 360 API",

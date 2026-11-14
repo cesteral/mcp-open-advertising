@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "msads",
+  toolName: "msads_get_pacing_status",
   accountId: {
     field: "accountId",
     schema: z.string().min(1).describe("Microsoft Advertising Account ID"),

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createPacingTool } from "@cesteral/shared";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "tiktok",
+  toolName: "tiktok_get_pacing_status",
   accountId: { field: "advertiserId", schema: z.string().min(1).describe("TikTok Advertiser ID") },
   campaignIdSchema: z.string().min(1).describe("TikTok Campaign ID to check pacing for"),
   platformApi: "the TikTok API",

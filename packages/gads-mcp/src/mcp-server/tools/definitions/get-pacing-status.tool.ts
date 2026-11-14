@@ -6,7 +6,7 @@ import { createPacingTool } from "@cesteral/shared";
 import { CustomerIdSchema } from "../utils/customer-id.js";
 
 export const getPacingStatusTool = createPacingTool({
-  platform: "gads",
+  toolName: "gads_get_pacing_status",
   accountId: { field: "customerId", schema: CustomerIdSchema },
   campaignIdSchema: z.string().describe("Google Ads Campaign ID"),
   platformApi: "the Google Ads API",
