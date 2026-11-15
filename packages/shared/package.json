@@ -39,6 +39,10 @@
     "./auth": {
       "types": "./dist/auth/index.d.ts",
       "import": "./dist/auth/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit/index.d.ts",
+      "import": "./dist/testkit/index.js"
     }
   },
   "scripts": {
@@ -74,6 +78,14 @@
     "pino-pretty": "^13.2.0",
     "zod": "catalog:",
     "zod-to-json-schema": "^3.24.6"
+  },
+  "peerDependencies": {
+    "vitest": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

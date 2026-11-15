@@ -9,19 +9,8 @@
  * `tools/list` responses stay healthy across all 13 servers. Each tool's
  * `outputSchema` is published in the same response and is guarded separately.
  *
- * Usage from a per-server vitest test:
- *
- * ```ts
- * import { describe, it } from "vitest";
- * import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
- * import { assertSchemaSizesUnderLimit } from "@cesteral/shared";
- *
- * describe("schema size guard", () => {
- *   it("each tool inputSchema stays under 256 KB", () => {
- *     assertSchemaSizesUnderLimit(allTools);
- *   });
- * });
- * ```
+ * Per-server tests call `describeSchemaSizeGuard(allTools)` from
+ * `@cesteral/shared/testkit`, which runs `assertSchemaSizesUnderLimit`.
  */
 
 import { zodToJsonSchema } from "zod-to-json-schema";

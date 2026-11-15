@@ -179,6 +179,10 @@ Each of these has a CI ratchet or a runtime guarantee that a change can trip. Re
 
 A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocked unit test. Each package's `tests/**/*wire*.test.ts` calls the tool's `*Logic` with only `fetch` stubbed and asserts the exact upstream method, URL and body against a vendor source cited in a `// basis:` comment. `scripts/lib/wire-request-coverage.test.mjs` boots every server and fails if a write tool's `*Logic` is never called (or its name never appears as a string literal; comments do not count) in a basis-citing wire test of its own package. Every write tool on all 13 servers is covered, so `wire-request-coverage-allowlist.json` lists no gaps; an entry added there needs a reason, and the list may only shrink: an entry that is now covered, no longer a write, or gone fails too.
 
+## Shared Test Suites
+
+The tests every server repeats (schema-size guard, the cross-server contract, the server card against `registry.json`) are parameterised suites in `@cesteral/shared/testkit`: `describeSchemaSizeGuard`, `describeCrossServerContract`, `describeServerCard`. A server's `tests/schema-size.test.ts`, `tests/cross-server-contract.test.ts` and `tests/integration/server-card.test.ts` are one call each; what genuinely differs (required tools, destructive pins, terminal operations, platform config) is a parameter, and a server-only check stays a local test beside the call. Change a fleet-wide check in the suite, never in a server's copy. The testkit imports `vitest`, so it is a test-only entry: nothing else in `@cesteral/shared` may import it, and `vitest` stays a devDependency (an optional peer of shared).
+
 ## TypeScript Build Issues
 
 If you encounter "The inferred type cannot be named" errors, add explicit return type annotations:
