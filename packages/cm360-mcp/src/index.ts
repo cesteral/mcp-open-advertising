@@ -25,9 +25,10 @@ import { allTools } from "./mcp-server/tools/definitions/index.js";
 const transportMode = detectTransportMode();
 const logger = createServerLogger("cm360-mcp", transportMode, otelLogMixin());
 
-/** Stdio credentials come from a service account in env vars (file path or base64 JSON). */
+// The fingerprint of the service account `buildEnvAdapter` loaded; keys the per-user rate limit.
 let credentialFingerprint: string | undefined;
 
+/** Stdio credentials come from a service account in env vars (file path or base64 JSON). */
 const setupStdioCredentials = createStdioSessionSetup({
   sessionServiceStore,
   logger,
