@@ -78,6 +78,9 @@ function main() {
   const tree = join(tmp, "repo");
   run(`git worktree add --detach "${tree}" HEAD`, ROOT);
   try {
+    // A contributor has installed before running new:server; the second
+    // install links the new package into the workspace.
+    run(`${PNPM} install --frozen-lockfile`, tree);
     run(
       `node scripts/new-server.mjs ${KEY} --display-name "ZZ Scaffold" ` +
         `--base-url https://api.example.invalid/v1 --docs-url https://docs.example.invalid`,
