@@ -73,7 +73,7 @@ export const UpdateReportTemplateInputSchema = z
 
 export const UpdateReportTemplateOutputSchema = z
   .object({
-    templateData: z.unknown().optional().describe("Raw `data` object returned by TTD (`{ id }`)"),
+    templateData: z.unknown().optional().describe("Raw data scalar returned by TTD"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
       .optional()
@@ -97,9 +97,7 @@ type UpdateReportTemplateOutput = z.infer<typeof UpdateReportTemplateOutputSchem
 
 const UPDATE_REPORT_TEMPLATE_MUTATION = `mutation UpdateReportTemplate($input: MyReportsTemplateUpdateInput!) {
   myReportsTemplateUpdate(input: $input) {
-    data {
-      id
-    }
+    data
     errors {
       __typename
       ... on MutationError {
@@ -158,7 +156,7 @@ export async function updateReportTemplateLogic(
     (gqlData.myReportsTemplateUpdate as Record<string, unknown> | undefined) ?? {};
   const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
-  // Effect emitted only when the mutation actually executed (data present,
+  // Effect emitted only when the mutation actually executed (data scalar present,
   // no mutation errors). The summary uses stable scalar identities only.
   const mutationExecuted = Boolean(mutationResult.data) && !errors?.length;
   const effect: EffectResult | undefined = mutationExecuted
