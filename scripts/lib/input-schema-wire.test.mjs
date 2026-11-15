@@ -25,7 +25,8 @@ import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
@@ -94,7 +95,7 @@ describe("every tool publishes the parameters it takes", () => {
       const { allTools } = await import(pathToFileURL(toolsModule).href);
       expect(Array.isArray(allTools), `${pkg} tools/index.js exports allTools`).toBe(true);
 
-      const wire = new Map((await withServerClient(pkg, listRawTools)).map((t) => [t.name, t]));
+      const wire = new Map(toolsOf(pkg).map((t) => [t.name, t]));
       const problems = [];
       for (const tool of allTools) {
         const problem = wireSchemaProblem(tool, wire.get(tool.name));

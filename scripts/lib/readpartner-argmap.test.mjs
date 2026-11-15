@@ -31,7 +31,8 @@
 // always be mapped. This is the discriminator DV360 omitted (Risk #6).
 
 import { describe, expect, it } from "vitest";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -61,8 +62,8 @@ function inputArgNames(tool) {
 
 describe("governed write readPartner.argMap self-containment", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every readPartner covers its read tool's required args and names real args`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: every readPartner covers its read tool's required args and names real args`, () => {
+      const tools = toolsOf(pkg);
       const byName = new Map(tools.map((t) => [t.name, t]));
 
       const problems = [];

@@ -1,13 +1,14 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 //
 // One platform key per server (see platform-keys.mjs). The per-server half
-// boots each built server and reads its real tools/list, so the annotations
+// reads each built server's real tools/list, so the annotations
 // checked are the ones a client and the governance layer receive.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { checkGovernedTools, checkPlatformNames, checkRegistryKeys } from "./platform-keys.mjs";
 
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -50,16 +51,9 @@ describe("platform keys: registry", () => {
 });
 
 describe("platform keys: governed tools carry the key", () => {
-  // One test per server, like the other boot-based checks: a server's cold
-  // boot can take seconds on a loaded machine.
-  it.each(registry.servers.map((s) => [s.package, s]))(
-    "%s",
-    async (_pkg, server) => {
-      const tools = await withServerClient(server.package, listRawTools);
-      expect(checkGovernedTools(server, tools)).toEqual([]);
-    },
-    60_000
-  );
+  it.each(registry.servers.map((s) => [s.package, s]))("%s", (_pkg, server) => {
+    expect(checkGovernedTools(server, toolsOf(server.package))).toEqual([]);
+  });
 
   it("a governed tool with another slug or platform fails", () => {
     const server = { package: "reddit-mcp", platform_key: "reddit" };

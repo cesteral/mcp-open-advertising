@@ -12,5 +12,5 @@ describe("boot-server harness", () => {
     expect(tools.length).toBeGreaterThan(0);
     const governed = tools.filter((t) => t?.annotations?.cesteral).map((t) => t.name);
     expect(governed).toContain("meta_update_entity");
-  }, 30000);
+  });
 });

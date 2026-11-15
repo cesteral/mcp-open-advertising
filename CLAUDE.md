@@ -179,6 +179,10 @@ Each of these has a CI ratchet or a runtime guarantee that a change can trip. Re
 
 A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocked unit test. Each package's `tests/**/*wire*.test.ts` calls the tool's `*Logic` with only `fetch` stubbed and asserts the exact upstream method, URL and body against a vendor source cited in a `// basis:` comment. `scripts/lib/wire-request-coverage.test.mjs` boots every server and fails if a write tool's `*Logic` is never called (or its name never appears as a string literal; comments do not count) in a basis-citing wire test of its own package. Every write tool on all 13 servers is covered, so `wire-request-coverage-allowlist.json` lists no gaps; an entry added there needs a reason, and the list may only shrink: an entry that is now covered, no longer a write, or gone fails too.
 
+## Root Scripts Suite: Don't Boot Servers Per Test File
+
+`pnpm run test:scripts` (`vitest.config.scripts.ts`) boots every server once in vitest's `globalSetup` and hands what each advertises (`tools/list`, serverInfo, prompts and their rendered text, resources) to every test file. A suite that only needs that reads it with `toolsOf(pkg)` / `serverSnapshot(pkg)` from `scripts/lib/fleet-snapshot-inject.mjs`; it must not call `withServerClient` itself, because each test file is its own worker and pays a cold import of the server's whole dist graph per boot (316 boots per run before the snapshot, and the flakes under load that came with them). Boot your own only to drive a server or compare a fresh boot, and say why in `scripts/README.md`.
+
 ## TypeScript Build Issues
 
 If you encounter "The inferred type cannot be named" errors, add explicit return type annotations:
