@@ -162,7 +162,7 @@ query GetReportTemplate($id: ID!) {
 \`\`\`graphql
 mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
   myReportsTemplateCreate(input: $input) {
-    data
+    data { id }
     errors {
       __typename
       ... on MutationError { field message }
@@ -171,7 +171,7 @@ mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
 }
 \`\`\`
 
-**Important:** \`data\` is a **scalar** — do NOT select sub-fields like \`data { id }\`. The mutation does not return the new template's ID directly. Query \`myReportsReportTemplates(last: 1)\` after a successful create to retrieve it (the deprecated pre-2026-05-22 name; TTD's docs do not state the default sort of its replacement \`reportingTemplates\`, so the create tool has not moved to it).
+**Important:** \`data\` is an object: select \`data { id }\` (TTD: the ID of the generated report template). The create tool reads the new template's ID from it. A live run on 2026-04-14 found \`data\` to be a scalar with no sub-fields; TTD's current docs and report-templates guide show \`data { id }\`, and this has not been re-run live. If a live account rejects \`data { id }\`, the scalar shape is back.
 
 ### Update template
 \`\`\`graphql
@@ -484,7 +484,7 @@ TTD documents \`cancelBulkJob(input: { jobId: 123 }) { data { id } }\` (an inlin
 | \`MyReportsGetDerivedTemplateResponse\` | \`isDerived\` | ❌ Does not exist (TTD renamed it \`partialAccess\` on 2026-05-22; \`ttd_get_report_template\` selects neither) |
 | \`MyReportsTemplateResultSet\` | \`reportType { name }\`, \`fields\`, \`metrics\`, \`conversionMetrics\` | ✅ Works |
 | \`MyReportsTemplateResultSet\` | \`filters\`, \`name\` | ❌ Do not exist |
-| \`MyReportsTemplateCreatePayload\` | \`data\` (scalar) | ✅ Works |
+| \`MyReportsTemplateCreatePayload\` | \`data { id }\` (object; per TTD docs, not yet re-run live) | ⚠️ Docs-confirmed |
 | \`MyReportsTemplateUpdatePayload\` | \`data\` (scalar) | ✅ Works |
 | \`MyReportsTemplateScheduleCreatePayload\` | \`data { scheduleId }\` | ✅ Works |
 | \`derivedReportTemplate\` query | Variable type must be \`ID!\` not \`String!\` | ⚠️ Type matters |
