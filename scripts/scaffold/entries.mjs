@@ -71,7 +71,7 @@ export function buildRegistryEntry(opts, registry, tools) {
       terminalOperations: [
         {
           tool: `${n.key}_delete_entity`,
-          operations: ["bulk_job"],
+          operations: ["delete"],
           note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
         },
       ],
