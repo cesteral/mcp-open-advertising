@@ -1,76 +1,32 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { describeServerCard, readServerCard } from "@cesteral/shared/testkit";
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
 import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const registry = JSON.parse(
-  readFileSync(resolve(__dirname, "../../../../registry.json"), "utf8")
-) as {
-  protocol_version: string;
-  servers: Array<{
-    package: string;
-    title: string;
-    runtime_description: string;
-    platform: string;
-    documentation_url: string;
-    auth: { modes: string[] };
-  }>;
-};
-const entry = registry.servers.find((s) => s.package === "linkedin-mcp")!;
-
-const logger: any = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-  child: vi.fn(),
-};
-logger.child.mockReturnValue(logger);
-
-const config: any = {
-  serviceName: "linkedin-mcp",
-  port: 3006,
-  host: "127.0.0.1",
-  nodeEnv: "test",
-  mcpStatefulSessionTimeoutMs: 60_000,
-  mcpAuthMode: entry.auth.modes[0],
-  mcpAllowedOrigins: "*",
-  linkedinApiBaseUrl: "https://api.linkedin.com",
-  linkedinApiVersion: TEST_LINKEDIN_API_VERSION,
+const serverCard = {
+  packageName: "linkedin-mcp",
+  createServer: createMcpHttpServer,
+  platformConfig: {
+    port: 3006,
+    linkedinApiBaseUrl: "https://api.linkedin.com",
+    linkedinApiVersion: TEST_LINKEDIN_API_VERSION,
+  },
 };
 
-describe("/.well-known/mcp/server-card.json (linkedin-mcp)", () => {
-  it("matches the registry.json entry", async () => {
-    const { app, shutdown } = createMcpHttpServer(config, logger);
-    try {
-      const res = await app.request("/.well-known/mcp/server-card.json");
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.name).toBe(entry.package);
-      expect(body.title).toBe(entry.title);
-      expect(body.auth.current_mode).toBe(entry.auth.modes[0]);
-      expect(body.auth.supported_modes).toEqual(entry.auth.modes);
-      expect(body.description).toBe(entry.runtime_description);
-      expect(body.platform).toBe(entry.platform);
-      expect(body.documentation_url).toBe(entry.documentation_url);
-      expect(body.mcp_protocol_versions).toContain(registry.protocol_version);
-      expect(body.transports).toEqual([{ type: "streamable_http", endpoint: "/mcp" }]);
+describeServerCard(serverCard);
 
-      // #204 Tier 1 — the untrusted-content boundary is declared on every card.
-      expect(body.untrusted_content.returns_third_party_content).toBe(true);
-      expect(body.untrusted_content.client_obligations.length).toBeGreaterThan(0);
-      // Every linkedin tool declares where platform text sits (or declares
-      // none), so the card claims per-response. The claim is ratcheted in
-      // scripts/lib/untrusted-declarations.test.mjs.
-      expect(body.untrusted_content.path_reporting).toBe("per-response");
-    } finally {
-      await shutdown();
-    }
+describe("/.well-known/mcp/server-card.json untrusted-content boundary (linkedin-mcp)", () => {
+  // #204 Tier 1: the untrusted-content boundary is declared on every card.
+  it("declares the untrusted-content boundary per response", async () => {
+    const body = await readServerCard(serverCard);
+    expect(body.untrusted_content.returns_third_party_content).toBe(true);
+    expect(body.untrusted_content.client_obligations.length).toBeGreaterThan(0);
+    // Every linkedin tool declares where platform text sits (or declares
+    // none), so the card claims per-response. The claim is ratcheted in
+    // scripts/lib/untrusted-declarations.test.mjs.
+    expect(body.untrusted_content.path_reporting).toBe("per-response");
   });
 });
