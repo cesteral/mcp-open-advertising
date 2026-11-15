@@ -6,27 +6,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerReportCsvResource,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const TIKTOK_PACKAGE_NAME = "tiktok-mcp";
-const TIKTOK_PLATFORM = "tiktok";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -83,136 +66,32 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("tiktok-mcp", {
-      version: packageJson.version,
-      description:
-        "TikTok Ads campaign management and reporting via TikTok Marketing API v1.3. Supports 3 entity types (campaign, adGroup, ad), async reporting with breakdowns, bulk operations, targeting search, and audience estimation.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "TikTok Ads campaign management and reporting server. Supports 3 entity types (campaign, adGroup, ad), async reporting, targeting, and bulk operations via TikTok Marketing API v1.3. " +
-        "Use tiktok_list_advertisers for the bound advertiser's account info, tiktok_list_entities to browse entities. " +
-        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: TIKTOK_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: TIKTOK_PACKAGE_NAME,
-    platform: TIKTOK_PLATFORM,
-    workflowIdByToolName: tiktokWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "tiktok-mcp",
+    platform: "tiktok",
+    version: packageJson.version,
+    description:
+      "TikTok Ads campaign management and reporting via TikTok Marketing API v1.3. Supports 3 entity types (campaign, adGroup, ad), async reporting with breakdowns, bulk operations, targeting search, and audience estimation.",
+    instructions:
+      "TikTok Ads campaign management and reporting server. Supports 3 entity types (campaign, adGroup, ad), async reporting, targeting, and bulk operations via TikTok Marketing API v1.3. " +
+      "Use tiktok_list_advertisers for the bound advertiser's account info, tiktok_list_entities to browse entities. " +
+      "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: tiktokWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    reportCsv: {
+      store: reportCsvStore,
+      platformLabel: "TikTok",
+      downloadToolName: "tiktok_download_report",
+    },
   });
-
-  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
-  // by `tiktok_download_report` (storeRawCsv: true).
-  registerReportCsvResource({
-    server,
-    ResourceTemplate,
-    store: reportCsvStore,
-    platform: "TikTok",
-    downloadToolName: "tiktok_download_report",
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

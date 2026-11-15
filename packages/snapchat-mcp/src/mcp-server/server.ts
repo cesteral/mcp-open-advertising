@@ -6,27 +6,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerReportCsvResource,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const SNAPCHAT_PACKAGE_NAME = "snapchat-mcp";
-const SNAPCHAT_PLATFORM = "snapchat";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -78,137 +61,33 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("snapchat-mcp", {
-      version: packageJson.version,
-      description:
-        "Snapchat Ads campaign management and reporting via the Snap Marketing API. Supports campaign, ad squad, ad, creative, and audience workflows with reporting, targeting, bid adjustments, and previews.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Snapchat Ads campaign management and reporting server. Supports campaign, ad squad, ad, creative, and audience workflows with async reporting, targeting, bid adjustments, and bulk operations via the Snap Marketing API. " +
-        "Progressive discovery: (1) start with snapchat_list_ad_accounts to resolve accessible account IDs, then snapchat_list_entities to browse campaigns/adSquads/ads/creatives; " +
-        "(2) before authoring writes, read MCP Resources entity-schema://snapchat/all for field shapes, entity-hierarchy://snapchat/all for parent/child rules, entity-examples://snapchat/all for payloads, and reporting-reference://snapchat for stats fields and breakdowns; " +
-        "(3) for multi-step flows use MCP Prompts: snapchat_campaign_setup_workflow, snapchat_reporting_workflow, snapchat_targeting_discovery_workflow, creative_upload_workflow, snapchat_bulk_operations_workflow.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: SNAPCHAT_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: SNAPCHAT_PACKAGE_NAME,
-    platform: SNAPCHAT_PLATFORM,
-    workflowIdByToolName: snapchatWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "snapchat-mcp",
+    platform: "snapchat",
+    version: packageJson.version,
+    description:
+      "Snapchat Ads campaign management and reporting via the Snap Marketing API. Supports campaign, ad squad, ad, creative, and audience workflows with reporting, targeting, bid adjustments, and previews.",
+    instructions:
+      "Snapchat Ads campaign management and reporting server. Supports campaign, ad squad, ad, creative, and audience workflows with async reporting, targeting, bid adjustments, and bulk operations via the Snap Marketing API. " +
+      "Progressive discovery: (1) start with snapchat_list_ad_accounts to resolve accessible account IDs, then snapchat_list_entities to browse campaigns/adSquads/ads/creatives; " +
+      "(2) before authoring writes, read MCP Resources entity-schema://snapchat/all for field shapes, entity-hierarchy://snapchat/all for parent/child rules, entity-examples://snapchat/all for payloads, and reporting-reference://snapchat for stats fields and breakdowns; " +
+      "(3) for multi-step flows use MCP Prompts: snapchat_campaign_setup_workflow, snapchat_reporting_workflow, snapchat_targeting_discovery_workflow, creative_upload_workflow, snapchat_bulk_operations_workflow.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: snapchatWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    reportCsv: {
+      store: reportCsvStore,
+      platformLabel: "Snapchat",
+      downloadToolName: "snapchat_download_report",
+    },
   });
-
-  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
-  // by `snapchat_download_report` (storeRawCsv: true).
-  registerReportCsvResource({
-    server,
-    ResourceTemplate,
-    store: reportCsvStore,
-    platform: "Snapchat",
-    downloadToolName: "snapchat_download_report",
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**
