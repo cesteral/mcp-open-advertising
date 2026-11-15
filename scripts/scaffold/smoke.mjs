@@ -14,7 +14,7 @@
 // the global pnpm is too old).
 
 import { execSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
@@ -106,11 +106,17 @@ function main() {
     try {
       run(
         `./node_modules/.bin/vitest run --config vitest.config.scripts.ts ` +
-          `--reporter=json --outputFile="${report}"`,
+          `--reporter=default --reporter=json --outputFile.json="${report}"`,
         tree
       );
-    } catch {
-      // Failures are expected; the report decides.
+    } catch (err) {
+      // Failures are expected; the report decides. A run that wrote no
+      // report (a crash, a signal) is not a result.
+      if (!existsSync(report)) {
+        throw new Error(
+          `the scripts suite wrote no report (exit ${err.status}, signal ${err.signal ?? "none"})`
+        );
+      }
     }
     const failed = failures(report);
     const { problems, expected } = compare(failed);
