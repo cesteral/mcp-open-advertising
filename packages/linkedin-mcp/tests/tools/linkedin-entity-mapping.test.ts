@@ -2,11 +2,9 @@
 //
 // Entity path model after the staged /v2/ -> /rest/ migration (#210).
 //
-// The migration is half-done ON PURPOSE — creatives need a schema rewrite, and
-// get/update/delete need an account parameter that would churn every governed
-// definitionHash in this package. A half-done migration is exactly the kind of
-// state that rots quietly, so the invariants that keep it coherent are pinned
-// here rather than left to reviewer memory.
+// Every entity's collection and item paths are on /rest/; item paths take the
+// owning ad account (#210). The invariants that keep the path model coherent
+// are pinned here rather than left to reviewer memory.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -14,7 +12,9 @@ import {
   adAccountIdFromUrn,
   getEntityConfig,
   getSupportedEntityTypes,
+  entityItemRequest,
   isAccountScopedEntity,
+  itemRequiresAdAccount,
   type LinkedInEntityType,
 } from "../../src/mcp-server/tools/utils/entity-mapping.js";
 
@@ -61,41 +61,25 @@ describe("staged migration invariants", () => {
     expect(types).toEqual(["adAccount", "campaignGroup", "campaign", "creative", "conversionRule"]);
   });
 
-  it.each(types)("%s: apiSurface agrees with the path it actually builds", (type) => {
+  it.each(types)("%s: every collection path is on /rest/", (type) => {
     const config = getEntityConfig(type as LinkedInEntityType);
     const path = config.accountScoped ? config.collectionPath("123") : config.collectionPath();
-    if (config.apiSurface === "rest") {
-      expect(path, `${type} claims rest but builds ${path}`).toMatch(/^\/rest\//);
-    } else {
-      expect(path, `${type} claims legacy-v2 but builds ${path}`).toMatch(/^\/v2\//);
-    }
+    expect(path, `${type} builds ${path}`).toMatch(/^\/rest\//);
   });
 
-  it.each(types)("%s: anything left on /v2/ says why", (type) => {
-    const config = getEntityConfig(type as LinkedInEntityType);
-    if (config.apiSurface !== "legacy-v2") return;
-    // Without this, "not migrated yet" and "nobody noticed" look identical.
-    expect(config.migrationBlockedBy ?? "", `${type} is on /v2/ with no reason`).not.toHaveLength(
-      0
+  it("lists creatives with the Creatives API criteria finder and cursor paging", () => {
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Search For Creatives".
+    expect(getEntityConfig("creative").collectionPath("123")).toBe(
+      "/rest/adAccounts/123/creatives"
     );
+    expect(getEntityConfig("creative").listFinder).toEqual({ name: "criteria", paging: "cursor" });
   });
 
-  it("keeps a legacy item path for every account-scoped entity", () => {
-    // get/update/delete take a URN and cannot build /rest/adAccounts/{id}/...,
-    // so they need somewhere to go. Dropping this silently breaks them.
-    for (const type of types) {
-      const config = getEntityConfig(type as LinkedInEntityType);
-      if (!config.accountScoped) continue;
-      expect(config.legacyCollectionPath, `${type}`).toMatch(/^\/v2\//);
-    }
-  });
-
-  it("still requires an ad account to list creatives and conversion rules", () => {
-    // THE regression this guards. Those two stayed on /v2/, where the account is
-    // a query parameter rather than part of the path. Deriving "needs an
-    // account" from `accountScoped` alone would have quietly stopped requiring
-    // one for exactly the entities the migration left behind.
-    expect(getEntityConfig("creative").accountScoped).toBe(false);
+  it("still requires an ad account to list conversion rules", () => {
+    // THE regression this guards. A conversion rule's account is a query
+    // parameter rather than part of the path. Deriving "needs an account" from
+    // `accountScoped` alone would quietly stop requiring one.
+    expect(getEntityConfig("creative").accountScoped).toBe(true);
     expect(getEntityConfig("conversionRule").accountScoped).toBe(false);
     expect(isAccountScopedEntity("creative")).toBe(true);
     expect(isAccountScopedEntity("conversionRule")).toBe(true);
@@ -107,5 +91,79 @@ describe("staged migration invariants", () => {
       "creative",
     ]);
     expect(isAccountScopedEntity("adAccount")).toBe(false);
+  });
+});
+
+const ACCOUNT = "urn:li:sponsoredAccount:512";
+
+describe("entityItemRequest: every item path is on /rest/ (#210)", () => {
+  // basis: LinkedIn Campaigns / Campaign Groups / Creatives / Conversion
+  // Tracking / Ad Accounts pages (learn.microsoft.com/en-us/linkedin, read
+  // 2026-11-14): GET/POST/DELETE on these exact item paths.
+  it("campaign: /rest/adAccounts/{id}/adCampaigns/{numeric campaign id}", () => {
+    expect(entityItemRequest("campaign", "urn:li:sponsoredCampaign:77", ACCOUNT)).toEqual({
+      path: "/rest/adAccounts/512/adCampaigns/77",
+    });
+  });
+
+  it("campaignGroup: /rest/adAccounts/{id}/adCampaignGroups/{numeric group id}", () => {
+    expect(entityItemRequest("campaignGroup", "urn:li:sponsoredCampaignGroup:66", ACCOUNT)).toEqual(
+      { path: "/rest/adAccounts/512/adCampaignGroups/66" }
+    );
+  });
+
+  it("creative: /rest/adAccounts/{id}/creatives/{ENCODED creative URN}", () => {
+    expect(entityItemRequest("creative", "urn:li:sponsoredCreative:88", ACCOUNT)).toEqual({
+      path: "/rest/adAccounts/512/creatives/urn%3Ali%3AsponsoredCreative%3A88",
+    });
+    // A bare id is the creative's numeric id; the path still carries the URN.
+    expect(entityItemRequest("creative", "88", ACCOUNT).path).toBe(
+      "/rest/adAccounts/512/creatives/urn%3Ali%3AsponsoredCreative%3A88"
+    );
+  });
+
+  it("conversionRule: /rest/conversions/{numeric id} with the account as a query parameter", () => {
+    expect(entityItemRequest("conversionRule", "urn:lla:llaPartnerConversion:99", ACCOUNT)).toEqual(
+      { path: "/rest/conversions/99", query: { account: ACCOUNT } }
+    );
+  });
+
+  it("adAccount: /rest/adAccounts/{numeric id}, no adAccountUrn needed", () => {
+    expect(entityItemRequest("adAccount", "urn:li:sponsoredAccount:512", undefined)).toEqual({
+      path: "/rest/adAccounts/512",
+    });
+    expect(entityItemRequest("adAccount", "urn:li:sponsoredAccount:512", ACCOUNT).path).toBe(
+      "/rest/adAccounts/512"
+    );
+  });
+
+  it("refuses an adAccountUrn that names a different account than the adAccount entity", () => {
+    expect(() =>
+      entityItemRequest("adAccount", "urn:li:sponsoredAccount:512", "urn:li:sponsoredAccount:1")
+    ).toThrow(/different ad account/i);
+  });
+
+  it.each(["campaign", "campaignGroup", "creative", "conversionRule"] as const)(
+    "%s: refuses to build an item path without an ad account",
+    (type) => {
+      expect(itemRequiresAdAccount(type)).toBe(true);
+      expect(() => entityItemRequest(type, "123", undefined)).toThrow(/adAccountUrn/);
+    }
+  );
+
+  it("adAccount is the only entity whose item path needs no adAccountUrn", () => {
+    expect(getSupportedEntityTypes().filter((t) => !itemRequiresAdAccount(t))).toEqual([
+      "adAccount",
+    ]);
+  });
+
+  it("refuses a URN of the wrong entity type rather than addressing another entity", () => {
+    // urn:li:sponsoredCampaign:7 as a campaignGroup would PATCH group 7.
+    expect(() => entityItemRequest("campaignGroup", "urn:li:sponsoredCampaign:7", ACCOUNT)).toThrow(
+      /sponsoredCampaignGroup/
+    );
+    expect(() => entityItemRequest("campaign", "urn:li:sponsoredCampaign:x", ACCOUNT)).toThrow(
+      /sponsoredCampaign/
+    );
   });
 });

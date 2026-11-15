@@ -19,7 +19,8 @@ import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
@@ -60,9 +61,7 @@ describe("workflow-id maps match the registered tools", () => {
   for (const pkg of packages) {
     it(`${pkg}: every registered tool is mapped, and only those`, async () => {
       const map = await exportedMap(pkg);
-      const registered = await withServerClient(pkg, async (client) =>
-        (await listRawTools(client)).map((t) => t.name)
-      );
+      const registered = toolsOf(pkg).map((t) => t.name);
 
       const expected = registered.filter((n) => !isSearchTool(n) && !UNMAPPED.has(n));
       for (const n of registered) if (UNMAPPED.has(n)) seenUnmapped.add(n);

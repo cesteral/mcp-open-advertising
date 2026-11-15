@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; some calls still on legacy `/v2/`, see Current Status).
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; the image/video uploads are still on legacy `/v2/`, see Current Status).
 
 ## Purpose
 
@@ -26,14 +26,15 @@ per-session Bearer token authentication.
 
 #### 1. `linkedin_list_entities`
 
-List LinkedIn entities with optional filtering and offset-based pagination.
+List LinkedIn entities. Creatives page with a cursor (`pageToken`), conversion rules come back in one response, and the other types page with the `start` offset; `pagination.nextPageInputKey` says which to send.
 
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to list
-- `adAccountUrn` (string, optional): Ad Account URN to scope results
-- `start` (number, optional): Offset for pagination (default 0)
-- `count` (number, optional): Results per page (default 25)
+- `adAccountUrn` (string, required except for `adAccount`): Ad Account URN to scope results
+- `start` (number, optional): Offset for pagination (default 0); not for creatives
+- `pageToken` (string, optional): Creatives only, the previous page's `pagination.nextCursor`
+- `count` (number, optional): Results per page (default 25, max 100)
 
 #### 2. `linkedin_get_entity`
 
@@ -43,6 +44,7 @@ Get a single LinkedIn entity by URN.
 
 - `entityType` (string, required): Type of entity to retrieve
 - `entityUrn` (string, required): The entity URN (e.g., `urn:li:sponsoredCampaign:123`)
+- `adAccountUrn` (string, required except for `adAccount`): The ad account that owns the entity; LinkedIn addresses every other entity under its account
 
 #### 3. `linkedin_create_entity`
 
@@ -51,7 +53,8 @@ Create a new LinkedIn entity.
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to create
-- `data` (object, required): Entity fields as key-value pairs
+- `adAccountUrn` (string, required for `creative`): The ad account to create in; for other types `data.account` names it, and the two must agree when both are given
+- `data` (object, required): Entity fields as key-value pairs. A creative is `{ campaign, content: { reference: <share/ugcPost URN> }, name?, intendedStatus? }` on LinkedIn's Creatives API
 
 #### 4. `linkedin_update_entity`
 
@@ -61,16 +64,18 @@ Update an existing LinkedIn entity (PATCH via Rest.li partial update).
 
 - `entityType` (string, required): Type of entity to update
 - `entityUrn` (string, required): The entity URN to update
-- `data` (object, required): Fields to update as key-value pairs
+- `adAccountUrn` (string, required except for `adAccount`): The ad account that owns the entity; LinkedIn addresses every other entity under its account
+- `data` (object, required): Fields to update as key-value pairs. A creative's status field is `intendedStatus`
 
 #### 5. `linkedin_delete_entity`
 
-Delete a LinkedIn entity.
+Delete a LinkedIn entity. LinkedIn deletes only DRAFT entities this way (a creative also while its campaign is DRAFT); delete anything else by setting its status to `PENDING_DELETION` with `linkedin_update_entity`. Conversion rules cannot be deleted.
 
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to delete
 - `entityUrn` (string, required): The entity URN to delete
+- `adAccountUrn` (string, required except for `adAccount`): The ad account that owns the entity; LinkedIn addresses every other entity under its account
 
 ### Account
 
@@ -122,7 +127,8 @@ Batch update status for multiple LinkedIn Ads entities.
 
 - `entityType` (string, required): Type of entities to update
 - `entityUrns` (string[], required): Entity URNs to update (max 50)
-- `status` (string, required): `ACTIVE`, `PAUSED`, or `ARCHIVED`
+- `adAccountUrn` (string, required except for `adAccount`): The one ad account all the entities belong to
+- `status` (string, required): `ACTIVE`, `PAUSED`, `DRAFT`, `ARCHIVED` or `CANCELED` (sent as `intendedStatus` for creatives)
 
 #### 10. `linkedin_bulk_create_entities`
 
@@ -131,6 +137,7 @@ Batch create multiple entities of the same type.
 **Parameters:**
 
 - `entityType` (string, required): Type of entities to create
+- `adAccountUrn` (string, required for `creative`): The one ad account every item is created in
 - `items` (array, required): Array of entity data objects (max 50)
 
 #### 11. `linkedin_bulk_update_entities`
@@ -140,15 +147,18 @@ Batch update multiple entities with individual data payloads.
 **Parameters:**
 
 - `entityType` (string, required): Type of entities being updated
+- `adAccountUrn` (string, required except for `adAccount`): The one ad account all the entities belong to
 - `items` (array, required): Array of update items (max 50), each with `entityUrn` and `data`
 
 #### 12. `linkedin_adjust_bids`
 
-Batch adjust campaign bid amounts with percentage or absolute changes (safe read-modify-write).
+Batch set campaign bid amounts (`unitCost`), one partial update per campaign.
 
 **Parameters:**
 
-- `adjustments` (array, required): Array of bid adjustments (max 50), each with campaign URN, `adjustmentType` (percentage/absolute), and `value`
+- `adAccountUrn` (string, required): The ad account that owns every campaign in `adjustments`
+- `adjustments` (array, required): Bid adjustments (max 50), each with `campaignUrn`, `amount` (decimal string) and `currencyCode`
+- `reason` (string, optional): Why the bids are changing
 
 ### Targeting
 
@@ -176,13 +186,14 @@ List the targeting facets (names, URNs, entity types, supported finders). Takes 
 
 #### 15. `linkedin_duplicate_entity`
 
-Duplicate a campaign group, campaign, or creative.
+Duplicate a campaign group, campaign, creative or conversion rule (read, then create a DRAFT copy in the same ad account; a creative's copy has `intendedStatus: DRAFT`). Ad accounts cannot be duplicated.
 
 **Parameters:**
 
-- `entityType` (string, required): Type of entity to duplicate (`campaignGroup`, `campaign`, `creative`)
+- `entityType` (string, required): `campaignGroup`, `campaign` or `conversionRule`
 - `entityUrn` (string, required): URN of the entity to duplicate
-- `options` (object, optional): Duplication options (e.g., rename prefix/suffix, status)
+- `adAccountUrn` (string, required): The ad account that owns the source
+- `newName` (string, optional): Name for the copy (defaults to `Copy of {name}`)
 
 #### 16. `linkedin_get_delivery_forecast`
 
@@ -245,12 +256,11 @@ exercised against a live LinkedIn account. Each endpoint is recorded in
 `platform-facts.json`: `verified` where it was read from LinkedIn's own
 documentation, `unverified` where it was not.
 
-The `/v2/` → `/rest/` migration is staged and incomplete (#210): ad accounts,
-campaign and campaign-group list/create, analytics, targeting (facets and
-entities), delivery forecasts, audience counts and ad previews use the versioned
-`/rest/` surface; get/update/delete for campaigns, campaign groups and creatives,
-plus creatives, conversions and the image/video uploads, still call legacy `/v2/`
-paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
+The `/v2/` → `/rest/` migration is nearly complete (#210): every entity's list,
+create, get, update and delete (creatives on the Creatives API), analytics,
+targeting (facets and entities), delivery forecasts, audience counts and ad
+previews use the versioned `/rest/` surface. The image/video uploads and the
+`/v2/me` session check still call legacy `/v2/` paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
 documentation (read 2026-10-01) but have not been run against a live account.
 
 ## Development
@@ -299,8 +309,9 @@ pnpm run typecheck
 - Entity identifiers use **URN format** (e.g., `urn:li:sponsoredCampaign:123`)
 - `LinkedIn-Version` (pinned to `202610`) and `X-Restli-Protocol-Version: 2.0.0` headers are **required on all API requests** and injected automatically
 - Updates use **Rest.li partial update format** via `X-Restli-Method: PARTIAL_UPDATE`
-- Budget values are `CurrencyAmount` objects with `currencyCode` and `amount` (amount is in **cents**)
-- `ARCHIVED` status is **permanent** and cannot be reversed
+- Budget values are `CurrencyAmount` objects with `currencyCode` and `amount` (amount is a decimal string in major units, e.g. `"100.00"`)
+- `ARCHIVED` is reversible; only DRAFT entities can be deleted, anything else goes to `PENDING_DELETION`
+- Get, update, delete, duplicate, the bulk updates and bid adjustments take the owning `adAccountUrn`
 
 ### Transport
 

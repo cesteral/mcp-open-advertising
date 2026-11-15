@@ -14,7 +14,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const allowlist = JSON.parse(
   readFileSync(join(ROOT, "scripts", "lib", "ungoverned-writes-allowlist.json"), "utf8")
@@ -39,9 +40,27 @@ const packages = readdirSync(join(ROOT, "packages"))
 const MUTATION_NAME = new RegExp(
   "(^|_)(" +
     [
-      "create", "update", "delete", "remove", "archive", "duplicate", "upload",
-      "insert", "mutate", "mutation", "manage", "submit", "pause", "resume",
-      "enable", "disable", "activate", "deactivate", "cancel", "rerun", "bulk",
+      "create",
+      "update",
+      "delete",
+      "remove",
+      "archive",
+      "duplicate",
+      "upload",
+      "insert",
+      "mutate",
+      "mutation",
+      "manage",
+      "submit",
+      "pause",
+      "resume",
+      "enable",
+      "disable",
+      "activate",
+      "deactivate",
+      "cancel",
+      "rerun",
+      "bulk",
       "import",
     ].join("|") +
     ")(_|$)"
@@ -82,8 +101,8 @@ function toolsMissingReadOnlyHint(tools) {
 
 describe("write-tool governance coverage ratchet", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every write tool is governed or explicitly allowlisted`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: every write tool is governed or explicitly allowlisted`, () => {
+      const tools = toolsOf(pkg);
       const ungoverned = ungovernedWrites(tools);
       const allowed = [...(allowlist[pkg] ?? [])].sort();
 
@@ -120,8 +139,8 @@ describe("write-tool governance coverage ratchet", () => {
 // It also asserts every tool declares readOnlyHint explicitly.
 describe("write-tool mislabel ratchet", () => {
   for (const pkg of packages) {
-    it(`${pkg}: mutation-named tools are marked writes (or explicitly read-by-design), and readOnlyHint is always declared`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: mutation-named tools are marked writes (or explicitly read-by-design), and readOnlyHint is always declared`, () => {
+      const tools = toolsOf(pkg);
 
       // (0) readOnlyHint must be an explicit boolean on every tool.
       const missingHint = toolsMissingReadOnlyHint(tools);

@@ -4,10 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineCreateAdAccountUrn } from "../utils/ad-account-param.js";
 import {
   runLinkedInCreateDryRun,
   resolveLinkedInCreateCapability,
   symbolicValidate,
+  creativeStatusFieldError,
 } from "../utils/dry-run.js";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { snapshotFromLinkedInEntity } from "../utils/capture-snapshot.js";
@@ -32,19 +34,22 @@ const TOOL_DESCRIPTION = `Create a new LinkedIn Ads entity.
 
 **Key requirements by entity type:**
 - **campaignGroup**: requires \`name\`, \`account\` (URN), \`status\`
-- **campaign**: requires \`name\`, \`campaignGroup\` (URN), \`account\` (URN), \`type\`, \`objectiveType\`, \`status\`
-- **creative**: requires \`campaign\` (URN), \`status\`, \`reference\`
-- **conversionRule**: requires \`name\`, \`type\`, \`account\` (URN), \`status\`
+- **campaign**: requires \`name\`, \`campaignGroup\` and \`account\` (URNs), \`type\`, \`costType\`, \`unitCost\`, \`dailyBudget\` or \`totalBudget\`, \`locale\`, \`targetingCriteria\`, \`offsiteDeliveryEnabled\`, \`politicalIntent\`, \`status\` (\`objectiveType\` is optional)
+- **creative**: pass \`adAccountUrn\`; \`data\` requires \`campaign\` (URN) and \`content\` (e.g. \`{ "reference": "urn:li:share:123" }\`), with optional \`name\`, \`intendedStatus\` (DRAFT, ACTIVE, …) and \`leadgenCallToAction\` (required for LEAD_GENERATION campaigns). A creative has no \`status\` and no writable \`account\`
+- **conversionRule**: requires \`name\`, \`type\`, \`account\` (URN)
 
 **Gotchas:**
 - All entity IDs are URNs (e.g., urn:li:sponsoredAccount:123)
 - Budget values use CurrencyAmount objects: \`{ "amount": "10.00", "currencyCode": "USD" }\`
-- Campaigns require \`type\` (TEXT_AD, SPONSORED_UPDATES, etc.) and \`objectiveType\`
+- \`adAccountUrn\`, when given for a campaign, campaign group or conversion rule, must name the same account as \`data.account\`
 - Writes are rate-limited at 3x read cost`;
 
 export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    adAccountUrn: adAccountUrnSchema.describe(
+      "The ad account to create the entity in (e.g. urn:li:sponsoredAccount:123). Required for a creative, whose body has no writable account; for a campaign, campaign group or conversion rule data.account names it, and adAccountUrn must agree when both are given."
+    ),
     data: z.record(z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
@@ -54,6 +59,7 @@ export const CreateEntityInputSchema = z
         "When true, validates the creation and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created entity) without calling the LinkedIn API. No entity is created."
       ),
   })
+  .superRefine(refineCreateAdAccountUrn)
   .describe("Parameters for creating a LinkedIn Ads entity");
 
 export const CreateEntityOutputSchema = z
@@ -108,6 +114,8 @@ export async function createEntityLogic(
     );
   }
   const createValidationErrors = symbolicValidate(input.data);
+  const creativeStatusError = creativeStatusFieldError(input.entityType, input.data);
+  if (creativeStatusError) createValidationErrors.push(creativeStatusError);
   if (createValidationErrors.length > 0) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
@@ -118,6 +126,7 @@ export async function createEntityLogic(
   const entity = (await linkedInService.createEntity(
     input.entityType as LinkedInEntityType,
     input.data,
+    input.adAccountUrn,
     context
   )) as unknown as Record<string, unknown>;
 
@@ -225,10 +234,31 @@ export const createEntityTool = {
           account: "urn:li:sponsoredAccount:123456789",
           type: "SPONSORED_UPDATES",
           objectiveType: "BRAND_AWARENESS",
-          status: "DRAFT",
-          dailyBudget: { amount: "50.00", currencyCode: "USD" },
-          bidType: "CPM",
+          costType: "CPM",
           unitCost: { amount: "10.00", currencyCode: "USD" },
+          dailyBudget: { amount: "50.00", currencyCode: "USD" },
+          locale: { country: "US", language: "en" },
+          targetingCriteria: {
+            include: {
+              and: [{ or: { "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"] } }],
+            },
+          },
+          offsiteDeliveryEnabled: false,
+          politicalIntent: "NOT_POLITICAL",
+          status: "DRAFT",
+        },
+      },
+    },
+    {
+      label: "Create a creative from an existing post",
+      input: {
+        entityType: "creative",
+        adAccountUrn: "urn:li:sponsoredAccount:123456789",
+        data: {
+          campaign: "urn:li:sponsoredCampaign:111222333",
+          content: { reference: "urn:li:share:6778045555198214144" },
+          name: "Awareness creative A",
+          intendedStatus: "DRAFT",
         },
       },
     },

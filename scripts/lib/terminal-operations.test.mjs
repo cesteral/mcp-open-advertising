@@ -36,7 +36,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { irreversibleStatusOptions, isDestructiveCandidate } from "./destructive-tools.mjs";
 
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -61,31 +62,28 @@ describe("terminal-operation declarations match the shipped tool surface", () =>
     }
   });
 
-  it.each(packages)(
-    "%s: every destructive tool is declared terminal or allowlisted",
-    async (pkg) => {
-      const tools = await withServerClient(pkg, listRawTools);
-      const declared = new Set(declaredFor(pkg).map((t) => t.tool));
-      const allowed = new Set(reversible.filter((r) => r.package === pkg).map((r) => r.tool));
+  it.each(packages)("%s: every destructive tool is declared terminal or allowlisted", (pkg) => {
+    const tools = toolsOf(pkg);
+    const declared = new Set(declaredFor(pkg).map((t) => t.tool));
+    const allowed = new Set(reversible.filter((r) => r.package === pkg).map((r) => r.tool));
 
-      const undeclared = tools
-        .filter(isDestructiveCandidate)
-        .map((t) => t.name)
-        .filter((name) => !declared.has(name) && !allowed.has(name));
+    const undeclared = tools
+      .filter(isDestructiveCandidate)
+      .map((t) => t.name)
+      .filter((name) => !declared.has(name) && !allowed.has(name));
 
-      expect(
-        undeclared,
-        `${pkg}: destructive tools missing from registry.servers[].operational.terminalOperations. ` +
-          `Declare them there, or add them to scripts/lib/reversible-operations-allowlist.json ` +
-          `with the reason they are reversible.`
-      ).toEqual([]);
-    }
-  );
+    expect(
+      undeclared,
+      `${pkg}: destructive tools missing from registry.servers[].operational.terminalOperations. ` +
+        `Declare them there, or add them to scripts/lib/reversible-operations-allowlist.json ` +
+        `with the reason they are reversible.`
+    ).toEqual([]);
+  });
 
   it.each(packages)(
     "%s: every tool offering an irreversible status is declared terminal or allowlisted",
-    async (pkg) => {
-      const tools = await withServerClient(pkg, listRawTools);
+    (pkg) => {
+      const tools = toolsOf(pkg);
       const declared = new Set(declaredFor(pkg).map((t) => t.tool));
       const allowed = new Set(reversible.filter((r) => r.package === pkg).map((r) => r.tool));
 
@@ -104,8 +102,8 @@ describe("terminal-operation declarations match the shipped tool surface", () =>
     }
   );
 
-  it.each(packages)("%s: no stale terminal declaration", async (pkg) => {
-    const tools = await withServerClient(pkg, listRawTools);
+  it.each(packages)("%s: no stale terminal declaration", (pkg) => {
+    const tools = toolsOf(pkg);
     const live = new Map(tools.map((t) => [t.name, t]));
 
     for (const entry of declaredFor(pkg)) {
@@ -124,10 +122,10 @@ describe("terminal-operation declarations match the shipped tool surface", () =>
     }
   });
 
-  it("no stale allowlist entry", async () => {
+  it("no stale allowlist entry", () => {
     const stale = [];
     for (const pkg of packages) {
-      const tools = await withServerClient(pkg, listRawTools);
+      const tools = toolsOf(pkg);
       const live = new Set(tools.map((t) => t.name));
       for (const entry of reversible.filter((r) => r.package === pkg)) {
         if (!live.has(entry.tool)) stale.push(`${pkg}:${entry.tool}`);

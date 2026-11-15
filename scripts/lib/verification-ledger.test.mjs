@@ -9,7 +9,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { toManifestEntry } from "./manifest.mjs";
 import {
   loadLedger,
@@ -21,21 +22,21 @@ import {
 } from "./verification-ledger.mjs";
 
 /** A real governed tool, so the hash under test is a real definitionHash. */
-async function aGovernedTool() {
-  const tools = await withServerClient("ttd-mcp", listRawTools);
+function aGovernedTool() {
+  const tools = toolsOf("ttd-mcp");
   const tool = tools.find((t) => t.annotations?.cesteral);
   expect(tool, "ttd-mcp should advertise at least one governed tool").toBeTruthy();
   return tool;
 }
 
 describe("a tool cannot promote itself", () => {
-  it("ships `declared` when the ledger is omitted entirely", async () => {
-    const entry = toManifestEntry(await aGovernedTool());
+  it("ships `declared` when the ledger is omitted entirely", () => {
+    const entry = toManifestEntry(aGovernedTool());
     expect(entry.verification).toEqual(DEFAULT_VERIFICATION);
   });
 
-  it("ignores a status planted in the tool's own cesteral annotation", async () => {
-    const tool = await aGovernedTool();
+  it("ignores a status planted in the tool's own cesteral annotation", () => {
+    const tool = aGovernedTool();
     const selfPromoting = {
       ...tool,
       annotations: {
@@ -51,8 +52,8 @@ describe("a tool cannot promote itself", () => {
 });
 
 describe("demotion on definition change", () => {
-  it("promotes when the bound hash matches the shipped definition", async () => {
-    const tool = await aGovernedTool();
+  it("promotes when the bound hash matches the shipped definition", () => {
+    const tool = aGovernedTool();
     const { definitionHash } = toManifestEntry(tool);
 
     const entry = toManifestEntry(tool, {
@@ -69,8 +70,8 @@ describe("demotion on definition change", () => {
     expect(entry.verification.demotedFrom).toBeUndefined();
   });
 
-  it("DEMOTES when the definition changes under a previously-verified claim", async () => {
-    const tool = await aGovernedTool();
+  it("DEMOTES when the definition changes under a previously-verified claim", () => {
+    const tool = aGovernedTool();
     const { definitionHash: originalHash } = toManifestEntry(tool);
 
     // A real definition change: edit the description, which definitionHash covers.
@@ -201,9 +202,9 @@ describe("ledger files are well-formed and honest", () => {
 
   it.each(packages.filter((p) => existsSync(ledgerPath(p))))(
     "%s: every ledger tool name is a tool the server actually advertises",
-    async (pkg) => {
+    (pkg) => {
       const ledger = loadLedger(pkg);
-      const live = new Set((await withServerClient(pkg, listRawTools)).map((t) => t.name));
+      const live = new Set(toolsOf(pkg).map((t) => t.name));
       const unknown = Object.keys(ledger).filter((name) => !live.has(name));
       expect(unknown, `${pkg}: ledger names tools that do not exist`).toEqual([]);
     }

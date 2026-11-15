@@ -36,6 +36,7 @@ Updates the \`unitCost\` (bid) for each campaign via PATCH.
 **bid structure:** \`{ "amount": "10.00", "currencyCode": "USD" }\`
 
 **Gotchas:**
+- Every campaign must belong to the one ad account named by \`adAccountUrn\`.
 - Only applies to campaigns with manual bidding (bidType: CPM, CPC, etc.).
 - LOWEST_COST campaigns may ignore unitCost.
 - Each adjustment consumes 3x rate limit tokens (write operation).
@@ -43,6 +44,12 @@ Updates the \`unitCost\` (bid) for each campaign via PATCH.
 
 export const AdjustBidsInputSchema = z
   .object({
+    adAccountUrn: z
+      .string()
+      .min(1)
+      .describe(
+        "The ad account that owns every campaign in `adjustments` (e.g. urn:li:sponsoredAccount:123). LinkedIn addresses a campaign under its account."
+      ),
     adjustments: z
       .array(
         z.object({
@@ -174,6 +181,7 @@ export async function adjustBidsLogic(
 
   // Pass all adjustments to the service in one call
   const serviceResult = await linkedInService.adjustBids(
+    input.adAccountUrn,
     input.adjustments.map((a) => ({
       campaignUrn: a.campaignUrn,
       bidAmount: {
@@ -338,6 +346,7 @@ export const adjustBidsTool = {
     {
       label: "Single bid adjustment",
       input: {
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         adjustments: [
           {
             campaignUrn: "urn:li:sponsoredCampaign:123456789",
@@ -350,6 +359,7 @@ export const adjustBidsTool = {
     {
       label: "Multiple bid adjustments",
       input: {
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         adjustments: [
           {
             campaignUrn: "urn:li:sponsoredCampaign:111111111",

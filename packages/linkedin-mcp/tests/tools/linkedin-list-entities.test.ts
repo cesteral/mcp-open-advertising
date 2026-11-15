@@ -40,6 +40,7 @@ describe("linkedin_list_entities tool", () => {
         entities: [{ id: 111222333, name: "Test Campaign", status: "ACTIVE" }],
         total: 1,
         start: 0,
+        paging: "offset",
       });
 
       const result = await listEntitiesLogic(
@@ -67,6 +68,7 @@ describe("linkedin_list_entities tool", () => {
         entities,
         total: 100,
         start: 0,
+        paging: "offset",
       });
 
       const result = await listEntitiesLogic(
@@ -100,6 +102,7 @@ describe("linkedin_list_entities tool", () => {
         entities: [{ id: 123456789, name: "My Account" }],
         total: 1,
         start: 0,
+        paging: "offset",
       });
 
       const result = await listEntitiesLogic(
@@ -118,6 +121,7 @@ describe("linkedin_list_entities tool", () => {
         entities: [],
         total: 0,
         start: 50,
+        paging: "offset",
       });
 
       await listEntitiesLogic(
@@ -133,8 +137,7 @@ describe("linkedin_list_entities tool", () => {
       expect(mockLinkedInService.listEntities).toHaveBeenCalledWith(
         "campaign",
         "urn:li:sponsoredAccount:123456789",
-        50,
-        10,
+        { start: 50, count: 10, pageToken: undefined },
         mockContext
       );
     });

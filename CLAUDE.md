@@ -183,6 +183,10 @@ A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocke
 
 The tests every server repeats (schema-size guard, the cross-server contract, the server card against `registry.json`) are parameterised suites in `@cesteral/shared/testkit`: `describeSchemaSizeGuard`, `describeCrossServerContract`, `describeServerCard`. A server's `tests/schema-size.test.ts`, `tests/cross-server-contract.test.ts` and `tests/integration/server-card.test.ts` are one call each; what genuinely differs (required tools, destructive pins, terminal operations, platform config) is a parameter, and a server-only check stays a local test beside the call. Change a fleet-wide check in the suite, never in a server's copy. The testkit imports `vitest`, so it is a test-only entry: nothing else in `@cesteral/shared` may import it, and `vitest` stays a devDependency (an optional peer of shared).
 
+## Root Scripts Suite: Don't Boot Servers Per Test File
+
+`pnpm run test:scripts` (`vitest.config.scripts.ts`) boots every server once in vitest's `globalSetup` and hands what each advertises (`tools/list`, serverInfo, prompts and their rendered text, resources) to every test file. A suite that only needs that reads it with `toolsOf(pkg)` / `serverSnapshot(pkg)` from `scripts/lib/fleet-snapshot-inject.mjs`; it must not call `withServerClient` itself, because each test file is its own worker and pays a cold import of the server's whole dist graph per boot (316 boots per run before the snapshot, and the flakes under load that came with them). Boot your own only to drive a server or compare a fresh boot, and say why in `scripts/README.md`.
+
 ## TypeScript Build Issues
 
 If you encounter "The inferred type cannot be named" errors, add explicit return type annotations:

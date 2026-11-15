@@ -25,7 +25,9 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
-import { withServerClient, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { PROMPT_ARG_SETS } from "./fleet-snapshot.mjs";
+import { serverSnapshot } from "./fleet-snapshot-inject.mjs";
 
 const sharedModule = join(
   ROOT,
@@ -43,28 +45,6 @@ const { CROSS_PLATFORM_PROMPTS } = await import(pathToFileURL(sharedModule).href
 
 const PROMPT_NAMES = CROSS_PLATFORM_PROMPTS.map((p) => p.prompt.name);
 
-/**
- * Every server registers both prompts (msads-mcp since #235). Required, so
- * dropping them from a server is a reviewed change rather than a silent one.
- */
-/** Argument sets each prompt is rendered with: none, and every argument set. */
-const ARG_SETS = {
-  cross_platform_campaign_setup: [
-    {},
-    { totalBudget: "50000", objective: "awareness", currency: "EUR" },
-  ],
-  cross_platform_performance_comparison: [
-    {},
-    { dateRange: "LAST_30_DAYS" },
-    { dateRange: "2026-03-01 to 2026-03-31" },
-  ],
-};
-
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
-};
-
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
   .sort();
@@ -81,9 +61,9 @@ function listFiles(dir) {
 
 describe("cross-platform prompts come only from @cesteral/shared", () => {
   it("covers both prompts with every argument", () => {
-    expect(PROMPT_NAMES.sort()).toEqual(Object.keys(ARG_SETS).sort());
+    expect(PROMPT_NAMES.sort()).toEqual(Object.keys(PROMPT_ARG_SETS).sort());
     for (const { prompt } of CROSS_PLATFORM_PROMPTS) {
-      const covered = new Set(ARG_SETS[prompt.name].flatMap((args) => Object.keys(args)));
+      const covered = new Set(PROMPT_ARG_SETS[prompt.name].flatMap((args) => Object.keys(args)));
       for (const arg of prompt.arguments) expect(covered.has(arg.name)).toBe(true);
     }
   });
@@ -105,56 +85,52 @@ describe("cross-platform prompts come only from @cesteral/shared", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("every registering server publishes the shared metadata and renders identical text", async () => {
+  // Every server registers both prompts (msads-mcp since #235). Required, so
+  // dropping them from a server is a reviewed change rather than a silent one.
+  // Each prompt is rendered for every argument set in PROMPT_ARG_SETS by the
+  // fleet snapshot (fleet-snapshot.mjs), and compared here.
+  it("every registering server publishes the shared metadata and renders identical text", () => {
     const expected = new Map(CROSS_PLATFORM_PROMPTS.map((p) => [p.prompt.name, p]));
     const registering = [];
     const problems = [];
 
     for (const pkg of packages) {
-      await withServerClient(pkg, async (client) => {
-        if (!client.getServerCapabilities()?.prompts) return;
-        const { prompts } = await client.request(
-          { method: "prompts/list", params: {} },
-          IDENTITY_SCHEMA
-        );
-        const found = prompts.filter((p) => expected.has(p.name));
-        if (found.length === 0) return;
-        registering.push(pkg);
-        if (found.length !== PROMPT_NAMES.length) {
-          problems.push(`${pkg}: registers ${found.map((p) => p.name)} but not all of them`);
+      const { prompts } = serverSnapshot(pkg);
+      const found = prompts.filter(({ prompt }) => expected.has(prompt.name));
+      if (found.length === 0) continue;
+      registering.push(pkg);
+      if (found.length !== PROMPT_NAMES.length) {
+        problems.push(`${pkg}: registers ${found.map((f) => f.prompt.name)} but not all of them`);
+      }
+
+      for (const { prompt: listed, renders } of found) {
+        const { prompt, generateMessage } = expected.get(listed.name);
+        if (listed.description !== prompt.description) {
+          problems.push(`${pkg} ${listed.name}: description differs from @cesteral/shared`);
+        }
+        const listedArgs = (listed.arguments ?? []).map((a) => ({
+          name: a.name,
+          description: a.description,
+          required: a.required ?? false,
+        }));
+        if (JSON.stringify(listedArgs) !== JSON.stringify(prompt.arguments)) {
+          problems.push(`${pkg} ${listed.name}: arguments differ from @cesteral/shared`);
         }
 
-        for (const listed of found) {
-          const { prompt, generateMessage } = expected.get(listed.name);
-          if (listed.description !== prompt.description) {
-            problems.push(`${pkg} ${listed.name}: description differs from @cesteral/shared`);
-          }
-          const listedArgs = (listed.arguments ?? []).map((a) => ({
-            name: a.name,
-            description: a.description,
-            required: a.required ?? false,
-          }));
-          if (JSON.stringify(listedArgs) !== JSON.stringify(prompt.arguments)) {
-            problems.push(`${pkg} ${listed.name}: arguments differ from @cesteral/shared`);
-          }
-
-          for (const args of ARG_SETS[listed.name]) {
-            const result = await client.request(
-              { method: "prompts/get", params: { name: listed.name, arguments: args } },
-              IDENTITY_SCHEMA
+        for (const args of PROMPT_ARG_SETS[listed.name]) {
+          const rendered = renders.find(
+            (r) => JSON.stringify(r.arguments) === JSON.stringify(args)
+          );
+          if (rendered?.text !== generateMessage(args)) {
+            problems.push(
+              `${pkg} ${listed.name} ${JSON.stringify(args)}: rendered text differs from @cesteral/shared`
             );
-            const text = (result.messages ?? []).map((m) => m.content?.text ?? "").join("\n");
-            if (text !== generateMessage(args)) {
-              problems.push(
-                `${pkg} ${listed.name} ${JSON.stringify(args)}: rendered text differs from @cesteral/shared`
-              );
-            }
           }
         }
-      });
+      }
     }
 
     expect(problems).toEqual([]);
     expect(registering).toEqual(packages);
-  }, 120_000);
+  });
 });

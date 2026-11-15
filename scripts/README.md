@@ -63,9 +63,34 @@ The sync scripts and `generate-server-json.mjs` take `--check` (or have a `check
 
 ### `lib/` and `__tests__/`
 
-- `lib/` holds the modules the scripts share (server boot harness, manifest building, ledger and audit logic) and the repo-wide invariant tests that boot every server, such as write-tool governance coverage and the script-path guard. Their allowlists and snapshots (`*.json`) live beside them.
+- `lib/` holds the modules the scripts share (server boot harness and fleet snapshot, manifest building, ledger and audit logic) and the repo-wide invariant tests that read every server, such as write-tool governance coverage and the script-path guard. Their allowlists and snapshots (`*.json`) live beside them.
 - `__tests__/` holds the tests for the scripts in `check/`, for `ci-local.mjs` and `publish-all.sh`, and the pin on the release workflow's identity.
-- Both are run by `pnpm test:scripts` (Vitest, config in `vitest.config.scripts.ts`), which CI runs on every pull request. Most of these tests boot built servers, so run `pnpm run build` first.
+- Both are run by `pnpm test:scripts` (Vitest, config in `vitest.config.scripts.ts`), which CI runs on every pull request. These tests read built servers, so run `pnpm run build` first.
+
+#### Booting servers in the suite: use the fleet snapshot
+
+A cold in-process boot of a server imports its whole `dist` graph, and every test file runs in its own worker, so a suite that boots its own servers pays that once per file: 316 boots per run before the snapshot, which is also what made the suite flake under load. Instead, vitest's `globalSetup` (`lib/fleet-snapshot-global-setup.mjs`) boots each server **once**, collects what any client can ask of it, and hands that to every test file:
+
+```js
+import { serverSnapshot, toolsOf } from "./fleet-snapshot-inject.mjs";
+
+toolsOf("meta-mcp"); // the raw tools/list wire objects, `cesteral` annotations intact
+serverSnapshot("meta-mcp"); // { serverVersion, capabilities, tools, prompts, resources }
+```
+
+- `prompts[].renders` holds each prompt rendered with its required arguments set to `"x"`, plus every argument set listed in `PROMPT_ARG_SETS` (`lib/fleet-snapshot.mjs`). A suite that needs a prompt rendered another way adds its argument set there; it does not boot a server.
+- A snapshot is plain JSON shared by every file: read it, never mutate it.
+- Running a single test file through `vitest.config.scripts.ts` still runs `globalSetup`, so it boots the whole fleet once first.
+
+Boot a server yourself (`withServerClient` from `lib/boot-server.mjs`) only when the test must **drive** it or compare a fresh boot. Three suites do, one boot per server each:
+
+| Suite                            | Why it cannot read the snapshot                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `tools-list-determinism.test`    | Compares a fresh boot with the snapshot's boot (another process): reading the snapshot twice proves nothing. |
+| `untrusted-error-marker.test`    | Calls every tool with empty arguments to read the error results.                                             |
+| `evals/tool-search-ranking.test` | Runs the corpus's queries against each server's live `*_search_tools`.                                       |
+
+`boot-server.test` boots `meta-mcp` once, to test the harness itself. `tools-list-determinism.test` is also what proves the snapshot is what a live boot returns, for every server.
 
 ## Deployment scripts
 

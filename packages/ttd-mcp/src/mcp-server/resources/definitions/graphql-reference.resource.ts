@@ -125,7 +125,7 @@ Some older mutations use \`userErrors\` instead of \`errors\` — check the sche
 ### List templates
 \`\`\`graphql
 query GetReportTemplates($first: Int, $after: String) {
-  myReportsReportTemplates(first: $first, after: $after) {
+  reportingTemplates(first: $first, after: $after) {
     pageInfo { startCursor hasNextPage endCursor }
     totalCount
     nodes {
@@ -171,7 +171,7 @@ mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
 }
 \`\`\`
 
-**Important:** \`data\` is a **scalar** — do NOT select sub-fields like \`data { id }\`. The mutation does not return the new template's ID directly. Query \`myReportsReportTemplates(last: 1)\` after a successful create to retrieve it.
+**Important:** \`data\` is a **scalar** — do NOT select sub-fields like \`data { id }\`. The mutation does not return the new template's ID directly. Query \`myReportsReportTemplates(last: 1)\` after a successful create to retrieve it (the deprecated pre-2026-05-22 name; TTD's docs do not state the default sort of its replacement \`reportingTemplates\`, so the create tool has not moved to it).
 
 ### Update template
 \`\`\`graphql
@@ -481,7 +481,7 @@ TTD documents \`cancelBulkJob(input: { jobId: 123 }) { data { id } }\` (an inlin
 | \`MyReportsTemplateColumn\` | \`columnOrder\`, \`includedInPivot\`, \`isOverlapColumn\` | ✅ Works |
 | \`MyReportsTemplateColumn\` | \`columnId\`, \`columnType\`, \`name\` | ❌ Do not exist |
 | \`MyReportsGetDerivedTemplateResponse\` | \`requestedReportTemplateId\`, \`name\`, \`reportFormatType\`, \`resultSets\` | ✅ Works |
-| \`MyReportsGetDerivedTemplateResponse\` | \`isDerived\` | ❌ Does not exist |
+| \`MyReportsGetDerivedTemplateResponse\` | \`isDerived\` | ❌ Does not exist (TTD renamed it \`partialAccess\` on 2026-05-22; \`ttd_get_report_template\` selects neither) |
 | \`MyReportsTemplateResultSet\` | \`reportType { name }\`, \`fields\`, \`metrics\`, \`conversionMetrics\` | ✅ Works |
 | \`MyReportsTemplateResultSet\` | \`filters\`, \`name\` | ❌ Do not exist |
 | \`MyReportsTemplateCreatePayload\` | \`data\` (scalar) | ✅ Works |

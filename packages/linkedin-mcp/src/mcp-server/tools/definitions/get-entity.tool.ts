@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
@@ -13,7 +14,7 @@ const TOOL_DESCRIPTION = `Get a single LinkedIn Ads entity by URN.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-**Important:** LinkedIn entity IDs are URNs like \`urn:li:sponsoredAccount:123\`.`;
+**Important:** LinkedIn entity IDs are URNs like \`urn:li:sponsoredCampaign:123\`. Pass the owning ad account as \`adAccountUrn\` for every type except adAccount: LinkedIn addresses campaigns, campaign groups, creatives and conversion rules under their account. A creative's status field is \`intendedStatus\`.`;
 
 export const GetEntityInputSchema = z
   .object({
@@ -21,8 +22,10 @@ export const GetEntityInputSchema = z
     entityUrn: z
       .string()
       .min(1)
-      .describe("The entity URN to retrieve (e.g., urn:li:sponsoredAccount:123)"),
+      .describe("The entity URN to retrieve (e.g., urn:li:sponsoredCampaign:123)"),
+    adAccountUrn: adAccountUrnSchema,
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for getting a LinkedIn Ads entity");
 
 export const GetEntityOutputSchema = z
@@ -46,6 +49,7 @@ export async function getEntityLogic(
   const entity = await linkedInService.getEntity(
     input.entityType as LinkedInEntityType,
     input.entityUrn,
+    input.adAccountUrn,
     context
   );
 
@@ -98,6 +102,7 @@ export const getEntityTool = {
       input: {
         entityType: "campaign",
         entityUrn: "urn:li:sponsoredCampaign:123456789",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
       },
     },
     {

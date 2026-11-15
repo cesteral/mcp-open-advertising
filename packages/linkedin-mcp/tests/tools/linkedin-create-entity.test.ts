@@ -90,6 +90,7 @@ describe("linkedin_create_entity tool", () => {
       expect(mockLinkedInService.createEntity).toHaveBeenCalledWith(
         "campaign",
         expect.objectContaining({ name: "Brand Awareness Campaign" }),
+        undefined,
         mockContext
       );
     });
@@ -130,17 +131,38 @@ describe("linkedin_create_entity tool", () => {
 
 describe("linkedin_validate_entity tool", () => {
   describe("validateEntityTool.logic()", () => {
+    it("does not require objectiveType (LinkedIn marks it optional)", async () => {
+      const result = await validateEntityTool.logic(
+        { entityType: "campaign", mode: "create", data: { name: "x" } },
+        mockContext as any
+      );
+      const fields = result.issues.map((i) => i.field);
+      expect(fields).not.toContain("objectiveType");
+      for (const f of ["costType", "locale", "targetingCriteria", "politicalIntent"]) {
+        expect(fields).toContain(f);
+      }
+    });
+
     it("passes validation for valid campaign create", async () => {
       const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "create",
+          // Every field LinkedIn's Campaigns page marks Required (read 2026-11-14).
           data: {
             name: "Valid Campaign",
             campaignGroup: "urn:li:sponsoredCampaignGroup:987654321",
             account: "urn:li:sponsoredAccount:123456789",
             type: "SPONSORED_UPDATES",
-            objectiveType: "BRAND_AWARENESS",
+            costType: "CPM",
+            unitCost: { amount: "10.00", currencyCode: "USD" },
+            dailyBudget: { amount: "50.00", currencyCode: "USD" },
+            locale: { country: "US", language: "en" },
+            targetingCriteria: {
+              include: { and: [{ or: { "urn:li:adTargetingFacet:locations": ["urn:li:geo:1"] } }] },
+            },
+            offsiteDeliveryEnabled: false,
+            politicalIntent: "NOT_POLITICAL",
             status: "DRAFT",
           },
         },
@@ -202,7 +224,12 @@ describe("linkedin_validate_entity tool", () => {
             campaignGroup: "urn:li:sponsoredCampaignGroup:987654321",
             account: "urn:li:sponsoredAccount:123456789",
             type: "SPONSORED_UPDATES",
-            objectiveType: "BRAND_AWARENESS",
+            costType: "CPM",
+            unitCost: { amount: "10.00", currencyCode: "USD" },
+            locale: { country: "US", language: "en" },
+            targetingCriteria: { include: { and: [] } },
+            offsiteDeliveryEnabled: false,
+            politicalIntent: "NOT_POLITICAL",
             status: "DRAFT",
             dailyBudget: "100.00", // Should be CurrencyAmount object, not string
           },
@@ -335,7 +362,11 @@ describe("linkedin_create_entity governance contract", () => {
 
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     const result = await createEntityLogic(
-      { entityType: "creative", data: { status: "PAUSED" } } as any,
+      {
+        entityType: "creative",
+        adAccountUrn: "urn:li:sponsoredAccount:1",
+        data: { intendedStatus: "PAUSED" },
+      } as any,
       mockContext as any,
       { sessionId: "s" }
     );
