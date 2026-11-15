@@ -29,7 +29,8 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { toManifestEntry } from "./manifest.mjs";
 
 const HEX_64 = /^[0-9a-f]{64}$/;
@@ -53,8 +54,8 @@ let fleetEffectWriteCount = 0;
 
 describe("effect-class manifest coverage", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every effect-class write resolves to a manifest entry with a definitionHash`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: every effect-class write resolves to a manifest entry with a definitionHash`, () => {
+      const tools = toolsOf(pkg);
       const effects = effectWrites(tools);
       fleetEffectWriteCount += effects.length;
 
@@ -73,9 +74,10 @@ describe("effect-class manifest coverage", () => {
           entry.definitionHash,
           `${tool.name}: manifest entry definitionHash must be a 64-char hex SHA-256`
         ).toMatch(HEX_64);
-        expect(entry.toolName, `${tool.name}: manifest entry toolName must match the tool name`).toBe(
-          tool.name
-        );
+        expect(
+          entry.toolName,
+          `${tool.name}: manifest entry toolName must match the tool name`
+        ).toBe(tool.name);
       }
     });
   }

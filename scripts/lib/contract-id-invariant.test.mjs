@@ -20,7 +20,8 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
@@ -28,8 +29,8 @@ const packages = readdirSync(join(ROOT, "packages"))
 
 describe("governed contractId identity invariant", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every governed tool's contractId == slug.toolSlug.vN`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: every governed tool's contractId == slug.toolSlug.vN`, () => {
+      const tools = toolsOf(pkg);
       const governed = tools.filter((t) => t.annotations?.cesteral);
 
       for (const tool of governed) {
@@ -69,8 +70,8 @@ describe("governed contractId identity invariant", () => {
 // that way.
 describe("one contractPlatformSlug per server", () => {
   for (const pkg of packages) {
-    it(`${pkg}: every governed tool uses the same contractPlatformSlug`, async () => {
-      const tools = await withServerClient(pkg, listRawTools);
+    it(`${pkg}: every governed tool uses the same contractPlatformSlug`, () => {
+      const tools = toolsOf(pkg);
       const bySlug = new Map();
       for (const tool of tools) {
         const slug = tool.annotations?.cesteral?.contractPlatformSlug;

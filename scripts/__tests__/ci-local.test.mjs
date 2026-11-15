@@ -31,20 +31,64 @@ describe("ci-local against the real ci.yml", () => {
     expect(() => jobs.map(planJob)).not.toThrow();
   });
 
-  it("runs build-and-test's commands in CI's order", () => {
-    const runs = [
-      ...ci
-        .slice(ci.indexOf("\n  build-and-test:"), ci.indexOf("\n  conformance:"))
-        .matchAll(/^ {8}run: (.+)$/gm),
-    ].map((m) => m[1]);
-    const plan = planJob(jobs.find((j) => j.name === "build-and-test"));
-    expect(plan.commands.map((c) => c.run)).toEqual(runs);
-    expect(runs[0]).toBe("pnpm install --frozen-lockfile");
-    expect(runs).toContain("pnpm run test:scripts");
+  it("runs each job's commands in CI's order", () => {
+    // secret-scan has no `run:`; its one command is the local gitleaks stand-in.
+    for (const job of jobs.filter((j) => j.name !== "secret-scan")) {
+      const block = ci.slice(ci.indexOf(`\n  ${job.name}:`) + 1).split(/\n {2}\S/)[0];
+      const runs = [...block.matchAll(/^ {8}run: (.+)$/gm)].map((m) => m[1]);
+      expect(
+        planJob(job).commands.map((c) => c.run),
+        job.name
+      ).toEqual(runs);
+    }
+  });
+
+  it("keeps every check CI has run (none dropped by splitting the job)", () => {
+    const all = jobs.flatMap((job) => planJob(job).commands.map((c) => c.run));
+    for (const command of [
+      "pnpm run format:check",
+      "pnpm run check:registry",
+      "pnpm run check:registry-tools",
+      "pnpm run check:doc-tool-counts",
+      "pnpm run check:account-scope",
+      "pnpm run check:platform-facts",
+      "pnpm run build",
+      "pnpm run lint",
+      "pnpm run test:scripts",
+      "pnpm run generate:manifests",
+      "pnpm run check:registry-runtime",
+      "pnpm exec turbo run typecheck --only",
+      "pnpm exec turbo run test --only",
+      "pnpm run test:conformance:ci",
+    ]) {
+      expect(all, command).toContain(command);
+    }
+  });
+
+  it("gives every job that needs built packages the build job's output", () => {
+    // `--only` and the scripts suite assume dist/ exists. A job that runs them
+    // without depending on `build` would fail, or pass against nothing.
+    const build = jobs.find((j) => j.name === "build");
+    expect(build.steps.some((s) => s.uses?.startsWith("actions/upload-artifact@"))).toBe(true);
+    for (const name of [
+      "lint",
+      "typecheck",
+      "test-packages",
+      "test-scripts",
+      "attestation",
+      "conformance",
+    ]) {
+      const job = jobs.find((j) => j.name === name);
+      expect(job.needs, name).toEqual(["build"]);
+      expect(
+        job.steps.some((s) => s.uses?.startsWith("actions/download-artifact@")),
+        name
+      ).toBe(true);
+    }
   });
 
   it("keeps needs: and working-directory:", () => {
-    expect(jobs.find((j) => j.name === "conformance").needs).toEqual(["build-and-test"]);
+    expect(jobs.find((j) => j.name === "conformance").needs).toEqual(["build"]);
     const tf = planJob(jobs.find((j) => j.name === "terraform-validate"));
     expect(tf.requires).toEqual(["terraform"]);
     expect(tf.commands.every((c) => c.cwd === "terraform")).toBe(true);

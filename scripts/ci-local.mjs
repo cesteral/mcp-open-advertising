@@ -39,6 +39,9 @@ export const ACTION_MAP = {
   "actions/checkout": null,
   "pnpm/action-setup": null,
   "actions/setup-node": null,
+  // The build job's output is already in the working tree when running locally.
+  "actions/upload-artifact": null,
+  "actions/download-artifact": null,
   "hashicorp/setup-terraform": { requires: "terraform" },
   "gacts/gitleaks": {
     requires: "gitleaks",

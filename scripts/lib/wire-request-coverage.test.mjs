@@ -31,7 +31,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import { citesBasis, coveredTools, referencesIn } from "./wire-request-coverage.mjs";
 
 const allowlist = JSON.parse(
@@ -44,8 +45,8 @@ const packages = readdirSync(join(ROOT, "packages"))
 
 const entriesFor = (list, pkg) => list.filter((e) => e.package === pkg).map((e) => e.tool);
 
-async function writeToolsOf(pkg) {
-  const tools = await withServerClient(pkg, listRawTools);
+function writeToolsOf(pkg) {
+  const tools = toolsOf(pkg);
   return {
     live: new Set(tools.map((t) => t.name)),
     writes: tools.filter((t) => t.annotations?.readOnlyHint === false).map((t) => t.name),
@@ -53,8 +54,8 @@ async function writeToolsOf(pkg) {
 }
 
 describe("every write tool is exercised by a vendor-sourced wire-request test", () => {
-  it.each(packages)("%s: uncovered write tools are allowlisted, and only those", async (pkg) => {
-    const { live, writes } = await writeToolsOf(pkg);
+  it.each(packages)("%s: uncovered write tools are allowlisted, and only those", (pkg) => {
+    const { live, writes } = writeToolsOf(pkg);
     const covered = coveredTools(pkg, writes);
     const uncoveredAllowed = new Set(entriesFor(allowlist.uncovered, pkg));
     const noUpstream = new Set(entriesFor(allowlist.noUpstream, pkg));

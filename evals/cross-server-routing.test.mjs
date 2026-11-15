@@ -58,6 +58,7 @@ import {
   compareToBaseline,
 } from "./lib/score.mjs";
 import { runEval } from "./run-cross-server-routing.mjs";
+import { toolsOf } from "../scripts/lib/fleet-snapshot-inject.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const corpus = JSON.parse(readFileSync(join(ROOT, "evals", "cross-server-routing.json"), "utf-8"));
@@ -67,8 +68,8 @@ const baselines = JSON.parse(
 
 let catalog;
 beforeAll(async () => {
-  catalog = await buildMergedCatalog();
-}, 180_000);
+  catalog = await buildMergedCatalog(serverPackages(), toolsOf);
+});
 
 // ---------------------------------------------------------------------------
 // The merged catalog — the object Layer 2 is a property of.
