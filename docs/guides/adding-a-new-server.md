@@ -6,6 +6,36 @@ Step-by-step guide for adding a new ad platform MCP server to this monorepo. Use
 
 > **How to use the snippets.** They are abridged illustrations, not files to paste: they show the shape of each piece and every `@cesteral/shared` call a server must make, but leave out platform detail. Your config field names, session config and auth headers will differ. Start from the reference files below instead, and treat CI as the authority: most of the rules a new server must meet are enforced by checks, not by this text. Run **`corepack pnpm ci:local`** early and often. It runs `.github/workflows/ci.yml`'s steps in order, and each failure names the file to change. [Step 20](#step-20-verification-checklist) lists the checks and what each one requires.
 
+## Quick start: `pnpm new:server`
+
+Generate the server instead of copying it. Agree the platform key in a [New Platform Proposal](https://github.com/cesteral/mcp-open-advertising/issues/new?template=new_platform_proposal.yml) first; the key is lower snake case and becomes the package name, tool prefix and `platform_key` (`reddit` → `reddit-mcp`, `reddit_*`).
+
+```bash
+pnpm new:server reddit --display-name "Reddit Ads" --base-url https://ads-api.reddit.com/api/v3 --docs-url https://ads-api.reddit.com/docs
+```
+
+Add `--dry-run` to list the files first; `--port` and `--rate-limit` (default 25 requests/min) are optional. It writes `packages/reddit-mcp` from the management template in `templates/server/management/`, and adds the server to `registry.json` (and the registry data `@cesteral/shared` compiles in), `platform-facts.json` and its doc's counts, the README fleet table, Cloud Build's `images:`, the three Terraform maps, the issue forms and the two docs tables. Then:
+
+```bash
+pnpm install && pnpm run build
+pnpm sync:untrusted-declarations
+pnpm run test
+```
+
+`sync:untrusted-declarations` adds the new tools to `scripts/lib/untrusted-declarations.snapshot.json`; it reads the built server, so it cannot run before the build. The generated server lists accounts, lists and reads entities, validates payloads, computes pacing and has tool search. Its create, update, delete and bulk-status tools are governed stubs: their schemas and governance annotations are complete, and every call returns an error until you implement it. The generated `packages/reddit-mcp/README.md` ends with the list to work through before it can merge:
+
+- Implement the four write tools, each with a dry-run and a wire-request test (`tests/**/*wire*.test.ts`, calling the tool's `*Logic` with only `fetch` stubbed and a `// basis:` citation). CI's wire-request coverage fails until all four have one; nothing else should.
+- Replace the placeholder endpoints in `entity-mapping.ts` and the service.
+- Point the auth adapter's `validate()` at a cheap authenticated endpoint.
+- Verify the server's two `platform-facts.json` entries (API base, rate limit).
+- Declare untrusted paths for each write tool once it returns platform text.
+- Check `operational.terminalOperations` in `registry.json`.
+- Add the platform's credential secrets to `mcp_secret_env_vars` in `terraform/variables.tf`.
+- Replace the scaffold's `contract.exceptions` reasons, or ship the tools.
+- Update the fleet count in the root README.
+
+CI's `scaffold-smoke` job generates a server this way on every pull request and fails unless the only failing check is that wire-request coverage, so the template keeps passing as the fleet checks change. The steps below explain what each generated file does; read the ones for the code you are replacing.
+
 **Copy from `packages/pinterest-mcp` and rename** (no platform logic, or only platform names):
 
 | File                                                                                                      | Change                                                                                                                        |
@@ -23,6 +53,7 @@ Step-by-step guide for adding a new ad platform MCP server to this monorepo. Use
 
 ## Table of Contents
 
+- [Quick start: `pnpm new:server`](#quick-start-pnpm-newserver)
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Step 0: Planning](#step-0-planning)
