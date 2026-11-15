@@ -259,6 +259,7 @@ Use the targeting criteria when creating or updating a campaign:
   "params": {
     "entityType": "campaign",
     "entityUrn": "urn:li:sponsoredCampaign:{campaignId}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "targetingCriteria": {
         "include": { ... }

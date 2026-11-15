@@ -57,6 +57,7 @@ describe("linkedin_delete_entity governance contract", () => {
   });
 
   it("dry_run returns a deleted expected post-state and does not delete", async () => {
+    svc.getEntity.mockResolvedValue({ ...campaign, status: "DRAFT" });
     const result = await deleteEntityLogic(
       { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:123", dry_run: true } as any,
       ctx,
@@ -71,16 +72,24 @@ describe("linkedin_delete_entity governance contract", () => {
     });
   });
 
-  it("dry_run on an ACTIVE campaign reports wouldSucceed:false", async () => {
-    svc.getEntity.mockResolvedValue({ ...campaign, status: "ACTIVE" });
-    const result = await deleteEntityLogic(
-      { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:123", dry_run: true } as any,
-      ctx,
-      sdk
-    );
-    expect(result.dryRun?.wouldSucceed).toBe(false);
-    expect(result.dryRun?.validationErrors.map((e) => e.code)).toContain("ACTIVE_NOT_DELETABLE");
-  });
+  // LinkedIn's DELETE removes only a DRAFT campaign; any other goes to
+  // PENDING_DELETION by status update (Campaigns page, read 2026-11-14).
+  it.each(["ACTIVE", "PAUSED", "ARCHIVED"])(
+    "dry_run on a %s campaign reports wouldSucceed:false",
+    async (status) => {
+      svc.getEntity.mockResolvedValue({ ...campaign, status });
+      const result = await deleteEntityLogic(
+        { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:123", dry_run: true } as any,
+        ctx,
+        sdk
+      );
+      expect(result.dryRun?.wouldSucceed).toBe(false);
+      expect(result.dryRun?.validationErrors.map((e) => e.code)).toEqual([
+        "NOT_DRAFT_NOT_DELETABLE",
+      ]);
+      expect(result.dryRun?.validationErrors[0]?.message).toMatch(/PENDING_DELETION/);
+    }
+  );
 
   it("execute captures before (live) and after (deleted) + dispatchedCapability", async () => {
     const result = await deleteEntityLogic(

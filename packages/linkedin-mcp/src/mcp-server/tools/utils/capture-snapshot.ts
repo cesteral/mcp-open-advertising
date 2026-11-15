@@ -32,7 +32,12 @@ import type {
 export interface LinkedInServiceLike {
   // Loosened from `LinkedInService.getEntity` (generic over the entity-type
   // union) so the helper accepts arbitrary `entityType` strings.
-  getEntity?: (entityType: any, entityUrn: string, context?: RequestContext) => Promise<unknown>;
+  getEntity?: (
+    entityType: any,
+    entityUrn: string,
+    adAccountUrn: string | undefined,
+    context?: RequestContext
+  ) => Promise<unknown>;
 }
 
 /**
@@ -141,11 +146,12 @@ export async function captureLinkedInSnapshot(
   service: LinkedInServiceLike,
   entityType: string,
   entityUrn: string,
+  adAccountUrn: string | undefined,
   context: RequestContext
 ): Promise<NormalizedEntitySnapshot | undefined> {
   if (!ENTITY_KIND_MAP[entityType] || !service.getEntity) return undefined;
   try {
-    const current = (await service.getEntity(entityType, entityUrn, context)) as
+    const current = (await service.getEntity(entityType, entityUrn, adAccountUrn, context)) as
       | Record<string, unknown>
       | undefined;
     if (!current || typeof current !== "object") return undefined;

@@ -61,17 +61,19 @@ ACTIVE, CANCELED, DRAFT, PENDING_DELETION
 |-------|------|----------|-------------|
 | name | string | Yes | Campaign name |
 | campaignGroup | string | Yes | Campaign group URN |
-| account | string | Yes | Ad account URN |
-| type | string | Yes | SPONSORED_UPDATES, TEXT_AD, DYNAMIC, etc. |
-| objectiveType | string | Yes | BRAND_AWARENESS, WEBSITE_TRAFFIC, etc. |
-| status | string | Yes | ACTIVE, PAUSED, DRAFT, ARCHIVED, CANCELED |
-| dailyBudget | CurrencyAmount | No | Daily spending limit |
-| totalBudget | CurrencyAmount | No | Total campaign budget |
-| bidType | string | No | CPM, CPC, CPS, AUTOMATED |
-| unitCost | CurrencyAmount | No | Bid amount (used when bidType is CPM/CPC) |
+| account | string | Yes | Ad account URN (immutable) |
+| type | string | Yes | SPONSORED_UPDATES, TEXT_AD, SPONSORED_INMAILS, DYNAMIC |
+| costType | string | Yes | CPM, CPC, CPV |
+| unitCost | CurrencyAmount | Yes | Bid, target cost or cost cap, depending on the bidding strategy |
+| dailyBudget | CurrencyAmount | Yes, unless totalBudget | Daily spending limit |
+| totalBudget | CurrencyAmount | Yes, unless dailyBudget | Lifetime budget |
+| locale | object | Yes | \`{ country, language }\`, a supported combination |
+| targetingCriteria | object | Yes | Audience targeting definition |
+| offsiteDeliveryEnabled | boolean | Yes | Serve on the LinkedIn Audience Network (no default) |
+| politicalIntent | string | Yes | POLITICAL, NOT_POLITICAL, NOT_DECLARED |
+| status | string | Yes | ACTIVE, PAUSED, DRAFT, ARCHIVED (reversible), CANCELED, PENDING_DELETION |
+| objectiveType | string | No | BRAND_AWARENESS, ENGAGEMENT, LEAD_GENERATION, WEBSITE_CONVERSIONS, VIDEO_VIEWS, etc. |
 | runSchedule | DateRange | No | Start/end timestamps (ms) |
-| targetingCriteria | object | No | Audience targeting definition |
-| locale | object | No | Language and country for targeting |
 
 ## Campaign Types
 SPONSORED_UPDATES, TEXT_AD, DYNAMIC, SPONSORED_INMAILS, VIDEO, CAROUSEL
@@ -82,6 +84,13 @@ ENGAGEMENT, VIDEO_VIEWS, TALENT_LEADS
 `,
 
   creative: `# LinkedIn Creative Schema
+
+These are the fields \`linkedin_create_entity\` sends to the legacy \`/v2/adCreatives\`
+collection. A creative is read, updated and deleted on LinkedIn's Creatives API
+(\`/rest/adAccounts/{accountId}/creatives/{encoded URN}\`, #210), whose schema is
+simplified: its status field is \`intendedStatus\` (ACTIVE, PAUSED, DRAFT, ARCHIVED,
+CANCELED, PENDING_DELETION), and \`name\` and \`leadgenCallToAction\` are the
+other fields an update can change.
 
 ## Key Fields
 

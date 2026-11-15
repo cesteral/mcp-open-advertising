@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
+import { assertDuplicable } from "../../../services/linkedin/linkedin-service.js";
 import {
   runLinkedInDuplicateDryRun,
   resolveLinkedInDuplicateCapability,
@@ -24,9 +26,17 @@ import type {
 
 const TOOL_NAME = "linkedin_duplicate_entity";
 const TOOL_TITLE = "Duplicate LinkedIn Ads Entity";
+/**
+ * An ad account cannot be copied, and a creative's read and create are on
+ * different LinkedIn APIs until creatives migrate (`assertDuplicable`).
+ */
+const DUPLICABLE_ENTITY_TYPES = getEntityTypeEnum().filter(
+  (t) => t !== "adAccount" && t !== "creative"
+) as [string, ...string[]];
+
 const TOOL_DESCRIPTION = `Copy a LinkedIn Ads entity by reading it and creating a new entity with the same settings.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${DUPLICABLE_ENTITY_TYPES.join(", ")}
 
 LinkedIn does not have a native copy API endpoint, so this tool:
 1. Reads the source entity
@@ -36,14 +46,17 @@ LinkedIn does not have a native copy API endpoint, so this tool:
 5. Creates the new entity
 
 **Gotchas:**
+- Pass the source's ad account as \`adAccountUrn\`; the copy is created in that account.
+- An adAccount cannot be duplicated (create one instead), and a creative cannot be duplicated yet (its read and create are on different LinkedIn APIs).
 - The new entity will be in DRAFT status regardless of source status.
 - Some entity-specific fields may need manual adjustment after duplication.
-- Campaign URNs in references (e.g., creative.campaign) are preserved from source.`;
+- References to other entities (e.g., a campaign's campaignGroup) are preserved from source.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to duplicate"),
+    entityType: z.enum(DUPLICABLE_ENTITY_TYPES).describe("Type of entity to duplicate"),
     entityUrn: z.string().min(1).describe("The source entity URN to copy"),
+    adAccountUrn: adAccountUrnSchema,
     newName: z
       .string()
       .optional()
@@ -56,6 +69,7 @@ export const DuplicateEntityInputSchema = z
         "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in DRAFT, projected from the source) without creating anything."
       ),
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for duplicating a LinkedIn Ads entity");
 
 export const DuplicateEntityOutputSchema = z
@@ -86,10 +100,17 @@ export async function duplicateEntityLogic(
 ): Promise<DuplicateEntityOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
   const dispatchedCapability = resolveLinkedInDuplicateCapability(input.entityType);
+  // Refused on dry-run too: a dry-run must not approve a copy the write refuses.
+  assertDuplicable(input.entityType as LinkedInEntityType);
 
   if (input.dry_run === true) {
     const dryRun = await runLinkedInDuplicateDryRun(
-      { entityType: input.entityType, entityUrn: input.entityUrn, newName: input.newName },
+      {
+        entityType: input.entityType,
+        entityUrn: input.entityUrn,
+        adAccountUrn: input.adAccountUrn,
+        newName: input.newName,
+      },
       linkedInService,
       context
     );
@@ -106,6 +127,7 @@ export async function duplicateEntityLogic(
   const newEntity = (await linkedInService.duplicateEntity(
     input.entityType as LinkedInEntityType,
     input.entityUrn,
+    input.adAccountUrn,
     { newName: input.newName },
     context
   )) as unknown as Record<string, unknown>;
@@ -178,7 +200,11 @@ export const duplicateEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
+        argMap: {
+          entityType: "entityType",
+          entityUrn: "entityUrn",
+          adAccountUrn: "adAccountUrn",
+        },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.duplicate_entity.v1",
@@ -197,6 +223,7 @@ export const duplicateEntityTool = {
       input: {
         entityType: "campaign",
         entityUrn: "urn:li:sponsoredCampaign:123456789",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
       },
     },
     {
@@ -204,6 +231,7 @@ export const duplicateEntityTool = {
       input: {
         entityType: "campaignGroup",
         entityUrn: "urn:li:sponsoredCampaignGroup:987654321",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
         newName: "Q2 2026 Brand Awareness (Copy)",
       },
     },
