@@ -29,7 +29,7 @@ Ad Account (urn:li:sponsoredAccount:XXXXXXXXX)
 | **adAccount** | \`/rest/adAccounts\` | Ad Account |
 | **campaignGroup** | \`/rest/adAccounts/{accountId}/adCampaignGroups\` | Campaign Group |
 | **campaign** | \`/rest/adAccounts/{accountId}/adCampaigns\` | Campaign |
-| **creative** | \`/v2/adCreatives\` for list and create *(not yet migrated — schema rewrite, #210)*; get/update/delete on \`/rest/adAccounts/{accountId}/creatives/{encodedUrn}\` | Creative |
+| **creative** | \`/rest/adAccounts/{accountId}/creatives\` (Creatives API) | Creative |
 | **conversionRule** | \`/rest/conversions\` (list, create); get/update at \`/rest/conversions/{id}?account={accountUrn}\`; no delete | Conversion Rule |
 
 ## Key Concepts
@@ -56,7 +56,7 @@ URNs must be URL-encoded when used in API paths:
 2. **Conversion Rule(s)** — optional; create if tracking conversions
 3. **Campaign Group** — requires \`account\` URN, \`name\`, \`status\`
 4. **Campaign(s)** — requires \`campaignGroup\` and \`account\` URNs, \`name\`, \`type\`, \`costType\`, \`unitCost\`, a daily or total budget, \`locale\`, \`targetingCriteria\`, \`offsiteDeliveryEnabled\`, \`politicalIntent\` and \`status\` (\`objectiveType\` is optional)
-5. **Creative(s)** — requires \`campaign\` URN, \`reference\` content URN
+5. **Creative(s)** — requires \`adAccountUrn\`, a \`campaign\` URN and \`content\` (e.g. \`{ "reference": "urn:li:share:…" }\`); status field \`intendedStatus\`
 
 ## LinkedIn API Patterns
 
@@ -83,15 +83,12 @@ entity (a creative also while its campaign is DRAFT); anything else is deleted
 by setting its status (or \`intendedStatus\`) to \`PENDING_DELETION\`. ARCHIVED is
 reversible. LinkedIn documents no delete for a conversion rule.
 
-### List: GET /rest/adAccounts/{accountId}/{entityPath}?q=search&start={n}&count={n}
-Offset-based pagination via \`start\` and \`count\` parameters.
-Response contains \`elements\` array and \`paging\` object.
+### List: one finder per entity
+- Campaigns and campaign groups: \`GET /rest/adAccounts/{accountId}/{entityPath}?q=search&start={n}&count={n}\`, offset paging, \`elements\` and \`paging\` in the response.
+- Creatives: \`GET /rest/adAccounts/{accountId}/creatives?q=criteria&pageSize={n}\`, cursor paging: pass the response's \`metadata.nextPageToken\` back as \`pageToken\` (\`linkedin_list_entities\` returns it as \`pagination.nextCursor\`). Max page size 100.
+- Conversion rules: \`GET /rest/conversions?q=account&account={urn}\`, everything in one response.
 
-Entities not yet migrated still scope by query parameter:
-- \`accounts=List(urn%3Ali%3AsponsoredAccount%3A123)\` — creatives (\`/v2/adCreatives\`; Rest.li 2.0 list syntax)
-- \`account\` — conversion rules (\`/rest/conversions?q=account&account={urn}\`, no paging)
-
-Campaigns and campaign groups no longer use a scoping parameter: the account is part of their path.
+Every list call sends \`X-Restli-Method: FINDER\`.
 
 ## Required Headers (All Requests)
 

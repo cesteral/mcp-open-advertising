@@ -13,7 +13,12 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 const linkedInService = {
-  listEntities: vi.fn(async () => ({ entities: [{ id: "urn:li:test:1" }], total: 1, start: 0 })),
+  listEntities: vi.fn(async () => ({
+    entities: [{ id: "urn:li:test:1" }],
+    total: 1,
+    start: 0,
+    paging: "offset",
+  })),
   getEntity: vi.fn(async () => ({ id: "urn:li:test:1" })),
   createEntity: vi.fn(async () => ({ id: "urn:li:test:new" })),
   updateEntity: vi.fn(async () => ({})),
@@ -25,9 +30,11 @@ const linkedInService = {
   bulkUpdateStatus: vi.fn(async (entityType: string, entityUrns: string[]) => ({
     results: entityUrns.map((entityUrn: string) => ({ entityUrn, success: true })),
   })),
-  bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
-    results: items.map(() => ({ success: true, entity: { id: "urn:li:test:new" } })),
-  })),
+  bulkCreateEntities: vi.fn(
+    async (_entityType: string, _adAccountUrn: string, items: unknown[]) => ({
+      results: items.map(() => ({ success: true, entity: { id: "urn:li:test:new" } })),
+    })
+  ),
   bulkUpdateEntities: vi.fn(
     async (_entityType: string, _adAccountUrn: string, items: Array<{ entityUrn: string }>) => ({
       results: items.map((item) => ({ entityUrn: item.entityUrn, success: true })),

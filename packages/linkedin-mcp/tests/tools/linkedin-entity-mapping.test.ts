@@ -2,11 +2,9 @@
 //
 // Entity path model after the staged /v2/ -> /rest/ migration (#210).
 //
-// The migration is still staged: creative list/create need a schema rewrite and
-// stay on /v2/adCreatives. Item paths (get/update/delete) are all on /rest/ and
-// take the owning ad account (#210). A half-done migration is exactly the kind
-// of state that rots quietly, so the invariants that keep it coherent are
-// pinned here rather than left to reviewer memory.
+// Every entity's collection and item paths are on /rest/; item paths take the
+// owning ad account (#210). The invariants that keep the path model coherent
+// are pinned here rather than left to reviewer memory.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -63,31 +61,25 @@ describe("staged migration invariants", () => {
     expect(types).toEqual(["adAccount", "campaignGroup", "campaign", "creative", "conversionRule"]);
   });
 
-  it.each(types)("%s: apiSurface agrees with the path it actually builds", (type) => {
+  it.each(types)("%s: every collection path is on /rest/", (type) => {
     const config = getEntityConfig(type as LinkedInEntityType);
     const path = config.accountScoped ? config.collectionPath("123") : config.collectionPath();
-    if (config.apiSurface === "rest") {
-      expect(path, `${type} claims rest but builds ${path}`).toMatch(/^\/rest\//);
-    } else {
-      expect(path, `${type} claims legacy-v2 but builds ${path}`).toMatch(/^\/v2\//);
-    }
+    expect(path, `${type} builds ${path}`).toMatch(/^\/rest\//);
   });
 
-  it.each(types)("%s: anything left on /v2/ says why", (type) => {
-    const config = getEntityConfig(type as LinkedInEntityType);
-    if (config.apiSurface !== "legacy-v2") return;
-    // Without this, "not migrated yet" and "nobody noticed" look identical.
-    expect(config.migrationBlockedBy ?? "", `${type} is on /v2/ with no reason`).not.toHaveLength(
-      0
+  it("lists creatives with the Creatives API criteria finder and cursor paging", () => {
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Search For Creatives".
+    expect(getEntityConfig("creative").collectionPath("123")).toBe(
+      "/rest/adAccounts/123/creatives"
     );
+    expect(getEntityConfig("creative").listFinder).toEqual({ name: "criteria", paging: "cursor" });
   });
 
-  it("still requires an ad account to list creatives and conversion rules", () => {
-    // THE regression this guards. Those two stayed on /v2/, where the account is
-    // a query parameter rather than part of the path. Deriving "needs an
-    // account" from `accountScoped` alone would have quietly stopped requiring
-    // one for exactly the entities the migration left behind.
-    expect(getEntityConfig("creative").accountScoped).toBe(false);
+  it("still requires an ad account to list conversion rules", () => {
+    // THE regression this guards. A conversion rule's account is a query
+    // parameter rather than part of the path. Deriving "needs an account" from
+    // `accountScoped` alone would quietly stop requiring one.
+    expect(getEntityConfig("creative").accountScoped).toBe(true);
     expect(getEntityConfig("conversionRule").accountScoped).toBe(false);
     expect(isAccountScopedEntity("creative")).toBe(true);
     expect(isAccountScopedEntity("conversionRule")).toBe(true);

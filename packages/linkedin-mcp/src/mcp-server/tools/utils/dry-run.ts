@@ -246,6 +246,8 @@ export async function runLinkedInCreateDryRun(
   _context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(args.data);
+  const creativeStatusError = creativeStatusFieldError(args.entityType, args.data);
+  if (creativeStatusError) validationErrors.push(creativeStatusError);
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[args.entityType]) {

@@ -42,7 +42,11 @@ describe("LinkedInService", () => {
         paging: { count: 2, start: 0, total: 2 },
       });
 
-      const result = await service.listEntities("campaign", "urn:li:sponsoredAccount:123456789");
+      const result = await service.listEntities(
+        "campaign",
+        "urn:li:sponsoredAccount:123456789",
+        {}
+      );
 
       expect(result.entities).toHaveLength(2);
       expect(result.total).toBe(2);
@@ -64,7 +68,10 @@ describe("LinkedInService", () => {
         paging: { count: 0, start: 50, total: 50 },
       });
 
-      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", 50, 10);
+      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", {
+        start: 50,
+        count: 10,
+      });
 
       const [, params] = mockHttpClient.get.mock.calls[0];
       expect(params.start).toBe("50");
@@ -74,7 +81,7 @@ describe("LinkedInService", () => {
     it("caps count at 100", async () => {
       mockHttpClient.get.mockResolvedValueOnce({ elements: [], paging: {} });
 
-      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", 0, 200);
+      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", { count: 200 });
 
       const [, params] = mockHttpClient.get.mock.calls[0];
       expect(parseInt(params.count, 10)).toBeLessThanOrEqual(100);
@@ -86,7 +93,7 @@ describe("LinkedInService", () => {
         paging: { count: 1, start: 0, total: 1 },
       });
 
-      await service.listEntities("adAccount");
+      await service.listEntities("adAccount", undefined, {});
 
       const [path, params] = mockHttpClient.get.mock.calls[0];
       expect(path).toBe("/rest/adAccounts");
@@ -157,19 +164,30 @@ describe("LinkedInService", () => {
     });
   });
 
-  describe("legacy list scoping params", () => {
-    it("scopes creatives with a Rest.li 2.0 list, not the 1.0 `accounts[0]` key", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
-      await service.listEntities("creative", "urn:li:sponsoredAccount:7");
-      const [path, params] = mockHttpClient.get.mock.calls[0];
-      expect(path).toBe("/v2/adCreatives");
-      expect(params.accounts).toEqual(["urn:li:sponsoredAccount:7"]);
-      expect(Object.keys(params)).not.toContain("accounts[0]");
+  describe("list finders and conversion-rule items", () => {
+    it("lists creatives under the account with the criteria finder and a page size", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ elements: [], metadata: {} });
+      const out = await service.listEntities("creative", "urn:li:sponsoredAccount:7", {
+        count: 10,
+      });
+      const [path, params, , options] = mockHttpClient.get.mock.calls[0];
+      expect(path).toBe("/rest/adAccounts/7/creatives");
+      expect(params).toEqual({ q: "criteria", pageSize: "10" });
+      expect(options).toEqual({ restliMethod: "FINDER" });
+      expect(out.paging).toBe("cursor");
+      expect(out.nextPageToken).toBeUndefined();
+    });
+
+    it("refuses a pageToken for an offset-paged finder", async () => {
+      await expect(
+        service.listEntities("campaign", "urn:li:sponsoredAccount:7", { pageToken: "x" })
+      ).rejects.toThrow(/start\/count/);
+      expect(mockHttpClient.get).not.toHaveBeenCalled();
     });
 
     it("lists conversion rules with the `account` finder and no paging parameters", async () => {
       mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
-      await service.listEntities("conversionRule", "urn:li:sponsoredAccount:7", 0, 50);
+      await service.listEntities("conversionRule", "urn:li:sponsoredAccount:7", { count: 50 });
       const [path, params] = mockHttpClient.get.mock.calls[0];
       expect(path).toBe("/rest/conversions");
       expect(params).toEqual({ q: "account", account: "urn:li:sponsoredAccount:7" });
@@ -209,15 +227,33 @@ describe("LinkedInService", () => {
         status: "DRAFT",
       };
 
-      const result = await service.createEntity("campaignGroup", data);
+      const result = await service.createEntity("campaignGroup", data, undefined);
 
       expect(result).toEqual({ id: 987654321 });
       const [path, body] = mockHttpClient.post.mock.calls[0];
-      // The account moves from the payload into the path under /rest/. The
-      // payload still carries it, which is why create could migrate without a
-      // new tool parameter.
+      // The account moves from the payload into the path under /rest/; the
+      // payload still carries it, so adAccountUrn is optional here.
       expect(path).toBe("/rest/adAccounts/123456789/adCampaignGroups");
       expect(body).toMatchObject(data);
+    });
+
+    it("posts a creative under adAccountUrn, with no account in the body", async () => {
+      mockHttpClient.post.mockResolvedValueOnce({ id: "urn:li:sponsoredCreative:1" });
+      const data = {
+        campaign: "urn:li:sponsoredCampaign:5",
+        content: { reference: "urn:li:share:9" },
+      };
+      await service.createEntity("creative", data, "urn:li:sponsoredAccount:7");
+      const [path, body] = mockHttpClient.post.mock.calls[0];
+      expect(path).toBe("/rest/adAccounts/7/creatives");
+      expect(body).toEqual(data);
+    });
+
+    it("refuses a creative create with no adAccountUrn", async () => {
+      await expect(
+        service.createEntity("creative", { campaign: "urn:li:sponsoredCampaign:5" }, undefined)
+      ).rejects.toThrow(/Pass adAccountUrn\./);
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
     });
   });
 

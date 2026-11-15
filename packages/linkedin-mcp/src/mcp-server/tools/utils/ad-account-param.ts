@@ -40,3 +40,21 @@ export function refineAdAccountUrn(
     message: `adAccountUrn is required for a ${value.entityType}: LinkedIn addresses it under its ad account.`,
   });
 }
+
+/**
+ * `superRefine` body for the create tools: a creative's body has no writable
+ * account (`account` is read-only on the Creatives API), so its create needs
+ * `adAccountUrn`. The other types name their account in the body.
+ */
+export function refineCreateAdAccountUrn(
+  value: { entityType: string; adAccountUrn?: string },
+  ctx: z.RefinementCtx
+): void {
+  if (value.adAccountUrn !== undefined || value.entityType !== "creative") return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["adAccountUrn"],
+    message:
+      "adAccountUrn is required to create a creative: LinkedIn creates it under its ad account, and a creative body has no writable account.",
+  });
+}
