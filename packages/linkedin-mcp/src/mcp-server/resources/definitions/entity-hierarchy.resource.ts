@@ -19,7 +19,7 @@ Ad Account (urn:li:sponsoredAccount:XXXXXXXXX)
   ├── Campaign Group (urn:li:sponsoredCampaignGroup:XXXXXXXXX)
   │     └── Campaign (urn:li:sponsoredCampaign:XXXXXXXXX)
   │           └── Creative (urn:li:sponsoredCreative:XXXXXXXXX)
-  └── Conversion Rule (urn:li:conversion:XXXXXXXXX)
+  └── Conversion Rule (urn:lla:llaPartnerConversion:XXXXXXXXX)
 \`\`\`
 
 ## Entity Types (5 total)
@@ -29,8 +29,8 @@ Ad Account (urn:li:sponsoredAccount:XXXXXXXXX)
 | **adAccount** | \`/rest/adAccounts\` | Ad Account |
 | **campaignGroup** | \`/rest/adAccounts/{accountId}/adCampaignGroups\` | Campaign Group |
 | **campaign** | \`/rest/adAccounts/{accountId}/adCampaigns\` | Campaign |
-| **creative** | \`/v2/adCreatives\` *(not yet migrated — schema rewrite, #210)* | Creative |
-| **conversionRule** | \`/rest/conversions\` (list, create); get/update/delete on legacy \`/v2/conversions\` *(#210)* | Conversion Rule |
+| **creative** | \`/v2/adCreatives\` for list and create *(not yet migrated — schema rewrite, #210)*; get/update/delete on \`/rest/adAccounts/{accountId}/creatives/{encodedUrn}\` | Creative |
+| **conversionRule** | \`/rest/conversions\` (list, create); get/update at \`/rest/conversions/{id}?account={accountUrn}\`; no delete | Conversion Rule |
 
 ## Key Concepts
 
@@ -40,7 +40,7 @@ All LinkedIn entity IDs are URNs (Uniform Resource Names):
 - Campaign Group: \`urn:li:sponsoredCampaignGroup:987654321\`
 - Campaign: \`urn:li:sponsoredCampaign:111222333\`
 - Creative: \`urn:li:sponsoredCreative:444555666\`
-- Conversion Rule: \`urn:li:conversion:777888999\`
+- Conversion Rule: \`urn:lla:llaPartnerConversion:777888999\`
 
 URNs must be URL-encoded when used in API paths:
 \`urn:li:sponsoredAccount:123\` → \`urn%3Ali%3AsponsoredAccount%3A123\`
@@ -55,7 +55,7 @@ URNs must be URL-encoded when used in API paths:
 1. **Ad Account** — pre-exists; use \`linkedin_list_ad_accounts\` to find URN
 2. **Conversion Rule(s)** — optional; create if tracking conversions
 3. **Campaign Group** — requires \`account\` URN, \`name\`, \`status\`
-4. **Campaign(s)** — requires \`campaignGroup\` URN, \`account\` URN, \`type\`, \`objectiveType\`
+4. **Campaign(s)** — requires \`campaignGroup\` and \`account\` URNs, \`name\`, \`type\`, \`costType\`, \`unitCost\`, a daily or total budget, \`locale\`, \`targetingCriteria\`, \`offsiteDeliveryEnabled\`, \`politicalIntent\` and \`status\` (\`objectiveType\` is optional)
 5. **Creative(s)** — requires \`campaign\` URN, \`reference\` content URN
 
 ## LinkedIn API Patterns
@@ -63,15 +63,25 @@ URNs must be URL-encoded when used in API paths:
 ### Create: POST /rest/adAccounts/{accountId}/{entityPath}
 Body is JSON. Response contains the new entity URN.
 
-### Read: GET /v2/{entityPath}/{encodedUrn} *(still legacy — #210)*
-URN must be URL-encoded in path. Exception: an ad account is read, updated and
-deleted at \`/rest/adAccounts/{numericId}\` (e.g. \`/rest/adAccounts/123\`), keyed
-by the numeric id, not the URN.
+### Read, update, delete: one item path per entity, under its ad account
+A LinkedIn URN does not carry its owning account, so the get, update, delete,
+duplicate, bulk-update and bid tools take \`adAccountUrn\` (every entity type
+except adAccount):
 
-### Update: POST /v2/{entityPath}/{encodedUrn} *(still legacy — #210)* with X-Restli-Method: PARTIAL_UPDATE
-Body: \`{ "patch": { "$set": { ...fields } } }\`
+| Entity | Item path |
+|--------|-----------|
+| adAccount | \`/rest/adAccounts/{numericId}\` |
+| campaignGroup | \`/rest/adAccounts/{accountId}/adCampaignGroups/{numericId}\` |
+| campaign | \`/rest/adAccounts/{accountId}/adCampaigns/{numericId}\` |
+| creative | \`/rest/adAccounts/{accountId}/creatives/{encoded creative URN}\` |
+| conversionRule | \`/rest/conversions/{numericId}?account={encoded account URN}\` |
 
-### Delete: DELETE /v2/{entityPath}/{encodedUrn} *(still legacy — #210)*
+Read is GET. Update is POST with \`X-Restli-Method: PARTIAL_UPDATE\` and body
+\`{ "patch": { "$set": { ...fields } } }\`; a creative's status field is
+\`intendedStatus\`. Delete is DELETE, and LinkedIn accepts it only for a DRAFT
+entity (a creative also while its campaign is DRAFT); anything else is deleted
+by setting its status (or \`intendedStatus\`) to \`PENDING_DELETION\`. ARCHIVED is
+reversible. LinkedIn documents no delete for a conversion rule.
 
 ### List: GET /rest/adAccounts/{accountId}/{entityPath}?q=search&start={n}&count={n}
 Offset-based pagination via \`start\` and \`count\` parameters.

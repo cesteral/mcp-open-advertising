@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineAdAccountUrn } from "../utils/ad-account-param.js";
 import { runLinkedInDeleteDryRun, resolveLinkedInDeleteCapability } from "../utils/dry-run.js";
 import { snapshotFromLinkedInEntity, buildLinkedInSnapshot } from "../utils/capture-snapshot.js";
 import {
@@ -22,22 +23,30 @@ import type {
 
 const TOOL_NAME = "linkedin_delete_entity";
 const TOOL_TITLE = "Delete LinkedIn Ads Entity";
-const TOOL_DESCRIPTION = `Delete a LinkedIn Ads entity by URN.
+/** LinkedIn documents no delete for a conversion rule. */
+const DELETABLE_ENTITY_TYPES = getEntityTypeEnum().filter((t) => t !== "conversionRule") as [
+  string,
+  ...string[],
+];
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+const TOOL_DESCRIPTION = `Delete a LinkedIn Ads entity by URN (HTTP DELETE).
+
+**Supported entity types:** ${DELETABLE_ENTITY_TYPES.join(", ")}
 
 **Gotchas:**
-- Active campaigns/campaign groups must be paused before deletion.
-- Deletion is permanent and cannot be undone.
-- Creative deletion will unlink it from any campaigns.`;
+- Pass the owning ad account as \`adAccountUrn\` for every type except adAccount.
+- LinkedIn deletes only DRAFT campaigns, campaign groups and ad accounts this way, and a creative only while it or its campaign is DRAFT (or a video whose processing failed). To delete anything else, set its status (a creative's \`intendedStatus\`) to PENDING_DELETION with linkedin_update_entity.
+- Deletion cannot be undone.
+- Conversion rules cannot be deleted: LinkedIn documents no delete for them.`;
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    entityType: z.enum(DELETABLE_ENTITY_TYPES).describe("Type of entity to delete"),
     entityUrn: z
       .string()
       .min(1)
       .describe("The entity URN to delete (e.g., urn:li:sponsoredCampaign:123)"),
+    adAccountUrn: adAccountUrnSchema,
     dry_run: z
       .boolean()
       .optional()
@@ -46,6 +55,7 @@ export const DeleteEntityInputSchema = z
         "When true, validates the deletion and returns a DryRunResult under `dryRun` (expected post-state = the entity with canonical status `deleted`) without calling the LinkedIn API. The entity is never deleted."
       ),
   })
+  .superRefine(refineAdAccountUrn)
   .describe("Parameters for deleting a LinkedIn Ads entity");
 
 export const DeleteEntityOutputSchema = z
@@ -85,7 +95,11 @@ export async function deleteEntityLogic(
   // Dry-run never mutates and never prompts for confirmation.
   if (input.dry_run === true) {
     const dryRun = await runLinkedInDeleteDryRun(
-      { entityType: input.entityType, entityUrn: input.entityUrn },
+      {
+        entityType: input.entityType,
+        entityUrn: input.entityUrn,
+        adAccountUrn: input.adAccountUrn,
+      },
       linkedInService,
       context
     );
@@ -126,6 +140,7 @@ export async function deleteEntityLogic(
         ? ((await linkedInService.getEntity(
             input.entityType as LinkedInEntityType,
             input.entityUrn,
+            input.adAccountUrn,
             context
           )) as unknown as Record<string, unknown>)
         : undefined;
@@ -139,6 +154,7 @@ export async function deleteEntityLogic(
   await linkedInService.deleteEntity(
     input.entityType as LinkedInEntityType,
     input.entityUrn,
+    input.adAccountUrn,
     context
   );
 
@@ -201,7 +217,11 @@ export const deleteEntityTool = {
       entityIdArgs: ["entityUrn"],
       readPartner: {
         toolName: "linkedin_get_entity",
-        argMap: { entityType: "entityType", entityUrn: "entityUrn" },
+        argMap: {
+          entityType: "entityType",
+          entityUrn: "entityUrn",
+          adAccountUrn: "adAccountUrn",
+        },
       },
       schemaVersion: 1,
       contractId: "linkedin_ads.delete_entity.v1",
@@ -215,10 +235,11 @@ export const deleteEntityTool = {
   },
   inputExamples: [
     {
-      label: "Delete a campaign",
+      label: "Delete a DRAFT campaign",
       input: {
         entityType: "campaign",
         entityUrn: "urn:li:sponsoredCampaign:123456789",
+        adAccountUrn: "urn:li:sponsoredAccount:512345678",
       },
     },
   ],

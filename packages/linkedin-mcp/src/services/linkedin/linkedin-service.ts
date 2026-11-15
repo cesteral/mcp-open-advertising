@@ -14,6 +14,7 @@ import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
+  entityItemRequest,
   type LinkedInEntityType,
   adAccountIdFromUrn,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
@@ -252,18 +253,20 @@ export class LinkedInService {
     };
   }
 
+  /**
+   * `adAccountUrn` is the entity's owning ad account: every item path but an ad
+   * account's own is addressed under it (entity-mapping.ts `itemRequest`).
+   */
   async getEntity<T extends LinkedInEntityType>(
     entityType: T,
     entityUrn: string,
+    adAccountUrn: string | undefined,
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
+    const item = entityItemRequest(entityType, entityUrn, adAccountUrn);
     await this.rateLimiter.consume(`linkedin:default`);
 
-    return this.httpClient.get(
-      this.entityItemPath(entityType, entityUrn),
-      undefined,
-      context
-    ) as Promise<LinkedInEntityMap[T]>;
+    return this.httpClient.get(item.path, item.query, context) as Promise<LinkedInEntityMap[T]>;
   }
 
   async createEntity<T extends LinkedInEntityType>(
@@ -290,26 +293,45 @@ export class LinkedInService {
   async updateEntity<T extends LinkedInEntityType>(
     entityType: T,
     entityUrn: string,
+    adAccountUrn: string | undefined,
     data: LinkedInUpdateEntityInputMap[T],
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
+    const item = entityItemRequest(entityType, entityUrn, adAccountUrn);
     await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.patch(
-      this.entityItemPath(entityType, entityUrn),
+      item.path,
       data as unknown as Record<string, unknown>,
-      context
+      context,
+      item.query
     ) as Promise<LinkedInEntityMap[T]>;
   }
 
+  /**
+   * HTTP DELETE on the entity. LinkedIn deletes only DRAFT campaigns, campaign
+   * groups, accounts and creatives this way (a creative also when its campaign
+   * is DRAFT, or a failed video); anything else is deleted by setting its
+   * status (a creative's `intendedStatus`) to `PENDING_DELETION`. LinkedIn
+   * documents no delete for a conversion rule, so one is refused here.
+   */
   async deleteEntity(
     entityType: LinkedInEntityType,
     entityUrn: string,
+    adAccountUrn: string | undefined,
     context?: RequestContext
   ): Promise<unknown> {
+    if (entityType === "conversionRule") {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "LinkedIn's Conversions API documents no delete for a conversion rule, so none is sent. " +
+          "Change it with linkedin_update_entity instead."
+      );
+    }
+    const item = entityItemRequest(entityType, entityUrn, adAccountUrn);
     await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
-    return this.httpClient.delete(this.entityItemPath(entityType, entityUrn), context);
+    return this.httpClient.delete(item.path, context, item.query);
   }
 
   // ─── Ad Accounts ───────────────────────────────────────────────────
@@ -351,11 +373,14 @@ export class LinkedInService {
   async bulkUpdateStatus(
     entityType: LinkedInEntityType,
     entityUrns: string[],
+    adAccountUrn: string | undefined,
     status: string,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
+    // A creative's status field on the Creatives API is `intendedStatus`.
+    const patch = entityType === "creative" ? { intendedStatus: status } : { status };
     const bulkResults = await executeBulkConcurrent(entityUrns, async (entityUrn) => {
-      return this.updateEntity(entityType, entityUrn, { status }, context);
+      return this.updateEntity(entityType, entityUrn, adAccountUrn, patch, context);
     });
 
     return {
@@ -390,11 +415,12 @@ export class LinkedInService {
    */
   async bulkUpdateEntities<T extends LinkedInEntityType>(
     entityType: T,
+    adAccountUrn: string | undefined,
     items: Array<{ entityUrn: string; data: LinkedInUpdateEntityInputMap[T] }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
     const bulkResults = await executeBulkConcurrent(items, async (item) => {
-      return this.updateEntity(entityType, item.entityUrn, item.data, context);
+      return this.updateEntity(entityType, item.entityUrn, adAccountUrn, item.data, context);
     });
 
     return {
@@ -412,6 +438,7 @@ export class LinkedInService {
    * Adjust bids for campaigns via read-modify-write.
    */
   async adjustBids(
+    adAccountUrn: string,
     adjustments: Array<{ campaignUrn: string; bidAmount: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ campaignUrn: string; success: boolean; error?: string }> }> {
@@ -422,6 +449,7 @@ export class LinkedInService {
         await this.updateEntity(
           "campaign",
           adjustment.campaignUrn,
+          adAccountUrn,
           { unitCost: adjustment.bidAmount } as unknown as LinkedInUpdateEntityInputMap["campaign"],
           context
         );
@@ -541,15 +569,19 @@ export class LinkedInService {
   /**
    * Duplicate an entity by reading it and creating a copy.
    * LinkedIn does not have a native copy endpoint, so this is a manual copy.
+   * The copy is created in the source's ad account.
    */
   async duplicateEntity<T extends LinkedInEntityType>(
     entityType: T,
     entityUrn: string,
+    adAccountUrn: string | undefined,
     options?: { newName?: string },
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
+    assertDuplicable(entityType);
+
     // Read source entity
-    const source = await this.getEntity(entityType, entityUrn, context);
+    const source = await this.getEntity(entityType, entityUrn, adAccountUrn, context);
 
     // Build copy payload — strip read-only fields
     const copyData: Record<string, unknown> = { ...(source as unknown as Record<string, unknown>) };
@@ -566,6 +598,11 @@ export class LinkedInService {
       copyData.name = options.newName;
     } else if (typeof copyData.name === "string") {
       copyData.name = `Copy of ${copyData.name}`;
+    }
+
+    // The source read names its account; the create path is built from it.
+    if (copyData.account === undefined && adAccountUrn !== undefined) {
+      copyData.account = `urn:li:sponsoredAccount:${adAccountIdFromUrn(adAccountUrn)}`;
     }
 
     // Set to draft/paused status
@@ -638,41 +675,33 @@ export class LinkedInService {
       context
     );
   }
+}
 
-  // ─── Internal Helpers ────────────────────────────────────────────
-
-  /**
-   * Path for a single entity.
-   *
-   * Under `/rest/` an account-scoped entity's item path is
-   * `/rest/adAccounts/{accountId}/adCampaigns/{campaignId}` — the account is
-   * required for GET/PATCH/DELETE too, not just for listing. A LinkedIn URN
-   * (`urn:li:sponsoredCampaign:123`) does not carry its owning account, and this
-   * server binds no session-level account, so there is nothing to derive it
-   * from. Supplying it means a new parameter on `get`/`update`/`delete_entity`,
-   * which changes their inputSchema and therefore every governed
-   * `definitionHash` in this package — deliberately staged separately (#210).
-   *
-   * Until then these keep the legacy `/v2/` item path. They are NOT converted
-   * into refusals: that `/v2/` is fully dead for these products is #210's claim
-   * and it is unverified from here, so refusing would risk breaking a call that
-   * still works, on our own say-so.
-   *
-   * `adAccount` is the exception that IS on `/rest/`, and its key is the
-   * NUMERIC account id — `/rest/adAccounts/123`, not the encoded URN. LinkedIn's
-   * official clients address it exactly that way against the versioned API
-   * (linkedin-api-python-client README: `resource_path="/adAccounts/{id}"`,
-   * `path_keys={"id": 123}`, `version_string="202212"`; its client_test expects
-   * the path `/adAccounts/123`).
-   */
-  private entityItemPath(entityType: LinkedInEntityType, entityUrn: string): string {
-    if (entityType === "adAccount") {
-      return `${getEntityConfig("adAccount").collectionPath()}/${adAccountIdFromUrn(entityUrn)}`;
-    }
-    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    const config = getEntityConfig(entityType);
-    const collection = config.legacyCollectionPath ?? config.collectionPath();
-    return `${collection}/${encodedUrn}`;
+/**
+ * Entity types `linkedin_duplicate_entity` cannot copy, and why.
+ *
+ * An ad account: LinkedIn's Ad Accounts page documents create (BUSINESS type
+ * only) but no copy, and a copied account is a new billing relationship, not a
+ * campaign setting. A creative: its read is on the Creatives API
+ * (`/rest/adAccounts/{id}/creatives/{urn}`, `intendedStatus`, the simplified
+ * schema) while its create is still on `/v2/adCreatives` (#210), so a read
+ * result is not a valid create payload.
+ */
+export function assertDuplicable(entityType: LinkedInEntityType): void {
+  if (entityType === "adAccount") {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "An ad account cannot be duplicated. Create a new one with linkedin_create_entity " +
+        "(LinkedIn accepts BUSINESS-type accounts only)."
+    );
+  }
+  if (entityType === "creative") {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "A creative cannot be duplicated yet: its read is on LinkedIn's Creatives API and its " +
+        "create is still on the legacy /v2/adCreatives schema (#210), so a copy would not be a " +
+        "valid create payload. Create the creative with linkedin_create_entity."
+    );
   }
 }
 

@@ -89,6 +89,7 @@ Add targeting criteria to the campaign via update:
 linkedin_update_entity({
   "entityType": "campaign",
   "entityUrn": "urn:li:sponsoredCampaign:XXXXXXXXX",
+  "adAccountUrn": "${adAccountUrn}",
   "data": {
     "targetingCriteria": {
       "include": {
@@ -179,9 +180,9 @@ linkedin_create_entity({
 1. Validate payloads: \`linkedin_validate_entity\`
 2. Preview creative: \`linkedin_get_ad_preview({ creativeUrn: "...", adAccountUrn: "..." })\`
 3. Review all entities:
-   - Campaign group: \`linkedin_get_entity({ entityType: "campaignGroup", entityUrn: "..." })\`
-   - Campaign: \`linkedin_get_entity({ entityType: "campaign", entityUrn: "..." })\`
-   - Creative: \`linkedin_get_entity({ entityType: "creative", entityUrn: "..." })\`
+   - Campaign group: \`linkedin_get_entity({ entityType: "campaignGroup", entityUrn: "...", adAccountUrn: "${adAccountUrn}" })\`
+   - Campaign: \`linkedin_get_entity({ entityType: "campaign", entityUrn: "...", adAccountUrn: "${adAccountUrn}" })\`
+   - Creative: \`linkedin_get_entity({ entityType: "creative", entityUrn: "...", adAccountUrn: "${adAccountUrn}" })\`
 4. Activate: \`linkedin_bulk_update_status\` to set ACTIVE
 
 ## Common Gotchas

@@ -38,4 +38,18 @@ describe("meta_get_pacing_status", () => {
     expect(getPacingStatusTool.description).toMatch(/minor unit/);
     expect(getPacingStatusTool.description).toMatch(/major unit/);
   });
+
+  it("rejects an empty adAccountId or campaignId", () => {
+    const valid = {
+      adAccountId: "act_1",
+      campaignId: "c1",
+      spendToDate: 2500,
+      budgetTotal: 10000,
+      flightStartDate: "2026-09-01",
+      flightEndDate: "2026-10-31",
+    };
+    expect(GetPacingStatusInputSchema.safeParse(valid).success).toBe(true);
+    expect(GetPacingStatusInputSchema.safeParse({ ...valid, adAccountId: "" }).success).toBe(false);
+    expect(GetPacingStatusInputSchema.safeParse({ ...valid, campaignId: "" }).success).toBe(false);
+  });
 });

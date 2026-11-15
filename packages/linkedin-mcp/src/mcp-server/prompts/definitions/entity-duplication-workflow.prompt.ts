@@ -12,12 +12,18 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const linkedInEntityDuplicationWorkflowPrompt: Prompt = {
   name: "linkedin_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating LinkedIn Ads campaign groups, campaigns, and creatives using linkedin_duplicate_entity — covers A/B testing, scaling, and common patterns.",
+    "Step-by-step guide for duplicating LinkedIn Ads campaign groups, campaigns and conversion rules using linkedin_duplicate_entity — covers A/B testing, scaling, and common patterns.",
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to duplicate: campaignGroup, campaign, or creative",
+      description: "Entity type to duplicate: campaignGroup, campaign, or conversionRule",
       required: true,
+    },
+    {
+      name: "adAccountUrn",
+      description:
+        "URN of the ad account that owns the entity (required for every type except adAccount)",
+      required: false,
     },
     {
       name: "entityUrn",
@@ -30,6 +36,7 @@ export const linkedInEntityDuplicationWorkflowPrompt: Prompt = {
 export function getLinkedInEntityDuplicationWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityUrn = args?.entityUrn || "{entityUrn}";
+  const adAccountUrn = args?.adAccountUrn || "{adAccountUrn}";
 
   return `# LinkedIn Entity Duplication Workflow
 
@@ -40,13 +47,15 @@ Entity URN: \`${entityUrn}\`
 
 ## Overview
 
-\`linkedin_duplicate_entity\` creates a copy of a campaign group, campaign, or creative. The copy includes child entities and all settings.
+\`linkedin_duplicate_entity\` reads one campaign group, campaign or conversion rule and creates a DRAFT copy of it in the same ad account. Only that entity is copied: a campaign group's campaigns and a campaign's creatives are not.
 
 | What Gets Copied | Details |
 |------------------|---------|
-| **Campaign Group** | All campaigns and their creatives |
-| **Campaign** | All creatives, targeting, and budget settings |
-| **Creative** | Creative reference and tracking settings |
+| **Campaign Group** | Its own settings (name, budget, schedule), not its campaigns |
+| **Campaign** | Targeting, budget and bid settings, not its creatives |
+| **Conversion Rule** | Its own settings |
+
+Ad accounts cannot be duplicated, and creatives cannot be yet (their read and create are on different LinkedIn APIs).
 
 ---
 
@@ -59,7 +68,8 @@ Before duplicating, inspect the entity you're copying:
   "tool": "linkedin_get_entity",
   "params": {
     "entityType": "${entityType}",
-    "entityUrn": "${entityUrn}"
+    "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}"
   }
 }
 \`\`\`
@@ -76,6 +86,7 @@ Confirm this is the right entity and note its current state.
   "params": {
     "entityType": "${entityType}",
     "entityUrn": "${entityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "options": {
       "copyCreatives": true
     }
@@ -101,6 +112,7 @@ Use the returned URN to modify the copy:
   "params": {
     "entityType": "${entityType}",
     "entityUrn": "{newEntityUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "name": "Campaign B - Senior Tech Leaders"
     }
@@ -116,6 +128,7 @@ Use the returned URN to modify the copy:
   "params": {
     "entityType": "campaign",
     "entityUrn": "{newCampaignUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "targetingCriteria": {
         "include": {
@@ -141,6 +154,7 @@ Use the returned URN to modify the copy:
   "params": {
     "entityType": "campaign",
     "entityUrn": "{newCampaignUrn}",
+    "adAccountUrn": "${adAccountUrn}",
     "data": {
       "dailyBudget": { "amount": "200.00", "currencyCode": "USD" }
     }
@@ -164,6 +178,7 @@ After reviewing and customizing the copy:
   "params": {
     "entityType": "${entityType}",
     "entityUrns": ["{newEntityUrn}"],
+    "adAccountUrn": "${adAccountUrn}",
     "status": "ACTIVE"
   }
 }
@@ -209,7 +224,8 @@ After duplication, verify the copy:
   "tool": "linkedin_get_entity",
   "params": {
     "entityType": "${entityType}",
-    "entityUrn": "{newEntityUrn}"
+    "entityUrn": "{newEntityUrn}",
+    "adAccountUrn": "${adAccountUrn}"
   }
 }
 \`\`\`

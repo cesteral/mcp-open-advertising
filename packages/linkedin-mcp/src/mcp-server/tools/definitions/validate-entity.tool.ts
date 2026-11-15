@@ -38,16 +38,6 @@ const CAMPAIGN_TYPES = [
   "DYNAMIC",
   "STANDARD_UPDATE",
 ] as const;
-const OBJECTIVE_TYPES = [
-  "BRAND_AWARENESS",
-  "WEBSITE_VISIT",
-  "ENGAGEMENT",
-  "VIDEO_VIEW",
-  "LEAD_GENERATION",
-  "WEBSITE_CONVERSION",
-  "JOB_APPLICANT",
-  "TALENT_LEAD",
-] as const;
 const CONVERSION_TYPES = [
   "ADD_TO_CART",
   "DOWNLOAD",
@@ -80,6 +70,9 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
       suggestedValues: ACCOUNT_STATUSES,
     },
   ],
+  // The fields LinkedIn's Campaigns page marks Required (read 2026-11-14).
+  // `objectiveType` is optional there. dailyBudget or totalBudget is also
+  // required, which a per-field rule cannot express.
   campaign: [
     { field: "name", expectedType: "string" },
     { field: "campaignGroup", expectedType: "string", hint: "Campaign group URN" },
@@ -91,10 +84,36 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
       suggestedValues: CAMPAIGN_TYPES,
     },
     {
-      field: "objectiveType",
+      field: "costType",
       expectedType: "string",
-      hint: "Campaign optimization objective",
-      suggestedValues: OBJECTIVE_TYPES,
+      hint: "Pricing model",
+      suggestedValues: ["CPM", "CPC", "CPV"],
+    },
+    {
+      field: "unitCost",
+      expectedType: "object",
+      hint: 'Bid, target cost or cost cap: { "amount": "10.00", "currencyCode": "USD" }',
+    },
+    {
+      field: "locale",
+      expectedType: "object",
+      hint: 'Campaign locale: { "country": "US", "language": "en" }',
+    },
+    {
+      field: "targetingCriteria",
+      expectedType: "object",
+      hint: "Audience targeting (include/exclude facets)",
+    },
+    {
+      field: "offsiteDeliveryEnabled",
+      expectedType: "boolean",
+      hint: "Serve on the LinkedIn Audience Network (no default)",
+    },
+    {
+      field: "politicalIntent",
+      expectedType: "string",
+      hint: "Whether the campaign is political advertising",
+      suggestedValues: ["POLITICAL", "NOT_POLITICAL", "NOT_DECLARED"],
     },
     {
       field: "status",
