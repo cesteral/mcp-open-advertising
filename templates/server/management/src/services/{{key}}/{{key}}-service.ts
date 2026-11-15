@@ -44,6 +44,22 @@ export class {{Pascal}}Service {
     };
   }
 
+  async listAccounts(
+    pageToken: string | undefined,
+    context?: RequestContext
+  ): Promise<ListEntitiesResult> {
+    await this.rateLimiter.consume("{{key}}:accounts");
+    const body = (await this.httpClient.get(
+      "/accounts",
+      pageToken ? { page_token: pageToken } : undefined,
+      context
+    )) as { data?: Record<string, unknown>[]; next_page_token?: string };
+    return {
+      entities: body.data ?? [],
+      ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
+    };
+  }
+
   async getEntity(
     entityType: {{Pascal}}EntityType,
     accountId: string,

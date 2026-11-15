@@ -33,6 +33,7 @@ const PLATFORM = "{{key}}";
  * nothing else may (`scripts/lib/workflow-id-maps.test.mjs`).
  */
 export const {{key}}WorkflowIdByToolName: Record<string, string> = {
+  {{key}}_list_accounts: "mcp.execute.{{key}}_entity_read",
   {{key}}_list_entities: "mcp.execute.{{key}}_entity_read",
   {{key}}_get_entity: "mcp.execute.{{key}}_entity_read",
   {{key}}_validate_entity: "mcp.execute.{{key}}_entity_read",
@@ -62,7 +63,7 @@ export async function createMcpServer(
         logging: {},
       },
       instructions:
-        "{{displayName}} campaign management server. Use {{key}}_list_entities to browse entities and {{key}}_get_entity to read one. " +
+        "{{displayName}} campaign management server. Use {{key}}_list_accounts to find accounts, {{key}}_list_entities to browse entities and {{key}}_get_entity to read one. " +
         "The create, update, delete and bulk-status tools are not implemented yet and return an error.",
     }
   );

@@ -3,10 +3,11 @@
 
 /**
  * Tool definitions. The scaffold ships the management server type's MUST
- * tools (scripts/lib/contract-tiers.mjs) plus tool search. The create, update,
+ * tools (scripts/lib/contract-tiers.mjs), account discovery and tool search. The create, update,
  * delete and bulk-status tools are governed stubs until implemented.
  */
 
+export { listAccountsTool } from "./list-accounts.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
@@ -16,6 +17,7 @@ export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 
+import { listAccountsTool } from "./list-accounts.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
@@ -31,6 +33,7 @@ import {
 } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
+  listAccountsTool,
   listEntitiesTool,
   getEntityTool,
   createEntityTool,

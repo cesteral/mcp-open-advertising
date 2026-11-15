@@ -21,13 +21,14 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "{{key}}_update_entity",
       "{{key}}_delete_entity",
     ],
+    account: ["{{key}}_list_accounts"],
     bulk: ["{{key}}_bulk_update_status"],
     specialized: ["{{key}}_get_pacing_status"],
     validation: ["{{key}}_validate_entity"],
     discovery: ["{{key}}_search_tools"],
   },
   commonWorkflows: ["campaign_setup"],
-  startHere: "{{key}}_list_entities",
+  startHere: "{{key}}_list_accounts",
 });
 
 export const allResources: Resource[] = [

@@ -19,7 +19,6 @@ import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
-  NO_UNTRUSTED_CONTENT,
   assertAccountScope,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
@@ -128,6 +127,9 @@ export const createEntityTool = {
   ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
-  // Replace with the paths that carry platform text once the call is implemented.
-  untrustedContent: NO_UNTRUSTED_CONTENT,
+  // `entity` is the platform's object. Add `$.after` once the snapshot is built.
+  untrustedContent: {
+    structuredPaths: ["$.entity"],
+    contentBlocks: [],
+  },
 };

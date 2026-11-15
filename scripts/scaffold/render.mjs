@@ -15,6 +15,7 @@ export const CONFIG_LINES = { baseUrl: 24, rateLimit: 26 };
 /** The tools the management template registers, in barrel order. */
 export function TEMPLATE_TOOLS(key) {
   return [
+    "list_accounts",
     "list_entities",
     "get_entity",
     "create_entity",

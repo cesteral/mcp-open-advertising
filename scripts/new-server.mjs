@@ -87,7 +87,9 @@ async function main() {
 
   const readme = plan.writes.get(plan.created.find((p) => p.endsWith("/README.md")));
   const todo = readme.slice(readme.indexOf("## Before this server can merge"));
-  console.log(`\nNext: pnpm install && pnpm run build && pnpm run test\n\n${todo}`);
+  console.log(
+    `\nNext:\n  pnpm install && pnpm run build\n  pnpm sync:untrusted-declarations   # records the new tools' untrusted-content declarations\n  pnpm run test\n\n${todo}`
+  );
   return 0;
 }
 

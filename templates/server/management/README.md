@@ -8,6 +8,7 @@ API documentation: {{docsUrl}}
 
 | Tool                         | What it does                                       |
 | ---------------------------- | -------------------------------------------------- |
+| `{{key}}_list_accounts`      | List the accounts the token can access             |
 | `{{key}}_list_entities`      | List entities of one type in an account            |
 | `{{key}}_get_entity`         | Read one entity                                    |
 | `{{key}}_validate_entity`    | Check a payload client-side, without an API call   |

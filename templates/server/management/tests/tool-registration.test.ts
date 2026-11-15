@@ -16,9 +16,10 @@ describe("{{package}} tool registration", () => {
     ({ allTools } = await import("../src/mcp-server/tools/index.js"));
   }, 120_000);
 
-  it("registers the management MUST tools and tool search", () => {
+  it("registers the management MUST tools, account discovery and tool search", () => {
     expect(allTools.map((t) => t.name).sort()).toEqual(
       [
+        "{{key}}_list_accounts",
         "{{key}}_list_entities",
         "{{key}}_get_entity",
         "{{key}}_create_entity",

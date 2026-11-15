@@ -17,6 +17,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
@@ -45,6 +46,21 @@ function failures(reportPath) {
   return failed;
 }
 
+/**
+ * The generated server's write tools that no wire-request test covers,
+ * computed with the tree's own coverage library (vitest truncates the
+ * assertion message, so the failure text cannot be relied on to list them).
+ */
+async function uncoveredWrites(tree) {
+  const lib = (p) => import(pathToFileURL(join(tree, "scripts/lib", p)).href);
+  const { withServerClient, listRawTools } = await lib("boot-server.mjs");
+  const { coveredTools } = await lib("wire-request-coverage.mjs");
+  const tools = await withServerClient(PACKAGE, listRawTools);
+  const writes = tools.filter((t) => t.annotations?.readOnlyHint === false).map((t) => t.name);
+  const covered = coveredTools(PACKAGE, writes);
+  return writes.filter((name) => !covered.has(name)).sort();
+}
+
 function compare(failed) {
   const expected = new Set(expectedTodoFailures(KEY));
   const unexpected = [...failed.keys()].filter((n) => !expected.has(n));
@@ -56,24 +72,10 @@ function compare(failed) {
       `missing expected failure (a stub is now covered? update expected-todo.mjs): ${name}`
     );
   }
-  // The expected case must fail for the four stubs and nothing else of this server.
-  for (const name of [...expected].filter((n) => failed.has(n))) {
-    const message = failed.get(name);
-    const named = new Set(message.match(new RegExp(`\\b${KEY}_[a-z_]+\\b`, "g")) ?? []);
-    const want = expectedTodoTools(KEY);
-    const extra = [...named].filter((t) => !want.includes(t));
-    const absent = want.filter((t) => !named.has(t));
-    if (extra.length || absent.length) {
-      problems.push(
-        `${name}: expected it to name exactly ${want.join(", ")}; ` +
-          `also named [${extra.join(", ")}], did not name [${absent.join(", ")}]`
-      );
-    }
-  }
   return { problems, expected: expected.size };
 }
 
-function main() {
+async function main() {
   const tmp = mkdtempSync(join(tmpdir(), "scaffold-smoke-"));
   const tree = join(tmp, "repo");
   run(`git worktree add --detach "${tree}" HEAD`, ROOT);
@@ -88,6 +90,8 @@ function main() {
     );
     run(`${PNPM} install --no-frozen-lockfile`, tree);
     run(`${PNPM} run build`, tree);
+    // Generated from the built servers; the CLI prints it as a next step.
+    run(`${PNPM} run sync:untrusted-declarations`, tree);
     for (const script of [
       "format:check",
       "generate:registry",
@@ -127,7 +131,18 @@ function main() {
       console.error(`\nscaffold smoke FAILED:\n\n${problems.join("\n\n")}`);
       return 1;
     }
-    console.log(`\nscripts suite: failed = expected (${expected})`);
+    const uncovered = await uncoveredWrites(tree);
+    const want = [...expectedTodoTools(KEY)].sort();
+    if (JSON.stringify(uncovered) !== JSON.stringify(want)) {
+      console.error(
+        `\nscaffold smoke FAILED: uncovered write tools are [${uncovered.join(", ")}], ` +
+          `expected exactly [${want.join(", ")}]`
+      );
+      return 1;
+    }
+    console.log(
+      `\nscripts suite: failed = expected (${expected}); uncovered writes = the ${want.length} stubs`
+    );
 
     run(`bash scripts/conformance-test.sh --ci ${PACKAGE}`, tree);
     console.log("\nscaffold smoke passed");
@@ -144,4 +159,4 @@ function main() {
   }
 }
 
-process.exitCode = main();
+process.exitCode = await main();
