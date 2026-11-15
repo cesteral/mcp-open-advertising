@@ -1,15 +1,22 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { ToolDefinitionForFactory } from "@cesteral/shared";
 
 vi.mock("../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: vi.fn(() => ({ boundAccountId: "1234567890" })),
 }));
 
 describe("{{package}} tool registration", () => {
-  it("registers the management MUST tools and tool search", async () => {
-    const { allTools } = await import("../src/mcp-server/tools/index.js");
+  // One cold import of the tool barrel pulls in every definition and
+  // @cesteral/shared; on a loaded machine that alone can pass 5s.
+  let allTools: ToolDefinitionForFactory[];
+  beforeAll(async () => {
+    ({ allTools } = await import("../src/mcp-server/tools/index.js"));
+  }, 120_000);
+
+  it("registers the management MUST tools and tool search", () => {
     expect(allTools.map((t) => t.name).sort()).toEqual(
       [
         "{{key}}_list_entities",
@@ -23,10 +30,9 @@ describe("{{package}} tool registration", () => {
         "{{key}}_search_tools",
       ].sort()
     );
-  }, 30_000);
+  });
 
-  it("every governed tool's contractId is built from its slugs", async () => {
-    const { allTools } = await import("../src/mcp-server/tools/index.js");
+  it("every governed tool's contractId is built from its slugs", () => {
     const governed = allTools
       .map((t) => (t.annotations as { cesteral?: Record<string, unknown> } | undefined)?.cesteral)
       .filter((c): c is Record<string, unknown> => c !== undefined);
