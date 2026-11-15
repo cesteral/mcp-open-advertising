@@ -78,10 +78,12 @@ async function main() {
   if (values["dry-run"]) return 0;
 
   applyPlan(ROOT, plan);
-  // server.json is generated from the registry entry just written.
-  execFileSync("node", [join(ROOT, "scripts/generate/generate-server-json.mjs")], {
-    stdio: "inherit",
-  });
+  // Both are generated from the registry entry just written: each package's
+  // server.json, and the registry data @cesteral/shared compiles in (the
+  // server card and serverInfo read it; a stale copy fails every boot).
+  for (const script of ["generate-server-json.mjs", "sync-registry-data.mjs"]) {
+    execFileSync("node", [join(ROOT, "scripts/generate", script)], { stdio: "inherit" });
+  }
 
   const readme = plan.writes.get(plan.created.find((p) => p.endsWith("/README.md")));
   const todo = readme.slice(readme.indexOf("## Before this server can merge"));

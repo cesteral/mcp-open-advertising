@@ -26,6 +26,7 @@ const COPIED = [
   "registry.json",
   "platform-facts.json",
   "README.md",
+  "docs/architecture/platform-facts-ledger.md",
   ...new Set(INVENTORY_SITES.map((s) => s.file)),
   ...DERIVED.map((d) => d.file),
 ];
@@ -110,6 +111,21 @@ describe("scaffold: plan and apply", () => {
       const line = Number(fact.codeRefs[0].split(":").at(-1));
       expect(config.split("\n")[line - 1], fact.id).toContain(fact.value);
     }
+  });
+
+  it("the platform-facts doc counts the new facts", async () => {
+    // scripts/__tests__/check-platform-facts.test.mjs asserts the doc's total.
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    const ledger = JSON.parse(readFileSync(join(tmp, "platform-facts.json"), "utf8"));
+    const doc = readFileSync(join(tmp, "docs/architecture/platform-facts-ledger.md"), "utf8");
+    const count = (cls) => ledger.facts.filter((f) => f.class === cls).length;
+    expect(doc).toContain(`— ${ledger.facts.length} facts:`);
+    expect(doc).toContain(
+      `the ${count("versioned-base-url") + count("unversioned-base-url")} versioned and unversioned API base URLs`
+    );
+    expect(doc).toContain(
+      `(${ledger.facts.filter((f) => f.id.endsWith(".rate_limit_default")).length} \`<platform>.rate_limit_default\` facts`
+    );
   });
 
   it("the registry file keeps its formatting apart from the new entry", async () => {

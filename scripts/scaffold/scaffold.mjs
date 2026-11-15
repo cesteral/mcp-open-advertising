@@ -93,6 +93,31 @@ function appendToJsonArray(text, file, items) {
   return `${text.slice(0, close)},\n${body}${text.slice(close)}`;
 }
 
+const FACTS_DOC = "docs/architecture/platform-facts-ledger.md";
+
+/**
+ * Restate the ledger's size in its doc, which
+ * scripts/__tests__/check-platform-facts.test.mjs holds to the real count.
+ */
+function recountFactsDoc(text, facts) {
+  const count = (pred) => facts.filter(pred).length;
+  const counts = [
+    [/— \d+ facts:/, `— ${facts.length} facts:`],
+    [
+      /the \d+ versioned and unversioned API base URLs/,
+      `the ${count((f) => /-base-url$/.test(f.class))} versioned and unversioned API base URLs`,
+    ],
+    [
+      /\(\d+ `<platform>\.rate_limit_default` facts/,
+      `(${count((f) => f.id.endsWith(".rate_limit_default"))} \`<platform>.rate_limit_default\` facts`,
+    ],
+  ];
+  return counts.reduce((t, [re, value]) => {
+    if (!re.test(t)) throw new ScaffoldError(`${FACTS_DOC}: cannot find ${re} to update`);
+    return t.replace(re, value);
+  }, text);
+}
+
 /** 1-based line of the first line in `text` that `test` accepts. */
 function lineOf(text, test, what) {
   const i = text.split("\n").findIndex(test);
@@ -147,6 +172,7 @@ export async function planScaffold(root, opts, today) {
   };
 
   const tools = TEMPLATE_TOOLS(n.key);
+  const facts = buildPlatformFacts(full, today, configLines);
   const site = {
     ...n,
     displayName: opts.displayName,
@@ -162,11 +188,14 @@ export async function planScaffold(root, opts, today) {
     ],
     [
       "platform-facts.json",
-      appendToJsonArray(
-        read("platform-facts.json"),
-        "platform-facts.json",
-        buildPlatformFacts(full, today, configLines)
-      ),
+      appendToJsonArray(read("platform-facts.json"), "platform-facts.json", facts),
+    ],
+    [
+      FACTS_DOC,
+      recountFactsDoc(read(FACTS_DOC), [
+        ...JSON.parse(read("platform-facts.json")).facts,
+        ...facts,
+      ]),
     ],
     [
       "README.md",
