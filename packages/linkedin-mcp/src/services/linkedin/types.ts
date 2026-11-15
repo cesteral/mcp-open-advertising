@@ -52,11 +52,11 @@ export type LinkedInOptimizationTargetType =
   | "TARGET_COST_PER_IMPRESSION"
   | "TARGET_COST_PER_VIDEO_VIEW";
 
-export type LinkedInCreativeStatus =
+/** A creative's `intendedStatus` (Creatives page, read 2026-11-14). */
+export type LinkedInCreativeIntendedStatus =
   | "ACTIVE"
   | "PAUSED"
   | "ARCHIVED"
-  | "COMPLETED"
   | "CANCELED"
   | "DRAFT"
   | "PENDING_DELETION"
@@ -147,19 +147,27 @@ export interface LinkedInCampaign {
   lastModified?: LinkedInAuditStamp;
 }
 
-export interface LinkedInCreativeVariables {
-  data: Record<string, unknown>;
-}
-
+/**
+ * A creative on the Creatives API (`/rest/adAccounts/{id}/creatives`), which
+ * replaces adCreativesV2. `id` is the creative URN; `account` and the audit,
+ * review and serving fields are read-only.
+ */
 export interface LinkedInCreative {
-  id: number;
-  status: LinkedInCreativeStatus;
+  id: LinkedInUrn;
+  account?: LinkedInUrn;
   campaign: LinkedInUrn;
-  reference?: LinkedInUrn;
-  type?: string;
-  variables?: LinkedInCreativeVariables;
-  created?: LinkedInAuditStamp;
-  lastModified?: LinkedInAuditStamp;
+  name?: string;
+  intendedStatus?: LinkedInCreativeIntendedStatus;
+  /** e.g. `{ reference: "urn:li:share:…" }`, or a dynamic / event / VAST ad. */
+  content?: Record<string, unknown>;
+  leadgenCallToAction?: Record<string, unknown>;
+  review?: Record<string, unknown>;
+  isServing?: boolean;
+  servingHoldReasons?: string[];
+  createdAt?: number;
+  createdBy?: LinkedInUrn;
+  lastModifiedAt?: number;
+  lastModifiedBy?: LinkedInUrn;
 }
 
 export interface LinkedInConversionRule {
@@ -220,6 +228,8 @@ export interface LinkedInPaging {
 export interface LinkedInElementsResponse<T> {
   elements: T[];
   paging?: LinkedInPaging;
+  /** Cursor-paged finders return the next page's token here, not `paging`. */
+  metadata?: { nextPageToken?: string };
 }
 
 // ─── Request Body Types ───────────────────────────────────────────────────────
@@ -245,12 +255,13 @@ export interface CreateLinkedInCampaignRequest {
   locale?: LinkedInLocale;
 }
 
+/** `POST /rest/adAccounts/{id}/creatives`; the account is in the path, not the body. */
 export interface CreateLinkedInCreativeRequest {
   campaign: LinkedInUrn;
-  reference?: LinkedInUrn;
-  status?: LinkedInCreativeStatus;
-  type?: string;
-  variables?: LinkedInCreativeVariables;
+  content?: Record<string, unknown>;
+  intendedStatus?: LinkedInCreativeIntendedStatus;
+  name?: string;
+  leadgenCallToAction?: Record<string, unknown>;
 }
 
 // ─── Type Guards ──────────────────────────────────────────────────────────────
@@ -277,7 +288,7 @@ export function isLinkedInCreative(value: unknown): value is LinkedInCreative {
   return (
     typeof value === "object" &&
     value !== null &&
-    typeof (value as LinkedInCreative).id === "number" &&
+    typeof (value as LinkedInCreative).id === "string" &&
     typeof (value as LinkedInCreative).campaign === "string"
   );
 }

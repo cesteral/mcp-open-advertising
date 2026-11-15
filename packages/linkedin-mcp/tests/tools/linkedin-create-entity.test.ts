@@ -90,6 +90,7 @@ describe("linkedin_create_entity tool", () => {
       expect(mockLinkedInService.createEntity).toHaveBeenCalledWith(
         "campaign",
         expect.objectContaining({ name: "Brand Awareness Campaign" }),
+        undefined,
         mockContext
       );
     });
@@ -361,7 +362,11 @@ describe("linkedin_create_entity governance contract", () => {
 
   it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
     const result = await createEntityLogic(
-      { entityType: "creative", data: { status: "PAUSED" } } as any,
+      {
+        entityType: "creative",
+        adAccountUrn: "urn:li:sponsoredAccount:1",
+        data: { intendedStatus: "PAUSED" },
+      } as any,
       mockContext as any,
       { sessionId: "s" }
     );

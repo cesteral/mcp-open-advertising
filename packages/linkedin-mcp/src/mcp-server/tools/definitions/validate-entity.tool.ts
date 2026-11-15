@@ -22,15 +22,6 @@ const CAMPAIGN_STATUSES = [
   "PENDING_DELETION",
   "REMOVED",
 ] as const;
-const CREATIVE_STATUSES = [
-  "ACTIVE",
-  "PAUSED",
-  "ARCHIVED",
-  "DRAFT",
-  "PENDING_DELETION",
-  "CANCELED",
-  "REMOVED",
-] as const;
 const CAMPAIGN_TYPES = [
   "TEXT_AD",
   "SPONSORED_UPDATES",
@@ -122,15 +113,15 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
       suggestedValues: CAMPAIGN_STATUSES,
     },
   ],
+  // The Creatives API (read 2026-11-14): campaign is required, and content is
+  // what the creative sponsors. There is no `status`; intendedStatus is optional.
   creative: [
     { field: "campaign", expectedType: "string", hint: "Campaign URN" },
     {
-      field: "status",
-      expectedType: "string",
-      hint: "Creative lifecycle status",
-      suggestedValues: CREATIVE_STATUSES,
+      field: "content",
+      expectedType: "object",
+      hint: 'What the creative sponsors, e.g. { "reference": "urn:li:share:123" }',
     },
-    { field: "reference", expectedType: "string", hint: "Content reference URN" },
   ],
   conversionRule: [
     { field: "name", expectedType: "string" },

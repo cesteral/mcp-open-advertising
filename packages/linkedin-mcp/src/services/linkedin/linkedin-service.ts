@@ -16,6 +16,7 @@ import {
   getEntityConfig,
   entityItemRequest,
   type LinkedInEntityType,
+  type LinkedInListPaging,
   adAccountIdFromUrn,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type {
@@ -204,52 +205,78 @@ export class LinkedInService {
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
+  /**
+   * One page of a finder. `page.start` applies to offset finders and
+   * `page.pageToken` to cursor finders (creatives); passing the other kind is
+   * refused rather than silently ignored.
+   */
   async listEntities<T extends LinkedInEntityType>(
     entityType: T,
-    adAccountUrn?: string,
-    start?: number,
-    count?: number,
+    adAccountUrn: string | undefined,
+    page: { start?: number; count?: number; pageToken?: string },
     context?: RequestContext
   ): Promise<{
     entities: LinkedInEntityMap[T][];
     total?: number;
     start?: number;
-    /** False when the finder returns everything in one response (no start/count). */
-    paged: boolean;
+    paging: LinkedInListPaging;
+    /** Cursor finders only: the token for the next page, absent on the last. */
+    nextPageToken?: string;
   }> {
     const config = getEntityConfig(entityType);
-    const finder = config.listFinder ?? { name: "search", paged: true };
+    const finder = config.listFinder ?? { name: "search", paging: "offset" as const };
+
+    if (finder.paging !== "offset" && page.start !== undefined && page.start > 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        finder.paging === "cursor"
+          ? `LinkedIn pages ${entityType} lists with a cursor: pass the previous response's pageToken, not start.`
+          : `LinkedIn returns every ${entityType} in one response; start does not apply.`
+      );
+    }
+    if (finder.paging !== "cursor" && page.pageToken !== undefined) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `pageToken applies to cursor-paged lists only; ${entityType} lists page with start/count.`
+      );
+    }
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
 
     const params: Record<string, RestliQueryValue> = { q: finder.name };
-    if (finder.paged) {
-      params.start = String(start ?? 0);
-      params.count = String(Math.min(count ?? 25, 100));
+    const count = String(Math.min(page.count ?? 25, 100));
+    if (finder.paging === "offset") {
+      params.start = String(page.start ?? 0);
+      params.count = count;
+    } else if (finder.paging === "cursor") {
+      params.pageSize = count;
+      if (page.pageToken !== undefined) params.pageToken = page.pageToken;
     }
 
-    // For account-scoped collections the ad account lives in the PATH; otherwise
-    // (creatives on /v2/, conversion rules on /rest/) it is a query parameter.
-    // entity-mapping.ts owns which is which.
-    // A `list` param is sent as a one-element Rest.li 2.0 `List(...)`.
+    // For account-scoped collections the ad account lives in the PATH; for a
+    // conversion rule it is a query parameter. entity-mapping.ts owns which.
     if (adAccountUrn && config.listScopingParam) {
-      const { name, list } = config.listScopingParam;
-      params[name] = list ? [adAccountUrn] : adAccountUrn;
+      params[config.listScopingParam.name] = adAccountUrn;
     }
 
     const path = config.collectionPath(
       config.accountScoped && adAccountUrn ? adAccountIdFromUrn(adAccountUrn) : undefined
     );
 
-    const result = (await this.httpClient.get(path, params, context)) as LinkedInElementsResponse<
-      LinkedInEntityMap[T]
-    >;
+    // The Creatives page says a finder call "must" carry X-RestLi-Method:
+    // FINDER; LinkedIn's official clients send it on every finder.
+    const result = (await this.httpClient.get(path, params, context, {
+      restliMethod: "FINDER",
+    })) as LinkedInElementsResponse<LinkedInEntityMap[T]>;
 
     return {
       entities: result.elements ?? [],
       total: result.paging?.total,
       start: result.paging?.start,
-      paged: finder.paged,
+      paging: finder.paging,
+      ...(finder.paging === "cursor" && result.metadata?.nextPageToken
+        ? { nextPageToken: result.metadata.nextPageToken }
+        : {}),
     };
   }
 
@@ -269,23 +296,25 @@ export class LinkedInService {
     return this.httpClient.get(item.path, item.query, context) as Promise<LinkedInEntityMap[T]>;
   }
 
+  /**
+   * `adAccountUrn` is the account the entity is created in. A creative's body
+   * has no writable account, so its path comes from `adAccountUrn` alone; a
+   * campaign or campaign group body carries `account`, which is used when
+   * `adAccountUrn` is absent and must agree with it when both are given.
+   */
   async createEntity<T extends LinkedInEntityType>(
     entityType: T,
     data: LinkedInCreateEntityInputMap[T],
+    adAccountUrn: string | undefined,
     context?: RequestContext
   ): Promise<LinkedInEntityMap[T]> {
     const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
-
-    // A create payload for an account-scoped entity carries the owning account,
-    // so the path can be built without adding a parameter to the tool schema.
     const payload = data as unknown as Record<string, unknown>;
     const path = config.collectionPath(
-      config.accountScoped
-        ? adAccountIdFromUrn(requireAccountInPayload(payload, entityType))
-        : undefined
+      config.accountScoped ? createAccountId(entityType, payload, adAccountUrn) : undefined
     );
+
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.post(path, payload, context) as Promise<LinkedInEntityMap[T]>;
   }
@@ -398,13 +427,14 @@ export class LinkedInService {
    */
   async bulkCreateEntities<T extends LinkedInEntityType>(
     entityType: T,
+    adAccountUrn: string | undefined,
     items: LinkedInCreateEntityInputMap[T][],
     context?: RequestContext
   ): Promise<{
     results: Array<{ success: boolean; entity?: LinkedInEntityMap[T]; error?: string }>;
   }> {
     const results = await executeBulkConcurrent(items, async (data) => {
-      return this.createEntity(entityType, data, context);
+      return this.createEntity(entityType, data, adAccountUrn, context);
     });
     return { results };
   }
@@ -585,14 +615,20 @@ export class LinkedInService {
 
     // Build copy payload — strip read-only fields
     const copyData: Record<string, unknown> = { ...(source as unknown as Record<string, unknown>) };
-    delete copyData.id;
-    delete copyData.changeAuditStamps;
-    delete copyData.created;
-    delete copyData.lastModified;
-    delete copyData.review;
-    delete copyData.servingStatuses;
-    delete copyData.version;
-    delete copyData.associatedEntity;
+    const readOnly =
+      entityType === "creative"
+        ? CREATIVE_READ_ONLY_FIELDS
+        : [
+            "id",
+            "changeAuditStamps",
+            "created",
+            "lastModified",
+            "review",
+            "servingStatuses",
+            "version",
+            "associatedEntity",
+          ];
+    for (const field of readOnly) delete copyData[field];
 
     if (options?.newName) {
       copyData.name = options.newName;
@@ -600,15 +636,21 @@ export class LinkedInService {
       copyData.name = `Copy of ${copyData.name}`;
     }
 
-    // The source read names its account; the create path is built from it.
-    if (copyData.account === undefined && adAccountUrn !== undefined) {
+    // A campaign / group / conversion-rule body names its account; a creative's
+    // does not (it is read-only), and its create path comes from adAccountUrn.
+    if (entityType !== "creative" && copyData.account === undefined && adAccountUrn !== undefined) {
       copyData.account = `urn:li:sponsoredAccount:${adAccountIdFromUrn(adAccountUrn)}`;
     }
 
-    // Set to draft/paused status
-    copyData.status = "DRAFT";
+    // The copy starts as a draft. A creative's status field is intendedStatus.
+    copyData[entityType === "creative" ? "intendedStatus" : "status"] = "DRAFT";
 
-    return this.createEntity(entityType, copyData as LinkedInCreateEntityInputMap[T], context);
+    return this.createEntity(
+      entityType,
+      copyData as LinkedInCreateEntityInputMap[T],
+      adAccountUrn,
+      context
+    );
   }
 
   // ─── Delivery Forecast ────────────────────────────────────────────
@@ -678,15 +720,30 @@ export class LinkedInService {
 }
 
 /**
- * Entity types `linkedin_duplicate_entity` cannot copy, and why.
+ * The entity type `linkedin_duplicate_entity` cannot copy, and why.
  *
  * An ad account: LinkedIn's Ad Accounts page documents create (BUSINESS type
  * only) but no copy, and a copied account is a new billing relationship, not a
- * campaign setting. A creative: its read is on the Creatives API
- * (`/rest/adAccounts/{id}/creatives/{urn}`, `intendedStatus`, the simplified
- * schema) while its create is still on `/v2/adCreatives` (#210), so a read
- * result is not a valid create payload.
+ * campaign setting.
  */
+/**
+ * Creative fields the Creatives page marks read-only (read 2026-11-14), plus
+ * `isTest` and `metadata`, which are derived on read. A duplicate drops them.
+ */
+const CREATIVE_READ_ONLY_FIELDS = [
+  "id",
+  "account",
+  "createdAt",
+  "createdBy",
+  "lastModifiedAt",
+  "lastModifiedBy",
+  "isServing",
+  "isTest",
+  "review",
+  "servingHoldReasons",
+  "metadata",
+];
+
 export function assertDuplicable(entityType: LinkedInEntityType): void {
   if (entityType === "adAccount") {
     throw new McpError(
@@ -695,35 +752,41 @@ export function assertDuplicable(entityType: LinkedInEntityType): void {
         "(LinkedIn accepts BUSINESS-type accounts only)."
     );
   }
-  if (entityType === "creative") {
-    throw new McpError(
-      JsonRpcErrorCode.InvalidParams,
-      "A creative cannot be duplicated yet: its read is on LinkedIn's Creatives API and its " +
-        "create is still on the legacy /v2/adCreatives schema (#210), so a copy would not be a " +
-        "valid create payload. Create the creative with linkedin_create_entity."
-    );
-  }
 }
 
 /**
- * The ad account URN carried by a create payload.
+ * The numeric ad account id a create posts under
+ * (`/rest/adAccounts/{accountId}/…`).
  *
- * Under `/rest/` a create posts to `/rest/adAccounts/{accountId}/adCampaigns`,
- * so the account has to be known before the request is built. Campaign and
- * campaign-group payloads already carry it as `account`, which is why `create`
- * could be migrated without adding a tool parameter — unlike get/update/delete,
- * where nothing in the call supplies one.
+ * A creative's body has no writable account (`account` is read-only on the
+ * Creatives API), so it needs `adAccountUrn`. A campaign or campaign group body
+ * names its `account`; that is used when `adAccountUrn` is absent, and the two
+ * must agree when both are given, so a create cannot land in a different
+ * account than its body names.
  */
-function requireAccountInPayload(
+function createAccountId(
+  entityType: LinkedInEntityType,
   payload: Record<string, unknown>,
-  entityType: LinkedInEntityType
+  adAccountUrn: string | undefined
 ): string {
-  const account = payload.account;
-  if (typeof account === "string" && account.length > 0) return account;
-  throw new McpError(
-    JsonRpcErrorCode.InvalidParams,
-    `Creating a ${entityType} requires an "account" URN in the payload — LinkedIn's versioned ` +
-      `API posts to /rest/adAccounts/{accountId}/…, so the owning account must be known ` +
-      `before the request is built. See #210.`
-  );
+  const bodyAccount =
+    typeof payload.account === "string" && payload.account.length > 0 ? payload.account : undefined;
+  if (adAccountUrn !== undefined && bodyAccount !== undefined) {
+    if (adAccountIdFromUrn(adAccountUrn) !== adAccountIdFromUrn(bodyAccount)) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `adAccountUrn ${adAccountUrn} names a different ad account than data.account ${bodyAccount}.`
+      );
+    }
+  }
+  const account = adAccountUrn ?? bodyAccount;
+  if (account === undefined) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Creating a ${entityType} needs its ad account: LinkedIn posts it to ` +
+        `/rest/adAccounts/{accountId}/…. Pass adAccountUrn` +
+        (entityType === "creative" ? "." : ` or an "account" URN in data.`)
+    );
+  }
+  return adAccountIdFromUrn(account);
 }

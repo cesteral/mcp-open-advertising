@@ -93,7 +93,7 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_analytics_path", "2026-10-01"],
     ["linkedin.ad_targeting_facets_path", "2026-10-01"],
     ["linkedin.rest_uses_cursor_pagination", "2026-10-01"],
-    ["linkedin.creatives_need_schema_rewrite", "2026-10-01"],
+    ["linkedin.creatives_need_schema_rewrite", "2026-11-14"],
     ["linkedin.restli_protocol_header", "2026-10-01"],
     ["linkedin.ad_analytics_fields", "2026-10-01"],
     ["linkedin.ad_analytics_pivots", "2026-10-01"],

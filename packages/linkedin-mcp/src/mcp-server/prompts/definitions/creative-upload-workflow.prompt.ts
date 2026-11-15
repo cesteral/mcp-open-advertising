@@ -26,7 +26,7 @@ export function getLinkedInCreativeUploadWorkflowMessage(args?: Record<string, s
 - Organization URN for your company page (e.g., urn:li:organization:123456)
 
 ## Overview
-LinkedIn creative workflow: Upload image → Create Creative → Link to Campaign
+LinkedIn creative workflow: Upload image → Put it in a post → Create the creative from the post
 
 ---
 
@@ -51,29 +51,25 @@ linkedin_upload_image({
 
 ## Step 2: Create Creative
 
+A creative on LinkedIn's Creatives API sponsors a post: \`content.reference\` is a
+\`urn:li:share:…\` or \`urn:li:ugcPost:…\` (or \`urn:li:adInMailContent:…\`). Create
+the post that carries the uploaded image first (Posts API, outside this server),
+then create the creative from it:
+
 \`\`\`json
 linkedin_create_entity({
   "entityType": "creative",
+  "adAccountUrn": "${adAccountUrn}",
   "data": {
-    "account": "${adAccountUrn}",
     "campaign": "{your_campaign_urn}",
-    "content": {
-      "contentType": "SPONSORED_IMAGE",
-      "media": {
-        "id": "{assetUrn_from_step_1}",
-        "headline": "Your Headline Here",
-        "description": "Your ad description",
-        "callToAction": "LEARN_MORE",
-        "landingPage": "https://yoursite.com"
-      }
-    },
-    "status": "DRAFT",
-    "type": "SPONSORED"
+    "content": { "reference": "{post_urn}" },
+    "name": "Your creative name",
+    "intendedStatus": "DRAFT"
   }
 })
 \`\`\`
 
-⚠️ **GOTCHA**: Creative must be created in DRAFT status. Move to ACTIVE only after review.
+⚠️ **GOTCHA**: The status field is \`intendedStatus\`, not \`status\`, and the body has no \`account\` (pass \`adAccountUrn\`). Create in DRAFT and move to ACTIVE after review.
 
 ## Step 3: Preview Creative
 
@@ -112,6 +108,7 @@ LEARN_MORE, SIGN_UP, REGISTER, JOIN_NOW, REQUEST_DEMO, TRY_FREE, CONTACT_US, GET
 
 ## Success Criteria
 - [ ] Image uploaded (assetUrn obtained)
+- [ ] Post created from the image
 - [ ] Creative created in DRAFT status
 - [ ] Preview reviewed
 - [ ] Creative activated when ready

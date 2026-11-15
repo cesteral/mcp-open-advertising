@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; some calls still on legacy `/v2/`, see Current Status).
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; the image/video uploads are still on legacy `/v2/`, see Current Status).
 
 ## Purpose
 
@@ -26,14 +26,15 @@ per-session Bearer token authentication.
 
 #### 1. `linkedin_list_entities`
 
-List LinkedIn entities with optional filtering and offset-based pagination.
+List LinkedIn entities. Creatives page with a cursor (`pageToken`), conversion rules come back in one response, and the other types page with the `start` offset; `pagination.nextPageInputKey` says which to send.
 
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to list
-- `adAccountUrn` (string, optional): Ad Account URN to scope results
-- `start` (number, optional): Offset for pagination (default 0)
-- `count` (number, optional): Results per page (default 25)
+- `adAccountUrn` (string, required except for `adAccount`): Ad Account URN to scope results
+- `start` (number, optional): Offset for pagination (default 0); not for creatives
+- `pageToken` (string, optional): Creatives only, the previous page's `pagination.nextCursor`
+- `count` (number, optional): Results per page (default 25, max 100)
 
 #### 2. `linkedin_get_entity`
 
@@ -52,7 +53,8 @@ Create a new LinkedIn entity.
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to create
-- `data` (object, required): Entity fields as key-value pairs
+- `adAccountUrn` (string, required for `creative`): The ad account to create in; for other types `data.account` names it, and the two must agree when both are given
+- `data` (object, required): Entity fields as key-value pairs. A creative is `{ campaign, content: { reference: <share/ugcPost URN> }, name?, intendedStatus? }` on LinkedIn's Creatives API
 
 #### 4. `linkedin_update_entity`
 
@@ -135,6 +137,7 @@ Batch create multiple entities of the same type.
 **Parameters:**
 
 - `entityType` (string, required): Type of entities to create
+- `adAccountUrn` (string, required for `creative`): The one ad account every item is created in
 - `items` (array, required): Array of entity data objects (max 50)
 
 #### 11. `linkedin_bulk_update_entities`
@@ -183,7 +186,7 @@ List the targeting facets (names, URNs, entity types, supported finders). Takes 
 
 #### 15. `linkedin_duplicate_entity`
 
-Duplicate a campaign group, campaign or conversion rule (read, then create a DRAFT copy in the same ad account). Ad accounts cannot be duplicated, and creatives cannot be yet: their read is on the Creatives API and their create is still on `/v2/adCreatives`.
+Duplicate a campaign group, campaign, creative or conversion rule (read, then create a DRAFT copy in the same ad account; a creative's copy has `intendedStatus: DRAFT`). Ad accounts cannot be duplicated.
 
 **Parameters:**
 
@@ -253,12 +256,11 @@ exercised against a live LinkedIn account. Each endpoint is recorded in
 `platform-facts.json`: `verified` where it was read from LinkedIn's own
 documentation, `unverified` where it was not.
 
-The `/v2/` → `/rest/` migration is staged and incomplete (#210): ad accounts,
-campaign and campaign-group list/create, analytics, targeting (facets and
-entities), delivery forecasts, audience counts and ad previews use the versioned
-`/rest/` surface, as do get/update/delete for every entity type (they take the
-owning `adAccountUrn`) and conversion-rule list/create; creative list/create and
-the image/video uploads still call legacy `/v2/` paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
+The `/v2/` → `/rest/` migration is nearly complete (#210): every entity's list,
+create, get, update and delete (creatives on the Creatives API), analytics,
+targeting (facets and entities), delivery forecasts, audience counts and ad
+previews use the versioned `/rest/` surface. The image/video uploads and the
+`/v2/me` session check still call legacy `/v2/` paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
 documentation (read 2026-10-01) but have not been run against a live account.
 
 ## Development

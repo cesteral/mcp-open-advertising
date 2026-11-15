@@ -19,17 +19,11 @@ import type { RestliQueryParams } from "../../../services/linkedin/restli-query.
  * collection path as a function of the account id and `listScopingParam` is
  * gone.
  *
- * THIS MIGRATION IS STAGED, AND THE STATE IS IN THE TYPES ON PURPOSE
- *
- * `apiSurface` records, per entity, whether its COLLECTION (list / create) has
- * actually been moved. The one still on `"legacy-v2"` is `creative`: its list
- * and create move to a *simplified schema* under the Creatives API, so its
- * `defaultFields` and create payload have to be rewritten rather than
- * re-pathed.
- *
- * Item paths (get / update / delete) are all on `/rest/` (#210). Every one but
- * the ad account's own embeds the owning account, in the path or as a query
- * parameter, so the item tools take an `adAccountUrn` — see `itemRequest`.
+ * Every entity's collection (list / create) and item (get / update / delete)
+ * is on `/rest/` (#210). Every item path but the ad account's own embeds the
+ * owning account, in the path or as a query parameter, so the item tools take
+ * an `adAccountUrn` — see `itemRequest`. Creatives are on the Creatives API's
+ * simplified schema (`content`, `intendedStatus`), not adCreativesV2.
  *
  * NONE OF THESE PATHS HAVE BEEN EXERCISED AGAINST LINKEDIN. The item paths are
  * read off LinkedIn's Marketing API pages (`linkedin.*` platform facts, read
@@ -43,9 +37,6 @@ export type LinkedInEntityType =
   | "creative"
   | "conversionRule";
 
-/** Which LinkedIn API surface an entity's paths currently target. */
-export type LinkedInApiSurface = "rest" | "legacy-v2";
-
 export interface LinkedInEntityConfig {
   /**
    * Collection path for this entity.
@@ -57,22 +48,19 @@ export interface LinkedInEntityConfig {
   /** True when {@link collectionPath} embeds an ad account id in the PATH. */
   accountScoped: boolean;
   /**
-   * Query parameter that scopes a list to an ad account, for entities whose
-   * collection is not account-scoped in the path (`creative` on legacy `/v2/`,
-   * `conversionRule` on `/rest/`). Where the account is in the path
-   * (`accountScoped`), this is unset.
+   * Query parameter that scopes a list to an ad account, for an entity whose
+   * collection is not account-scoped in the path (`conversionRule`). Where the
+   * account is in the path (`accountScoped`), this is unset.
    */
-  listScopingParam?: { name: "accounts"; list: true } | { name: "account"; list: false };
+  listScopingParam?: { name: "account" };
   /**
-   * The finder a list call names in `q`, and whether it takes `start`/`count`.
-   * Absent means `q=search` with offset paging, which is what the account-scoped
-   * campaign and campaign-group collections and the legacy `/v2/` ones accept.
-   * LinkedIn names finders per resource, and a wrong name 404s with "No virtual
-   * resource found" (#301).
+   * The finder a list call names in `q`, and how it pages: `offset` sends
+   * `start`/`count`, `cursor` sends `pageSize`/`pageToken` and reads
+   * `metadata.nextPageToken`, `none` sends neither. Absent means `q=search`
+   * with offset paging. LinkedIn names finders per resource, and a wrong name
+   * 404s with "No virtual resource found" (#301).
    */
-  listFinder?: { name: string; paged: boolean };
-  /** Whether this entity has been migrated to the versioned `/rest/` surface. */
-  apiSurface: LinkedInApiSurface;
+  listFinder?: { name: string; paging: LinkedInListPaging };
   /** Display name for messages */
   displayName: string;
   /** Default fields to request when listing/getting */
@@ -84,9 +72,10 @@ export interface LinkedInEntityConfig {
    * the ad account's own needs it, so the caller supplies `adAccountUrn`.
    */
   itemRequest: (entityUrn: string, adAccountUrn: string | undefined) => LinkedInItemRequest;
-  /** Why this entity's collection is still on `/v2/`, when it is. */
-  migrationBlockedBy?: string;
 }
+
+/** How a list finder pages (see `listFinder`). */
+export type LinkedInListPaging = "offset" | "cursor" | "none";
 
 /** One entity's item path, plus the query parameters it needs (conversions take `account`). */
 export interface LinkedInItemRequest {
@@ -98,7 +87,6 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
   adAccount: {
     collectionPath: () => "/rest/adAccounts",
     accountScoped: false,
-    apiSurface: "rest",
     displayName: "Ad Account",
     defaultFields: ["id", "name", "status", "currency", "type", "reference"],
     // `/rest/adAccounts/{adAccountID}` — the NUMERIC id, not the encoded URN.
@@ -122,7 +110,6 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "campaignGroup")}/adCampaignGroups/${numericIdFromUrn(entityUrn, "li", "sponsoredCampaignGroup")}`,
     }),
     accountScoped: true,
-    apiSurface: "rest",
     displayName: "Campaign Group",
     defaultFields: ["id", "name", "status", "account", "totalBudget", "runSchedule"],
   },
@@ -133,7 +120,6 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "campaign")}/adCampaigns/${numericIdFromUrn(entityUrn, "li", "sponsoredCampaign")}`,
     }),
     accountScoped: true,
-    apiSurface: "rest",
     displayName: "Campaign",
     defaultFields: [
       "id",
@@ -150,27 +136,19 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     ],
   },
   creative: {
-    // List and create are NOT migrated. The Creatives API replaces
-    // adCreativesV2 with a simplified schema — a different model, so
-    // `defaultFields` and the create payload must be rewritten, not re-pathed.
-    collectionPath: () => "/v2/adCreatives",
-    // Item calls ARE on the Creatives API (#210):
-    // `/rest/adAccounts/{adAccountId}/creatives/{encoded creative URN}`. Unlike
-    // campaigns, the key is the URL-encoded URN, not the numeric id. Its status
-    // field is `intendedStatus`.
+    // The Creatives API (it replaces adCreativesV2):
+    // `/rest/adAccounts/{adAccountId}/creatives`, searched with the `criteria`
+    // finder and cursor paging (pageSize max 100). The create body carries no
+    // account (`account` is read-only), so the path comes from adAccountUrn.
+    collectionPath: (id) => `/rest/adAccounts/${requireAccountId(id, "creative")}/creatives`,
+    accountScoped: true,
+    listFinder: { name: "criteria", paging: "cursor" },
+    // Item calls key on the URL-encoded URN, not the numeric id.
     itemRequest: (entityUrn, adAccountUrn) => ({
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "creative")}/creatives/${encodeURIComponent(`urn:li:sponsoredCreative:${numericIdFromUrn(entityUrn, "li", "sponsoredCreative")}`)}`,
     }),
-    accountScoped: false,
-    // A one-element array, serialized as Rest.li 2.0 `accounts=List(urn%3A…)`.
-    // The old `accounts[0]=` key was the Rest.li 1.0 spelling of the same
-    // parameter, sent under a `X-Restli-Protocol-Version: 2.0.0` header.
-    listScopingParam: { name: "accounts", list: true },
-    apiSurface: "legacy-v2",
     displayName: "Creative",
-    defaultFields: ["id", "status", "campaign", "reference", "review"],
-    migrationBlockedBy:
-      "Creatives API uses a simplified schema, not just a new path — needs a payload/field rewrite (#210)",
+    defaultFields: ["id", "name", "intendedStatus", "campaign", "account", "content", "review"],
   },
   conversionRule: {
     // list and create are on /rest/conversions (#301). The item path is
@@ -185,9 +163,8 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     // Find Conversion Rules by Ad Account: `GET /rest/conversions?q=account&account={urn}`.
     // The `account` finder takes no paging parameters (a `pageSize` is rejected
     // 400 QUERY_PARAM_NOT_ALLOWED) and the response carries no `paging`.
-    listScopingParam: { name: "account", list: false },
-    listFinder: { name: "account", paged: false },
-    apiSurface: "rest",
+    listScopingParam: { name: "account" },
+    listFinder: { name: "account", paging: "none" },
     displayName: "Conversion Rule",
     defaultFields: [
       "id",
@@ -301,12 +278,11 @@ export function getEntityTypeEnum(): [string, ...string[]] {
 /**
  * Entity types that cannot be listed without an ad account.
  *
- * Deliberately NOT the same question as `accountScoped`. Under `/rest/` the
- * account sits in the path; under `/v2/` it is a query parameter. Both mean the
- * caller must supply one, and `list-entities.tool.ts` only cares about that.
- * Deriving this from `accountScoped` alone would have silently stopped requiring
- * an account for `creative` and `conversionRule` the moment they were left
- * behind on `/v2/` — a scoping regression hidden inside a path migration.
+ * Deliberately NOT the same question as `accountScoped`. For most entities the
+ * account sits in the path; for a conversion rule it is a query parameter.
+ * Both mean the caller must supply one, and `list-entities.tool.ts` only cares
+ * about that. Deriving this from `accountScoped` alone would silently stop
+ * requiring an account for `conversionRule`.
  *
  * Derived from the configs so it cannot drift from them by hand.
  */

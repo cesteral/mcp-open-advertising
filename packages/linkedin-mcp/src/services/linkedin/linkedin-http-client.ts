@@ -68,9 +68,17 @@ export class LinkedInHttpClient {
    * `dateRange: { start: {...} }`), never pre-encoded strings or 1.0-style
    * `key[0]` / `a.b.c` names.
    */
-  async get(path: string, params?: RestliQueryParams, context?: RequestContext): Promise<unknown> {
+  async get(
+    path: string,
+    params?: RestliQueryParams,
+    context?: RequestContext,
+    options?: { restliMethod?: "FINDER" }
+  ): Promise<unknown> {
     const url = this.buildUrl(path, params);
-    return this.request(url, context, { method: "GET" });
+    return this.request(url, context, {
+      method: "GET",
+      ...(options?.restliMethod ? { headers: { "X-Restli-Method": options.restliMethod } } : {}),
+    });
   }
 
   /**

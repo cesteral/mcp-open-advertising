@@ -306,27 +306,77 @@ describe("linkedin_create_entity → Rest.li CREATE", () => {
     expect(out.entity).toEqual({ id: "600000009" });
   });
 
-  it("creative → POST /v2/adCreatives (legacy, not migrated), id decoded from x-restli-id", async () => {
+  it("creative → POST /rest/adAccounts/{id}/creatives, the account from adAccountUrn", async () => {
     // basis: [py] client_test.py CREATE "complex entity id" — x-restli-id
     // carries a reduced-encoded URN (`urn%3Ali%3Aapp%3A123`).
-    createdRoute("/v2/adCreatives", "urn%3Ali%3AsponsoredCreative%3A800000009");
+    createdRoute(
+      `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      "urn%3Ali%3AsponsoredCreative%3A800000009"
+    );
     const data = {
       campaign: CAMPAIGN_URN,
-      status: "ACTIVE",
-      reference: "urn:li:share:123",
+      content: { reference: "urn:li:share:123" },
+      intendedStatus: "DRAFT",
+      name: "Autumn A",
     };
     const out = await createEntityLogic(
-      CreateEntityInputSchema.parse({ entityType: "creative", data }),
+      CreateEntityInputSchema.parse({ entityType: "creative", adAccountUrn: ACCOUNT_URN, data }),
       ctx,
       sdk
     );
     const req = onlyWrite();
-    // basis: unverified (code-only) — platform-facts
-    // linkedin.creatives_need_schema_rewrite: creatives stay on /v2/adCreatives.
-    expect(req.url).toBe(`${API_BASE_URL}/v2/adCreatives`);
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Create a Creative":
+    // POST /rest/adAccounts/{adAccountId}/creatives with body { content,
+    // campaign, intendedStatus } (`account` is read-only, so it is not sent);
+    // 201 with the id in x-restli-id, e.g. urn:li:sponsoredCreative:120491345.
+    expect(req.url).toBe(`${API_BASE_URL}/rest/adAccounts/${ACCOUNT_ID}/creatives`);
     expectRestliHeaders(req, { json: true });
     expect(req.body).toEqual(data);
     expect(out.entity).toEqual({ id: "urn:li:sponsoredCreative:800000009" });
+  });
+
+  it("a creative create without adAccountUrn is refused before any request", () => {
+    expect(() =>
+      CreateEntityInputSchema.parse({
+        entityType: "creative",
+        data: { campaign: CAMPAIGN_URN, content: { reference: "urn:li:share:1" } },
+      })
+    ).toThrow(/adAccountUrn is required/);
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("a creative `status` is refused (its field is intendedStatus)", async () => {
+    await expect(
+      createEntityLogic(
+        CreateEntityInputSchema.parse({
+          entityType: "creative",
+          adAccountUrn: ACCOUNT_URN,
+          data: {
+            campaign: CAMPAIGN_URN,
+            content: { reference: "urn:li:share:1" },
+            status: "DRAFT",
+          },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toMatchObject({ code: JsonRpcErrorCode.InvalidParams });
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("refuses an adAccountUrn that disagrees with a campaign's data.account", async () => {
+    await expect(
+      createEntityLogic(
+        CreateEntityInputSchema.parse({
+          entityType: "campaign",
+          adAccountUrn: "urn:li:sponsoredAccount:1",
+          data: { name: "x", account: ACCOUNT_URN, campaignGroup: GROUP_URN },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/different ad account/);
+    expect(stub.requests).toHaveLength(0);
   });
 
   it("conversionRule → POST /rest/conversions (account stays in the body)", async () => {
@@ -1006,17 +1056,67 @@ describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () =>
     expect(remaining()).toBe(LIMIT - 1 - 3);
   });
 
-  it.each(["adAccount", "creative"])("refuses to duplicate a %s (schema)", (entityType) => {
-    // basis: LinkedIn Ad Accounts page documents no copy; a creative's read is
-    // on the Creatives API while its create is still /v2/adCreatives (#210).
+  it("refuses to duplicate an adAccount (schema)", () => {
+    // basis: LinkedIn Ad Accounts page documents create but no copy.
     expect(() =>
       DuplicateEntityInputSchema.parse({
-        entityType,
-        entityUrn: "urn:li:sponsoredCreative:1",
+        entityType: "adAccount",
+        entityUrn: ACCOUNT_URN,
         adAccountUrn: ACCOUNT_URN,
       })
     ).toThrow();
     expect(stub.requests).toHaveLength(0);
+  });
+
+  it("creative → GET it on the Creatives API, POST a DRAFT copy to the account's creatives", async () => {
+    const urn = "urn:li:sponsoredCreative:800000001";
+    stub.route({
+      method: "GET",
+      path: creativeItem(urn),
+      response: {
+        id: urn,
+        account: ACCOUNT_URN,
+        campaign: CAMPAIGN_URN,
+        name: "Autumn A",
+        intendedStatus: "ACTIVE",
+        content: { reference: "urn:li:share:123" },
+        createdAt: 1,
+        createdBy: "urn:li:person:x",
+        lastModifiedAt: 2,
+        lastModifiedBy: "urn:li:person:x",
+        isServing: true,
+        isTest: false,
+        review: { status: "APPROVED" },
+        servingHoldReasons: ["STOPPED"],
+      },
+    });
+    createdRoute(
+      `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      "urn%3Ali%3AsponsoredCreative%3A800000099"
+    );
+    await duplicateEntityLogic(
+      DuplicateEntityInputSchema.parse({
+        entityType: "creative",
+        entityUrn: urn,
+        adAccountUrn: ACCOUNT_URN,
+      }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      `GET ${creativeItem(urn)}`,
+      `POST /rest/adAccounts/${ACCOUNT_ID}/creatives`,
+    ]);
+    // basis: LinkedIn Creatives page (read 2026-11-14) — the schema marks
+    // account, createdAt, createdBy, id, isServing, lastModified*, review and
+    // servingHoldReasons read-only; the status field is intendedStatus. That
+    // the copy is a DRAFT named "Copy of …" is this server's choice.
+    expect(onlyWrite().body).toEqual({
+      campaign: CAMPAIGN_URN,
+      name: "Copy of Autumn A",
+      intendedStatus: "DRAFT",
+      content: { reference: "urn:li:share:123" },
+    });
   });
 
   it("dry_run reads the source and creates nothing", async () => {
@@ -1210,6 +1310,74 @@ describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTIO
       expect(tool.description).toContain("No confirm or finalize request is sent");
     });
   }
+});
+
+describe("linkedin_list_entities → creative (Creatives API criteria finder)", () => {
+  // basis: LinkedIn Creatives page (read 2026-11-14), "Search For Creatives":
+  // GET /rest/adAccounts/{adAccountId}/creatives?q=criteria with
+  // X-RestLi-Method: FINDER ("must be included"); cursor paging with pageSize
+  // (max 100) and pageToken, the next token in metadata.nextPageToken.
+  it("first page: q=criteria&pageSize=N, FINDER header, nextPageToken as the cursor", async () => {
+    stub.route({
+      method: "GET",
+      path: `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      response: {
+        metadata: { nextPageToken: "DgGerr1i" },
+        elements: [{ id: "urn:li:sponsoredCreative:1", intendedStatus: "DRAFT" }],
+      },
+    });
+    const out = await listEntitiesLogic(
+      ListEntitiesInputSchema.parse({
+        entityType: "creative",
+        adAccountUrn: ACCOUNT_URN,
+        count: 10,
+      }),
+      ctx,
+      sdk
+    );
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.path).toBe(`/rest/adAccounts/${ACCOUNT_ID}/creatives`);
+    expect(req!.rawQuery).toBe("q=criteria&pageSize=10");
+    expect(req!.headers["x-restli-method"]).toBe("FINDER");
+    expect(out.entities).toHaveLength(1);
+    expect(out.pagination.nextCursor).toBe("DgGerr1i");
+    expect(out.pagination.nextPageInputKey).toBe("pageToken");
+  });
+
+  it("next page: sends the pageToken back; no token means the last page", async () => {
+    stub.route({
+      method: "GET",
+      path: `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      response: { metadata: {}, elements: [] },
+    });
+    const out = await listEntitiesLogic(
+      ListEntitiesInputSchema.parse({
+        entityType: "creative",
+        adAccountUrn: ACCOUNT_URN,
+        pageToken: "DgGerr1i",
+      }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests()[0]!.rawQuery).toBe("q=criteria&pageSize=25&pageToken=DgGerr1i");
+    expect(out.pagination.nextCursor).toBeNull();
+  });
+
+  it("refuses an offset `start` for creatives (cursor paging only)", async () => {
+    await expect(
+      listEntitiesLogic(
+        ListEntitiesInputSchema.parse({
+          entityType: "creative",
+          adAccountUrn: ACCOUNT_URN,
+          start: 25,
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/pageToken/);
+    expect(stub.requests).toHaveLength(0);
+  });
 });
 
 describe("linkedin_list_entities → conversionRule", () => {

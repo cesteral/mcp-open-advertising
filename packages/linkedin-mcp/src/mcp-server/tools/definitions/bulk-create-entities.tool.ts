@@ -11,6 +11,8 @@ import {
   ONE_WRITE_PER_ITEM,
 } from "../utils/bulk-capacity.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { adAccountUrnSchema, refineCreateAdAccountUrn } from "../utils/ad-account-param.js";
+import { creativeStatusFieldError } from "../utils/dry-run.js";
 import {
   BulkOperationResultSchema,
   assertGovernedEffectDryRun,
@@ -39,6 +41,8 @@ Creates entities individually with concurrency (max 5 concurrent requests).
 Each item must be a complete entity payload (same as linkedin_create_entity data).
 
 **Gotchas:**
+- \`adAccountUrn\` names the one ad account every item is created in. It is required for creatives (a creative body has no writable account); for other types each item's \`account\` names it, and \`adAccountUrn\` must agree when given.
+- A creative's status field is \`intendedStatus\`; \`status\` is refused for creatives.
 - Max 50 items per call.
 - Partial failures are allowed — check results for individual errors.`;
 
@@ -47,6 +51,9 @@ const EFFECT_KIND = "entities_created";
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    adAccountUrn: adAccountUrnSchema.describe(
+      "The ad account every item is created in (e.g. urn:li:sponsoredAccount:123). Required for creatives; for other types each item's account names it, and adAccountUrn must agree when given."
+    ),
     items: z.array(z.record(z.any())).min(1).max(50).describe("Entity payloads to create (max 50)"),
     dry_run: z
       .boolean()
@@ -56,6 +63,7 @@ export const BulkCreateEntitiesInputSchema = z
         "When true, symbolically validates the batch and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bulk create) without calling the LinkedIn API. No entities are created."
       ),
   })
+  .superRefine(refineCreateAdAccountUrn)
   .describe("Parameters for bulk entity creation");
 
 export const BulkCreateEntitiesOutputSchema = z
@@ -123,10 +131,22 @@ export async function bulkCreateEntitiesLogic(
   // write. One 3-token linkedin:default POST per item.
   assertLinkedInBulkCapacity(TOOL_NAME, input.items.length, ONE_WRITE_PER_ITEM);
 
+  // A payload the dry-run reports as failing must not execute either.
+  const creativeStatusError = input.items
+    .map((item, i) => creativeStatusFieldError(input.entityType, item ?? {}, `items.${i}.status`))
+    .find((e) => e !== undefined);
+  if (creativeStatusError) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `${creativeStatusError.message} (${creativeStatusError.field})`
+    );
+  }
+
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   const result = await linkedInService.bulkCreateEntities(
     input.entityType as LinkedInEntityType,
+    input.adAccountUrn,
     input.items,
     context
   );
@@ -169,6 +189,12 @@ export async function bulkCreateEntitiesLogic(
 function buildBulkEffectDryRun(input: BulkCreateEntitiesInput): EffectDryRunResult {
   const validationErrors: DryRunValidationError[] = [];
   input.items.forEach((item, i) => {
+    const creativeStatusError = creativeStatusFieldError(
+      input.entityType,
+      item ?? {},
+      `items.${i}.status`
+    );
+    if (creativeStatusError) validationErrors.push(creativeStatusError);
     if (!item || typeof item !== "object" || Object.keys(item).length === 0) {
       validationErrors.push({
         code: "EMPTY_ITEM",

@@ -27,12 +27,12 @@ import type {
 const TOOL_NAME = "linkedin_duplicate_entity";
 const TOOL_TITLE = "Duplicate LinkedIn Ads Entity";
 /**
- * An ad account cannot be copied, and a creative's read and create are on
- * different LinkedIn APIs until creatives migrate (`assertDuplicable`).
+ * An ad account cannot be copied (`assertDuplicable`).
  */
-const DUPLICABLE_ENTITY_TYPES = getEntityTypeEnum().filter(
-  (t) => t !== "adAccount" && t !== "creative"
-) as [string, ...string[]];
+const DUPLICABLE_ENTITY_TYPES = getEntityTypeEnum().filter((t) => t !== "adAccount") as [
+  string,
+  ...string[],
+];
 
 const TOOL_DESCRIPTION = `Copy a LinkedIn Ads entity by reading it and creating a new entity with the same settings.
 
@@ -47,7 +47,8 @@ LinkedIn does not have a native copy API endpoint, so this tool:
 
 **Gotchas:**
 - Pass the source's ad account as \`adAccountUrn\`; the copy is created in that account.
-- An adAccount cannot be duplicated (create one instead), and a creative cannot be duplicated yet (its read and create are on different LinkedIn APIs).
+- An adAccount cannot be duplicated (create one instead).
+- A creative's copy keeps its campaign and content and starts with \`intendedStatus: DRAFT\`.
 - The new entity will be in DRAFT status regardless of source status.
 - Some entity-specific fields may need manual adjustment after duplication.
 - References to other entities (e.g., a campaign's campaignGroup) are preserved from source.`;

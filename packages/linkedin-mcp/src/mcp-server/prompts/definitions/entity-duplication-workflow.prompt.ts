@@ -12,11 +12,11 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const linkedInEntityDuplicationWorkflowPrompt: Prompt = {
   name: "linkedin_entity_duplication_workflow",
   description:
-    "Step-by-step guide for duplicating LinkedIn Ads campaign groups, campaigns and conversion rules using linkedin_duplicate_entity — covers A/B testing, scaling, and common patterns.",
+    "Step-by-step guide for duplicating LinkedIn Ads campaign groups, campaigns, creatives and conversion rules using linkedin_duplicate_entity — covers A/B testing, scaling, and common patterns.",
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to duplicate: campaignGroup, campaign, or conversionRule",
+      description: "Entity type to duplicate: campaignGroup, campaign, creative, or conversionRule",
       required: true,
     },
     {
@@ -47,15 +47,16 @@ Entity URN: \`${entityUrn}\`
 
 ## Overview
 
-\`linkedin_duplicate_entity\` reads one campaign group, campaign or conversion rule and creates a DRAFT copy of it in the same ad account. Only that entity is copied: a campaign group's campaigns and a campaign's creatives are not.
+\`linkedin_duplicate_entity\` reads one campaign group, campaign, creative or conversion rule and creates a DRAFT copy of it in the same ad account. Only that entity is copied: a campaign group's campaigns and a campaign's creatives are not.
 
 | What Gets Copied | Details |
 |------------------|---------|
 | **Campaign Group** | Its own settings (name, budget, schedule), not its campaigns |
 | **Campaign** | Targeting, budget and bid settings, not its creatives |
+| **Creative** | Its campaign, content and name (starts with \`intendedStatus: DRAFT\`) |
 | **Conversion Rule** | Its own settings |
 
-Ad accounts cannot be duplicated, and creatives cannot be yet (their read and create are on different LinkedIn APIs).
+Ad accounts cannot be duplicated.
 
 ---
 
