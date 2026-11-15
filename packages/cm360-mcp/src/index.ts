@@ -15,60 +15,49 @@ import {
   detectTransportMode,
   createServerLogger,
   bootstrapMcpServer,
+  createStdioSessionSetup,
 } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("cm360-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a GoogleAuthAdapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  let credentialsJson: string | undefined;
+/** Stdio credentials come from a service account in env vars (file path or base64 JSON). */
+let credentialFingerprint: string | undefined;
 
-  if (mcpConfig.cm360ServiceAccountFile) {
-    logger.info(
-      { file: mcpConfig.cm360ServiceAccountFile },
-      "Loading service account from file (stdio mode)"
-    );
-    credentialsJson = readFileSync(mcpConfig.cm360ServiceAccountFile, "utf-8");
-  } else if (mcpConfig.cm360ServiceAccountJson) {
-    credentialsJson = Buffer.from(mcpConfig.cm360ServiceAccountJson, "base64").toString();
-  }
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () => {
+    let credentialsJson: string | undefined;
 
-  if (!credentialsJson) {
-    logger.warn(
-      "No CM360 service account credentials found in env vars. " +
-        "Set CM360_SERVICE_ACCOUNT_JSON or CM360_SERVICE_ACCOUNT_FILE for stdio mode."
-    );
-    return false;
-  }
+    if (mcpConfig.cm360ServiceAccountFile) {
+      logger.info(
+        { file: mcpConfig.cm360ServiceAccountFile },
+        "Loading service account from file (stdio mode)"
+      );
+      credentialsJson = readFileSync(mcpConfig.cm360ServiceAccountFile, "utf-8");
+    } else if (mcpConfig.cm360ServiceAccountJson) {
+      credentialsJson = Buffer.from(mcpConfig.cm360ServiceAccountJson, "base64").toString();
+    }
 
-  const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
-  const authAdapter = createGoogleAuthAdapter(credentials, [
-    "https://www.googleapis.com/auth/dfareporting",
-    "https://www.googleapis.com/auth/dfatrafficking",
-  ]);
+    if (!credentialsJson) return undefined;
 
-  // Validate credentials at startup to fail fast on invalid service account
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    { baseUrl: mcpConfig.cm360ApiBaseUrl },
-    logger,
-    rateLimiter,
-    getCredentialFingerprint(credentials)
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+    const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
+    credentialFingerprint = getCredentialFingerprint(credentials);
+    return createGoogleAuthAdapter(credentials, [
+      "https://www.googleapis.com/auth/dfareporting",
+      "https://www.googleapis.com/auth/dfatrafficking",
+    ]);
+  },
+  buildServices: (adapter) =>
+    buildSessionServices(mcpConfig, adapter, logger, credentialFingerprint),
+  missingCredentialsWarning:
+    "No CM360 service account credentials found in env vars. Set CM360_SERVICE_ACCOUNT_JSON or CM360_SERVICE_ACCOUNT_FILE for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

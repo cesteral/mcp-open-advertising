@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { MetaBearerAuthStrategy } from "../../auth/meta-auth-strategy.js";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { META_RETRY_CONFIG } from "../../services/meta/meta-graph-api-client.js";
 
@@ -55,80 +57,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: META_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For meta-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as MetaAuthAdapter | undefined;
-      if (adapter) {
-        const services = createSessionServices(
-          adapter,
-          { baseUrl: (appConfig as AppConfig).metaApiBaseUrl },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const metaToken = cfg.metaAccessToken;
-
-        // Prefer token exchange flow if app credentials are available
-        if (metaToken && cfg.metaAppId && cfg.metaAppSecret) {
-          const { MetaRefreshTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
-          const envAdapter = new MetaRefreshTokenAdapter(
-            metaToken,
-            { appId: cfg.metaAppId, appSecret: cfg.metaAppSecret },
-            cfg.metaApiBaseUrl
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: cfg.metaApiBaseUrl },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        if (metaToken) {
-          const { MetaAccessTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
-          const envAdapter = new MetaAccessTokenAdapter(metaToken, cfg.metaApiBaseUrl);
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: (appConfig as AppConfig).metaApiBaseUrl },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Meta access token required. Set META_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=meta-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "Meta API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as MetaAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Meta access token required. Set META_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=meta-bearer.",
+      unsupportedModeMessage: "Meta API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },
