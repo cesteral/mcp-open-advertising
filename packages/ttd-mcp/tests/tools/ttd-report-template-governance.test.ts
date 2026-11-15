@@ -89,12 +89,13 @@ describe("ttd report-template + execution governance contract (effect class)", (
       expect(result.dryRun?.validationErrors[0]?.code).toBe("INVALID_REPORT_TYPE_ID");
     });
 
-    it("execute emits the effect, with the id from data { id }, when the mutation executed", async () => {
-      ttdService.graphqlQuery.mockResolvedValueOnce({
-        data: { myReportsTemplateCreate: { data: { id: "tpl-1" }, errors: null } },
-      });
+    it("execute emits the effect when the mutation executed", async () => {
+      ttdService.graphqlQuery
+        .mockResolvedValueOnce({ data: { myReportsTemplateCreate: { data: "ok", errors: null } } })
+        .mockResolvedValueOnce({
+          data: { myReportsReportTemplates: { nodes: [{ id: "tpl-1", name: "My Template" }] } },
+        });
       const result = await createReportTemplateLogic({ ...input } as any, ctx, sdk);
-      expect(ttdService.graphqlQuery).toHaveBeenCalledTimes(1);
       expect(result.effect).toEqual({
         effectKind: "report_template_created",
         summary: { template_name: "My Template", template_id: "tpl-1" },
@@ -104,16 +105,18 @@ describe("ttd report-template + execution governance contract (effect class)", (
       expect(() => CreateReportTemplateOutputSchema.parse(result)).not.toThrow();
     });
 
-    // Fleet review ttd REST #15: the id used to come from "newest template
-    // visible to this user"; it now comes from the mutation payload, so a
-    // concurrent template cannot be recorded. If the payload carries no id the
-    // effect omits template_id rather than guessing.
-    it("omits template_id when the mutation payload carries no id", async () => {
-      ttdService.graphqlQuery.mockResolvedValueOnce({
-        data: { myReportsTemplateCreate: { data: {}, errors: null } },
-      });
+    // Fleet review ttd REST #15: the id comes from "newest template visible to
+    // this user". A template created concurrently by someone else must not be
+    // recorded as this call's template in the governed effect.
+    it("does not claim the newest template's id when its name is not ours", async () => {
+      ttdService.graphqlQuery
+        .mockResolvedValueOnce({ data: { myReportsTemplateCreate: { data: "ok", errors: null } } })
+        .mockResolvedValueOnce({
+          data: {
+            myReportsReportTemplates: { nodes: [{ id: "tpl-other", name: "Another Template" }] },
+          },
+        });
       const result = await createReportTemplateLogic({ ...input } as any, ctx, sdk);
-      expect(ttdService.graphqlQuery).toHaveBeenCalledTimes(1);
       expect(result.templateId).toBeUndefined();
       expect(result.effect).toEqual({
         effectKind: "report_template_created",

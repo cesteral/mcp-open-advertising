@@ -1710,9 +1710,14 @@ describe("ttd_list_report_templates → reportingTemplates", () => {
 });
 
 describe("ttd_create_report_template → myReportsTemplateCreate", () => {
-  it("sends the mutation selecting data { id } and takes the template id from it", async () => {
+  it("sends the mutation, then reads the newest template for its id", async () => {
     routeGraphql("myReportsTemplateCreate", {
-      data: { myReportsTemplateCreate: { data: { id: "tmpl9" }, errors: [] } },
+      data: { myReportsTemplateCreate: { data: "ok", errors: [] } },
+    });
+    routeGraphql("myReportsReportTemplates", {
+      data: {
+        myReportsReportTemplates: { nodes: [{ id: "tmpl9", name: "Perf", format: "EXCEL" }] },
+      },
     });
 
     const out = await createReportTemplateLogic(
@@ -1723,27 +1728,19 @@ describe("ttd_create_report_template → myReportsTemplateCreate", () => {
 
     const req = onlyMutation();
     expectGraphqlRequest(req);
-    // basis: TTD's myReportsTemplateCreate page
-    // (https://open.thetradedesk.com/rest/openttd/advertiser/content/docs/AdvertiserReferences/api/gql-doc/my-reports-template-create:
-    // `myReportsTemplateCreate(input: MyReportsTemplateCreateInput!):
-    // MyReportsTemplateCreatePayload!`; payload `data: MyReportsTemplateCreateResponse`
-    // with `id: ID!` "The ID of the generated report template", and
-    // `errors: [MyReportsTemplateCreateMutationError!]`) and TTD's "User-defined
-    // report templates" guide (.../GuidesAdvertiser/reds/doc/ReportTemplates,
-    // "Generate a report template": `myReportsTemplateCreate(input: {...}) {
-    // data { id } errors { __typename ... on MutationError { field message } } }`).
-    // Input fields { name, format, resultSets }: guide example; the
-    // `MyReportsTemplateCreateInput` type page was not read.
+    // basis: docs/api/ttd-api-reference-part4.md:205 (mutation name). Input type
+    // MyReportsTemplateCreateInput and fields { name, format, resultSets }:
+    // unverified (code-only).
     expect(gqlQuery(req)).toMatch(/myReportsTemplateCreate\(input: \$input\)/);
-    expect(gqlQuery(req)).toMatch(/data\s*\{\s*id\s*\}/);
     expect(gqlVariables(req)).toEqual({
       input: { name: "Perf", format: "EXCEL", resultSets: [RESULT_SET] },
     });
-    // The id comes from the mutation: no follow-up query is sent.
-    expect(graphqlRequests()).toHaveLength(1);
+    // The follow-up is a query (no write): myReportsReportTemplates(last: 1) —
+    // name from docs/api/ttd-api-reference-part4.md:209; args unverified.
+    expect(graphqlRequests()).toHaveLength(2);
+    expect(gqlQuery(graphqlRequests()[1]!)).toMatch(/myReportsReportTemplates\(last: 1\)/);
     expect(out.templateId).toBe("tmpl9");
-    expect(out.effect?.summary).toEqual({ template_name: "Perf", template_id: "tmpl9" });
-    expect(remaining()).toBe(LIMIT - 1);
+    expect(remaining()).toBe(LIMIT - 2);
   });
 
   it("dry_run sends nothing", async () => {

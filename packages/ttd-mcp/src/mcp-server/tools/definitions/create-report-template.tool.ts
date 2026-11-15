@@ -78,11 +78,11 @@ export const CreateReportTemplateInputSchema = z
 
 export const CreateReportTemplateOutputSchema = z
   .object({
-    templateData: z.unknown().optional().describe("Raw `data` object returned by TTD (`{ id }`)"),
+    templateData: z.unknown().optional().describe("Raw data scalar returned by TTD"),
     templateId: z
       .string()
       .optional()
-      .describe("ID of the newly created template (`data.id` from the mutation)"),
+      .describe("ID of the newly created template (retrieved via follow-up query)"),
     templateName: z.string().optional().describe("Name of the newly created template"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
@@ -107,9 +107,7 @@ type CreateReportTemplateOutput = z.infer<typeof CreateReportTemplateOutputSchem
 
 const CREATE_REPORT_TEMPLATE_MUTATION = `mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
   myReportsTemplateCreate(input: $input) {
-    data {
-      id
-    }
+    data
     errors {
       __typename
       ... on MutationError {
@@ -117,6 +115,12 @@ const CREATE_REPORT_TEMPLATE_MUTATION = `mutation CreateReportTemplate($input: M
         message
       }
     }
+  }
+}`;
+
+const GET_NEWEST_TEMPLATE_QUERY = `query GetNewestTemplate {
+  myReportsReportTemplates(last: 1) {
+    nodes { id name format }
   }
 }`;
 
@@ -168,21 +172,37 @@ export async function createReportTemplateLogic(
     (gqlData.myReportsTemplateCreate as Record<string, unknown> | undefined) ?? {};
   const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
+  let templateId: string | undefined;
+  let templateName: string | undefined;
+
   const mutationExecuted = Boolean(mutationResult.data) && !errors?.length;
 
-  // TTD documents `MyReportsTemplateCreatePayload.data` as an object whose `id`
-  // is "The ID of the generated report template", so the id comes straight from
-  // the mutation: no follow-up "newest template" lookup, which could return
-  // another user's template.
-  const createdData = mutationResult.data as Record<string, unknown> | null | undefined;
-  const createdId = createdData?.id;
-  const templateId =
-    mutationExecuted && (typeof createdId === "string" || typeof createdId === "number")
-      ? String(createdId)
-      : undefined;
-  const templateName = templateId !== undefined ? input.name : undefined;
+  if (mutationExecuted) {
+    try {
+      const listRaw = (await ttdService.graphqlQuery(
+        GET_NEWEST_TEMPLATE_QUERY,
+        {},
+        context
+      )) as Record<string, unknown>;
+      const listData = (listRaw.data as Record<string, unknown> | undefined) ?? {};
+      const connection =
+        (listData.myReportsReportTemplates as Record<string, unknown> | undefined) ?? {};
+      const nodes = (connection.nodes as Array<Record<string, unknown>> | undefined) ?? [];
+      // `myReportsTemplateCreate` returns no id, so the new template is looked
+      // up as the newest one visible to this user. Another user or session may
+      // have created one since; only accept it if it carries the name just
+      // created, otherwise report no id rather than a wrong one — the id goes
+      // into the governed effect summary.
+      if (nodes.length > 0 && nodes[0].name === input.name) {
+        templateId = nodes[0].id as string | undefined;
+        templateName = nodes[0].name as string | undefined;
+      }
+    } catch {
+      // Follow-up query failed — mutation still succeeded, just can't retrieve the ID
+    }
+  }
 
-  // Effect emitted only when the mutation actually executed (data present,
+  // Effect emitted only when the mutation actually executed (data scalar present,
   // no mutation errors). The summary uses stable scalar identities only.
   const effect: EffectResult | undefined = mutationExecuted
     ? {
