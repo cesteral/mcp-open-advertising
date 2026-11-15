@@ -1763,7 +1763,7 @@ describe("ttd_create_report_template → myReportsTemplateCreate", () => {
 describe("ttd_update_report_template → myReportsTemplateUpdate", () => {
   it("sends { id, name, resultSets } as $input", async () => {
     routeGraphql("myReportsTemplateUpdate", {
-      data: { myReportsTemplateUpdate: { data: "ok", errors: [] } },
+      data: { myReportsTemplateUpdate: { data: { id: 9 }, errors: [] } },
     });
     await updateReportTemplateLogic(
       UpdateReportTemplateInputSchema.parse({
@@ -1776,9 +1776,18 @@ describe("ttd_update_report_template → myReportsTemplateUpdate", () => {
     );
     const req = onlyMutation();
     expectGraphqlRequest(req);
-    // basis: docs/api/ttd-api-reference-part4.md:213 (mutation name); input
-    // fields: unverified (code-only).
+    // basis: TTD's myReportsTemplateUpdate page
+    // (https://open.thetradedesk.com/rest/openttd/advertiser/content/docs/AdvertiserReferences/api/gql-doc/my-reports-template-update:
+    // `myReportsTemplateUpdate(input: MyReportsTemplateUpdateInput!):
+    // MyReportsTemplateUpdatePayload!`; payload `data: MyReportsTemplateUpdateResponse`
+    // with `id: Long!` "The id for the updated template", and
+    // `errors: [MyReportsTemplateUpdateMutationError!]`) and TTD's "User-defined
+    // report templates" guide (.../GuidesAdvertiser/reds/doc/ReportTemplates,
+    // "Update a report template": `data { id } errors { __typename ... on
+    // MutationError { field message } }`). Input fields { id, name, resultSets }:
+    // guide example; the input type page was not read.
     expect(gqlQuery(req)).toMatch(/myReportsTemplateUpdate\(input: \$input\)/);
+    expect(gqlQuery(req)).toMatch(/data\s*\{\s*id\s*\}/);
     expect(gqlVariables(req)).toEqual({
       input: { id: "tmpl9", name: "Perf v2", resultSets: [RESULT_SET] },
     });

@@ -175,7 +175,7 @@ describe("ttd report-template + execution governance contract (effect class)", (
 
     it("execute emits the effect when the mutation executed", async () => {
       ttdService.graphqlQuery.mockResolvedValueOnce({
-        data: { myReportsTemplateUpdate: { data: "ok", errors: null } },
+        data: { myReportsTemplateUpdate: { data: { id: 1 }, errors: null } },
       });
       const result = await updateReportTemplateLogic({ ...input } as any, ctx, sdk);
       expect(result.effect).toEqual({

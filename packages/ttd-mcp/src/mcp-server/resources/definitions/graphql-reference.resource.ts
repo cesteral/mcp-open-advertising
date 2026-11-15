@@ -177,7 +177,7 @@ mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
 \`\`\`graphql
 mutation UpdateReportTemplate($input: MyReportsTemplateUpdateInput!) {
   myReportsTemplateUpdate(input: $input) {
-    data
+    data { id }
     errors {
       __typename
       ... on MutationError { field message }
@@ -186,7 +186,7 @@ mutation UpdateReportTemplate($input: MyReportsTemplateUpdateInput!) {
 }
 \`\`\`
 
-**Important:** \`data\` is a **scalar** here too. The update completely replaces the template structure — re-include all columns you want to keep.
+**Important:** \`data\` is an object here too: select \`data { id }\` (\`id\` is a \`Long\`, the id of the updated template; per TTD docs, not re-run live). The update completely replaces the template structure — re-include all columns you want to keep.
 
 ---
 
@@ -485,7 +485,7 @@ TTD documents \`cancelBulkJob(input: { jobId: 123 }) { data { id } }\` (an inlin
 | \`MyReportsTemplateResultSet\` | \`reportType { name }\`, \`fields\`, \`metrics\`, \`conversionMetrics\` | ✅ Works |
 | \`MyReportsTemplateResultSet\` | \`filters\`, \`name\` | ❌ Do not exist |
 | \`MyReportsTemplateCreatePayload\` | \`data { id }\` (object; per TTD docs, not yet re-run live) | ⚠️ Docs-confirmed |
-| \`MyReportsTemplateUpdatePayload\` | \`data\` (scalar) | ✅ Works |
+| \`MyReportsTemplateUpdatePayload\` | \`data { id }\` (object, \`id: Long!\`; per TTD docs, not yet re-run live) | ⚠️ Docs-confirmed |
 | \`MyReportsTemplateScheduleCreatePayload\` | \`data { scheduleId }\` | ✅ Works |
 | \`derivedReportTemplate\` query | Variable type must be \`ID!\` not \`String!\` | ⚠️ Type matters |
 | \`dateFormat\` enum | Must be UPPERCASE (\`INTERNATIONAL\`) | ⚠️ Casing matters |
