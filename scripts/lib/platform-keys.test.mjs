@@ -88,7 +88,7 @@ describe("platform keys: names outside the hash", () => {
     };
     const fake = (path) =>
       path.endsWith("server.ts")
-        ? 'const ZZ_PLATFORM = "zz-management";\n    platform: ZZ_PLATFORM,\n'
+        ? '    platform: "zz-management",\n'
         : path.endsWith("report-errors.ts")
           ? 'export type ReportingPlatform =\n  | "zz";'
           : 'platform: z.enum(["zz"])';

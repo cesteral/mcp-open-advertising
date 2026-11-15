@@ -1,31 +1,15 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const CM360_PACKAGE_NAME = "cm360-mcp";
-const CM360_PLATFORM = "cm360";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -71,128 +55,27 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("cm360-mcp", {
-      version: packageJson.version,
-      description:
-        "Campaign Manager 360 ad serving and trafficking management via CM360 API v5. Supports CRUD operations on campaigns, placements, ads, creatives, floodlight activities, and async reporting.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "CM360 campaign management and reporting server. Use cm360_list_user_profiles to discover your profileId first. " +
-        "Supports CRUD for campaigns, placements, ads, creatives, sites, advertisers, and floodlight activities via CM360 API v5. " +
-        "Async reporting via cm360_get_report (blocking) or cm360_submit_report + cm360_check_report_status + cm360_download_report (non-blocking).",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: CM360_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: CM360_PACKAGE_NAME,
-    platform: CM360_PLATFORM,
-    workflowIdByToolName: cm360WorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "cm360-mcp",
+    platform: "cm360",
+    version: packageJson.version,
+    description:
+      "Campaign Manager 360 ad serving and trafficking management via CM360 API v5. Supports CRUD operations on campaigns, placements, ads, creatives, floodlight activities, and async reporting.",
+    instructions:
+      "CM360 campaign management and reporting server. Use cm360_list_user_profiles to discover your profileId first. " +
+      "Supports CRUD for campaigns, placements, ads, creatives, sites, advertisers, and floodlight activities via CM360 API v5. " +
+      "Async reporting via cm360_get_report (blocking) or cm360_submit_report + cm360_check_report_status + cm360_download_report (non-blocking).",
+    tools: allTools,
     resources: allResources,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: cm360WorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
   });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const {
-      conformanceResources,
-      conformanceResourceTemplate,
-      conformancePrompts,
-      registerStaticResourcesFromDefinitions,
-    } = await import("@cesteral/shared");
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

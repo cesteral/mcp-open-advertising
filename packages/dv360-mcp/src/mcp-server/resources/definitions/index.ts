@@ -21,9 +21,11 @@ import { entityExamplesResource } from "./entity-examples.resource.js";
 import { targetingTypesResource } from "./targeting-types.resource.js";
 import { targetingSchemaResource } from "./targeting-schema.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import { createServerCapabilitiesResource } from "@cesteral/shared";
-
-import type { ResourceDefinition } from "../utils/types.js";
+import {
+  createServerCapabilitiesResource,
+  type StaticResourceDefinition,
+  type TemplatedResourceDefinition,
+} from "@cesteral/shared";
 
 const sharedCapabilities = createServerCapabilitiesResource({
   serverName: "dv360-mcp",
@@ -79,26 +81,25 @@ const sharedCapabilities = createServerCapabilitiesResource({
   startHere: "dv360_list_entities",
 });
 
-const serverCapabilitiesResource: ResourceDefinition = {
-  uriTemplate: "server-capabilities://dv360-mcp/overview",
-  name: sharedCapabilities.name,
-  description: sharedCapabilities.description,
-  mimeType: "application/json",
-  read: async () => ({
-    uri: "server-capabilities://dv360-mcp/overview",
-    mimeType: "application/json",
-    text: await sharedCapabilities.getContent(),
-  }),
+const serverCapabilitiesResource: StaticResourceDefinition = {
+  ...sharedCapabilities,
+  title: sharedCapabilities.name,
 };
 
-export const allResources = [
+/** Fixed-URI resources. */
+export const allResources: StaticResourceDefinition[] = [
+  // Targeting Resources
+  targetingTypesResource,
+  // Server Capabilities
+  serverCapabilitiesResource,
+];
+
+/** URI-template resources. */
+export const allTemplatedResources: TemplatedResourceDefinition[] = [
   // Entity Resources
   entitySchemaResource,
   entityFieldsResource,
   entityExamplesResource,
   // Targeting Resources
-  targetingTypesResource,
   targetingSchemaResource,
-  // Server Capabilities
-  serverCapabilitiesResource,
 ];

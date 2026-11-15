@@ -7,28 +7,10 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerReportCsvResource,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  registerTemplatedResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const TTD_PACKAGE_NAME = "ttd-mcp";
-const TTD_PLATFORM = "ttd";
 
 /**
  * Interaction-log workflow id per tool. Every registered tool except the
@@ -98,147 +80,35 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("ttd-mcp", {
-      version: packageJson.version,
-      description:
-        "The Trade Desk campaign management, reporting, and optimization via TTD's documented Platform API (REST v3 + GraphQL). Supports first-class CRUD entities, GraphQL bulk operations for >100-record writes, and async report generation.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "The Trade Desk campaign management and reporting server. Surfaces TTD's documented Platform API only (REST + GraphQL per TTD Foundations §1, §6). " +
-        "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
-        "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
-        "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
-        "For single-record writes use ttd_create_entity / ttd_update_entity (REST), and for batches the ttd_bulk_* tools. ttd_graphql_mutation_bulk has never been run against TTD and its jobs cannot be cancelled, so it runs against the TTD sandbox only unless the operator opts in.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: TTD_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: TTD_PACKAGE_NAME,
-    platform: TTD_PLATFORM,
-    workflowIdByToolName: ttdWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "ttd-mcp",
+    platform: "ttd",
+    version: packageJson.version,
+    description:
+      "The Trade Desk campaign management, reporting, and optimization via TTD's documented Platform API (REST v3 + GraphQL). Supports first-class CRUD entities, GraphQL bulk operations for >100-record writes, and async report generation.",
+    instructions:
+      "The Trade Desk campaign management and reporting server. Surfaces TTD's documented Platform API only (REST + GraphQL per TTD Foundations §1, §6). " +
+      "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
+      "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
+      "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
+      "For single-record writes use ttd_create_entity / ttd_update_entity (REST), and for batches the ttd_bulk_* tools. ttd_graphql_mutation_bulk has never been run against TTD and its jobs cannot be cancelled, so it runs against the TTD sandbox only unless the operator opts in.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    templatedResources: [fieldRulesResource],
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: ttdWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    reportCsv: {
+      store: reportCsvStore,
+      platformLabel: "TTD",
+      downloadToolName: "ttd_download_report",
+    },
   });
-
-  // Register `ttd-field-rules://{entityType}` for client-side discovery of
-  // required fields and enum suggestions before write tools.
-  registerTemplatedResourcesFromDefinitions({
-    server,
-    templateBuilder: (uriTemplate, options) => new ResourceTemplate(uriTemplate, options),
-    resources: [fieldRulesResource],
-    logger,
-  });
-
-  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
-  // by `ttd_download_report` (storeRawCsv: true).
-  registerReportCsvResource({
-    server,
-    ResourceTemplate,
-    store: reportCsvStore,
-    platform: "TTD",
-    downloadToolName: "ttd_download_report",
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

@@ -6,8 +6,8 @@
  * Provides full JSON Schema for DV360 entity types with metadata
  */
 
+import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
@@ -25,7 +25,7 @@ const URI_TEMPLATE = "entity-schema://{entityType}";
 /**
  * Read entity schema resource
  */
-async function readEntitySchema(params: Record<string, string>): Promise<ResourceContent> {
+async function readEntitySchema(params: Record<string, string>): Promise<string> {
   const { entityType } = params;
 
   if (!entityType) {
@@ -44,7 +44,7 @@ async function readEntitySchema(params: Record<string, string>): Promise<Resourc
   const cacheKey = `entity-schema://${entityType}`;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: "application/json", text: cached };
+    return cached;
   }
 
   const config = getEntityConfigDynamic(entityType);
@@ -87,17 +87,13 @@ async function readEntitySchema(params: Record<string, string>): Promise<Resourc
   const text = JSON.stringify(schemaDocument, null, 2);
   resourceCache.set(cacheKey, text);
 
-  return {
-    uri: cacheKey,
-    mimeType: "application/json",
-    text,
-  };
+  return text;
 }
 
 /**
  * List all available entity schemas
  */
-async function listEntitySchemas(): Promise<ResourceListItem[]> {
+async function listEntitySchemas(): Promise<TemplatedResourceListing[]> {
   const entityTypes = getSupportedEntityTypesDynamic();
 
   return entityTypes.map((entityType) => ({
@@ -111,11 +107,11 @@ async function listEntitySchemas(): Promise<ResourceListItem[]> {
 /**
  * Entity Schema Resource Definition
  */
-export const entitySchemaResource: ResourceDefinition = {
+export const entitySchemaResource: TemplatedResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
   mimeType: "application/json",
-  read: readEntitySchema,
+  resolveContent: (_uri, variables) => readEntitySchema(variables as Record<string, string>),
   list: listEntitySchemas,
 };

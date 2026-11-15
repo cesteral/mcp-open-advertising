@@ -44,6 +44,8 @@ packages/{server-name}/src/
 └── utils/
 ```
 
+A server's `mcp-server/server.ts` holds only its data (name, description, instructions, the tool / resource / prompt lists, the workflow-id map) and passes it to `createPlatformMcpServer()` from `@cesteral/shared`. The factory owns the server info, the interaction logger, tool / resource / prompt registration, the optional `report-csv://` template and the conformance fixtures, in one fixed registration order. That order is part of the wire contract: `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` follow it. Several `scripts/lib` ratchets and `shared` tests read `server.ts` as source (`platform-keys`, `definition-hash-resolver-coverage`), so keep the `platform: "<key>"` and `manifestUrl: new URL(...)` lines literal. dbm-mcp is `governed: false`, ships no manifest and so passes no `manifestUrl`.
+
 ### Creating a New MCP Tool
 
 Each tool is a single file in `src/mcp-server/tools/definitions/` exporting three things:

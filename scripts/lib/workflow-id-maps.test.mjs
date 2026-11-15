@@ -3,8 +3,8 @@
 // Ratchet (fleet review 2026-09, _cross-fleet #26): every server's
 // interaction-log workflow-id map covers exactly the tools it registers.
 //
-// Each server.ts hands `registerToolsFromDefinitions` a hand-written
-// `*WorkflowIdByToolName` map; the factory stamps the entry on the tool's
+// Each server.ts hands `createPlatformMcpServer` a hand-written
+// `*WorkflowIdByToolName` map; the tool factory stamps the entry on the tool's
 // interaction-log record and OTEL span (`mcp.workflow.id`). A tool missing
 // from the map logs every call, and every failure, with no workflowId, so
 // BigQuery grouping by workflow silently drops it. The review found 81 such

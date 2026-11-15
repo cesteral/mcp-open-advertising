@@ -7,27 +7,10 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  registerTemplatedResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const META_PACKAGE_NAME = "meta-mcp";
-const META_PLATFORM = "meta";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -81,135 +64,29 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("meta-mcp", {
-      version: packageJson.version,
-      description:
-        "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v26.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via the configured Meta Graph API (default: v26.0). " +
-        "Progressive discovery: (1) start with meta_list_ad_accounts to resolve accessible account IDs, then meta_list_entities to browse campaigns/adSets/ads (always pass `fields` — Graph API returns nothing by default); " +
-        "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for campaign→adSet→ad rules, entity-examples://all for payloads, targeting-reference://all for targeting spec, and insights-reference://all for metrics/breakdowns; " +
-        "(3) for multi-step flows use MCP Prompts: meta_insights_reporting_workflow, meta_targeting_discovery_workflow, meta_entity_update_workflow, meta_bulk_operations_workflow, meta_entity_duplication_workflow.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: META_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: META_PACKAGE_NAME,
-    platform: META_PLATFORM,
-    workflowIdByToolName: metaWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "meta-mcp",
+    platform: "meta",
+    version: packageJson.version,
+    description:
+      "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v26.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
+    instructions:
+      "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via the configured Meta Graph API (default: v26.0). " +
+      "Progressive discovery: (1) start with meta_list_ad_accounts to resolve accessible account IDs, then meta_list_entities to browse campaigns/adSets/ads (always pass `fields` — Graph API returns nothing by default); " +
+      "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for campaign→adSet→ad rules, entity-examples://all for payloads, targeting-reference://all for targeting spec, and insights-reference://all for metrics/breakdowns; " +
+      "(3) for multi-step flows use MCP Prompts: meta_insights_reporting_workflow, meta_targeting_discovery_workflow, meta_entity_update_workflow, meta_bulk_operations_workflow, meta_entity_duplication_workflow.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    templatedResources: [fieldRulesResource],
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: metaWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
   });
-
-  // Register `meta-field-rules://{entityType}` for client-side discovery of
-  // required fields and enum suggestions before write tools.
-  registerTemplatedResourcesFromDefinitions({
-    server,
-    templateBuilder: (uriTemplate, options) => new ResourceTemplate(uriTemplate, options),
-    resources: [fieldRulesResource],
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

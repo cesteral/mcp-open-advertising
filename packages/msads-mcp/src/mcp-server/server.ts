@@ -7,28 +7,10 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerReportCsvResource,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  registerTemplatedResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const MSADS_PACKAGE_NAME = "msads-mcp";
-const MSADS_PLATFORM = "msads";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -76,145 +58,41 @@ export const msadsWorkflowIdByToolName: Record<string, string> = {
   msads_delete_report_schedule: "mcp.execute.msads_reporting",
 };
 
+/**
+ * Create and configure MCP server instance
+ */
 export async function createMcpServer(
   logger: Logger,
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("msads-mcp", {
-      version: packageJson.version,
-      description:
-        "Microsoft Advertising (Bing Ads) campaign management and reporting via Microsoft Advertising API v13 JSON endpoints. Supports campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels, and Google Ads import.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Microsoft Advertising campaign management and reporting server. Supports Search, Shopping, Audience, and Performance Max campaigns with async reporting, targeting criterions, bid adjustments, ad extensions, and Google Ads import via Microsoft Advertising API v13 JSON endpoints. " +
-        "Use msads_list_accounts to discover accounts, msads_list_entities to browse entities. " +
-        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
-    }
-  );
-
-  const interactionLogger = InteractionLogger.shared({
-    serverName: MSADS_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: MSADS_PACKAGE_NAME,
-    platform: MSADS_PLATFORM,
-    workflowIdByToolName: msadsWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "msads-mcp",
+    platform: "msads",
+    version: packageJson.version,
+    description:
+      "Microsoft Advertising (Bing Ads) campaign management and reporting via Microsoft Advertising API v13 JSON endpoints. Supports campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels, and Google Ads import.",
+    instructions:
+      "Microsoft Advertising campaign management and reporting server. Supports Search, Shopping, Audience, and Performance Max campaigns with async reporting, targeting criterions, bid adjustments, ad extensions, and Google Ads import via Microsoft Advertising API v13 JSON endpoints. " +
+      "Use msads_list_accounts to discover accounts, msads_list_entities to browse entities. " +
+      "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    templatedResources: [fieldRulesResource],
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: msadsWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    reportCsv: {
+      store: reportCsvStore,
+      platformLabel: "Microsoft Ads",
+      downloadToolName: "msads_download_report",
+    },
   });
-
-  // Register `msads-field-rules://{entityType}` for client-side discovery of
-  // enum field rules before write tools.
-  registerTemplatedResourcesFromDefinitions({
-    server,
-    templateBuilder: (uriTemplate, options) => new ResourceTemplate(uriTemplate, options),
-    resources: [fieldRulesResource],
-    logger,
-  });
-
-  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
-  // by `msads_download_report` (storeRawCsv: true).
-  registerReportCsvResource({
-    server,
-    ResourceTemplate,
-    store: reportCsvStore,
-    platform: "Microsoft Ads",
-    downloadToolName: "msads_download_report",
-    logger,
-  });
-
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 export async function runStdioServer(server: McpServer, logger: Logger): Promise<void> {

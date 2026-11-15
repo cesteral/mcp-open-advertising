@@ -6,7 +6,7 @@
  * Provides list of all DV360 targeting types with descriptions and metadata
  */
 
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
+import type { StaticResourceDefinition } from "@cesteral/shared";
 import {
   ALL_TARGETING_TYPES,
   TARGETING_TYPE_DESCRIPTIONS,
@@ -19,7 +19,7 @@ import { resourceCache } from "../utils/resource-cache.js";
 const RESOURCE_NAME = "DV360 Targeting Types";
 const RESOURCE_DESCRIPTION =
   "List of all available DV360 targeting types with descriptions and categories";
-const URI_TEMPLATE = "targeting-types://";
+const URI = "targeting-types://";
 
 /**
  * Get supported parent types for a targeting type
@@ -34,11 +34,11 @@ function getSupportedParentTypes(_targetingType: TargetingType): string[] {
 /**
  * Read targeting types resource
  */
-async function readTargetingTypes(): Promise<ResourceContent> {
-  const cacheKey = "targeting-types://";
+async function readTargetingTypes(): Promise<string> {
+  const cacheKey = URI;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: "application/json", text: cached };
+    return cached;
   }
 
   const categorizedTypes: Record<
@@ -85,35 +85,17 @@ async function readTargetingTypes(): Promise<ResourceContent> {
   const text = JSON.stringify(document, null, 2);
   resourceCache.set(cacheKey, text);
 
-  return {
-    uri: cacheKey,
-    mimeType: "application/json",
-    text,
-  };
-}
-
-/**
- * List available targeting type resources (returns single resource for the full list)
- */
-async function listTargetingTypes(): Promise<ResourceListItem[]> {
-  return [
-    {
-      uri: "targeting-types://",
-      name: "All DV360 Targeting Types",
-      description: `Complete list of ${ALL_TARGETING_TYPES.length} targeting types with descriptions and categories`,
-      mimeType: "application/json",
-    },
-  ];
+  return text;
 }
 
 /**
  * Targeting Types Resource Definition
  */
-export const targetingTypesResource: ResourceDefinition = {
-  uriTemplate: URI_TEMPLATE,
+export const targetingTypesResource: StaticResourceDefinition = {
+  uri: URI,
   name: RESOURCE_NAME,
+  title: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
   mimeType: "application/json",
-  read: readTargetingTypes,
-  list: listTargetingTypes,
+  getContent: readTargetingTypes,
 };

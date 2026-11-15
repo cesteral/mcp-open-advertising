@@ -6,8 +6,8 @@
  * Provides JSON Schema for specific targeting option detail types
  */
 
+import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   ALL_TARGETING_TYPES,
   TARGETING_TYPE_DESCRIPTIONS,
@@ -89,7 +89,7 @@ function getTargetingExample(targetingType: TargetingType): Record<string, any> 
 /**
  * Read targeting schema resource
  */
-async function readTargetingSchema(params: Record<string, string>): Promise<ResourceContent> {
+async function readTargetingSchema(params: Record<string, string>): Promise<string> {
   const { targetingType } = params;
 
   if (!targetingType) {
@@ -112,7 +112,7 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
   const cacheKey = `targeting-schema://${targetingType}`;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: "application/json", text: cached };
+    return cached;
   }
 
   const schemaName = getTargetingDetailSchemaName(targetingType as TargetingType);
@@ -152,17 +152,13 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
   const text = JSON.stringify(document, null, 2);
   resourceCache.set(cacheKey, text);
 
-  return {
-    uri: cacheKey,
-    mimeType: "application/json",
-    text,
-  };
+  return text;
 }
 
 /**
  * List all available targeting schemas
  */
-async function listTargetingSchemas(): Promise<ResourceListItem[]> {
+async function listTargetingSchemas(): Promise<TemplatedResourceListing[]> {
   return ALL_TARGETING_TYPES.map((targetingType) => ({
     uri: `targeting-schema://${targetingType}`,
     name: `${targetingType} Schema`,
@@ -174,11 +170,11 @@ async function listTargetingSchemas(): Promise<ResourceListItem[]> {
 /**
  * Targeting Schema Resource Definition
  */
-export const targetingSchemaResource: ResourceDefinition = {
+export const targetingSchemaResource: TemplatedResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
   mimeType: "application/json",
-  read: readTargetingSchema,
+  resolveContent: (_uri, variables) => readTargetingSchema(variables as Record<string, string>),
   list: listTargetingSchemas,
 };

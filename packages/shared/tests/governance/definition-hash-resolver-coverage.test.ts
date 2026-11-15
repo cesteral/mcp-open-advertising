@@ -4,8 +4,9 @@
 /**
  * Every governed server wires a `definitionHash` resolver — sweep 2026-07-25, 10-F3.
  *
- * `registerToolsFromDefinitions` takes an optional `resolveManifestEntry`. When
- * it is absent the decision-token verifier has nothing to compare the token's
+ * `registerToolsFromDefinitions` takes an optional `resolveManifestEntry`, which
+ * `createPlatformMcpServer` builds from the server's `manifestUrl`. When it is
+ * absent the decision-token verifier has nothing to compare the token's
  * `definitionHash` claim against, so it reports `definitionHashVerified: false`.
  * Under `warn` that binding is simply unchecked; under `enforce` it fails closed
  * — a 100% write outage for that server the moment its posture is raised.
@@ -46,6 +47,9 @@ const registry: Registry = JSON.parse(
 const governed = registry.servers.filter((s) => s.governed === true).map((s) => s.package);
 const ungoverned = registry.servers.filter((s) => s.governed !== true).map((s) => s.package);
 
+// `createPlatformMcpServer({ manifestUrl: new URL("../cesteral-manifest.json", ...) })`
+const MANIFEST_URL = /manifestUrl:\s*new URL\(/;
+
 function serverSource(pkg: string): string {
   const path = resolve(repoRoot, "packages", pkg, "src/mcp-server/server.ts");
   return existsSync(path) ? readFileSync(path, "utf8") : "";
@@ -57,13 +61,13 @@ describe("definitionHash resolver coverage (10-F3)", () => {
     expect(governed.length).toBeGreaterThan(5);
   });
 
-  it.each(governed)("%s wires resolveManifestEntry", (pkg) => {
+  it.each(governed)("%s wires the manifest resolver", (pkg) => {
     const src = serverSource(pkg);
     expect(src, `${pkg} has no src/mcp-server/server.ts`).not.toBe("");
     expect(
-      /resolveManifestEntry:\s*createManifestEntryResolver\(/.test(src),
+      MANIFEST_URL.test(src),
       `${pkg} is declared governed in registry.json but does not pass ` +
-        `resolveManifestEntry to registerToolsFromDefinitions. The decision-token ` +
+        `manifestUrl to createPlatformMcpServer. The decision-token ` +
         `verifier then reports definitionHashVerified: false — unchecked under warn, ` +
         `and a total write outage under enforce.`
     ).toBe(true);
@@ -77,7 +81,7 @@ describe("definitionHash resolver coverage (10-F3)", () => {
     const src = serverSource(pkg);
     if (src === "") return;
     expect(
-      /resolveManifestEntry:\s*createManifestEntryResolver\(/.test(src),
+      MANIFEST_URL.test(src),
       `${pkg} is declared ungoverned in registry.json, so no manifest is generated ` +
         `for it and this resolver can only ever resolve nothing. Either set ` +
         `governed: true in registry.json, or drop the wiring.`

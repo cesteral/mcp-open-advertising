@@ -113,10 +113,9 @@ export function checkPlatformNames(registry, readSource) {
   for (const { package: pkg, platform_key: key } of registry.servers) {
     const path = `packages/${pkg}/src/mcp-server/server.ts`;
     const text = readSource(path);
-    const passed = text.match(/^\s+platform: ([A-Z0-9_]+),$/m)?.[1];
-    const value = passed && text.match(new RegExp(`const ${passed} = "([^"]+)";`))?.[1];
+    const value = text.match(/^\s+platform: "([^"]+)",$/m)?.[1];
     if (!value) {
-      violations.push(`${path}: no \`platform: <CONST>\` with a string const to check`);
+      violations.push(`${path}: no \`platform: "<key>"\` string literal to check`);
     } else if (value !== key) {
       violations.push(`${path}: telemetry platform "${value}" must equal platform_key "${key}"`);
     }
