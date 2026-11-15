@@ -1,7 +1,16 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DERIVED, INVENTORY_SITES, checkFleetInventory } from "../lib/fleet-inventory.mjs";
@@ -88,6 +97,23 @@ describe("scaffold: plan and apply", () => {
     await expect(planScaffold(tmp, { ...opts, type: "reporting" }, TODAY)).rejects.toThrow(
       /not supported yet.*PR 3/
     );
+  });
+
+  it("refuses a port that is not a usable integer", async () => {
+    for (const port of [Number("abc"), 70000, 3.5, 80]) {
+      await expect(planScaffold(tmp, { ...opts, port }, TODAY)).rejects.toThrow(ScaffoldError);
+    }
+  });
+
+  it("links the package's LICENSE.md to the root one, as every package does", async () => {
+    // publish-all.sh packs every registry server; inspect-tarball fails on a
+    // missing LICENSE.md, which would block the whole fleet's release.
+    cpSync(join(ROOT, "LICENSE.md"), join(tmp, "LICENSE.md"));
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    const license = join(tmp, "packages/foo-bar-mcp/LICENSE.md");
+    expect(lstatSync(license).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(license)).toBe("../../LICENSE.md");
+    expect(readFileSync(license, "utf8")).toBe(readFileSync(join(ROOT, "LICENSE.md"), "utf8"));
   });
 
   it("refuses a base URL that is not a URL", async () => {

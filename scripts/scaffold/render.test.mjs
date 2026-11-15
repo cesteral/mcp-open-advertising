@@ -45,6 +45,25 @@ describe("scaffold: management template", () => {
     expect(lines[CONFIG_LINES.rateLimit - 1]).toContain("default(25)");
   });
 
+  it("the account header the adapter reads is the one clients are told to send", () => {
+    // A multi-word key once read `x-foo_bar-account-id` while CORS, docs and
+    // errors said X-FooBar-Account-Id, so every bearer session failed.
+    const adapter = rendered.get("src/auth/foo_bar-auth-adapter.ts");
+    const transport = rendered.get("src/mcp-server/transports/streamable-http-transport.ts");
+    const read = adapter.match(/extractHeader\(headers, "(x-[^"]*account-id)"\)/i)?.[1];
+    expect(read).toBe("X-FooBar-Account-Id");
+    expect(transport).toContain(`"${read}"`);
+  });
+
+  it("rate-limit buckets are scoped to the credential, never to a caller-named account alone", () => {
+    // #237: a bucket keyed only on the account id (or a fixed key) is shared
+    // across tenants, so one tenant can drain another's quota.
+    const service = rendered.get("src/services/foo_bar/foo_bar-service.ts");
+    const keys = [...service.matchAll(/consume\(\s*(`[^`]*`|"[^"]*")/g)].map((m) => m[1]);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) expect(key, key).toMatch(/^`foo_bar:user:\$\{[^}]+\}/);
+  });
+
   it("TEMPLATE_TOOLS matches the rendered tool barrel", () => {
     // A Set: write tools also name their read partner with `toolName:`.
     const names = new Set();

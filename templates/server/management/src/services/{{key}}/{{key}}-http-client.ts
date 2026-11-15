@@ -35,6 +35,11 @@ export class {{Pascal}}HttpClient {
     private readonly logger: Logger
   ) {}
 
+  /** Rate-limit identity of this session's credential (see the auth adapter). */
+  get quotaUser(): string {
+    return this.authAdapter.quotaUser;
+  }
+
   async get(path: string, params?: {{Pascal}}QueryParams, context?: RequestContext): Promise<unknown> {
     return this.executeRequest(this.buildUrl(path, params), context, { method: "GET" });
   }

@@ -18,6 +18,20 @@ export interface {{Pascal}}AuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly accountId: string;
+  /**
+   * The rate-limit identity of this credential. Never the token itself, and
+   * never the caller-named account alone: buckets keyed on that are shared
+   * across tenants (#237; see pinterest-mcp's rate-limit-keys.ts).
+   */
+  readonly quotaUser: string;
+}
+
+/**
+ * TODO(scaffold): once `validate()` reads the platform's user id, return it
+ * here. Until then, a domain-separated one-way hash of the token.
+ */
+export function {{key}}QuotaUser(credential: string): string {
+  return `token-${fingerprintCredentials("{{key}}-quota-user", credential).slice(0, 16)}`;
 }
 
 export class {{Pascal}}AccessTokenAdapter implements {{Pascal}}AuthAdapter {
@@ -36,6 +50,10 @@ export class {{Pascal}}AccessTokenAdapter implements {{Pascal}}AuthAdapter {
 
   get accountId(): string {
     return this._accountId;
+  }
+
+  get quotaUser(): string {
+    return {{key}}QuotaUser(this.accessToken);
   }
 
   async getAccessToken(): Promise<string> {
@@ -76,7 +94,7 @@ export function parse{{Pascal}}TokenFromHeaders(
 export function get{{Pascal}}AccountIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
-  const accountId = extractHeader(headers, "x-{{key}}-account-id");
+  const accountId = extractHeader(headers, "X-{{Pascal}}-Account-Id");
   if (!accountId) {
     throw new McpError(
       JsonRpcErrorCode.InvalidRequest,

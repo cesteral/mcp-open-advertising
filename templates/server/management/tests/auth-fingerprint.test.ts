@@ -10,7 +10,7 @@ import {
 
 describe("{{package}} auth headers and fingerprint", () => {
   it("reads the bearer token and the account header", () => {
-    const headers = { authorization: "Bearer tok-1", "x-{{key}}-account-id": "acct-1" };
+    const headers = { authorization: "Bearer tok-1", "X-{{Pascal}}-Account-Id": "acct-1" };
     expect(parse{{Pascal}}TokenFromHeaders(headers)).toBe("tok-1");
     expect(get{{Pascal}}AccountIdFromHeaders(headers)).toBe("acct-1");
   });

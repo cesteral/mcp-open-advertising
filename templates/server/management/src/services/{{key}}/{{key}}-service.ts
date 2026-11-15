@@ -31,7 +31,7 @@ export class {{Pascal}}Service {
     pageToken: string | undefined,
     context?: RequestContext
   ): Promise<ListEntitiesResult> {
-    await this.rateLimiter.consume(`{{key}}:${accountId}`);
+    await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}:account:${accountId}`);
     const body = (await this.httpClient.get(
       `/accounts/${encodeURIComponent(accountId)}/${ENTITY_PATHS[entityType]}`,
       pageToken ? { page_token: pageToken } : undefined,
@@ -48,7 +48,7 @@ export class {{Pascal}}Service {
     pageToken: string | undefined,
     context?: RequestContext
   ): Promise<ListEntitiesResult> {
-    await this.rateLimiter.consume("{{key}}:accounts");
+    await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}`);
     const body = (await this.httpClient.get(
       "/accounts",
       pageToken ? { page_token: pageToken } : undefined,
@@ -66,7 +66,7 @@ export class {{Pascal}}Service {
     entityId: string,
     context?: RequestContext
   ): Promise<Record<string, unknown>> {
-    await this.rateLimiter.consume(`{{key}}:${accountId}`);
+    await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}:account:${accountId}`);
     return (await this.httpClient.get(
       `/accounts/${encodeURIComponent(accountId)}/${ENTITY_PATHS[entityType]}/${encodeURIComponent(entityId)}`,
       undefined,

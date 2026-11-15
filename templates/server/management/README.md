@@ -33,7 +33,7 @@ The scaffold passes CI except for the wire-request coverage of the four write st
 
 - [ ] Implement `{{key}}_create_entity`, `{{key}}_update_entity`, `{{key}}_delete_entity` and `{{key}}_bulk_update_status`, each with a dry-run and a wire-request test in `tests/` that calls its `*Logic` with only `fetch` stubbed and cites the vendor source in a `// basis:` comment.
 - [ ] Replace the placeholder paths in `src/mcp-server/tools/utils/entity-mapping.ts` and `src/services/{{key}}/{{key}}-service.ts` with the vendor's endpoints.
-- [ ] Point `validate()` in `src/auth/{{key}}-auth-adapter.ts` at a cheap authenticated endpoint, so a bad token fails at session start.
+- [ ] Point `validate()` in `src/auth/{{key}}-auth-adapter.ts` at a cheap authenticated endpoint, so a bad token fails at session start, and check there that the token may use the `X-{{Pascal}}-Account-Id` account. Return the platform's user id from `{{key}}QuotaUser`, so rate-limit buckets follow the user rather than a token hash.
 - [ ] Verify the two entries for `{{package}}` in `platform-facts.json` (API base and rate limit) against the vendor docs.
 - [ ] Declare the untrusted paths of each write tool once it returns platform text (`untrustedContent`).
 - [ ] Check `operational.terminalOperations` in `registry.json`: whether a delete can be undone, and any irreversible status.

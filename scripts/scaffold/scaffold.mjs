@@ -9,7 +9,7 @@
 // are the files CI's format:check sees, and the platform-facts codeRefs are
 // computed from the formatted config.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import * as prettier from "prettier";
 import {
@@ -70,6 +70,9 @@ function validate(opts, registry, root) {
       throw new ScaffoldError(`${n.package} is already in registry.json`);
   }
   const port = opts.port ?? nextFreePort(registry);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new ScaffoldError(`--port must be an integer from 1024 to 65535, got ${opts.port}`);
+  }
   const owner = registry.servers.find((s) => s.port === port);
   if (owner) throw new ScaffoldError(`port ${port} is taken by ${owner.package}`);
   if (existsSync(join(root, "packages", n.package))) {
@@ -210,9 +213,13 @@ export async function planScaffold(root, opts, today) {
   ]);
   const formatted = await format(modified);
 
+  // Every package links the root licence; publish refuses a tarball without it.
+  const links = new Map([[`${pkgDir}/LICENSE.md`, "../../LICENSE.md"]]);
+
   return {
     writes: new Map([...created, ...formatted]),
-    created: [...created.keys()],
+    links,
+    created: [...created.keys(), ...links.keys()],
     modified: [...formatted.keys()],
   };
 }
@@ -224,4 +231,5 @@ export function applyPlan(root, plan) {
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, text);
   }
+  for (const [path, target] of plan.links ?? []) symlinkSync(target, join(root, path));
 }

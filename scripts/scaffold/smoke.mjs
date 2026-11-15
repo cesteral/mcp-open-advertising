@@ -16,9 +16,10 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
+import { failuresFromReport } from "./report.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
 const KEY = "zzscaffold";
@@ -30,20 +31,11 @@ function run(cmd, cwd) {
   execSync(cmd, { cwd, stdio: "inherit", env: { ...process.env, CI: process.env.CI ?? "1" } });
 }
 
-/** Failed test full names, and their failure messages, from a vitest JSON report. */
-function failures(reportPath) {
+/** Failed tests (and files that never ran their tests) from a vitest JSON report. */
+function failures(reportPath, tree) {
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
-  const failed = new Map();
-  for (const file of report.testResults) {
-    for (const t of file.assertionResults) {
-      if (t.status === "failed") failed.set(t.fullName, (t.failureMessages ?? []).join("\n"));
-    }
-    // A file that fails to load has no assertion results, only a message.
-    if (file.status === "failed" && file.assertionResults.length === 0) {
-      failed.set(`${file.name} (file failed to run)`, file.message ?? "");
-    }
-  }
-  return failed;
+  for (const file of report.testResults) file.name = relative(tree, file.name);
+  return failuresFromReport(report);
 }
 
 /**
@@ -92,6 +84,9 @@ async function main() {
     run(`${PNPM} run build`, tree);
     // Generated from the built servers; the CLI prints it as a next step.
     run(`${PNPM} run sync:untrusted-declarations`, tree);
+    // Build-and-test runs these against the built servers too.
+    run(`${PNPM} run generate:manifests`, tree);
+    run(`${PNPM} run check:registry-runtime`, tree);
     for (const script of [
       "format:check",
       "generate:registry",
@@ -125,7 +120,7 @@ async function main() {
         );
       }
     }
-    const failed = failures(report);
+    const failed = failures(report, tree);
     const { problems, expected } = compare(failed);
     if (problems.length) {
       console.error(`\nscaffold smoke FAILED:\n\n${problems.join("\n\n")}`);
