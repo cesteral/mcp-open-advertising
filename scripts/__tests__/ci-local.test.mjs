@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseWorkflowJobs, planJob } from "../ci-local.mjs";
+import { expandMatrix, parseWorkflowJobs, planJob } from "../ci-local.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ci = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8");
@@ -28,7 +28,16 @@ describe("ci-local against the real ci.yml", () => {
   });
 
   it("maps every action to a local equivalent (planning never throws)", () => {
-    expect(() => jobs.map(planJob)).not.toThrow();
+    expect(() => jobs.flatMap(expandMatrix).map(planJob)).not.toThrow();
+  });
+
+  it("runs every scaffold-smoke matrix variant, with the variant substituted", () => {
+    const smoke = jobs.find((j) => j.name === "scaffold-smoke");
+    const runs = expandMatrix(smoke).map((j) => planJob(j).commands.at(-1).run);
+    expect(runs).toEqual([
+      "node scripts/scaffold/smoke.mjs --variant read-only",
+      "node scripts/scaffold/smoke.mjs --variant journey",
+    ]);
   });
 
   it("runs each job's commands in CI's order", () => {
@@ -36,15 +45,19 @@ describe("ci-local against the real ci.yml", () => {
     for (const job of jobs.filter((j) => j.name !== "secret-scan")) {
       const block = ci.slice(ci.indexOf(`\n  ${job.name}:`) + 1).split(/\n {2}\S/)[0];
       const runs = [...block.matchAll(/^ {8}run: (.+)$/gm)].map((m) => m[1]);
+      const [first] = expandMatrix(job);
+      const sub = (r) => r.replace(/\$\{\{\s*matrix\.(\w+)\s*\}\}/g, (_m, k) => first.matrix[k]);
       expect(
-        planJob(job).commands.map((c) => c.run),
+        planJob(first).commands.map((c) => c.run),
         job.name
-      ).toEqual(runs);
+      ).toEqual(runs.map(sub));
     }
   });
 
   it("keeps every check CI has run (none dropped by splitting the job)", () => {
-    const all = jobs.flatMap((job) => planJob(job).commands.map((c) => c.run));
+    const all = jobs
+      .flatMap(expandMatrix)
+      .flatMap((job) => planJob(job).commands.map((c) => c.run));
     for (const command of [
       "pnpm run format:check",
       "pnpm run check:registry",
@@ -99,6 +112,20 @@ describe("parseWorkflowJobs refuses what it cannot represent", () => {
   it("rejects a multi-line run:", () => {
     const text = "jobs:\n  a:\n    steps:\n      - run: |\n          echo hi\n";
     expect(() => parseWorkflowJobs(text)).toThrow(/multi-line run/);
+  });
+
+  it("expands a matrix into one job per value", () => {
+    const text =
+      "jobs:\n  a:\n    strategy:\n      fail-fast: false\n      matrix:\n        v: [x, y]\n    steps:\n      - run: echo ${{ matrix.v }}\n";
+    const [job] = parseWorkflowJobs(text);
+    expect(expandMatrix(job).map((j) => planJob(j).commands[0].run)).toEqual(["echo x", "echo y"]);
+  });
+
+  it("rejects any other ${{ }} left in a run:", () => {
+    const [job] = parseWorkflowJobs(
+      "jobs:\n  a:\n    steps:\n      - run: echo ${{ github.sha }}\n"
+    );
+    expect(() => planJob(job)).toThrow(/\$\{\{ github\.sha \}\}/);
   });
 
   it("rejects an unknown action at planning time", () => {
