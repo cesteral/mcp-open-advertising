@@ -51,7 +51,7 @@ describe("scaffold: names, registry entry, platform facts", () => {
   });
 
   it("the registry entry passes the platform-key and contract-tier checks", () => {
-    const entry = buildRegistryEntry(opts, registry, tools);
+    const entry = buildRegistryEntry({ ...opts, writes: true }, registry, tools);
     const withEntry = { ...registry, servers: [...registry.servers, entry] };
     expect(checkRegistryKeys(withEntry)).toEqual([]);
     expect(checkContractTiers(withEntry)).toEqual([]);
@@ -71,9 +71,31 @@ describe("scaffold: names, registry entry, platform facts", () => {
   });
 
   it("the registry entry has every field the existing entries have", () => {
-    const entry = buildRegistryEntry(opts, registry, tools);
+    const entry = buildRegistryEntry({ ...opts, writes: true }, registry, tools);
     const fields = new Set(registry.servers.flatMap((s) => Object.keys(s)));
     expect([...fields].filter((f) => !(f in entry))).toEqual([]);
+  });
+
+  it("a read-only entry is experimental and ungoverned, with exceptions for every missing SHOULD", () => {
+    const readTools = tools.filter(
+      (t) => !/_(create|update|delete)_entity$|_bulk_update_status$/.test(t)
+    );
+    const entry = buildRegistryEntry(opts, registry, readTools);
+    expect(entry).toMatchObject({ status: "experimental", governed: false });
+    expect(entry.operational.terminalOperations).toEqual([]);
+    expect(entry.contract.exceptions.map((e) => e.requirement).sort()).toEqual(
+      ["account_discovery", "bid_adjustment", "duplicate_entity", "reporting"].sort()
+    );
+    const withEntry = { ...registry, servers: [...registry.servers, entry] };
+    expect(checkContractTiers(withEntry)).toEqual([]);
+  });
+
+  it("an entry with write stubs is experimental and governed, its delete terminal", () => {
+    const entry = buildRegistryEntry({ ...opts, writes: true }, registry, tools);
+    expect(entry).toMatchObject({ status: "experimental", governed: true });
+    expect(entry.operational.terminalOperations.map((o) => o.tool)).toEqual([
+      "foo_bar_delete_entity",
+    ]);
   });
 
   it("an explicit port is kept", () => {

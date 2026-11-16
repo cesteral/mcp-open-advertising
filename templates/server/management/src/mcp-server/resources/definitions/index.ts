@@ -17,12 +17,16 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     crud: [
       "{{key}}_list_entities",
       "{{key}}_get_entity",
+      // {{#writes}}
       "{{key}}_create_entity",
       "{{key}}_update_entity",
       "{{key}}_delete_entity",
+      // {{/writes}}
     ],
     account: ["{{key}}_list_accounts"],
+    // {{#writes}}
     bulk: ["{{key}}_bulk_update_status"],
+    // {{/writes}}
     specialized: ["{{key}}_get_pacing_status"],
     validation: ["{{key}}_validate_entity"],
     discovery: ["{{key}}_search_tools"],

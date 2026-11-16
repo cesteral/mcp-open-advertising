@@ -53,8 +53,12 @@ export function buildRegistryEntry(opts, registry, tools) {
     tool_prefix: n.key,
     platform_key: n.key,
     type: opts.type,
+    // New servers start experimental: built and tested, never published or
+    // deployed until `pnpm promote:server` (scripts/lib/server-status.mjs).
+    status: "experimental",
     ...(exceptions.length ? { contract: { exceptions } } : {}),
-    governed: true,
+    // Ungoverned means no write tools (scripts/lib/governed-packages.mjs).
+    governed: Boolean(opts.writes),
     title: `${opts.displayName} MCP Server`,
     description: `${opts.displayName} management — entity CRUD, validation and pacing (scaffolded; experimental)`,
     runtime_description: `${opts.displayName} API: campaigns and child entities.`,
@@ -69,13 +73,15 @@ export function buildRegistryEntry(opts, registry, tools) {
     tags: ["advertising", n.key, "campaign-management"],
     untrustedContent: { pathReporting: "per-response" },
     operational: {
-      terminalOperations: [
-        {
-          tool: `${n.key}_delete_entity`,
-          operations: ["delete"],
-          note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
-        },
-      ],
+      terminalOperations: opts.writes
+        ? [
+            {
+              tool: `${n.key}_delete_entity`,
+              operations: ["delete"],
+              note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
+            },
+          ]
+        : [],
     },
   };
 }

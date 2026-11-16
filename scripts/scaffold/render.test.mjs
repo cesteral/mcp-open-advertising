@@ -16,7 +16,13 @@ const vars = {
   rateLimitPerMinute: "25",
 };
 
-const rendered = renderTemplate(join(TEMPLATE_DIR, "management"), vars);
+// The stubbed variant (`--with-writes`); most assertions below hold for it.
+const rendered = renderTemplate(join(TEMPLATE_DIR, "management"), vars, { writes: true });
+// The default: an experimental, read-only server.
+const readOnly = renderTemplate(join(TEMPLATE_DIR, "management"), vars);
+const WRITE_TOOLS = ["create_entity", "update_entity", "delete_entity", "bulk_update_status"].map(
+  (t) => `foo_bar_${t}`
+);
 
 describe("scaffold: management template", () => {
   it("renders every file with no placeholder left", () => {
@@ -27,6 +33,40 @@ describe("scaffold: management template", () => {
     }
   });
 
+  it("the read-only render has no write tool, no manifest wiring and no section marker", () => {
+    for (const [path, text] of readOnly) {
+      expect(text, path).not.toContain("{{");
+      for (const tool of WRITE_TOOLS) expect(text, `${path} names ${tool}`).not.toContain(tool);
+    }
+    // The pattern definition-hash-resolver-coverage.test.ts forbids on an ungoverned server.
+    expect(readOnly.get("src/mcp-server/server.ts")).not.toMatch(/manifestUrl:\s*new URL\(/);
+    expect(
+      [...readOnly.keys()].filter(
+        (p) =>
+          p.endsWith("-entity.tool.ts") &&
+          !p.includes("get-") &&
+          !p.includes("list-") &&
+          !p.includes("validate-")
+      )
+    ).toEqual([]);
+    expect(readOnly.has("src/mcp-server/tools/utils/not-implemented.ts")).toBe(false);
+  });
+
+  it("the stubbed render wires the manifest and names every write tool", () => {
+    expect(rendered.get("src/mcp-server/server.ts")).toMatch(/manifestUrl: new URL/);
+    const all = [...rendered.values()].join("\n");
+    for (const tool of WRITE_TOOLS) expect(all).toContain(tool);
+  });
+
+  it("TEMPLATE_TOOLS without writes matches the read-only barrel", () => {
+    const names = new Set(["foo_bar_search_tools"]);
+    for (const [path, text] of readOnly) {
+      if (!path.startsWith("src/mcp-server/tools/definitions/")) continue;
+      for (const m of text.matchAll(/(?:TOOL_NAME =|toolName:) "([a-z0-9_]+)"/g)) names.add(m[1]);
+    }
+    expect([...names].sort()).toEqual([...TEMPLATE_TOOLS("foo_bar")].sort());
+  });
+
   it("paths use the key", () => {
     expect(rendered.has("src/auth/foo_bar-auth-adapter.ts")).toBe(true);
     expect(rendered.has("src/services/foo_bar/foo_bar-http-client.ts")).toBe(true);
@@ -34,9 +74,9 @@ describe("scaffold: management template", () => {
 
   it("an unknown placeholder is an error, not left in the output", () => {
     const { displayName: _omit, ...partial } = vars;
-    expect(() => renderTemplate(join(TEMPLATE_DIR, "management"), partial)).toThrow(
-      /\{\{displayName\}\}/
-    );
+    expect(() =>
+      renderTemplate(join(TEMPLATE_DIR, "management"), partial, { writes: true })
+    ).toThrow(/\{\{displayName\}\}/);
   });
 
   it("CONFIG_LINES point at the values", () => {
@@ -93,6 +133,6 @@ describe("scaffold: management template", () => {
       for (const m of text.matchAll(/(?:TOOL_NAME =|toolName:) "([a-z0-9_]+)"/g)) names.add(m[1]);
     }
     names.add("foo_bar_search_tools");
-    expect([...names].sort()).toEqual([...TEMPLATE_TOOLS("foo_bar")].sort());
+    expect([...names].sort()).toEqual([...TEMPLATE_TOOLS("foo_bar", { writes: true })].sort());
   });
 });

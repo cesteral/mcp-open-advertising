@@ -17,6 +17,8 @@
 //   secretEnvVars: Record<ENV_NAME, { secret_name, version }>,
 // }
 
+import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
+
 function missing(file, list) {
   return new Error(`${file}: cannot find ${list} to insert into`);
 }
@@ -206,10 +208,16 @@ export const SITE_INSERTERS = {
     ),
 };
 
-/** Every inventory site file with `s` inserted: file → new text. */
-export function insertIntoSites(readFile, s) {
+/**
+ * Inventory site files with `s` inserted: file → new text. `deploy` covers the
+ * lists that feed publish and deploy (DEPLOY_SITE_FILES: an experimental
+ * server stays out of them until `pnpm promote:server`), `listing` the rest.
+ */
+export function insertIntoSites(readFile, s, { deploy = true, listing = true } = {}) {
   return new Map(
-    Object.entries(SITE_INSERTERS).map(([file, insert]) => [file, insert(readFile(file), s)])
+    Object.entries(SITE_INSERTERS)
+      .filter(([file]) => (DEPLOY_SITE_FILES.includes(file) ? deploy : listing))
+      .map(([file, insert]) => [file, insert(readFile(file), s)])
   );
 }
 

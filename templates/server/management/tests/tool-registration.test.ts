@@ -22,10 +22,12 @@ describe("{{package}} tool registration", () => {
         "{{key}}_list_accounts",
         "{{key}}_list_entities",
         "{{key}}_get_entity",
+        // {{#writes}}
         "{{key}}_create_entity",
         "{{key}}_update_entity",
         "{{key}}_delete_entity",
         "{{key}}_bulk_update_status",
+        // {{/writes}}
         "{{key}}_validate_entity",
         "{{key}}_get_pacing_status",
         "{{key}}_search_tools",
@@ -33,6 +35,20 @@ describe("{{package}} tool registration", () => {
     );
   });
 
+  // {{^writes}}
+  it("ships no write tool and no governance block while it is read-only", () => {
+    // governed: false is allowed only for a server with no write tool
+    // (scripts/lib/governed-packages.test.mjs). Add writes with
+    // `pnpm new:server {{key}} --add-write-stubs`.
+    for (const t of allTools) {
+      const a = t.annotations as { readOnlyHint?: boolean; cesteral?: unknown } | undefined;
+      expect(a?.readOnlyHint, t.name).not.toBe(false);
+      expect(a?.cesteral, t.name).toBeUndefined();
+    }
+  });
+  // {{/writes}}
+
+  // {{#writes}}
   it("every governed tool's contractId is built from its slugs", () => {
     const governed = allTools
       .map((t) => (t.annotations as { cesteral?: Record<string, unknown> } | undefined)?.cesteral)
@@ -55,4 +71,5 @@ describe("{{package}} tool registration", () => {
       )
     ).rejects.toThrow(/scaffold stub/);
   });
+  // {{/writes}}
 });
