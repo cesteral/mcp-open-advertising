@@ -14,7 +14,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { deployableServers } from "./lib/server-status.mjs";
+import { checkStatuses, deployableServers } from "./lib/server-status.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -24,6 +24,11 @@ function fail(message) {
   process.stderr.write(`fleet: ${message}\n`);
   process.exit(2);
 }
+
+// A missing or unknown status must not silently drop a server from deploy
+// (Terraform would plan to destroy its service): every subcommand refuses.
+const statusErrors = checkStatuses(registry);
+if (statusErrors.length) fail(`registry.json:\n  ${statusErrors.join("\n  ")}`);
 
 const [command, arg] = process.argv.slice(2);
 switch (command) {

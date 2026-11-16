@@ -132,7 +132,6 @@ describe("an experimental server reaches no publish or deploy command", () => {
           servers: [
             { package: STABLE, status: "stable" },
             { package: EXPERIMENTAL, status: "experimental" },
-            { package: "zznostatus-mcp" },
           ],
         })
       );
@@ -146,6 +145,29 @@ describe("an experimental server reaches no publish or deploy command", () => {
         encoding: "utf8",
       });
       expect(JSON.parse(JSON.parse(out.trim()))).toEqual([STABLE]);
+
+      // A missing or misspelled status fails the plan instead of quietly
+      // dropping (and so destroying) the server's service.
+      for (const bad of [
+        { package: "zznostatus-mcp" },
+        { package: "zztypo-mcp", status: "Stable" },
+      ]) {
+        writeFileSync(
+          join(dir, "registry.json"),
+          JSON.stringify({ servers: [{ package: STABLE, status: "stable" }, bad] })
+        );
+        const r = spawnSync("terraform", ["console"], {
+          cwd: join(dir, "module"),
+          input: "jsonencode(local.fleet_service_names)\n",
+          encoding: "utf8",
+        });
+        // `terraform console` reports an evaluation error but exits 0; plan and
+        // apply exit non-zero on the same error.
+        expect(`${r.stdout}${r.stderr}`, bad.package).toMatch(
+          bad.status ? /unknown status \\?"Stable\\?"/ : /Unsupported attribute/
+        );
+        expect(r.stdout, bad.package).not.toContain("zz");
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

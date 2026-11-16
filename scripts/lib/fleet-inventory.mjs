@@ -368,7 +368,7 @@ export function checkFleetInventory(root, registry = readRegistry(root)) {
       const unknown = extra.filter((n) => !packages.includes(n));
       if (experimental.length) {
         violations.push(
-          `${site.file} [${where}]: lists ${experimental.join(", ")}, which is experimental (deploy lists cover stable servers only; \`pnpm promote:server\` adds it)`
+          `${site.file} [${where}]: lists ${experimental.join(", ")}, which is not stable (deploy lists cover status "stable" only; \`pnpm promote:server\` adds it)`
         );
       }
       if (unknown.length) {

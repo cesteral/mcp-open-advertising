@@ -103,7 +103,7 @@ describe("fleet inventory", () => {
     for (const file of DEPLOY_SITE_FILES) {
       expect(
         violations.some(
-          (v) => v.startsWith(`${file} [`) && v.includes("msads-mcp, which is experimental")
+          (v) => v.startsWith(`${file} [`) && v.includes("msads-mcp, which is not stable")
         ),
         file
       ).toBe(true);
@@ -116,10 +116,13 @@ describe("fleet inventory", () => {
       expect(text, file).toContain("fleet.mjs deployable");
       expect(text, file).not.toMatch(/fleet\.mjs"? servers/);
     }
-    // Terraform reads registry.json itself and filters on status.
-    expect(readFileSync(join(ROOT, "terraform/main.tf"), "utf8")).toMatch(
-      /fleet_service_names = \[for s in .*registry\.json.*\.servers : s\.package if .*status.*== "stable"\]/
-    );
+    // Terraform reads registry.json itself, keeps stable servers, and fails on
+    // a missing or unknown status rather than dropping the server.
+    const main = readFileSync(join(ROOT, "terraform/main.tf"), "utf8");
+    const expr = main.match(/^\s*fleet_service_names = (.+)$/m)?.[1] ?? "";
+    expect(expr).toContain("registry.json");
+    expect(expr).toContain('s.status == "stable"');
+    expect(expr).not.toContain("try(");
   });
 
   it("registry port and tool_prefix must agree with the code", () => {

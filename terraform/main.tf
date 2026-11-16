@@ -246,7 +246,10 @@ module "networking" {
 # blocks used before the move to for_each (see moved.tf).
 
 locals {
-  fleet_service_names = [for s in jsondecode(file("${path.module}/../registry.json")).servers : s.package if try(s.status, "") == "stable"]
+  # A missing status is an "Unsupported attribute" error, and an unknown one
+  # fails the tobool() conversion with a message naming it, so a typo can never
+  # quietly drop (and so destroy) a live service.
+  fleet_service_names = [for s in jsondecode(file("${path.module}/../registry.json")).servers : s.package if(contains(["experimental", "stable"], s.status) ? s.status == "stable" : tobool("registry.json: ${s.package} has unknown status \"${s.status}\"; use experimental or stable"))]
 
   service_defaults = {
     min_instances = var.min_instances
