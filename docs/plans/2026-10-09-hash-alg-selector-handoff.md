@@ -108,8 +108,20 @@ A governance build on an older `contract-schema` strips `hashAlg` from the manif
 rejects it as `HASH_ALG_MISMATCH` under `enforce`. That fails closed, so it is safe, but
 it is a total write outage for that server until governance upgrades.
 
-The reverse direction is safe: a server on this slice verifying a legacy token against a
-legacy manifest behaves exactly as before.
+**The opposite order is just as unsafe.** Governance does not read a server's manifest
+live. Per the governance side ([#271](https://github.com/cesteral/mcp-open-advertising/issues/271);
+not verified from this repo), it learns an entry's algorithm from a baked file generated from
+the pinned `@cesteral/*-mcp` versions, which changes only by bumping that package's pin,
+regenerating, committing and deploying. If governance is re-baked to an `rfc8785` entry
+**before** the server has shipped it, governance stamps `rfc8785` while the server still
+runs its legacy manifest, and the server answers `HASH_ALG_MISMATCH` the other way round.
+The verifier checks algorithm equality **before** comparing hashes, so the fact that the
+hash values are identical today does not help. Governance cannot detect either window: its
+trust state stays `attested`. Under `enforce` each window is a full write outage for that
+server; under `warn` / `off` it is only a verdict in the logs.
+
+What is safe is the case where neither side has changed: a server on slice 1 verifying a
+legacy token against a legacy manifest behaves exactly as before.
 
 ## Verdicts
 
@@ -126,15 +138,34 @@ reads as unresolved: `definitionHashVerified: false` under `warn`, fail closed u
 
 ## Slice 2 (this repo, after the above)
 
+Making the verifier accept both algorithms during a transition would close the windows, but
+it conflicts with the deliberate "exactly one algorithm, never tries both" rule, so it is not
+proposed; the cutover is handled by procedure.
+
 1. Look at `orderSensitiveArgs` in warn-mode audit logs on the hosted fleet. This is the
    measurement the static check could not make.
 2. Switch `scripts/generate-manifests.mjs` to compute `definitionHash` under `rfc8785` and
    emit `hashAlg: "rfc8785"` on each entry. For all current definitions the hash value is
    unchanged; only the field is new.
-3. Release. Servers on the new manifest then require `rfc8785` tokens, and governance
-   (item 3/4 above) follows the manifest entry, so there is no flag day: each server moves
-   when it ships.
-4. Retiring `cesteral-c14n-v1` is a separate decision. Legacy manifests persist in
+3. Release. Servers on the new manifest then require `rfc8785` tokens. **This is not
+   coordination-free.** The algorithm can be chosen per server, but governance only learns
+   it when its bake is regenerated and deployed, so each server has a window in both orders
+   (see "Ordering constraint"). Handle it by procedure, below, not by assuming governance
+   follows the manifest in real time.
+4. Per-server procedure, once, as a precondition: governance's `hashAlg` support is
+   deployed. Then for each server:
+   1. Switch the server to `rfc8785` only while its contracts are in `warn` or `off`.
+   2. Governance bumps that package's pin, regenerates the bake and deploys. In `warn` /
+      `off`, either order of this and the previous step is safe.
+   3. Confirm `HASH_ALG_MISMATCH` has stopped appearing in the verdict logs.
+   4. Only then move the contracts to `enforce`.
+
+   If the `orderSensitiveArgs` measurement, or a future definition, shows an
+   order-sensitive definition, tell governance **before** switching that server: per
+   #271, governance deliberately does not attest an order-sensitive definition under
+   `rfc8785` in its current release (it fails closed).
+
+5. Retiring `cesteral-c14n-v1` is a separate decision. Legacy manifests persist in
    already-published tarballs for as long as those versions are installed.
 
 ## Tests
