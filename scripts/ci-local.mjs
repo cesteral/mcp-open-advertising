@@ -18,9 +18,10 @@
 //   - contract-version-guard compares against your local `origin/main`; run
 //     `git fetch origin main` first or it compares against a stale base.
 //   - Conformance binds ports 3001-3013; stop local dev servers first.
-//   - A `strategy.matrix` job runs once per value, one after another, with
-//     `${{ matrix.<name> }}` substituted. Any other `${{ }}` in a run: is an
-//     error: it has no local value.
+//   - A `strategy.matrix` job runs once per value (or once per
+//     `matrix.include` entry), one after another, with `${{ matrix.<name> }}`
+//     substituted. Any other `${{ }}` in a run: is an error: it has no local
+//     value.
 //
 // Usage: node scripts/ci-local.mjs [--job <name>]... [--list] [--strict]
 
@@ -72,7 +73,7 @@ export function parseWorkflowJobs(text) {
     if (!line.trim()) continue;
     const jobKey = line.match(/^ {2}([A-Za-z0-9_-]+):\s*$/);
     if (jobKey) {
-      job = { name: jobKey[1], needs: [], steps: [], matrix: {} };
+      job = { name: jobKey[1], needs: [], steps: [], matrix: {}, include: null };
       jobs.push(job);
       step = null;
       continue;
@@ -95,6 +96,30 @@ export function parseWorkflowJobs(text) {
         .map((v) => v.trim())
         .filter(Boolean);
       continue;
+    }
+    // `include:` under matrix, then one `- { k: v, k: v }` entry per line.
+    if (/^ {8}include:\s*$/.test(line) && !step) {
+      job.include = [];
+      continue;
+    }
+    const entry = line.match(/^ {10}- \{(.*)\}\s*$/);
+    if (entry && job.include && !step) {
+      job.include.push(
+        Object.fromEntries(
+          entry[1].split(",").map((kv) => {
+            const m = kv.match(/^\s*([A-Za-z0-9_-]+):\s*(\S+)\s*$/);
+            if (!m)
+              throw new Error(`${WORKFLOW} job ${job.name}: unsupported include entry "${kv}"`);
+            return [m[1], m[2]];
+          })
+        )
+      );
+      continue;
+    }
+    if (/^ {10}-/.test(line) && !step) {
+      throw new Error(
+        `${WORKFLOW} job ${job.name}: matrix.include entries must be one-line { k: v } maps`
+      );
     }
     const stepStart = line.match(/^ {6}- (.*)$/);
     if (stepStart) {
@@ -122,13 +147,21 @@ function readStepField(step, text, jobName) {
 }
 
 /**
- * One job per combination of its matrix values (the job itself when it has no
- * matrix), each with `matrix` holding that combination. Names stay the job's,
- * so `--job` and `needs:` select every variant.
+ * One job per combination of its matrix values, or per `matrix.include` entry
+ * (the job itself when it has neither), each with `matrix` holding that
+ * combination. Names stay the job's, so `--job` and `needs:` select every
+ * variant. Axes and include together (GitHub's "extend" semantics) are not
+ * supported.
  */
 export function expandMatrix(job) {
-  let combos = [{}];
-  for (const [axis, values] of Object.entries(job.matrix ?? {})) {
+  const axes = Object.entries(job.matrix ?? {});
+  if (job.include && axes.length) {
+    throw new Error(
+      `${WORKFLOW} job ${job.name}: matrix axes with matrix.include are not supported by ci-local`
+    );
+  }
+  let combos = job.include ? job.include.map((e) => ({ ...e })) : [{}];
+  for (const [axis, values] of axes) {
     combos = combos.flatMap((c) => values.map((v) => ({ ...c, [axis]: v })));
   }
   return combos.map((matrix) => ({

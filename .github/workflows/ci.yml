@@ -274,7 +274,13 @@ jobs:
       matrix:
         # read-only: the default scaffold must pass everything. journey: it then
         # gains write stubs and is promoted; only their wire coverage may fail.
-        variant: [read-only, journey]
+        # staged: read-only checks, then write stubs, then the checks again.
+        include:
+          - { type: management, variant: read-only }
+          - { type: management, variant: journey }
+          - { type: reporting, variant: staged }
+          - { type: reporting_conversions, variant: read-only }
+          - { type: reporting_conversions, variant: journey }
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -290,7 +296,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Scaffold a server and run the fleet checks on it
-        run: node scripts/scaffold/smoke.mjs --variant ${{ matrix.variant }}
+        run: node scripts/scaffold/smoke.mjs --type ${{ matrix.type }} --variant ${{ matrix.variant }}
 
   terraform-validate:
     runs-on: ubuntu-latest

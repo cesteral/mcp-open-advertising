@@ -31,12 +31,15 @@ describe("ci-local against the real ci.yml", () => {
     expect(() => jobs.flatMap(expandMatrix).map(planJob)).not.toThrow();
   });
 
-  it("runs every scaffold-smoke matrix variant, with the variant substituted", () => {
+  it("runs every scaffold-smoke leg, with its type and variant substituted", () => {
     const smoke = jobs.find((j) => j.name === "scaffold-smoke");
     const runs = expandMatrix(smoke).map((j) => planJob(j).commands.at(-1).run);
     expect(runs).toEqual([
-      "node scripts/scaffold/smoke.mjs --variant read-only",
-      "node scripts/scaffold/smoke.mjs --variant journey",
+      "node scripts/scaffold/smoke.mjs --type management --variant read-only",
+      "node scripts/scaffold/smoke.mjs --type management --variant journey",
+      "node scripts/scaffold/smoke.mjs --type reporting --variant staged",
+      "node scripts/scaffold/smoke.mjs --type reporting_conversions --variant read-only",
+      "node scripts/scaffold/smoke.mjs --type reporting_conversions --variant journey",
     ]);
   });
 
@@ -119,6 +122,18 @@ describe("parseWorkflowJobs refuses what it cannot represent", () => {
       "jobs:\n  a:\n    strategy:\n      fail-fast: false\n      matrix:\n        v: [x, y]\n    steps:\n      - run: echo ${{ matrix.v }}\n";
     const [job] = parseWorkflowJobs(text);
     expect(expandMatrix(job).map((j) => planJob(j).commands[0].run)).toEqual(["echo x", "echo y"]);
+  });
+
+  it("expands matrix.include into one job per entry", () => {
+    const text =
+      "jobs:\n  a:\n    strategy:\n      matrix:\n        include:\n" +
+      "          - { t: x, v: one }\n          - { t: y, v: two }\n" +
+      "    steps:\n      - run: echo ${{ matrix.t }} ${{ matrix.v }}\n";
+    const [job] = parseWorkflowJobs(text);
+    expect(expandMatrix(job).map((j) => planJob(j).commands[0].run)).toEqual([
+      "echo x one",
+      "echo y two",
+    ]);
   });
 
   it("rejects any other ${{ }} left in a run:", () => {
