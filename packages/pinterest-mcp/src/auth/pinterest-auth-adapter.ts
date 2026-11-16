@@ -285,6 +285,14 @@ export function parsePinterestTokenFromHeaders(
 }
 
 /**
+ * The HTTP header that names the ad account in `pinterest-bearer` mode. The
+ * transport's CORS allow-list and auth-error hint are built from this same
+ * constant, so a browser preflight admits the header and a client following the
+ * hint sends the header this adapter reads.
+ */
+export const PINTEREST_ADVERTISER_ID_HEADER = "X-Pinterest-Advertiser-Id";
+
+/**
  * Extract Pinterest advertiser ID from HTTP headers.
  * Expects `X-Pinterest-Advertiser-Id: <id>` header.
  */
@@ -292,13 +300,13 @@ export function getPinterestAdvertiserIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
   const adAccountId =
-    extractHeader(headers, "x-pinterest-advertiser-id") ??
-    extractHeader(headers, "X-Pinterest-Advertiser-Id");
+    extractHeader(headers, PINTEREST_ADVERTISER_ID_HEADER.toLowerCase()) ??
+    extractHeader(headers, PINTEREST_ADVERTISER_ID_HEADER);
 
   if (!adAccountId) {
     throw new McpError(
       JsonRpcErrorCode.InvalidRequest,
-      "Missing required X-Pinterest-Advertiser-Id header"
+      `Missing required ${PINTEREST_ADVERTISER_ID_HEADER} header`
     );
   }
 
