@@ -18,10 +18,10 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
 import { failuresFromReport } from "./report.mjs";
 import { TEMPLATE_TYPES } from "./render.mjs";
+import { uncoveredWrites } from "./uncovered-writes.mjs";
 import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
@@ -56,21 +56,6 @@ function failures(reportPath, tree) {
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
   for (const file of report.testResults) file.name = relative(tree, file.name);
   return failuresFromReport(report);
-}
-
-/**
- * The generated server's write tools that no wire-request test covers,
- * computed with the tree's own coverage library (vitest truncates the
- * assertion message, so the failure text cannot be relied on to list them).
- */
-async function uncoveredWrites(tree) {
-  const lib = (p) => import(pathToFileURL(join(tree, "scripts/lib", p)).href);
-  const { withServerClient, listRawTools } = await lib("boot-server.mjs");
-  const { coveredTools } = await lib("wire-request-coverage.mjs");
-  const tools = await withServerClient(PACKAGE, listRawTools);
-  const writes = tools.filter((t) => t.annotations?.readOnlyHint === false).map((t) => t.name);
-  const covered = coveredTools(PACKAGE, writes);
-  return writes.filter((name) => !covered.has(name)).sort();
 }
 
 function compare(failed, writes) {
@@ -147,7 +132,7 @@ async function checks(tree, tmp, stage, { writes, promoted }) {
   }
   const { problems, expected } = compare(failures(report, tree), writes);
   if (problems.length) throw new Error(`${stage}:\n\n${problems.join("\n\n")}`);
-  const uncovered = await uncoveredWrites(tree);
+  const uncovered = uncoveredWrites(tree, PACKAGE);
   const want = [...expectedTodoTools(KEY, { type: TYPE, writes })].sort();
   if (JSON.stringify(uncovered) !== JSON.stringify(want)) {
     throw new Error(
