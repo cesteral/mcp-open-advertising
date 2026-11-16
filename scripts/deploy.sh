@@ -116,7 +116,13 @@ TF_ARGS+=(-var-file="$TF_TMP/mcp-images.tfvars.json")
 # is also declared as a terraform resource. On a fresh state the apply would
 # fail with 409 already-exists — import the pre-existing repo once, after
 # which terraform owns it (cleanup policies, labels).
-if ! terraform state list 2>/dev/null | grep -q '^google_artifact_registry_repository\.container_repo$'; then
+# Read the state list into a variable and grep that, never `state list | grep -q`:
+# with `set -o pipefail`, grep -q exits at the first match, terraform then gets a
+# broken pipe, the pipeline reports failure, and the guard wrongly concludes the
+# repo is not in state (the import then fails: "already managed by Terraform").
+# `|| true` keeps the fresh-state case working, where there is nothing to list.
+STATE_RESOURCES="$(terraform state list 2>/dev/null || true)"
+if ! grep -q '^google_artifact_registry_repository\.container_repo$' <<<"$STATE_RESOURCES"; then
   if gcloud artifacts repositories describe "$REPO_NAME" --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
     print_step "Importing pre-existing Artifact Registry repo into Terraform state..."
     terraform import "${TF_ARGS[@]}" \
