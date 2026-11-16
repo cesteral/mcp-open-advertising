@@ -19,7 +19,10 @@ import {
   createTransportEntrypoints,
 } from "@cesteral/shared";
 import { PinterestBearerAuthStrategy } from "../../auth/pinterest-auth-strategy.js";
-import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
+import {
+  PINTEREST_ADVERTISER_ID_HEADER,
+  type PinterestAuthAdapter,
+} from "../../auth/pinterest-auth-adapter.js";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { PINTEREST_RETRY_CONFIG } from "../../services/pinterest/pinterest-http-client.js";
@@ -39,14 +42,14 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
       "X-Cesteral-Decision-Token",
-      "X-Pinterest-Ad-Account-Id",
+      PINTEREST_ADVERTISER_ID_HEADER,
       "X-Pinterest-App-Id",
       "X-Pinterest-App-Secret",
       "X-Pinterest-Refresh-Token",
     ],
     authErrorHint:
       config.mcpAuthMode === "pinterest-bearer"
-        ? "Provide a Pinterest access token via Authorization: Bearer <token> header and ad account ID via X-Pinterest-Ad-Account-Id header."
+        ? `Provide a Pinterest access token via Authorization: Bearer <token> header and ad account ID via ${PINTEREST_ADVERTISER_ID_HEADER} header.`
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,

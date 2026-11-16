@@ -1848,7 +1848,7 @@ Create files in this order (each step depends only on previous steps):
 | meta-mcp       | `meta-bearer`         | `MetaAccessTokenAdapter`                                       | `Authorization: Bearer`                                                    |
 | linkedin-mcp   | `linkedin-bearer`     | `LinkedInAccessTokenAdapter`                                   | `Authorization: Bearer`                                                    |
 | tiktok-mcp     | `tiktok-bearer`       | `TikTokAccessTokenAdapter`                                     | `Authorization: Bearer`, `X-TikTok-Advertiser-Id`                          |
-| pinterest-mcp  | `pinterest-bearer`    | `PinterestAccessTokenAdapter` / `PinterestRefreshTokenAdapter` | `Authorization: Bearer`, `X-Pinterest-Ad-Account-Id`                       |
+| pinterest-mcp  | `pinterest-bearer`    | `PinterestAccessTokenAdapter` / `PinterestRefreshTokenAdapter` | `Authorization: Bearer`, `X-Pinterest-Advertiser-Id`                       |
 | snapchat-mcp   | `snapchat-bearer`     | `SnapchatAccessTokenAdapter` / `SnapchatRefreshTokenAdapter`   | `Authorization: Bearer`, `X-Snapchat-Ad-Account-Id`                        |
 | amazon-dsp-mcp | `amazon-dsp-bearer`   | `AmazonDspAccessTokenAdapter`                                  | `Authorization: Bearer`, `X-Amazon-DSP-Profile-Id`                         |
 | msads-mcp      | `msads-bearer`        | `MsAdsAccessTokenAdapter`                                      | `AuthenticationToken`, `DeveloperToken`, `CustomerId`, `CustomerAccountId` |
