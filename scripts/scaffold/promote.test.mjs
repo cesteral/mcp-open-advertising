@@ -70,6 +70,23 @@ describe("scaffold: promote:server", () => {
     await expect(planPromotion(tmp, "foo_bar")).rejects.toThrow(/foo_bar_duplicate_entity/);
   });
 
+  it("refuses when a deploy list already names the server, rather than adding a duplicate", async () => {
+    // A contributor who added the platform's secrets to mcp_secret_env_vars
+    // early would otherwise get a second "foo-bar-mcp" = { block.
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    applyPlan(tmp, await planAddWrites(tmp, "foo_bar"));
+    const tf = read("terraform/variables.tf").replace(
+      "  default = {\n",
+      '  default = {\n    "foo-bar-mcp" = {\n    }\n'
+    );
+    writeFileSync(join(tmp, "terraform/variables.tf"), tf);
+    const before = snapshot();
+    await expect(planPromotion(tmp, "foo_bar")).rejects.toThrow(
+      /terraform\/variables\.tf already lists foo-bar-mcp/
+    );
+    expect(snapshot()).toEqual(before);
+  });
+
   it("refuses an unknown server and a stable one", async () => {
     await expect(planPromotion(tmp, "foo_bar")).rejects.toThrow(/no server/);
     await expect(planPromotion(tmp, "msads")).rejects.toThrow(/already stable/);

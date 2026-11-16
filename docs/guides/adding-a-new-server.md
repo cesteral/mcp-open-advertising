@@ -155,9 +155,9 @@ Before the server merges:
 - [ ] The platform facts are verified against the vendor's pages, or knowingly left `unverified` with their deadline
 - [ ] `docs/guides/ENV-VARIABLES-GUIDE.md`, `.env.example` and `scripts/create-secrets.sh` list the server's env vars
 
-Before it is promoted and deploys, because the checks prove the server is _listed_, not that it will _run_ on Cloud Run:
+After it is promoted and before it deploys, because the checks prove the server is _listed_, not that it will _run_ on Cloud Run:
 
-- [ ] Its `mcp_secret_env_vars` entry in `terraform/variables.tf` maps every credential env var to a Secret Manager secret. `promote:server` adds only `MCP_AUTH_SECRET_KEY`: a reference to a secret that does not exist fails the deploy, so add the rest when the secrets exist.
+- [ ] Its `mcp_secret_env_vars` entry in `terraform/variables.tf` maps every credential env var to a Secret Manager secret. `promote:server` creates the entry with only `MCP_AUTH_SECRET_KEY` (and refuses if a deploy list names the server already, so do not add it earlier): a reference to a secret that does not exist fails the deploy, so add the rest when the secrets exist.
 - [ ] Those secrets are created (`scripts/create-secrets.sh`) and hold values
 - [ ] Per-environment settings in your tfvars (resources, auth-mode overrides, invokers)
 - [ ] A `terraform plan` against the real project shows the new module resolving

@@ -14,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkContractTiers } from "../lib/contract-tiers.mjs";
+import { DEPLOY_SITE_FILES, serverTokens } from "../lib/fleet-inventory.mjs";
 import { names } from "./entries.mjs";
 import { replaceRegistryEntry } from "./add-writes.mjs";
 import { ScaffoldError, format } from "./scaffold.mjs";
@@ -33,6 +34,15 @@ export async function planPromotion(root, key) {
   if (violations.length) {
     throw new ScaffoldError(
       `${entry.package} cannot be promoted until it meets its whole contract:\n  ${violations.join("\n  ")}`
+    );
+  }
+
+  // Promotion adds the deploy entries; one that exists already (secrets added
+  // early, a half-finished promotion) would become a duplicate key.
+  const listed = DEPLOY_SITE_FILES.filter((f) => serverTokens(read(f)).includes(entry.package));
+  if (listed.length) {
+    throw new ScaffoldError(
+      `${listed.join(", ")} already lists ${entry.package}; remove those entries (promotion adds them) and run it again`
     );
   }
 

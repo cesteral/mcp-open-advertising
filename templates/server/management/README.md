@@ -53,7 +53,6 @@ A fresh read-only scaffold passes CI. Before it merges:
 - [ ] Declare the untrusted paths of each write tool (`untrustedContent`), then `pnpm sync:untrusted-declarations`.
 - [ ] Check `operational.terminalOperations` in `registry.json`: whether a delete can be undone, and any irreversible status.
 - [ ] Replace the scaffold's `contract.exceptions` reasons in `registry.json` with real ones, or ship the tools.
-- [ ] Add the platform's credential secrets to `mcp_secret_env_vars` in `terraform/variables.tf` once they exist in Secret Manager (promotion adds only `MCP_AUTH_SECRET_KEY`).
 <!-- {{/writes}} -->
 <!-- {{#writes}} -->
 The scaffold passes CI except for the wire-request coverage of the four write stubs. Work through this list; CI enforces the first item.
@@ -71,5 +70,8 @@ The scaffold passes CI except for the wire-request coverage of the four write st
 
 `pnpm promote:server {{key}}` makes the server stable (published and deployed). Promotion proves the contract is complete, not that the writes are implemented: CI's wire-request coverage still blocks the merge until each write has a wire test.
 
-- [ ] Add the platform's credential secrets to `mcp_secret_env_vars` in `terraform/variables.tf` once they exist in Secret Manager (promotion adds only `MCP_AUTH_SECRET_KEY`).
 <!-- {{/writes}} -->
+
+## After promotion, before it deploys
+
+- [ ] Add the platform's credential secrets to the server's `mcp_secret_env_vars` entry in `terraform/variables.tf` (promotion creates it with only `MCP_AUTH_SECRET_KEY`), once they exist in Secret Manager. Do not add the entry before promotion: `promote:server` refuses while a deploy list already names the server.
