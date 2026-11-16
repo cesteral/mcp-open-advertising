@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { AmazonDspBearerAuthStrategy } from "../../auth/amazon-dsp-auth-strategy.js";
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { buildRefreshTokenAgeHealth } from "../../utils/refresh-token-age.js";
 import {
@@ -74,115 +76,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         new Date(),
         config.amazonDspRefreshTokenWarnAgeDays
       ) ?? {},
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For amazon-dsp-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as AmazonDspAuthAdapter | undefined;
-      if (adapter) {
-        const cfg = appConfig as AppConfig;
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: cfg.amazonDspApiBaseUrl,
-            reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const amazonDspProfileId = cfg.amazonDspProfileId;
-
-        // Prefer refresh token flow if app credentials are available
-        if (
-          cfg.amazonDspAppId &&
-          cfg.amazonDspAppSecret &&
-          cfg.amazonDspRefreshToken &&
-          amazonDspProfileId
-        ) {
-          const { AmazonDspRefreshTokenAdapter } = await import(
-            "../../auth/amazon-dsp-auth-adapter.js"
-          );
-          const envAdapter = new AmazonDspRefreshTokenAdapter(
-            {
-              appId: cfg.amazonDspAppId,
-              appSecret: cfg.amazonDspAppSecret,
-              refreshToken: cfg.amazonDspRefreshToken,
-            },
-            amazonDspProfileId,
-            cfg.amazonDspApiBaseUrl
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfg.amazonDspApiBaseUrl,
-              reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        const amazonDspToken = cfg.amazonDspAccessToken;
-        if (amazonDspToken && amazonDspProfileId) {
-          const { AmazonDspAccessTokenAdapter } = await import(
-            "../../auth/amazon-dsp-auth-adapter.js"
-          );
-          // Pass the client ID like the stdio path does (src/index.ts) — without
-          // it no ClientId header is sent and every upstream call 401s.
-          const envAdapter = new AmazonDspAccessTokenAdapter(
-            amazonDspToken,
-            amazonDspProfileId,
-            cfg.amazonDspApiBaseUrl,
-            cfg.amazonDspClientId
-          );
-          await envAdapter.validate();
-          const cfgFallback = appConfig as AppConfig;
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfgFallback.amazonDspApiBaseUrl,
-              reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs,
-              reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-dsp-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "AmazonDsp API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as AmazonDspAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-dsp-bearer.",
+      unsupportedModeMessage: "AmazonDsp API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

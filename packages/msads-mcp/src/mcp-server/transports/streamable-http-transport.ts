@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { MsAdsBearerAuthStrategy } from "../../auth/msads-auth-strategy.js";
 import type { MsAdsAuthAdapter } from "../../auth/msads-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { MSADS_RETRY_CONFIG } from "../../services/msads/msads-http-client.js";
 
@@ -56,78 +58,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: MSADS_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const adapter = authResult.platformAuthAdapter as MsAdsAuthAdapter | undefined;
-      if (adapter) {
-        const cfg = appConfig as AppConfig;
-        const services = createSessionServices(
-          adapter,
-          {
-            campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl,
-            reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl,
-            customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl,
-            reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const { msadsAccessToken, msadsDeveloperToken, msadsCustomerId, msadsAccountId } = cfg;
-
-        if (msadsAccessToken && msadsDeveloperToken && msadsCustomerId && msadsAccountId) {
-          const { MsAdsAccessTokenAdapter } = await import("../../auth/msads-auth-adapter.js");
-          const envAdapter = new MsAdsAccessTokenAdapter(
-            msadsAccessToken,
-            msadsDeveloperToken,
-            msadsCustomerId,
-            msadsAccountId,
-            cfg.msadsCustomerApiBaseUrl
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl,
-              reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl,
-              customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl,
-              reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Microsoft Ads credentials required. Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=msads-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "Microsoft Ads API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as MsAdsAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Microsoft Ads credentials required. Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=msads-bearer.",
+      unsupportedModeMessage: "Microsoft Ads API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

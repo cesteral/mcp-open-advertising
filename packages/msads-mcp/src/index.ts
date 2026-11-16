@@ -6,56 +6,30 @@ import { mcpConfig } from "./config/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
-import { MsAdsAccessTokenAdapter } from "./auth/msads-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("msads-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const { msadsAccessToken, msadsDeveloperToken, msadsCustomerId, msadsAccountId } = mcpConfig;
-
-  if (!msadsAccessToken || !msadsDeveloperToken || !msadsCustomerId || !msadsAccountId) {
-    logger.warn(
-      "No Microsoft Ads credentials found in env vars. " +
-        "Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID for stdio mode."
-    );
-    return false;
-  }
-
-  const authAdapter = new MsAdsAccessTokenAdapter(
-    msadsAccessToken,
-    msadsDeveloperToken,
-    msadsCustomerId,
-    msadsAccountId,
-    mcpConfig.msadsCustomerApiBaseUrl
-  );
-
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    {
-      campaignApiBaseUrl: mcpConfig.msadsCampaignApiBaseUrl,
-      reportingApiBaseUrl: mcpConfig.msadsReportingApiBaseUrl,
-      customerApiBaseUrl: mcpConfig.msadsCustomerApiBaseUrl,
-      reportPollIntervalMs: mcpConfig.msadsReportPollIntervalMs,
-      reportMaxPollAttempts: mcpConfig.msadsReportMaxPollAttempts,
-    },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+/** Stdio credentials come from env vars: the four Microsoft Ads credentials. */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () => buildEnvAuthAdapter(mcpConfig),
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No Microsoft Ads credentials found in env vars. " +
+    "Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

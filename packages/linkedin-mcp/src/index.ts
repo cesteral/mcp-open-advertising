@@ -7,8 +7,14 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import { LinkedInAccessTokenAdapter } from "./auth/linkedin-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 import {
@@ -36,40 +42,22 @@ const logger = createServerLogger("linkedin-mcp", transportMode, otelLogMixin())
   }
 }
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a LinkedInAccessTokenAdapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const accessToken = mcpConfig.linkedinAccessToken;
-
-  if (!accessToken) {
-    logger.warn(
-      "No LinkedIn credentials found in env vars. " + "Set LINKEDIN_ACCESS_TOKEN for stdio mode."
-    );
-    return false;
-  }
-
-  const authAdapter = new LinkedInAccessTokenAdapter(
-    accessToken,
-    mcpConfig.linkedinApiBaseUrl,
-    mcpConfig.linkedinApiVersion
-  );
-
-  // Validate token at startup to fail fast on invalid credentials
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    { baseUrl: mcpConfig.linkedinApiBaseUrl, apiVersion: mcpConfig.linkedinApiVersion },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+/** Stdio credentials come from env vars: a static access token. */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () =>
+    mcpConfig.linkedinAccessToken
+      ? new LinkedInAccessTokenAdapter(
+          mcpConfig.linkedinAccessToken,
+          mcpConfig.linkedinApiBaseUrl,
+          mcpConfig.linkedinApiVersion
+        )
+      : undefined,
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No LinkedIn credentials found in env vars. Set LINKEDIN_ACCESS_TOKEN for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

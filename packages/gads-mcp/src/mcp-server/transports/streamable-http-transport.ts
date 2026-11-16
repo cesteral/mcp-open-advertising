@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { GAdsHeadersAuthStrategy } from "../../auth/gads-auth-strategy.js";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { GADS_RETRY_CONFIG } from "../../services/gads/gads-http-client.js";
 
@@ -58,71 +60,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: GADS_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const adapter = authResult.platformAuthAdapter as GAdsAuthAdapter | undefined;
-      if (adapter) {
-        await adapter.validate();
-        const services = createSessionServices(
-          adapter,
-          { baseUrl: (appConfig as AppConfig).gadsApiBaseUrl },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var creds if available
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const typedConfig = appConfig as AppConfig;
-        if (
-          typedConfig.gadsDeveloperToken &&
-          typedConfig.gadsClientId &&
-          typedConfig.gadsClientSecret &&
-          typedConfig.gadsRefreshToken
-        ) {
-          const { GAdsRefreshTokenAuthAdapter } = await import("../../auth/gads-auth-adapter.js");
-          const envAdapter = new GAdsRefreshTokenAuthAdapter({
-            developerToken: typedConfig.gadsDeveloperToken,
-            clientId: typedConfig.gadsClientId,
-            clientSecret: typedConfig.gadsClientSecret,
-            refreshToken: typedConfig.gadsRefreshToken,
-            loginCustomerId: typedConfig.gadsLoginCustomerId,
-          });
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: typedConfig.gadsApiBaseUrl },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Google Ads credentials required. Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN env vars, or use MCP_AUTH_MODE=gads-headers.",
-              status: 400 as const,
-            },
-          };
-        }
-
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "Google Ads API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as GAdsAuthAdapter | undefined,
+      validateAuthAdapter: true,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Google Ads credentials required. Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN env vars, or use MCP_AUTH_MODE=gads-headers.",
+      unsupportedModeMessage: "Google Ads API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },
