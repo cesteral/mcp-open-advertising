@@ -107,7 +107,7 @@ async function main() {
         `./node_modules/.bin/vitest run --config vitest.config.scripts.ts ` +
           `--reporter=default --reporter=json --outputFile.json="${report}" ` +
           // The scaffold's own unit tests assume the unscaffolded repo (next
-          // free port, no zzscaffold entry); build-and-test runs them.
+          // free port, no zzscaffold entry); the test-scripts job runs them.
           `--exclude "scripts/scaffold/**"`,
         tree
       );

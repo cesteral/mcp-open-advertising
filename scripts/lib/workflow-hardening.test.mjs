@@ -53,14 +53,52 @@ describe("workflow action pins", () => {
     }
   );
 
-  it.each(workflows.map((w) => [w.file, w]))(
-    "%s names the version beside each pin",
-    (_file, w) => {
-      for (const { ref, line } of usesRefs(w.text)) {
-        expect(line, `${w.file}: ${ref}`).toMatch(/#\s*v\d+(\.\d+)*\s*$/);
+  it.each(workflows.map((w) => [w.file, w]))("%s names the version beside each pin", (_file, w) => {
+    for (const { ref, line } of usesRefs(w.text)) {
+      expect(line, `${w.file}: ${ref}`).toMatch(/#\s*v\d+(\.\d+)*\s*$/);
+    }
+  });
+});
+
+/** Job ids under `jobs:` and each job's `needs`, read with the indentation GitHub's files use. */
+function jobGraph(text) {
+  const body = text.slice(text.search(/^jobs:\n/m));
+  const jobs = new Map();
+  let current;
+  for (const line of body.split("\n")) {
+    const job = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(line);
+    if (job) {
+      current = job[1];
+      jobs.set(current, []);
+      continue;
+    }
+    const needs = /^ {4}needs:\s*(.+?)\s*$/.exec(line);
+    if (needs && current) {
+      jobs.get(current).push(
+        ...needs[1]
+          .replace(/^\[|\]$/g, "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean)
+      );
+    }
+  }
+  return jobs;
+}
+
+describe("workflow job graph", () => {
+  // GitHub rejects the whole file when a `needs` names a missing job: the run
+  // fails in 0s and the pull request gets no checks at all, which no other
+  // test here notices. CI's build-and-test job was split while a branch still
+  // said `needs: build-and-test`.
+  it.each(workflows.map((w) => [w.file, w]))("%s: every needs names a job in the file", (_f, w) => {
+    const jobs = jobGraph(w.text);
+    for (const [job, needs] of jobs) {
+      for (const need of needs) {
+        expect([...jobs.keys()], `${w.file}: ${job} needs ${need}`).toContain(need);
       }
     }
-  );
+  });
 });
 
 describe("workflow token permissions", () => {

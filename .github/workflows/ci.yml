@@ -265,7 +265,7 @@ jobs:
   # four write stubs (scripts/scaffold/expected-todo.mjs). A change to the
   # template or to any fleet check that a new server would trip fails here.
   scaffold-smoke:
-    needs: build-and-test
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
