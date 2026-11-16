@@ -11,8 +11,8 @@ import { names } from "./entries.mjs";
 import { WRITE_TOOLS } from "./render.mjs";
 
 /** The write stubs whose wire tests are still to come. */
-export function expectedTodoTools(key, { writes = false } = {}) {
-  return writes ? WRITE_TOOLS(key) : [];
+export function expectedTodoTools(key, { type = "management", writes = false } = {}) {
+  return writes ? WRITE_TOOLS(key, type) : [];
 }
 
 /** Full vitest names (describe + test) of the cases that fail until the stubs are implemented. */

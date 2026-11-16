@@ -156,7 +156,8 @@ export async function planScaffold(root, opts, today) {
 
   const pkgDir = `packages/${n.package}`;
   const rendered = renderTemplate(
-    join(TEMPLATE_DIR, opts.type),
+    TEMPLATE_DIR,
+    opts.type,
     {
       ...n,
       displayName: opts.displayName,
@@ -179,7 +180,7 @@ export async function planScaffold(root, opts, today) {
     ),
   };
 
-  const tools = TEMPLATE_TOOLS(n.key, { writes: Boolean(opts.writes) });
+  const tools = TEMPLATE_TOOLS(n.key, { type: opts.type, writes: Boolean(opts.writes) });
   const facts = buildPlatformFacts(full, today, configLines);
   const site = {
     ...n,
