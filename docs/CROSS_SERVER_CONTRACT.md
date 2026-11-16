@@ -45,6 +45,8 @@ What a server must ship depends on its `type` in `registry.json` (`management`, 
 node -e 'for (const s of require("./registry.json").servers) for (const e of s.contract?.exceptions ?? []) console.log(s.package, e.requirement, "-", e.reason)'
 ```
 
+**An experimental server ships its read requirements first.** While a server's registry `status` is `experimental`, only the read rows above apply to it: create, update, delete, bulk status, duplicate, bid adjustment and conversion upload are checked once it is promoted to `stable` (`pnpm promote:server`). It still records an exception for every SHOULD it lacks, write ones included, so promotion needs no new ones. An experimental server is built, tested and conformance-run in CI, but never published or deployed.
+
 Names stay as they are: `gads_remove_entity` and `dv360_adjust_line_item_bids` are accepted variants, because renaming a tool changes its name, its `definitionHash` and, for a governed tool, its contract identity.
 
 ### Derived analysis tools (client-side)
