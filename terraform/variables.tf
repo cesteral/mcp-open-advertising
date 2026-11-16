@@ -27,7 +27,7 @@ variable "artifact_registry_repo_name" {
 }
 
 variable "mcp_images" {
-  description = "Container image per MCP service, keyed by package name (e.g. \"dbm-mcp\"). Must cover every server in registry.json; Cloud Build and scripts/deploy.sh pass it as a generated var file."
+  description = "Container image per MCP service, keyed by package name (e.g. \"dbm-mcp\"). Must cover every stable server in registry.json; Cloud Build and scripts/deploy.sh pass it as a generated var file."
   type        = map(string)
 }
 
@@ -209,7 +209,7 @@ variable "enable_required_apis" {
 }
 
 variable "mcp_secret_env_vars" {
-  description = "Env var to Secret Manager secret mapping per MCP service, keyed by package name. Setting it replaces the whole map, so list every service in registry.json."
+  description = "Env var to Secret Manager secret mapping per MCP service, keyed by package name. Setting it replaces the whole map, so list every stable service in registry.json."
   type = map(map(object({
     secret_name = string
     version     = string

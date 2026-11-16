@@ -60,61 +60,111 @@ function inputArgNames(tool) {
   return names;
 }
 
+/** Every readPartner problem in one server's advertised tools. */
+function readPartnerProblems(pkg, tools) {
+  const byName = new Map(tools.map((t) => [t.name, t]));
+
+  const problems = [];
+  for (const tool of tools) {
+    const readPartner = tool.annotations?.cesteral?.readPartner;
+    if (!readPartner) continue;
+
+    const { toolName, argMap } = readPartner;
+    const readTool = byName.get(toolName);
+    if (!readTool) {
+      problems.push(`${tool.name}: readPartner "${toolName}" is not advertised by ${pkg}`);
+      continue;
+    }
+    // Governance reads the before/after snapshot through the read partner, so
+    // it must itself be governed: a `cesteral` block with kind "read" and its
+    // own manifest entry. `--add-write-stubs` can leave it ungoverned when the
+    // contributor has edited get_entity.
+    if (readTool.annotations?.cesteral?.kind !== "read") {
+      problems.push(
+        `${tool.name}: readPartner "${toolName}" has no cesteral block with kind "read"; ` +
+          `give it one (see the template's get-entity.tool.ts)`
+      );
+    }
+
+    const mappedReadArgs = new Set(Object.values(argMap ?? {}));
+    const suppliable = inputArgNames(tool);
+    // Only fault required read args the write tool can actually source from
+    // its own inputs; response-derived ids (e.g. create's entityId) are out
+    // of the manifest's reach and legitimately unmapped.
+    const missing = requiredArgs(readTool).filter(
+      (arg) => suppliable.has(arg) && !mappedReadArgs.has(arg)
+    );
+    if (missing.length > 0) {
+      problems.push(
+        `${tool.name}: readPartner "${toolName}" requires [${missing.join(", ")}] ` +
+          `but argMap supplies only [${[...mappedReadArgs].join(", ")}] — ` +
+          `add the missing arg(s) to readPartner.argMap`
+      );
+    }
+
+    // Both sides of every entry must name a real arg. A value the read
+    // partner does not accept is stripped by its Zod schema, so the entry
+    // is harmless at runtime but tells governance to pass a parameter
+    // that does not exist (meta #22: `adAccountId` → meta_get_entity).
+    const readArgs = inputArgNames(readTool);
+    for (const [writeArg, readArg] of Object.entries(argMap ?? {})) {
+      if (!suppliable.has(writeArg)) {
+        problems.push(
+          `${tool.name}: readPartner.argMap key "${writeArg}" is not an input of ${tool.name}`
+        );
+      }
+      if (!readArgs.has(readArg)) {
+        problems.push(
+          `${tool.name}: readPartner.argMap maps "${writeArg}" to "${readArg}", ` +
+            `which "${toolName}" does not accept`
+        );
+      }
+    }
+  }
+  return problems;
+}
+
 describe("governed write readPartner.argMap self-containment", () => {
   for (const pkg of packages) {
     it(`${pkg}: every readPartner covers its read tool's required args and names real args`, () => {
-      const tools = toolsOf(pkg);
-      const byName = new Map(tools.map((t) => [t.name, t]));
-
-      const problems = [];
-      for (const tool of tools) {
-        const readPartner = tool.annotations?.cesteral?.readPartner;
-        if (!readPartner) continue;
-
-        const { toolName, argMap } = readPartner;
-        const readTool = byName.get(toolName);
-        if (!readTool) {
-          problems.push(`${tool.name}: readPartner "${toolName}" is not advertised by ${pkg}`);
-          continue;
-        }
-
-        const mappedReadArgs = new Set(Object.values(argMap ?? {}));
-        const suppliable = inputArgNames(tool);
-        // Only fault required read args the write tool can actually source from
-        // its own inputs; response-derived ids (e.g. create's entityId) are out
-        // of the manifest's reach and legitimately unmapped.
-        const missing = requiredArgs(readTool).filter(
-          (arg) => suppliable.has(arg) && !mappedReadArgs.has(arg)
-        );
-        if (missing.length > 0) {
-          problems.push(
-            `${tool.name}: readPartner "${toolName}" requires [${missing.join(", ")}] ` +
-              `but argMap supplies only [${[...mappedReadArgs].join(", ")}] — ` +
-              `add the missing arg(s) to readPartner.argMap`
-          );
-        }
-
-        // Both sides of every entry must name a real arg. A value the read
-        // partner does not accept is stripped by its Zod schema, so the entry
-        // is harmless at runtime but tells governance to pass a parameter
-        // that does not exist (meta #22: `adAccountId` → meta_get_entity).
-        const readArgs = inputArgNames(readTool);
-        for (const [writeArg, readArg] of Object.entries(argMap ?? {})) {
-          if (!suppliable.has(writeArg)) {
-            problems.push(
-              `${tool.name}: readPartner.argMap key "${writeArg}" is not an input of ${tool.name}`
-            );
-          }
-          if (!readArgs.has(readArg)) {
-            problems.push(
-              `${tool.name}: readPartner.argMap maps "${writeArg}" to "${readArg}", ` +
-                `which "${toolName}" does not accept`
-            );
-          }
-        }
-      }
-
+      const problems = readPartnerProblems(pkg, toolsOf(pkg));
       expect(problems, problems.join("\n")).toEqual([]);
     });
   }
+});
+
+describe("readPartnerProblems", () => {
+  const write = {
+    name: "zz_update_entity",
+    inputSchema: { properties: { entityId: {}, entityType: {} } },
+    annotations: {
+      cesteral: {
+        kind: "write",
+        readPartner: {
+          toolName: "zz_get_entity",
+          argMap: { entityId: "entityId", entityType: "entityType" },
+        },
+      },
+    },
+  };
+  const read = (annotations) => ({
+    name: "zz_get_entity",
+    inputSchema: {
+      properties: { entityId: {}, entityType: {} },
+      required: ["entityId", "entityType"],
+    },
+    annotations,
+  });
+
+  it("passes a governed read partner", () => {
+    expect(readPartnerProblems("zz-mcp", [write, read({ cesteral: { kind: "read" } })])).toEqual(
+      []
+    );
+  });
+
+  it("fails a read partner with no cesteral read block", () => {
+    expect(readPartnerProblems("zz-mcp", [write, read({ readOnlyHint: true })])).toEqual([
+      'zz_update_entity: readPartner "zz_get_entity" has no cesteral block with kind "read"; give it one (see the template\'s get-entity.tool.ts)',
+    ]);
+  });
 });

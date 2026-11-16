@@ -13,6 +13,7 @@ import {
   readRegistry,
 } from "../lib/fleet-inventory.mjs";
 import { SITE_INSERTERS, insertIntoSites, insertReadmeRow } from "./sites.mjs";
+import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
@@ -76,6 +77,20 @@ describe("scaffold: fleet-list inserters", () => {
       ]);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("deploy: false leaves every deploy site alone; listing: false leaves the rest", () => {
+    const s = server("zzscaffold");
+    const listingOnly = insertIntoSites(read, s, { deploy: false });
+    const deployOnly = insertIntoSites(read, s, { listing: false });
+    for (const file of DEPLOY_SITE_FILES) {
+      expect(listingOnly.has(file), file).toBe(false);
+      expect(deployOnly.get(file), file).toContain(s.package);
+    }
+    for (const file of siteFiles.filter((f) => !DEPLOY_SITE_FILES.includes(f))) {
+      expect(deployOnly.has(file), file).toBe(false);
+      expect(listingOnly.get(file), file).toContain(s.package);
     }
   });
 

@@ -48,9 +48,10 @@ REGION="europe-west2"
 REPO_NAME="cesteral"
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local")
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# The server list comes from registry.json (scripts/fleet.mjs). Captured
+# The stable servers come from registry.json (scripts/fleet.mjs deployable;
+# experimental servers are never published or deployed). Captured
 # before splitting so `set -e` stops the script if the lookup fails.
-SERVER_LIST="$(node "$REPO_ROOT/scripts/fleet.mjs" servers)"
+SERVER_LIST="$(node "$REPO_ROOT/scripts/fleet.mjs" deployable)"
 # shellcheck disable=SC2206 # package names contain no spaces or globs
 SERVERS=($SERVER_LIST)
 

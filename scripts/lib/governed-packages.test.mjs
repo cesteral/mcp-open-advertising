@@ -6,7 +6,9 @@ import {
   declaredGovernedPackages,
   isDeclaredGoverned,
   assertManifestCoverage,
+  checkUngovernedHasNoWrites,
 } from "./governed-packages.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -85,9 +87,44 @@ describe("registry.json is fully classified", () => {
     expect(unclassified.map((s) => s.package)).toEqual([]);
   });
 
-  it("dbm-mcp is the only ungoverned (reporting-only) server", () => {
-    const real = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf-8"));
-    const ungoverned = real.servers.filter((s) => s.governed === false).map((s) => s.package);
-    expect(ungoverned).toEqual(["dbm-mcp"]);
+  // Ungoverned is a rule, not a name: a server may set `governed: false` only
+  // while it ships no write tool. Its first write must be governed (a
+  // `cesteral` block, a manifest), so the flag flips with it.
+  const ungoverned = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf-8")).servers.filter(
+    (s) => s.governed === false
+  );
+  it.each(ungoverned.map((s) => [s.package, s]))(
+    "%s: governed: false and no write tool",
+    (_pkg, server) => {
+      expect(checkUngovernedHasNoWrites(server, toolsOf(server.package))).toEqual([]);
+    }
+  );
+});
+
+describe("checkUngovernedHasNoWrites", () => {
+  const read = (name) => ({ name, annotations: { readOnlyHint: true } });
+  const write = (name) => ({ name, annotations: { readOnlyHint: false } });
+
+  it("passes an ungoverned server whose tools all read", () => {
+    expect(
+      checkUngovernedHasNoWrites({ package: "zz-mcp", governed: false }, [read("zz_get")])
+    ).toEqual([]);
+  });
+
+  it("fails an ungoverned server that ships a write, naming it", () => {
+    expect(
+      checkUngovernedHasNoWrites({ package: "zz-mcp", governed: false }, [
+        read("zz_get"),
+        write("zz_update_entity"),
+      ])
+    ).toEqual([
+      'zz-mcp: "governed": false, but it ships write tool(s) zz_update_entity; govern them (a cesteral block each) and set "governed": true',
+    ]);
+  });
+
+  it("ignores a governed server", () => {
+    expect(
+      checkUngovernedHasNoWrites({ package: "zz-mcp", governed: true }, [write("zz_x")])
+    ).toEqual([]);
   });
 });

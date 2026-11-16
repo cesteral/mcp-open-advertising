@@ -44,7 +44,7 @@ packages/{server-name}/src/
 └── utils/
 ```
 
-A server's `mcp-server/server.ts` holds only its data (name, description, instructions, the tool / resource / prompt lists, the workflow-id map) and passes it to `createPlatformMcpServer()` from `@cesteral/shared`. The factory owns the server info, the interaction logger, tool / resource / prompt registration, the optional `report-csv://` template and the conformance fixtures, in one fixed registration order. That order is part of the wire contract: `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` follow it. Several `scripts/lib` ratchets and `shared` tests read `server.ts` as source (`platform-keys`, `definition-hash-resolver-coverage`), so keep the `platform: "<key>"` and `manifestUrl: new URL(...)` lines literal. dbm-mcp is `governed: false`, ships no manifest and so passes no `manifestUrl`.
+A server's `mcp-server/server.ts` holds only its data (name, description, instructions, the tool / resource / prompt lists, the workflow-id map) and passes it to `createPlatformMcpServer()` from `@cesteral/shared`. The factory owns the server info, the interaction logger, tool / resource / prompt registration, the optional `report-csv://` template and the conformance fixtures, in one fixed registration order. That order is part of the wire contract: `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` follow it. Several `scripts/lib` ratchets and `shared` tests read `server.ts` as source (`platform-keys`, `definition-hash-resolver-coverage`), so keep the `platform: "<key>"` and `manifestUrl: new URL(...)` lines literal. An ungoverned server (`governed: false`, allowed only while it ships no write tool: dbm-mcp, and every new experimental read-only server) ships no manifest and so passes no `manifestUrl`.
 
 ### Creating a New MCP Tool
 
@@ -136,6 +136,7 @@ Platform quirks that are easy to forget live next to the code, in `packages/<ser
 - **Secrets**: GCP Secret Manager
 - **IaC**: Terraform (`terraform/`)
 - **CI/CD**: Cloud Build (`cloudbuild.yaml`)
+- **Lifecycle**: every `registry.json` entry has `status` `experimental` or `stable`. Publish, Cloud Build, `deploy.sh`, `smoke-test.sh` and Terraform read stable servers only (`node scripts/fleet.mjs deployable`); CI builds and tests every server. `pnpm new:server` creates an experimental read-only server, `pnpm promote:server` makes it stable (see [adding-a-new-server.md](docs/guides/adding-a-new-server.md))
 
 ```bash
 # Test endpoints

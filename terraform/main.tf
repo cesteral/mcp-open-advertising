@@ -239,13 +239,17 @@ module "networking" {
 }
 
 # ── MCP services ─────────────────────────────────────────────────────────────
-# One Cloud Run service per server in registry.json, so registering a server
-# there adds it here. Each service's inputs are computed once in
+# One Cloud Run service per stable server in registry.json, so promoting a
+# server there adds it here. Experimental servers (registry `status`) are
+# built and tested in CI but never deployed. Each service's inputs are computed once in
 # local.mcp_service_inputs; the expressions are the ones the per-server module
 # blocks used before the move to for_each (see moved.tf).
 
 locals {
-  fleet_service_names = [for s in jsondecode(file("${path.module}/../registry.json")).servers : s.package]
+  # A missing status is an "Unsupported attribute" error, and an unknown one
+  # fails the tobool() conversion with a message naming it, so a typo can never
+  # quietly drop (and so destroy) a live service.
+  fleet_service_names = [for s in jsondecode(file("${path.module}/../registry.json")).servers : s.package if(contains(["experimental", "stable"], s.status) ? s.status == "stable" : tobool("registry.json: ${s.package} has unknown status \"${s.status}\"; use experimental or stable"))]
 
   service_defaults = {
     min_instances = var.min_instances

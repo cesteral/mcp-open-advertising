@@ -56,9 +56,10 @@ if [ "$REGISTRY_ONLY" = true ] && { [ "$NPM_ONLY" = true ] || [ "$CONTRACTS_ONLY
   exit 1
 fi
 
-# The server list comes from registry.json (scripts/fleet.mjs). Captured
+# The stable servers come from registry.json (scripts/fleet.mjs deployable;
+# experimental servers are never published or deployed). Captured
 # before splitting so `set -e` stops the script if the lookup fails.
-SERVER_LIST="$(node "$REPO_ROOT/scripts/fleet.mjs" servers)"
+SERVER_LIST="$(node "$REPO_ROOT/scripts/fleet.mjs" deployable)"
 # shellcheck disable=SC2206 # package names contain no spaces or globs
 SERVERS=($SERVER_LIST)
 

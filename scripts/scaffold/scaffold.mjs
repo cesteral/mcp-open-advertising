@@ -128,7 +128,8 @@ function lineOf(text, test, what) {
   return i + 1;
 }
 
-async function format(writes) {
+/** Format each ts/js/json/md file with the repo's prettier config, in memory. */
+export async function format(writes) {
   const config = (await prettier.resolveConfig(join(REPO_ROOT, "package.json"))) ?? {};
   const out = new Map();
   for (const [path, text] of writes) {
@@ -154,14 +155,18 @@ export async function planScaffold(root, opts, today) {
   const full = { ...opts, port };
 
   const pkgDir = `packages/${n.package}`;
-  const rendered = renderTemplate(join(TEMPLATE_DIR, opts.type), {
-    ...n,
-    displayName: opts.displayName,
-    port: String(port),
-    baseUrl: opts.baseUrl,
-    docsUrl: opts.docsUrl,
-    rateLimitPerMinute: String(opts.rateLimitPerMinute),
-  });
+  const rendered = renderTemplate(
+    join(TEMPLATE_DIR, opts.type),
+    {
+      ...n,
+      displayName: opts.displayName,
+      port: String(port),
+      baseUrl: opts.baseUrl,
+      docsUrl: opts.docsUrl,
+      rateLimitPerMinute: String(opts.rateLimitPerMinute),
+    },
+    { writes: Boolean(opts.writes) }
+  );
   const created = await format(new Map([...rendered].map(([p, t]) => [`${pkgDir}/${p}`, t])));
 
   const config = created.get(`${pkgDir}/src/config/index.ts`);
@@ -174,7 +179,7 @@ export async function planScaffold(root, opts, today) {
     ),
   };
 
-  const tools = TEMPLATE_TOOLS(n.key);
+  const tools = TEMPLATE_TOOLS(n.key, { writes: Boolean(opts.writes) });
   const facts = buildPlatformFacts(full, today, configLines);
   const site = {
     ...n,
@@ -209,7 +214,8 @@ export async function planScaffold(root, opts, today) {
         authLabel: "Bearer token",
       }),
     ],
-    ...insertIntoSites(read, site),
+    // Experimental: the deploy lists wait for `pnpm promote:server`.
+    ...insertIntoSites(read, site, { deploy: false }),
   ]);
   const formatted = await format(modified);
 

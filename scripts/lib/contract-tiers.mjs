@@ -11,6 +11,10 @@
 //     `contract.exceptions` giving the reason.
 //   - an exception for a requirement the server now meets fails too, so the
 //     list only shrinks.
+//   - an `experimental` server (registry `status`) is held to its type's read
+//     requirements only; the write ones (`write: true`) apply once it is
+//     promoted to `stable`. Its exceptions for write SHOULDs are kept, so
+//     promotion needs no new ones.
 //
 // Requirements are matched on the tool name after the server's `tool_prefix`.
 // Static: reads registry.json only (its `tools` lists are kept equal to the
@@ -20,14 +24,14 @@
 const REQUIREMENTS = {
   list_entities: { suffixes: ["list_entities"] },
   get_entity: { suffixes: ["get_entity"] },
-  create_entity: { suffixes: ["create_entity"] },
-  update_entity: { suffixes: ["update_entity"] },
-  delete_entity: { suffixes: ["delete_entity", "remove_entity"] },
-  bulk_update_status: { suffixes: ["bulk_update_status"] },
+  create_entity: { suffixes: ["create_entity"], write: true },
+  update_entity: { suffixes: ["update_entity"], write: true },
+  delete_entity: { suffixes: ["delete_entity", "remove_entity"], write: true },
+  bulk_update_status: { suffixes: ["bulk_update_status"], write: true },
   validate_entity: { suffixes: ["validate_entity"] },
   pacing: { suffixes: ["get_pacing_status"] },
-  duplicate_entity: { suffixes: ["duplicate_entity"] },
-  bid_adjustment: { suffixes: ["adjust_bids", "adjust_line_item_bids"] },
+  duplicate_entity: { suffixes: ["duplicate_entity"], write: true },
+  bid_adjustment: { suffixes: ["adjust_bids", "adjust_line_item_bids"], write: true },
   account_discovery: {
     suffixes: ["list_accounts", "list_ad_accounts", "list_advertisers", "list_user_profiles"],
   },
@@ -35,7 +39,7 @@ const REQUIREMENTS = {
   reporting: {
     suffixes: ["get_report", "submit_report", "get_insights", "get_analytics", "run_custom_query"],
   },
-  conversion_upload: { suffixes: ["insert_conversions"] },
+  conversion_upload: { suffixes: ["insert_conversions"], write: true },
 };
 
 export const SERVER_TYPES = {
@@ -92,13 +96,14 @@ export function checkContractTiers(registry) {
       continue;
     }
     const exceptions = server.contract?.exceptions ?? [];
+    const applies = (req) => server.status !== "experimental" || !REQUIREMENTS[req].write;
     const excepted = new Map(exceptions.map((e) => [e.requirement, e]));
     if (excepted.size !== exceptions.length) {
       violations.push(`${pkg}: contract.exceptions lists a requirement twice`);
     }
 
     for (const req of tier.must) {
-      if (!meets(server, req)) {
+      if (applies(req) && !meets(server, req)) {
         const names = REQUIREMENTS[req].suffixes.map((s) => `${server.tool_prefix}_${s}`);
         violations.push(
           `${pkg}: MUST ship ${names.join(" or ")} (${server.type}); a MUST cannot be excepted`
@@ -106,7 +111,7 @@ export function checkContractTiers(registry) {
       }
     }
     for (const req of tier.should) {
-      if (!meets(server, req) && !excepted.has(req)) {
+      if (applies(req) && !meets(server, req) && !excepted.has(req)) {
         const names = REQUIREMENTS[req].suffixes.map((s) => `${server.tool_prefix}_${s}`);
         violations.push(
           `${pkg}: SHOULD ship ${names.join(" or ")}; add it, or record why not in registry contract.exceptions`

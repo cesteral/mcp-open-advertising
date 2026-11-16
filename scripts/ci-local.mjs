@@ -18,6 +18,9 @@
 //   - contract-version-guard compares against your local `origin/main`; run
 //     `git fetch origin main` first or it compares against a stale base.
 //   - Conformance binds ports 3001-3013; stop local dev servers first.
+//   - A `strategy.matrix` job runs once per value, one after another, with
+//     `${{ matrix.<name> }}` substituted. Any other `${{ }}` in a run: is an
+//     error: it has no local value.
 //
 // Usage: node scripts/ci-local.mjs [--job <name>]... [--list] [--strict]
 
@@ -69,7 +72,7 @@ export function parseWorkflowJobs(text) {
     if (!line.trim()) continue;
     const jobKey = line.match(/^ {2}([A-Za-z0-9_-]+):\s*$/);
     if (jobKey) {
-      job = { name: jobKey[1], needs: [], steps: [] };
+      job = { name: jobKey[1], needs: [], steps: [], matrix: {} };
       jobs.push(job);
       step = null;
       continue;
@@ -81,6 +84,15 @@ export function parseWorkflowJobs(text) {
         .replace(/[[\]]/g, "")
         .split(",")
         .map((s) => s.trim())
+        .filter(Boolean);
+      continue;
+    }
+    // `strategy:` / `matrix:` children: `<name>: [a, b]` one level under matrix.
+    const axis = line.match(/^ {8}([A-Za-z0-9_-]+):\s*\[(.*)\]\s*$/);
+    if (axis && !step) {
+      job.matrix[axis[1]] = axis[2]
+        .split(",")
+        .map((v) => v.trim())
         .filter(Boolean);
       continue;
     }
@@ -109,6 +121,32 @@ function readStepField(step, text, jobName) {
   step[m[1] === "working-directory" ? "cwd" : m[1]] = value;
 }
 
+/**
+ * One job per combination of its matrix values (the job itself when it has no
+ * matrix), each with `matrix` holding that combination. Names stay the job's,
+ * so `--job` and `needs:` select every variant.
+ */
+export function expandMatrix(job) {
+  let combos = [{}];
+  for (const [axis, values] of Object.entries(job.matrix ?? {})) {
+    combos = combos.flatMap((c) => values.map((v) => ({ ...c, [axis]: v })));
+  }
+  return combos.map((matrix) => ({
+    ...job,
+    matrix,
+    steps: job.steps.map((st) =>
+      st.run
+        ? {
+            ...st,
+            run: st.run.replace(/\$\{\{\s*matrix\.([A-Za-z0-9_-]+)\s*\}\}/g, (m, k) =>
+              k in matrix ? matrix[k] : m
+            ),
+          }
+        : st
+    ),
+  }));
+}
+
 /** Resolve each step to something runnable locally, or throw on an unknown action. */
 export function planJob(job) {
   const requires = new Set();
@@ -126,7 +164,15 @@ export function planJob(job) {
       if (mapped?.run) commands.push({ name: mapped.name, run: mapped.run, cwd: step.cwd });
       continue;
     }
-    if (step.run) commands.push({ name: step.name ?? step.run, run: step.run, cwd: step.cwd });
+    if (step.run) {
+      const expr = step.run.match(/\$\{\{[^}]*\}\}/);
+      if (expr) {
+        throw new Error(
+          `${WORKFLOW} job ${job.name}: run: uses ${expr[0]}, which has no local value; extend expandMatrix or drop the expression`
+        );
+      }
+      commands.push({ name: step.name ?? step.run, run: step.run, cwd: step.cwd });
+    }
   }
   return { name: job.name, needs: job.needs, requires: [...requires], commands };
 }
@@ -175,7 +221,9 @@ function parseArgs(argv) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const plans = parseWorkflowJobs(readFileSync(join(ROOT, WORKFLOW), "utf8")).map(planJob);
+  const plans = parseWorkflowJobs(readFileSync(join(ROOT, WORKFLOW), "utf8"))
+    .flatMap(expandMatrix)
+    .map(planJob);
   const unknown = opts.jobs.filter((j) => !plans.some((p) => p.name === j));
   if (unknown.length) throw new Error(`no such job in ${WORKFLOW}: ${unknown.join(", ")}`);
   const selected = opts.jobs.length ? plans.filter((p) => opts.jobs.includes(p.name)) : plans;

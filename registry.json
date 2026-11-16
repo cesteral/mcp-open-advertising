@@ -11,6 +11,7 @@
       "tool_prefix": "dbm",
       "platform_key": "dbm",
       "type": "reporting",
+      "status": "stable",
       "governed": false,
       "title": "Bid Manager MCP Server",
       "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
@@ -61,6 +62,7 @@
       "tool_prefix": "dv360",
       "platform_key": "dv360",
       "type": "management",
+      "status": "stable",
       "contract": {
         "exceptions": [
           {
@@ -179,6 +181,7 @@
       "tool_prefix": "ttd",
       "platform_key": "ttd",
       "type": "management",
+      "status": "stable",
       "contract": {
         "exceptions": [
           {
@@ -329,6 +332,7 @@
       "tool_prefix": "gads",
       "platform_key": "google_ads",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Google Ads MCP Server",
       "description": "Google Ads management — campaign writes, GAQL reporting, bulk mutate, validation, and previews",
@@ -417,6 +421,7 @@
       "tool_prefix": "meta",
       "platform_key": "meta",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Meta Ads MCP Server",
       "description": "Meta Ads management — writes, insights, targeting, delivery estimates, previews, and media uploads",
@@ -516,6 +521,7 @@
       "tool_prefix": "linkedin",
       "platform_key": "linkedin_ads",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "LinkedIn Ads MCP Server",
       "description": "LinkedIn Ads management and analytics — CRUD, targeting, delivery forecasts, and media uploads",
@@ -603,6 +609,7 @@
       "tool_prefix": "tiktok",
       "platform_key": "tiktok",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "TikTok Ads MCP Server",
       "description": "TikTok Ads management — CRUD, async reports, targeting, and media uploads",
@@ -701,6 +708,7 @@
       "tool_prefix": "cm360",
       "platform_key": "cm360",
       "type": "management",
+      "status": "stable",
       "contract": {
         "exceptions": [
           {
@@ -808,6 +816,7 @@
       "tool_prefix": "snapchat",
       "platform_key": "snapchat",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Snapchat Ads MCP Server",
       "description": "Snapchat Ads management — CRUD, async reports, targeting, and audience estimates",
@@ -885,6 +894,7 @@
       "tool_prefix": "sa360",
       "platform_key": "sa360",
       "type": "reporting_conversions",
+      "status": "stable",
       "governed": true,
       "title": "Search Ads 360 MCP Server",
       "description": "Search Ads 360 — reporting via query language, insights, and offline conversion upload",
@@ -948,6 +958,7 @@
       "tool_prefix": "pinterest",
       "platform_key": "pinterest",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Pinterest Ads MCP Server",
       "description": "Pinterest Ads management — CRUD, async reports, targeting, and audience estimates",
@@ -1035,6 +1046,7 @@
       "tool_prefix": "amazon_dsp",
       "platform_key": "amazon_dsp",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Amazon DSP MCP Server",
       "description": "Amazon DSP management — CRUD, async reports, video upload, and Ads API v1 commitments and forecasts",
@@ -1115,6 +1127,7 @@
       "tool_prefix": "msads",
       "platform_key": "msads",
       "type": "management",
+      "status": "stable",
       "governed": true,
       "title": "Microsoft Advertising MCP Server",
       "description": "Microsoft Ads management — CRUD, Google Ads import, ad extensions, and async reports",

@@ -11,5 +11,7 @@ describeServerCard({
     port: {{port}},
     apiBaseUrl: "{{baseUrl}}",
   },
+  // {{#writes}}
   terminalTools: ["{{key}}_delete_entity"],
+  // {{/writes}}
 });

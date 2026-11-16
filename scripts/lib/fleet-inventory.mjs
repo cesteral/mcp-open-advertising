@@ -34,6 +34,32 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { derivePrefix } from "../../evals/lib/merged-catalog.mjs";
+import { deployableServers } from "./server-status.mjs";
+
+/**
+ * Hand-maintained lists that feed publish and deploy. They cover stable
+ * servers only (registry `status`): an experimental server is built and tested
+ * in CI, but never given an image, a Cloud Run service or a release.
+ */
+export const DEPLOY_SITE_FILES = [
+  "cloudbuild.yaml",
+  "cloudbuild-manual.yaml",
+  "terraform/main.tf",
+  "terraform/variables.tf",
+  "terraform/dev.tfvars.example",
+  "terraform/prod.tfvars.example",
+];
+
+/** Scripts and Cloud Build configs that publish or deploy: they read `fleet.mjs deployable`. */
+export const DEPLOY_CONSUMERS = [
+  "scripts/publish-all.sh",
+  "scripts/deploy.sh",
+  "scripts/smoke-test.sh",
+  "cloudbuild.yaml",
+  "cloudbuild-manual.yaml",
+];
+
+const deployablePackages = (servers) => deployableServers({ servers }).map((s) => s.package);
 
 const SERVER_TOKEN = /\b[a-z0-9]+(?:-[a-z0-9]+)*-mcp\b/g;
 
@@ -78,6 +104,7 @@ function dropdownOptions(text, id) {
 export const INVENTORY_SITES = [
   ...["cloudbuild.yaml", "cloudbuild-manual.yaml"].map((file) => ({
     file,
+    expected: deployablePackages,
     why: "Cloud Build does not record the server's images (the steps read the registry; images: is static)",
     lists: (t) => {
       const images = t.slice(Math.max(0, t.search(/^images:/m)));
@@ -95,6 +122,7 @@ export const INVENTORY_SITES = [
   })),
   {
     file: "terraform/main.tf",
+    expected: deployablePackages,
     why: "Terraform has no default MCP_AUTH_MODE for the service, so the for_each module cannot be planned",
     lists: (t) =>
       captures(t, /service_auth_defaults = \{\n([\s\S]*?)^\s+\}/gm).map((b) => ({
@@ -104,6 +132,7 @@ export const INVENTORY_SITES = [
   },
   {
     file: "terraform/variables.tf",
+    expected: deployablePackages,
     why: "the service has no secret mapping, so the for_each module cannot be planned",
     lists: (t) =>
       captures(t, /variable "mcp_secret_env_vars" \{[\s\S]*?default = \{\n([\s\S]*?)^ {2}\}/gm).map(
@@ -115,6 +144,7 @@ export const INVENTORY_SITES = [
   },
   ...["dev", "prod"].map((env) => ({
     file: `terraform/${env}.tfvars.example`,
+    expected: deployablePackages,
     why: "the example tfvars a deployer copies has no image for the server",
     lists: (t) =>
       captures(t, /^mcp_images = \{\n([\s\S]*?)^\}/gm).map((b) => ({
@@ -216,19 +246,19 @@ export function censusShortfalls(text, packages) {
  * one deliberately static list (Cloud Build's `images:`, checked above).
  */
 export const DERIVED = [
-  { file: "scripts/publish-all.sh", reads: "scripts/fleet.mjs" },
+  { file: "scripts/publish-all.sh", reads: "fleet.mjs deployable" },
   { file: "scripts/conformance-test.sh", reads: "scripts/fleet.mjs" },
-  { file: "scripts/deploy.sh", reads: "scripts/fleet.mjs" },
-  { file: "scripts/smoke-test.sh", reads: "scripts/fleet.mjs" },
+  { file: "scripts/deploy.sh", reads: "fleet.mjs deployable" },
+  { file: "scripts/smoke-test.sh", reads: "fleet.mjs deployable" },
   { file: "scripts/dev-server.sh", reads: "fleet.mjs" },
   {
     file: "cloudbuild.yaml",
-    reads: "/workspace/.fleet-services",
+    reads: "fleet.mjs deployable",
     scope: (t) => t.slice(0, t.search(/^images:/m)),
   },
   {
     file: "cloudbuild-manual.yaml",
-    reads: "/workspace/.fleet-services",
+    reads: "fleet.mjs deployable",
     scope: (t) => t.slice(0, t.search(/^images:/m)),
   },
   { file: "Dockerfile", reads: "pnpm fetch" },
@@ -334,8 +364,17 @@ export function checkFleetInventory(root, registry = readRegistry(root)) {
       if (missing.length) {
         violations.push(`${site.file} [${where}]: missing ${missing.join(", ")} — ${why}`);
       }
-      if (extra.length) {
-        violations.push(`${site.file} [${where}]: lists ${extra.join(", ")}, not in registry.json`);
+      const experimental = extra.filter((n) => packages.includes(n));
+      const unknown = extra.filter((n) => !packages.includes(n));
+      if (experimental.length) {
+        violations.push(
+          `${site.file} [${where}]: lists ${experimental.join(", ")}, which is not stable (deploy lists cover status "stable" only; \`pnpm promote:server\` adds it)`
+        );
+      }
+      if (unknown.length) {
+        violations.push(
+          `${site.file} [${where}]: lists ${unknown.join(", ")}, not in registry.json`
+        );
       }
     }
   }
@@ -348,9 +387,10 @@ export function checkFleetInventory(root, registry = readRegistry(root)) {
       continue;
     }
     if (decision !== true || !existsSync(join(root, file))) continue;
+    const censused = DEPLOY_SITE_FILES.includes(file) ? deployablePackages(servers) : packages;
     for (const { pkg, count, mode } of censusShortfalls(
       readFileSync(join(root, file), "utf8"),
-      packages
+      censused
     )) {
       violations.push(
         `${file}: mentions ${pkg} on ${count} line(s), but most servers on ${mode} — it is missing from a list in this file`
