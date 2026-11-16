@@ -6,64 +6,32 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readlinkSync,
   rmSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import {
   DEPLOY_SITE_FILES,
-  DERIVED,
   INVENTORY_SITES,
   checkFleetInventory,
 } from "../lib/fleet-inventory.mjs";
 import { checkContractTiers } from "../lib/contract-tiers.mjs";
-import { checkRegistryKeys } from "../lib/platform-keys.mjs";
+import { checkPlatformNames, checkRegistryKeys } from "../lib/platform-keys.mjs";
 import { validateLedger } from "../check/check-platform-facts.mjs";
 import { ScaffoldError, applyPlan, planScaffold } from "./scaffold.mjs";
-
-const ROOT = join(import.meta.dirname, "../..");
-const TODAY = "2026-11-15";
-
-const opts = {
-  key: "foo_bar",
-  displayName: "Foo Bar Ads",
-  type: "management",
-  baseUrl: "https://api.foobar.example",
-  docsUrl: "https://developers.foobar.example/docs",
-  rateLimitPerMinute: 25,
-};
-
-const COPIED = [
-  "registry.json",
-  "platform-facts.json",
-  "README.md",
-  "docs/architecture/platform-facts-ledger.md",
-  ...new Set(INVENTORY_SITES.map((s) => s.file)),
-  ...DERIVED.map((d) => d.file),
-];
+import { COPIED, ROOT, SCAFFOLD_OPTS as opts, TODAY, makeTempRepo } from "./test-fixture.mjs";
 
 let tmp;
 
-/** A temp repo root: the files the scaffold edits, plus every package's config (for ports). */
+/** A temp repo root (scripts/scaffold/test-fixture.mjs). */
 beforeEach(() => {
-  tmp = mkdtempSync(join(tmpdir(), "scaffold-"));
-  for (const file of new Set(COPIED)) {
-    mkdirSync(dirname(join(tmp, file)), { recursive: true });
-    cpSync(join(ROOT, file), join(tmp, file));
-  }
-  const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
-  for (const { package: pkg } of registry.servers) {
-    const config = `packages/${pkg}/src/config/index.ts`;
-    mkdirSync(dirname(join(tmp, config)), { recursive: true });
-    cpSync(join(ROOT, config), join(tmp, config));
-  }
+  tmp = makeTempRepo();
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
-const snapshot = () => new Map(COPIED.map((f) => [f, readFileSync(join(tmp, f), "utf8")]));
+const snapshot = () =>
+  new Map([...new Set(COPIED)].map((f) => [f, readFileSync(join(tmp, f), "utf8")]));
 
 describe("scaffold: plan and apply", () => {
   it("plans a package, registry entry, facts and every listing site, and writes nothing", async () => {
@@ -167,6 +135,13 @@ describe("scaffold: plan and apply", () => {
       const line = Number(fact.codeRefs[0].split(":").at(-1));
       expect(config.split("\n")[line - 1], fact.id).toContain(fact.value);
     }
+  });
+
+  it("a scaffold joins the reporting platform enums, since get_report makes it reporting-capable", async () => {
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    const registry = JSON.parse(readFileSync(join(tmp, "registry.json"), "utf8"));
+    expect(registry.servers.at(-1).tools).toContain("foo_bar_get_report");
+    expect(checkPlatformNames(registry, (p) => readFileSync(join(tmp, p), "utf8"))).toEqual([]);
   });
 
   it("the platform-facts doc counts the new facts", async () => {

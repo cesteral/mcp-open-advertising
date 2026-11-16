@@ -24,6 +24,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       // {{/writes}}
     ],
     account: ["{{key}}_list_accounts"],
+    reporting: ["{{key}}_get_report"],
     // {{#writes}}
     bulk: ["{{key}}_bulk_update_status"],
     // {{/writes}}

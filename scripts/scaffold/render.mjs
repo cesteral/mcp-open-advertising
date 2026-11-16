@@ -40,6 +40,7 @@ export const TEMPLATE_TYPES = {
       "delete_entity",
       "bulk_update_status",
       "validate_entity",
+      "get_report",
       "get_pacing_status",
       "search_tools",
     ],

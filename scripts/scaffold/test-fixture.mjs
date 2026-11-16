@@ -27,6 +27,9 @@ export const COPIED = [
   "README.md",
   "LICENSE.md",
   "docs/architecture/platform-facts-ledger.md",
+  // The reporting platform enums checkPlatformNames holds to the registry.
+  "packages/shared/src/utils/reporting/report-errors.ts",
+  "packages/shared/src/schemas/report-schedule.ts",
   ...new Set(INVENTORY_SITES.map((s) => s.file)),
   ...DERIVED.map((d) => d.file),
 ];
@@ -40,9 +43,11 @@ export function makeTempRepo() {
   }
   const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
   for (const { package: pkg } of registry.servers) {
-    const config = `packages/${pkg}/src/config/index.ts`;
-    mkdirSync(dirname(join(tmp, config)), { recursive: true });
-    cpSync(join(ROOT, config), join(tmp, config));
+    for (const file of ["src/config/index.ts", "src/mcp-server/server.ts"]) {
+      const path = `packages/${pkg}/${file}`;
+      mkdirSync(dirname(join(tmp, path)), { recursive: true });
+      cpSync(join(ROOT, path), join(tmp, path));
+    }
   }
   return tmp;
 }

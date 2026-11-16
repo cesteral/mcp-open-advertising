@@ -7,6 +7,7 @@ import { checkRegistryKeys } from "../lib/platform-keys.mjs";
 import { checkContractTiers } from "../lib/contract-tiers.mjs";
 import { validateLedger } from "../check/check-platform-facts.mjs";
 import { buildPlatformFacts, buildRegistryEntry, names, nextFreePort } from "./entries.mjs";
+import { TEMPLATE_TOOLS } from "./render.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -95,6 +96,14 @@ describe("scaffold: names, registry entry, platform facts", () => {
     expect(entry).toMatchObject({ status: "experimental", governed: true });
     expect(entry.operational.terminalOperations.map((o) => o.tool)).toEqual([
       "foo_bar_delete_entity",
+    ]);
+  });
+
+  it("the read-only management template needs only the duplicate and bid-adjustment exceptions", () => {
+    const entry = buildRegistryEntry(opts, registry, TEMPLATE_TOOLS("foo_bar"));
+    expect(entry.contract.exceptions.map((e) => e.requirement).sort()).toEqual([
+      "bid_adjustment",
+      "duplicate_entity",
     ]);
   });
 

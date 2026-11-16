@@ -29,6 +29,7 @@ describe("{{package}} tool registration", () => {
         "{{key}}_bulk_update_status",
         // {{/writes}}
         "{{key}}_validate_entity",
+        "{{key}}_get_report",
         "{{key}}_get_pacing_status",
         "{{key}}_search_tools",
       ].sort()

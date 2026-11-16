@@ -94,6 +94,14 @@ describe("scaffold: fleet-list inserters", () => {
     }
   });
 
+  it("a missing reporting enum anchor throws, naming the file", () => {
+    const file = "packages/shared/src/utils/reporting/report-errors.ts";
+    const text = read(file).replace("export type ReportingPlatform =", "export type Renamed =");
+    expect(() => SITE_INSERTERS[file](text, server("zzscaffold"))).toThrow(
+      /report-errors\.ts.*ReportingPlatform/
+    );
+  });
+
   it("a missing anchor throws, naming the file", () => {
     const text = read("terraform/main.tf").replace("service_auth_defaults = {", "renamed = {");
     expect(() => SITE_INSERTERS["terraform/main.tf"](text, server("zzscaffold"))).toThrow(

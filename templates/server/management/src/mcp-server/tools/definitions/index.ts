@@ -20,6 +20,7 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 // {{/writes}}
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { getReportTool } from "./get-report.tool.js";
 export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -32,6 +33,7 @@ import { deleteEntityTool } from "./delete-entity.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 // {{/writes}}
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { getReportTool } from "./get-report.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import {
   conformanceTools,
@@ -50,6 +52,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   bulkUpdateStatusTool,
   // {{/writes}}
   validateEntityTool,
+  getReportTool,
   getPacingStatusTool,
   createToolSearchTool({ platform: "{{key}}", getTools: () => allTools }),
 ];

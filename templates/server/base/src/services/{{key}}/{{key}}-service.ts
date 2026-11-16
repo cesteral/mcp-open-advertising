@@ -4,19 +4,26 @@
 import type { Logger } from "pino";
 import type { RateLimiter, RequestContext } from "@cesteral/shared";
 import type { {{Pascal}}HttpClient } from "./{{key}}-http-client.js";
-import { ENTITY_PATHS, type {{Pascal}}EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 
-export interface ListEntitiesResult {
-  entities: Record<string, unknown>[];
+export interface PageResult {
+  items: Record<string, unknown>[];
   nextPageToken?: string;
 }
 
+export interface ReportQuery {
+  startDate: string;
+  endDate: string;
+  dimensions?: string[];
+  metrics?: string[];
+  pageToken?: string;
+}
+
 /**
- * Entity reads against the {{displayName}} API. Write methods are added when
- * the governed stub tools are implemented.
+ * Account and report reads against the {{displayName}} API, shared by every
+ * server type.
  *
- * TODO(scaffold): the paths in ENTITY_PATHS and the response shape below are
- * placeholders; replace them from the vendor's API reference.
+ * TODO(scaffold): the paths and response shapes below are placeholders;
+ * replace them from the vendor's API reference.
  */
 export class {{Pascal}}Service {
   constructor(
@@ -25,52 +32,43 @@ export class {{Pascal}}Service {
     private readonly logger: Logger
   ) {}
 
-  async listEntities(
-    entityType: {{Pascal}}EntityType,
-    accountId: string,
-    pageToken: string | undefined,
-    context?: RequestContext
-  ): Promise<ListEntitiesResult> {
-    await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}:account:${accountId}`);
-    const body = (await this.httpClient.get(
-      `/accounts/${encodeURIComponent(accountId)}/${ENTITY_PATHS[entityType]}`,
-      pageToken ? { page_token: pageToken } : undefined,
-      context
-    )) as { data?: Record<string, unknown>[]; next_page_token?: string };
-    this.logger.debug({ entityType, count: body.data?.length ?? 0 }, "Listed entities");
-    return {
-      entities: body.data ?? [],
-      ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
-    };
-  }
-
-  async listAccounts(
-    pageToken: string | undefined,
-    context?: RequestContext
-  ): Promise<ListEntitiesResult> {
+  async listAccounts(pageToken: string | undefined, context?: RequestContext): Promise<PageResult> {
     await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}`);
     const body = (await this.httpClient.get(
       "/accounts",
       pageToken ? { page_token: pageToken } : undefined,
       context
     )) as { data?: Record<string, unknown>[]; next_page_token?: string };
-    return {
-      entities: body.data ?? [],
-      ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
-    };
+    return page(body);
   }
 
-  async getEntity(
-    entityType: {{Pascal}}EntityType,
+  /** A synchronous report: rows for the date range, one page at a time. */
+  async getReport(
     accountId: string,
-    entityId: string,
+    query: ReportQuery,
     context?: RequestContext
-  ): Promise<Record<string, unknown>> {
+  ): Promise<PageResult> {
     await this.rateLimiter.consume(`{{key}}:user:${this.httpClient.quotaUser}:account:${accountId}`);
-    return (await this.httpClient.get(
-      `/accounts/${encodeURIComponent(accountId)}/${ENTITY_PATHS[entityType]}/${encodeURIComponent(entityId)}`,
-      undefined,
+    const params: Record<string, string> = {
+      start_date: query.startDate,
+      end_date: query.endDate,
+    };
+    if (query.dimensions?.length) params.dimensions = query.dimensions.join(",");
+    if (query.metrics?.length) params.metrics = query.metrics.join(",");
+    if (query.pageToken) params.page_token = query.pageToken;
+    const body = (await this.httpClient.get(
+      `/accounts/${encodeURIComponent(accountId)}/reports`,
+      params,
       context
-    )) as Record<string, unknown>;
+    )) as { data?: Record<string, unknown>[]; next_page_token?: string };
+    this.logger.debug({ accountId, rows: body.data?.length ?? 0 }, "Fetched report");
+    return page(body);
   }
+}
+
+function page(body: { data?: Record<string, unknown>[]; next_page_token?: string }): PageResult {
+  return {
+    items: body.data ?? [],
+    ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
+  };
 }
