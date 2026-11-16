@@ -206,8 +206,8 @@ For a guided walkthrough, see the [10-minute quickstart](docs/guides/quickstart.
 
 ### Prerequisites
 
-- **Node.js** >= 20.0.0
-- **pnpm** >= 10.0.0 -- `corepack enable` picks up the pinned version from `packageManager` (or `npm install -g pnpm@10`)
+- **Node.js** >= 26.0.0
+- **pnpm** 10.34.5, the repo's `packageManager` -- Node 26 no longer bundles corepack, so `npm install -g pnpm@10.34.5`
 - **Docker** (for containerization)
 - **Terraform** >= 1.6.0 _(for deployment)_
 

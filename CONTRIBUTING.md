@@ -37,7 +37,7 @@ Before starting significant work, open an issue first to discuss the approach. T
 3. Make your changes
 4. Ensure all checks pass:
    ```bash
-   corepack pnpm ci:local
+   pnpm ci:local
    ```
    This runs `.github/workflows/ci.yml`'s jobs in order: formatting, the registry and inventory checks, build, lint, the repo-script ratchets (`test:scripts`), manifests, typecheck, tests, conformance, and — when `terraform` and `gitleaks` are installed — Terraform validation and the secret scan. Jobs it cannot run are reported as NOT RUN. `pnpm run build`/`typecheck`/`test` alone skip most of what CI checks.
 5. Commit with a clear message (see [Commit Messages](#commit-messages))
@@ -45,7 +45,7 @@ Before starting significant work, open an issue first to discuss the approach. T
 
 **PR requirements:**
 
-- `corepack pnpm ci:local` passes (or each NOT RUN job is explained)
+- `pnpm ci:local` passes (or each NOT RUN job is explained)
 - New functionality includes tests
 - TypeScript compiles without errors
 - Description explains **what** changed and **why**
@@ -62,7 +62,7 @@ Contributions that are most likely to be accepted:
 
 Contributions that need discussion first:
 
-- New MCP servers or tools — generate a new server with `pnpm new:server` (see the quick start in [Adding a New Server](docs/guides/adding-a-new-server.md#quick-start-pnpm-newserver)), and use the rest of that guide for what each generated file does. Open a [New Platform Proposal](https://github.com/cesteral/mcp-open-advertising/issues/new?template=new_platform_proposal.yml) to agree the platform key, scope and auth model before starting implementation.
+- New MCP servers or tools — generate a new server with `pnpm new:server` (see [Adding a New Server](docs/guides/adding-a-new-server.md#generate-the-server)), then work through the to-do list in the generated package's README. Open a [New Platform Proposal](https://github.com/cesteral/mcp-open-advertising/issues/new?template=new_platform_proposal.yml) to agree the platform key, scope and auth model before starting implementation.
 - Architectural changes to shared patterns
 - Changes to authentication flows
 - Dependency additions

@@ -46,7 +46,7 @@ Every new platform package must add:
 
 To be **governed** (required for any management server), it must also:
 
-- Carry a `cesteral` annotation block on every write tool (`entity` or `effect`), and a `kind: "read"` block on each entity write's `readPartner` read tool — see [`adding-a-new-server.md` Step 9.5](../guides/adding-a-new-server.md#step-95-governing-your-write-tools)
+- Carry a `cesteral` annotation block on every write tool (`entity` or `effect`), and a `kind: "read"` block on each entity write's `readPartner` read tool — see [`adding-a-new-server.md`, Implementing the write tools](../guides/adding-a-new-server.md#implementing-the-write-tools)
 - Register the package in `registry.json` (the manifest-discovery source of truth)
 - Produce a `dist/cesteral-manifest.json` via `pnpm run generate:manifests` (blesses each governed tool's `definitionHash`)
 
