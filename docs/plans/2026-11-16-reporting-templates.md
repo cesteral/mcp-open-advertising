@@ -8,7 +8,7 @@
 
 **Tech Stack:** ESM `.mjs` scripts, vitest, the existing `{{#writes}}` renderer.
 
-**Spec:** the decisions of 2026-11-16 (shared base + type overlays; async trio for reports; `insert_conversions` via `--add-write-stubs`; five smoke legs; then, because every fleet `submit_report` is a governed write, `get_report` in the read-only stage and the trio with writes), on top of `docs/plans/2026-11-16-experimental-servers.md`.
+**Spec:** the decisions of 2026-11-16 and the design review of the same day (reporting enums, guarded download, tool-vs-write accounting, the reporting write stage, a checked-in render fixture, per-type doc rows), on top of (shared base + type overlays; async trio for reports; `insert_conversions` via `--add-write-stubs`; five smoke legs; then, because every fleet `submit_report` is a governed write, `get_report` in the read-only stage and the trio with writes) `docs/plans/2026-11-16-experimental-servers.md`.
 
 ## Global Constraints
 
@@ -21,13 +21,18 @@
   - `reporting_conversions`: those three plus `insert_conversions` (`writeClass: "effect"`, `operation: ["upload_conversions"]`).
 - `--add-write-stubs` works for every type. `promote:server` is unchanged: a `reporting` server can promote read-only, while `reporting_conversions` needs `insert_conversions` first (its `conversion_upload` MUST).
 - No terminal operations for the reporting types (nothing destructive); `get_entity`'s `cesteral` read block stays in a writes section (entity types only).
-- Smoke legs: `management` read-only and journey, `reporting` read-only, `reporting_conversions` read-only and journey.
+- Smoke legs (five): `management` read-only and journey; `reporting` staged (read-only checks, then `--add-write-stubs` and the same checks with only `submit_report`'s wire coverage allowed to fail); `reporting_conversions` read-only and journey.
+- **Reporting enums.** A server that ships a reporting tool must appear in `ReportingPlatform` (`packages/shared/src/utils/reporting/report-errors.ts`) and the `platform: z.enum([...])` of `packages/shared/src/schemas/report-schedule.ts` (`checkPlatformNames`). `get_report` makes every scaffolded type reporting-capable, so the scaffold inserts its key into both, and its tests run `checkPlatformNames` on the generated tree.
+- **Downloads.** `download_report` fetches only through `fetchGuardedDownload` (every redirect checked, credentials stripped across origins) with `allowedHostSuffixes` from a `reportDownloadHosts` config default (the API base host, behind a `TODO(scaffold)`), never a caller-supplied URL.
+- **Tools vs writes.** `--add-write-stubs` appends to registry `tools` (and the README count) the whole difference between the type's read-only and with-writes tool sets. The wire-coverage expectation (`expectedTodoTools`) lists only the governed writes: `submit_report` for `reporting`, plus `insert_conversions` for `reporting_conversions`.
+- **Doc rows by type.** `sites.mjs` writes the `CROSS_SERVER_CONTRACT.md` Type column as `Management`, `Reporting only` or `Reporting + conversions`, and a matching purpose in `platform-mapping.md`.
 
 ## Review Focus
 
+0. **Reporting enums.** A scaffolded server (any type, since all get `get_report`) missing from `ReportingPlatform` or the report-schedule enum fails `platform-keys`. Pinned in Task 2.
 1. **Layer drift.** A fix to a base file reaches every type, while a type file shadows its base copy. A shadowed file that should have stayed shared goes stale. Pinned in Task 1 by a test: no type layer may shadow a base file unless it is on an explicit `SHADOWED` list.
 2. **A reporting server that is governed while read-only.** `get_report` and the base reads carry no `cesteral` block, and `submit_report` exists only with writes. Pinned in Task 3 by the rendered tool-registration test and the smoke's `governed-packages` pass.
-3. **`download_report`'s URL safety.** The template must use `assertSafeDownloadUrl` and the shared report view, and must never fetch a caller-supplied URL. Pinned in Task 4 by a template test that a non-https or off-host URL is refused.
+3. **`download_report`'s URL safety, redirects included.** It must use `fetchGuardedDownload` with allowed host suffixes and never fetch a caller-supplied URL. Pinned in Task 3 by a template test in which an allowed URL redirects to a forbidden host.
 4. **The `{}` sweep.** Every type keeps a tool that accepts `{}` (`list_accounts`), so `untrusted-error-marker` reaches the factory. This is held by base; the smoke legs check it.
 5. **Write-stub accounting per type.** `expectedTodoTools`, `WRITE_TOOLS`, the README tool count and `registry.json` `tools` must all agree for each type. Pinned in Tasks 3 to 5 by the `--add-write-stubs` byte-identical test for each type.
 
@@ -47,8 +52,8 @@
 - `TEMPLATE_TOOLS(key, { type, writes })` and `WRITE_TOOLS(key, type)`.
 - `SHADOWED`: the base paths a type layer may replace (each with a reason).
 
-- [ ] **Step 1: Before moving anything**, save every rendered file of the management template, for `foo_bar` with and without writes, under the workspace (`render-before/`).
-- [ ] **Step 2: Failing tests:** `renderTemplate(…, "management", …)` with and without writes equals `render-before/` byte for byte; a type layer shadowing a base path that is not on `SHADOWED` fails; an unknown type throws. Run; expect FAIL.
+- [ ] **Step 1: Before moving anything**, check in a render fixture: `scripts/scaffold/fixtures/management-render.json` (path → sha256 of every rendered file for `foo_bar`, with and without writes), written by `node scripts/scaffold/render-fixture.mjs --update`. The test compares against it, and an intended template change re-runs `--update` and shows in review.
+- [ ] **Step 2: Failing tests:** `renderTemplate(…, "management", …)` with and without writes matches the fixture; a type layer shadowing a base path that is not on `SHADOWED` fails; an unknown type throws. Run; expect FAIL.
 - [ ] **Step 3: Move the files and implement.** Update `planScaffold` and `planAddWrites` to the new signature.
 - [ ] **Step 4: Run** `vitest … scripts/scaffold/`. Expect PASS, including the existing `--add-write-stubs` byte-identical test.
 - [ ] **Step 5: Commit** `refactor(scaffold): layered server templates (base, entities, per type)`
@@ -67,7 +72,7 @@
 - `get_report` is read-only with no `cesteral` block, calls `assertAccountScope`, and uses rate-limit key `{{key}}:user:${quotaUser}:account:${accountId}`.
 - The reporting service calls a placeholder `GET /accounts/{id}/reports`, behind a `TODO(scaffold)`.
 
-- [ ] **Step 1: Failing tests:** the rendered management tools include `foo_bar_get_report`, and `buildRegistryEntry` no longer records a `reporting` exception. Run; expect FAIL.
+- [ ] **Step 1: Failing tests:** the rendered management tools include `foo_bar_get_report`; `buildRegistryEntry` no longer records a `reporting` exception; after `planScaffold` the temp tree's two reporting enums list `foo_bar` and `checkPlatformNames` on it returns `[]` (inserters for both enum files, which throw naming the file when the anchor is missing). Update the render fixture. Run; expect FAIL.
 - [ ] **Step 2: Implement.** Render both management variants into a temp package; expect tsc and eslint clean and the package's tests passing.
 - [ ] **Step 3: Commit** `feat(scaffold): get_report in every template`
 
@@ -78,7 +83,7 @@
 - Create: `templates/server/reporting/**`:
   - the barrel, `server.ts` (passing `reportCsv` with writes), `session-services.ts` (the reporting service, plus `createSessionBoundReportCsvStore` with writes), resources, `README.md`, `CLAUDE.md`, the suite tests and `tool-registration.test.ts`;
   - with writes, the governed `submit-report.tool.ts` stub and the `check-report-status.tool.ts` / `download-report.tool.ts` reads.
-- Modify: `scripts/scaffold/scaffold.mjs` (drop the "not supported" refusal for `reporting`), `entries.mjs` (type-specific description, no terminal operations), `add-writes.mjs` (per-type write files and tools), `expected-todo.mjs` (per type), tests
+- Modify: `scripts/scaffold/scaffold.mjs` (drop the "not supported" refusal for `reporting`), `entries.mjs` (type-specific description, no terminal operations), `sites.mjs` (per-type doc rows), `add-writes.mjs` (per-type write files and tools), `expected-todo.mjs` (per type), tests
 
 - [ ] **Step 1: Failing tests:**
   - `planScaffold` with `type: "reporting"` passes fleet-inventory and contract-tiers, and its entry is `experimental`, `governed: false`.
@@ -86,7 +91,7 @@
   - `--add-write-stubs` on an untouched reporting scaffold equals a `--with-writes` reporting scaffold.
   - Promoting a read-only reporting scaffold succeeds.
 - [ ] **Step 2: Run**; expect FAIL.
-- [ ] **Step 3: Implement.** `check_report_status` uses `ReportStatusSchema`. `download_report` takes only a `reportId` and an optional view, and fetches the platform URL the status call returned, through `assertSafeDownloadUrl`, `createServiceDownloadedReportView` and `spillBodyToGcs`. Render both variants into a temp package; expect tsc, eslint and its tests clean.
+- [ ] **Step 3: Implement.** `check_report_status` uses `ReportStatusSchema`. `download_report` takes only a `reportId` and an optional view, and fetches the platform URL the status call returned through `fetchGuardedDownload` (`allowedHostSuffixes` from `reportDownloadHosts`), then `createServiceDownloadedReportView` and `spillBodyToGcs`. The template ships a test: an allowed URL that redirects to a forbidden host is refused, and so are a non-https URL and an off-host URL. `planAddWrites` appends the whole read-only → with-writes tool difference to `tools` and the README count. `expectedTodoTools("x", { type: "reporting", writes: true })` is `["x_submit_report"]`, and both sets are asserted. Render both variants into a temp package; expect tsc, eslint and its tests clean.
 - [ ] **Step 4: Run**; expect PASS.
 - [ ] **Step 5: Commit** `feat(scaffold): reporting server template`
 
@@ -103,7 +108,7 @@
   - The read-only scaffold passes fleet-inventory and contract-tiers.
   - Promoting it read-only throws, naming `foo_bar_insert_conversions`.
   - After `--add-write-stubs` it promotes, and every check passes.
-  - Add a template test: `download_report` refuses a non-https or off-host URL.
+  - Tools added by `--add-write-stubs` are the four of the trio + conversions difference; `expectedTodoTools` is `[x_submit_report, x_insert_conversions]`.
 - [ ] **Step 2: Run**; expect FAIL.
 - [ ] **Step 3: Implement.** Render both variants; tsc, eslint and tests clean.
 - [ ] **Step 4: Run**; expect PASS.
@@ -113,10 +118,10 @@
 
 **Files:**
 
-- Modify: `scripts/scaffold/smoke.mjs` (`--type`; the key becomes `zzscaffold` for every type, one per leg), `.github/workflows/ci.yml` (`matrix.include` with the five `{ type, variant }` legs), `scripts/ci-local.mjs` (+ test: `matrix.include`)
+- Modify: `scripts/scaffold/smoke.mjs` (`--type`; `--variant read-only | journey | staged`, where staged runs the read-only checks, then `--add-write-stubs` and the checks again; the key is `zzscaffold` in every leg), `.github/workflows/ci.yml` (`matrix.include` with the five `{ type, variant }` legs), `scripts/ci-local.mjs` (+ test: `matrix.include`)
 
 - [ ] **Step 1: Failing tests:** `expandMatrix` expands `matrix.include` into one job per entry, with `${{ matrix.type }}` and `${{ matrix.variant }}` substituted; the real ci.yml yields five scaffold-smoke runs. Run; expect FAIL.
-- [ ] **Step 2: Implement**, including `--variant journey` for the reporting types (`--add-write-stubs`, then `promote:server`).
+- [ ] **Step 2: Implement**, including `--variant journey` for `reporting_conversions` and `--variant staged` for `reporting`.
 - [ ] **Step 3: Run** `vitest … scripts/__tests__/ci-local.test.mjs scripts/lib/workflow-hardening.test.mjs`. Expect PASS. The CI matrix runs the legs.
 - [ ] **Step 4: Commit** `ci: scaffold smoke for every server type`
 
