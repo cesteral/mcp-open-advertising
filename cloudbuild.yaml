@@ -35,7 +35,7 @@ steps:
         set -eu
         # The fleet's service list, from registry.json, for the later steps
         # (their images have no node).
-        node scripts/fleet.mjs servers > /workspace/.fleet-services
+        node scripts/fleet.mjs deployable > /workspace/.fleet-services
         npm install -g pnpm@10.34.5
         pnpm install --frozen-lockfile
         pnpm run check:registry

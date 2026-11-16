@@ -9,6 +9,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   CENSUS,
+  DEPLOY_CONSUMERS,
+  DEPLOY_SITE_FILES,
   DERIVED,
   INVENTORY_SITES,
   censusShortfalls,
@@ -46,7 +48,10 @@ describe("fleet inventory", () => {
       "registry.json: lists zzfake-mcp, but packages/zzfake-mcp does not exist"
     );
     for (const site of INVENTORY_SITES) {
-      const token = site.expected ? "zzfake-bearer" : "zzfake-mcp";
+      // The auth-mode dropdown lists modes; every other site lists packages
+      // (the deploy sites expect the stable ones, and the fake is stable).
+      const token =
+        site.expected && !DEPLOY_SITE_FILES.includes(site.file) ? "zzfake-bearer" : "zzfake-mcp";
       const hits = violations.filter((v) => v.startsWith(`${site.file} [`) && v.includes(token));
       expect(hits.length, `${site.file} never reported ${token}`).toBeGreaterThan(0);
     }
@@ -58,6 +63,63 @@ describe("fleet inventory", () => {
         `${file} census never reported zzfake-mcp`
       ).toBe(true);
     }
+  });
+
+  it("an experimental server is in every listing site and in no deploy site", () => {
+    // Deploy lists cover stable servers only: an experimental server is never
+    // built into an image, given a Cloud Run service or published.
+    const registry = readRegistry(ROOT);
+    const fake = {
+      ...registry.servers[0],
+      package: "zzexp-mcp",
+      port: 3998,
+      tool_prefix: "zzexp",
+      tools: [],
+      status: "experimental",
+      auth: { modes: ["zzexp-bearer"] },
+    };
+    const violations = checkFleetInventory(ROOT, {
+      ...registry,
+      servers: [...registry.servers, fake],
+    });
+    for (const file of new Set(INVENTORY_SITES.map((s) => s.file))) {
+      const mentions = violations.filter((v) => v.startsWith(file) && v.includes("zzexp"));
+      if (DEPLOY_SITE_FILES.includes(file)) {
+        expect(mentions, `${file} must not want an experimental server`).toEqual([]);
+      } else {
+        expect(mentions.length, `${file} must still list an experimental server`).toBeGreaterThan(
+          0
+        );
+      }
+    }
+  });
+
+  it("an experimental server listed in a deploy site is reported", () => {
+    const registry = readRegistry(ROOT);
+    const servers = registry.servers.map((s) =>
+      s.package === "msads-mcp" ? { ...s, status: "experimental" } : s
+    );
+    const violations = checkFleetInventory(ROOT, { ...registry, servers });
+    for (const file of DEPLOY_SITE_FILES) {
+      expect(
+        violations.some(
+          (v) => v.startsWith(`${file} [`) && v.includes("msads-mcp, which is experimental")
+        ),
+        file
+      ).toBe(true);
+    }
+  });
+
+  it("every deploy consumer reads the stable list, never the full one", () => {
+    for (const file of DEPLOY_CONSUMERS) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text, file).toContain("fleet.mjs deployable");
+      expect(text, file).not.toMatch(/fleet\.mjs"? servers/);
+    }
+    // Terraform reads registry.json itself and filters on status.
+    expect(readFileSync(join(ROOT, "terraform/main.tf"), "utf8")).toMatch(
+      /fleet_service_names = \[for s in .*registry\.json.*\.servers : s\.package if .*status.*== "stable"\]/
+    );
   });
 
   it("registry port and tool_prefix must agree with the code", () => {

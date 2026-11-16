@@ -17,7 +17,7 @@ steps:
     entrypoint: 'sh'
     args:
       - '-c'
-      - 'node scripts/fleet.mjs servers > /workspace/.fleet-services'
+      - 'node scripts/fleet.mjs deployable > /workspace/.fleet-services'
     id: 'fleet-services'
 
   - name: 'gcr.io/cloud-builders/docker'
