@@ -60,8 +60,9 @@
  *
  * Rate limiting: one process-wide key, `linkedin:default`
  * (`bulk-capacity.ts LINKEDIN_ENTITY_KEY`): an entity read draws 1 token and
- * every create / partial update / delete, and each media-upload POST and
- * binary PUT, 3 (`linkedin-service.ts LINKEDIN_WRITE_TOKENS`). Default
+ * every create / partial update / delete, and each media-upload initialize /
+ * finalize POST, 3 (`linkedin-service.ts LINKEDIN_WRITE_TOKENS`); the byte PUTs
+ * to LinkedIn's upload URLs draw none. Default
  * limit `mcpConfig.linkedinRateLimitPerMinute` (10/min) — each test stays
  * within one window.
  */
@@ -1137,179 +1138,344 @@ describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () =>
   });
 });
 
-describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTION + binary PUT", () => {
+/**
+ * Uploads are on LinkedIn's Images and Videos APIs (#210), which replace the
+ * Assets API (`/v2/assets?action=registerUpload`).
+ *
+ * basis: LinkedIn Images API page
+ * (learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api,
+ * li-lms-2026-10, read 2026-11-16), "Initialize Image Upload": `POST
+ * /rest/images?action=initializeUpload` with body `{ initializeUploadRequest:
+ * { owner } }`, `owner` a person (`urn:li:person:…`) or organization
+ * (`urn:li:organization:…`) URN; the response is `{ value: { uploadUrlExpiresAt,
+ * uploadUrl, image: "urn:li:image:…" } }`. "Upload the Image" links to the
+ * Vector Asset page (…/shares/vector-asset-api, read 2026-11-16): a PUT of the
+ * bytes to the uploadUrl, which "requires a valid OAuth token in the
+ * 'Authorization' header" (its sample answers 201).
+ *
+ * basis: LinkedIn Videos API page (…/community-management/shares/videos-api,
+ * li-lms-2026-10, read 2026-11-16), "How to Upload Videos": initialize, split the
+ * file into parts, upload each part, finalize. `POST
+ * /rest/videos?action=initializeUpload` with `{ initializeUploadRequest: { owner,
+ * fileSizeBytes, uploadCaptions, uploadThumbnail } }` (owner a person or
+ * organization URN; fileSizeBytes required, and "determines how many parts the
+ * video upload will be broken into"); the response carries `video`,
+ * `uploadToken` and `uploadInstructions[{ uploadUrl, firstByte, lastByte }]`
+ * (inclusive byte ranges, sorted). "Upload the Video": a PUT of each part with
+ * `Content-Type: application/octet-stream` and no Authorization header in the
+ * sample (the Vector Asset page: the video upload call "doesn't accept an OAuth
+ * token"); each response's `ETag` header is saved. "Finalize Video Upload":
+ * `POST /rest/videos?action=finalizeUpload` with `{ finalizeUploadRequest: {
+ * video, uploadToken, uploadedPartIds } }`, the part ids being the ETags in the
+ * order of the upload instructions (schema: `ETag: "e438…"` corresponds to
+ * `uploadedPartIds: ["e438…"]`), answered 200.
+ *
+ * Neither page's upload sample sends `LinkedIn-Version` or
+ * `X-Restli-Protocol-Version` to the upload URL (it is a `dms-uploads` URL on
+ * www.linkedin.com, not a Rest.li resource), so the PUTs send neither.
+ */
+describe("linkedin_upload_image / linkedin_upload_video → Images / Videos API", () => {
   const MEDIA_HOST = "cdn.example.com";
-  const UPLOAD_URL =
-    "https://api.linkedin.com/mediaUpload/C5522AQGTYER3k3ByHQ/feedshare-uploadedImage/0?ca=vector_feedshare";
-  const ASSET = "urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ";
+  const UPLOAD_HOST = "www.linkedin.com";
+  const ORG_URN = "urn:li:organization:5583111";
+  const IMAGE_URN = "urn:li:image:C4E10AQFoyyAjHPMQuQ";
+  const VIDEO_URN = "urn:li:video:C5505AQH-oV1qvnFtKA";
+  const IMAGE_UPLOAD_URL = `https://${UPLOAD_HOST}/dms-uploads/C4E10AQFoyyAjHPMQuQ/uploaded-image/0?ca=vector_ads&cn=uploads&sync=0&v=beta&ut=08zHQjMjAOLqc1`;
+  const VIDEO_PART_URLS = [
+    `https://${UPLOAD_HOST}/dms-uploads/C5505AQH-oV1qvnFtKA/uploadedVideo?sau=part0`,
+    `https://${UPLOAD_HOST}/dms-uploads/C5505AQH-oV1qvnFtKA/uploadedVideo/1?sau=part1`,
+  ];
 
-  const cases = [
-    {
-      tool: "linkedin_upload_image",
-      run: (mediaUrl: string, dry_run = false) =>
-        uploadImageLogic(
-          UploadImageInputSchema.parse({ adAccountUrn: ACCOUNT_URN, mediaUrl, dry_run }),
-          ctx,
-          sdk
-        ),
-      mediaPath: "/banner.png",
-      contentType: "image/png",
-      recipe: "urn:li:digitalmediaRecipe:ads-image",
-    },
-    {
-      tool: "linkedin_upload_video",
-      run: (mediaUrl: string, dry_run = false) =>
-        uploadVideoLogic(
-          UploadVideoInputSchema.parse({ adAccountUrn: ACCOUNT_URN, mediaUrl, dry_run }),
-          ctx,
-          sdk
-        ),
-      mediaPath: "/spot.mp4",
-      contentType: "video/mp4",
-      recipe: "urn:li:digitalmediaRecipe:ads-video",
-    },
-  ] as const;
+  const runImage = (mediaUrl: string, dry_run = false) =>
+    uploadImageLogic(
+      UploadImageInputSchema.parse({ ownerUrn: ORG_URN, mediaUrl, dry_run }),
+      ctx,
+      sdk
+    );
+  const runVideo = (mediaUrl: string, dry_run = false) =>
+    uploadVideoLogic(
+      UploadVideoInputSchema.parse({ ownerUrn: ORG_URN, mediaUrl, dry_run }),
+      ctx,
+      sdk
+    );
 
-  for (const c of cases) {
-    it(`${c.tool}: download, POST /v2/assets?action=registerUpload, PUT the bytes to the uploadUrl`, async () => {
-      const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
-      stub.route({
-        method: "GET",
-        host: MEDIA_HOST,
-        path: c.mediaPath,
-        rawBody: bytes,
-        contentType: c.contentType,
-      });
+  function mediaRoute(path: string, bytes: Uint8Array, contentType: string) {
+    stub.route({ method: "GET", host: MEDIA_HOST, path, rawBody: bytes, contentType });
+  }
+
+  const isAction = (name: string) => (req: WireRequest) => req.rawQuery === `action=${name}`;
+
+  describe("linkedin_upload_image", () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+
+    function imageRoutes(onInit?: (req: WireRequest) => boolean) {
+      mediaRoute("/banner.png", bytes, "image/png");
       stub.route({
         method: "POST",
-        path: "/v2/assets",
+        path: "/rest/images",
+        match: (req) => isAction("initializeUpload")(req) && (onInit ? onInit(req) : true),
         response: {
           value: {
-            uploadMechanism: {
-              "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-                uploadUrl: UPLOAD_URL,
-                headers: {},
-              },
-            },
-            asset: ASSET,
+            uploadUrlExpiresAt: 1650567510704,
+            uploadUrl: IMAGE_UPLOAD_URL,
+            image: IMAGE_URN,
           },
         },
       });
-      stub.route({ method: "PUT", path: new URL(UPLOAD_URL).pathname, status: 201, rawBody: "" });
+    }
 
-      const out = await c.run(`https://${MEDIA_HOST}${c.mediaPath}`);
-
-      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}`)).toEqual([
-        `GET ${MEDIA_HOST}${c.mediaPath}`,
-        `POST ${API_HOST}/v2/assets`,
-        `PUT ${API_HOST}${new URL(UPLOAD_URL).pathname}`,
-      ]);
-
-      const register = stub.requests[1]!;
-      // basis: [js] restli-client.ts `action` — POST to the resource with
-      // `?action=<actionName>` in the query and the action params as the JSON
-      // body (fixture "Action on a non-versioned resource":
-      // /testResource?action=doSomething); [restli] RestLiRouter: POST with an
-      // `action` param and no RMETHOD routes to ACTION. [py] README `action`
-      // example: `/liveAssetActions?action=register` with body
-      // `{ registerLiveEventRequest: { owner, recipes: ["urn:li:digitalmediaRecipe:…"] } }`
-      // — the same request-wrapper / owner / recipes shape.
-      // basis: unverified (code-only) — the `/v2/assets` resource, the
-      // `registerUpload` action name, the `ads-image` / `ads-video` recipes and
-      // `serviceRelationships`, and the response's `uploadMechanism` /
-      // `asset`: no source here documents the Assets API.
-      expect(register.url).toBe(`${API_BASE_URL}/v2/assets?action=registerUpload`);
-      expect(register.rawQuery).toBe("action=registerUpload");
-      expectRestliHeaders(register, { json: true });
-      expect(register.body).toEqual({
-        registerUploadRequest: {
-          owner: ACCOUNT_URN,
-          recipes: [c.recipe],
-          serviceRelationships: [
-            { identifier: "urn:li:userGeneratedContent", relationshipType: "OWNER" },
-          ],
-        },
-      });
-
-      const put = stub.requests[2]!;
-      // basis: unverified (code-only) — the binary PUT to the returned
-      // uploadUrl with the bearer token, the downloaded Content-Type and the
-      // Rest.li / version headers (linkedin-http-client.ts putBinary).
-      expect(put.url).toBe(UPLOAD_URL);
-      expect(put.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
-      expect(put.headers["content-type"]).toBe(c.contentType);
-      expect(put.headers["linkedin-version"]).toBe(API_VERSION);
-      expect(put.headers["x-restli-protocol-version"]).toBe("2.0.0");
-      expect(put.rawBody).toEqual(Buffer.from(bytes));
-
-      expect(out.assetUrn).toBe(ASSET);
-      // basis: unverified (code-only) — the server's own cost model, not a
-      // LinkedIn figure: the register POST and the binary PUT are each a write
-      // (`LINKEDIN_WRITE_TOKENS`, 3) on `linkedin:default`.
-      expect(remaining()).toBe(LIMIT - 2 * 3);
-    });
-
-    it(`${c.tool}: the register POST and the binary PUT each draw a write token before sending`, async () => {
-      // Tokens left at the moment each upstream request reaches fetch. The
-      // upload tools used to call the HTTP client directly, so both read LIMIT.
-      const seenAt: Record<string, number> = {};
-      const recordRemaining = (req: WireRequest) => {
-        seenAt[req.method] = remaining();
-        return true;
-      };
-      stub.route({
-        method: "GET",
-        host: MEDIA_HOST,
-        path: c.mediaPath,
-        rawBody: new Uint8Array([1, 2, 3]),
-        contentType: c.contentType,
-      });
-      stub.route({
-        method: "POST",
-        path: "/v2/assets",
-        match: recordRemaining,
-        response: {
-          value: {
-            uploadMechanism: {
-              "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-                uploadUrl: UPLOAD_URL,
-              },
-            },
-            asset: ASSET,
-          },
-        },
-      });
+    it("downloads, POSTs /rest/images?action=initializeUpload, PUTs the bytes with the token", async () => {
+      imageRoutes();
       stub.route({
         method: "PUT",
-        path: new URL(UPLOAD_URL).pathname,
-        match: recordRemaining,
+        host: UPLOAD_HOST,
+        path: new URL(IMAGE_UPLOAD_URL).pathname,
         status: 201,
         rawBody: "",
       });
 
-      await c.run(`https://${MEDIA_HOST}${c.mediaPath}`);
+      const out = await runImage(`https://${MEDIA_HOST}/banner.png`);
 
-      expect(seenAt).toEqual({
-        POST: LIMIT - 3,
-        PUT: LIMIT - 2 * 3,
+      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}`)).toEqual([
+        `GET ${MEDIA_HOST}/banner.png`,
+        `POST ${API_HOST}/rest/images`,
+        `PUT ${UPLOAD_HOST}${new URL(IMAGE_UPLOAD_URL).pathname}`,
+      ]);
+
+      const init = stub.requests[1]!;
+      // basis: Images API, "Initialize Image Upload" (see the block comment).
+      expect(init.url).toBe(`${API_BASE_URL}/rest/images?action=initializeUpload`);
+      expect(init.rawQuery).toBe("action=initializeUpload");
+      expectRestliHeaders(init, { json: true });
+      expect(init.body).toEqual({ initializeUploadRequest: { owner: ORG_URN } });
+
+      const put = stub.requests[2]!;
+      // basis: Vector Asset page, "Upload the Image": PUT with the OAuth token.
+      expect(put.url).toBe(IMAGE_UPLOAD_URL);
+      expect(put.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
+      expect(put.headers["content-type"]).toBe("image/png");
+      expect(put.headers["linkedin-version"]).toBeUndefined();
+      expect(put.headers["x-restli-protocol-version"]).toBeUndefined();
+      expect(put.rawBody).toEqual(Buffer.from(bytes));
+
+      expect(out.imageUrn).toBe(IMAGE_URN);
+      expect(out.effect).toEqual({
+        effectKind: "asset_uploaded",
+        summary: { asset_type: "image", asset_handle: IMAGE_URN },
       });
+      // basis: unverified (code-only) — the server's own cost model: the
+      // initialize POST is a write (LINKEDIN_WRITE_TOKENS, 3) on
+      // `linkedin:default`; the PUT goes to the upload host, not the API, and
+      // draws nothing.
+      expect(remaining()).toBe(LIMIT - 3);
     });
 
-    it(`${c.tool}: dry_run downloads and uploads nothing`, async () => {
-      await c.run(`https://${MEDIA_HOST}${c.mediaPath}`, true);
+    it("draws the write token before the initialize POST is sent", async () => {
+      let atInit: number | undefined;
+      imageRoutes(() => {
+        atInit = remaining();
+        return true;
+      });
+      stub.route({ method: "PUT", host: UPLOAD_HOST, path: /.*/, status: 201, rawBody: "" });
+
+      await runImage(`https://${MEDIA_HOST}/banner.png`);
+      expect(atInit).toBe(LIMIT - 3);
+    });
+
+    it("fails without a PUT when the initialize response has no uploadUrl or image", async () => {
+      mediaRoute("/banner.png", bytes, "image/png");
+      stub.route({ method: "POST", path: "/rest/images", response: { value: {} } });
+
+      await expect(runImage(`https://${MEDIA_HOST}/banner.png`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+    });
+
+    it("dry_run downloads and uploads nothing", async () => {
+      await runImage(`https://${MEDIA_HOST}/banner.png`, true);
       expect(stub.requests).toHaveLength(0);
     });
-  }
+  });
 
-  // The wire test above pins exactly two LinkedIn requests (register, PUT).
-  // The descriptions used to promise a third "confirm" step that is never sent.
-  for (const tool of [uploadImageTool, uploadVideoTool]) {
-    it(`${tool.name}: the description names the two requests sent and promises no confirm step`, () => {
-      expect(tool.description).not.toMatch(/3-step|→ confirm/);
-      expect(tool.description).toContain("POST /v2/assets?action=registerUpload");
-      expect(tool.description).toContain("No confirm or finalize request is sent");
+  describe("linkedin_upload_video", () => {
+    // Ten bytes, split by the initialize response into two parts (0-5, 6-9).
+    const bytes = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const instructions = [
+      { uploadUrl: VIDEO_PART_URLS[0], firstByte: 0, lastByte: 5 },
+      { uploadUrl: VIDEO_PART_URLS[1], firstByte: 6, lastByte: 9 },
+    ];
+    // The schema shows a quoted ETag; the "Upload the Video" sample an unquoted one.
+    const ETAGS = ['"e4383924336106965d6cd2a111beaceb"', "/ambry-videoei/signedId/AQHX97.bin"];
+    const PART_IDS = ["e4383924336106965d6cd2a111beaceb", "/ambry-videoei/signedId/AQHX97.bin"];
+
+    function videoRoutes(
+      opts: {
+        uploadInstructions?: unknown;
+        etags?: Array<string | undefined>;
+        onInit?: (req: WireRequest) => boolean;
+        onFinalize?: (req: WireRequest) => boolean;
+      } = {}
+    ) {
+      mediaRoute("/spot.mp4", bytes, "video/mp4");
+      stub.route({
+        method: "POST",
+        path: "/rest/videos",
+        match: (req) =>
+          isAction("initializeUpload")(req) && (opts.onInit ? opts.onInit(req) : true),
+        response: {
+          value: {
+            uploadUrlsExpireAt: 1633234498985,
+            video: VIDEO_URN,
+            uploadInstructions: opts.uploadInstructions ?? instructions,
+            uploadToken: "upload-token-1",
+          },
+        },
+      });
+      const etags = opts.etags ?? ETAGS;
+      VIDEO_PART_URLS.forEach((url, i) => {
+        const etag = etags[i];
+        stub.route({
+          method: "PUT",
+          host: UPLOAD_HOST,
+          path: new URL(url).pathname,
+          status: 200,
+          rawBody: "",
+          ...(etag !== undefined ? { headers: { etag } } : {}),
+        });
+      });
+      stub.route({
+        method: "POST",
+        path: "/rest/videos",
+        match: (req) =>
+          isAction("finalizeUpload")(req) && (opts.onFinalize ? opts.onFinalize(req) : true),
+        status: 200,
+        rawBody: "",
+      });
+    }
+
+    it("initializes with the file size, PUTs each part, then finalizes with the ETags in order", async () => {
+      videoRoutes();
+
+      const out = await runVideo(`https://${MEDIA_HOST}/spot.mp4`);
+
+      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}?${r.rawQuery}`)).toEqual([
+        `GET ${MEDIA_HOST}/spot.mp4?`,
+        `POST ${API_HOST}/rest/videos?action=initializeUpload`,
+        `PUT ${UPLOAD_HOST}${new URL(VIDEO_PART_URLS[0]!).pathname}?sau=part0`,
+        `PUT ${UPLOAD_HOST}${new URL(VIDEO_PART_URLS[1]!).pathname}?sau=part1`,
+        `POST ${API_HOST}/rest/videos?action=finalizeUpload`,
+      ]);
+
+      const init = stub.requests[1]!;
+      // basis: Videos API, "Initialize Video Upload" (see the block comment).
+      expect(init.url).toBe(`${API_BASE_URL}/rest/videos?action=initializeUpload`);
+      expectRestliHeaders(init, { json: true });
+      expect(init.body).toEqual({
+        initializeUploadRequest: {
+          owner: ORG_URN,
+          fileSizeBytes: bytes.length,
+          uploadCaptions: false,
+          uploadThumbnail: false,
+        },
+      });
+
+      // basis: Videos API, "Upload the Video": each part's inclusive byte range,
+      // application/octet-stream, no OAuth token.
+      const parts = stub.requests.filter((r) => r.method === "PUT");
+      expect(parts.map((p) => p.url)).toEqual(VIDEO_PART_URLS);
+      expect(parts[0]!.rawBody).toEqual(Buffer.from(bytes.subarray(0, 6)));
+      expect(parts[1]!.rawBody).toEqual(Buffer.from(bytes.subarray(6, 10)));
+      for (const p of parts) {
+        expect(p.headers["content-type"]).toBe("application/octet-stream");
+        expect(p.headers["authorization"]).toBeUndefined();
+        expect(p.headers["linkedin-version"]).toBeUndefined();
+        expect(p.headers["x-restli-protocol-version"]).toBeUndefined();
+      }
+
+      const finalize = stub.requests[4]!;
+      // basis: Videos API, "Finalize Video Upload".
+      expect(finalize.url).toBe(`${API_BASE_URL}/rest/videos?action=finalizeUpload`);
+      expectRestliHeaders(finalize, { json: true });
+      expect(finalize.body).toEqual({
+        finalizeUploadRequest: {
+          video: VIDEO_URN,
+          uploadToken: "upload-token-1",
+          uploadedPartIds: PART_IDS,
+        },
+      });
+
+      expect(out.videoUrn).toBe(VIDEO_URN);
+      expect(out.effect).toEqual({
+        effectKind: "asset_uploaded",
+        summary: { asset_type: "video", asset_handle: VIDEO_URN },
+      });
+      // basis: unverified (code-only) — initialize and finalize are writes (3
+      // each); the part PUTs go to the upload host and draw nothing, so a long
+      // video's part count cannot exhaust the per-minute budget.
+      expect(remaining()).toBe(LIMIT - 2 * 3);
+    });
+
+    it("draws a write token before the initialize and the finalize POST, none for the parts", async () => {
+      const seen: number[] = [];
+      videoRoutes({
+        onInit: () => {
+          seen.push(remaining());
+          return true;
+        },
+        onFinalize: () => {
+          seen.push(remaining());
+          return true;
+        },
+      });
+
+      await runVideo(`https://${MEDIA_HOST}/spot.mp4`);
+      expect(seen).toEqual([LIMIT - 3, LIMIT - 2 * 3]);
+    });
+
+    it("does not finalize when a part's response carries no ETag", async () => {
+      videoRoutes({ etags: [ETAGS[0], undefined] });
+
+      await expect(runVideo(`https://${MEDIA_HOST}/spot.mp4`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => isAction("finalizeUpload")(r))).toHaveLength(0);
+    });
+
+    it("uploads nothing when the upload instructions do not cover the file", async () => {
+      videoRoutes({ uploadInstructions: [instructions[0]] });
+
+      await expect(runVideo(`https://${MEDIA_HOST}/spot.mp4`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+    });
+
+    it("dry_run downloads and uploads nothing", async () => {
+      await runVideo(`https://${MEDIA_HOST}/spot.mp4`, true);
+      expect(stub.requests).toHaveLength(0);
+    });
+  });
+
+  // basis: Images API / Videos API: initializeUploadRequest.owner "Can be a
+  // person(urn:li:person:123), or organization(urn:li:organization:123) URN".
+  for (const schema of [UploadImageInputSchema, UploadVideoInputSchema]) {
+    it("refuses an ad-account owner and accepts a person or organization", () => {
+      const base = { mediaUrl: "https://cdn.example.com/a" };
+      expect(schema.safeParse({ ...base, ownerUrn: ACCOUNT_URN }).success).toBe(false);
+      expect(schema.safeParse({ ...base, ownerUrn: ORG_URN }).success).toBe(true);
+      expect(schema.safeParse({ ...base, ownerUrn: "urn:li:person:A1b2-C3_d" }).success).toBe(true);
     });
   }
+
+  it("the descriptions name the requests each tool sends", () => {
+    expect(uploadImageTool.description).toContain("POST /rest/images?action=initializeUpload");
+    expect(uploadVideoTool.description).toContain("POST /rest/videos?action=initializeUpload");
+    expect(uploadVideoTool.description).toContain("POST /rest/videos?action=finalizeUpload");
+    for (const tool of [uploadImageTool, uploadVideoTool]) {
+      expect(tool.description).not.toMatch(/\/v2\/assets|registerUpload|digitalmediaAsset/);
+    }
+  });
 });
 
 describe("linkedin_list_entities → creative (Creatives API criteria finder)", () => {

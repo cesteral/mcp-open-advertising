@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; the image/video uploads are still on legacy `/v2/`, see Current Status).
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; only the `/v2/me` session check is still on legacy `/v2/`, see Current Status).
 
 ## Purpose
 
@@ -259,8 +259,9 @@ documentation, `unverified` where it was not.
 The `/v2/` → `/rest/` migration is nearly complete (#210): every entity's list,
 create, get, update and delete (creatives on the Creatives API), analytics,
 targeting (facets and entities), delivery forecasts, audience counts and ad
-previews use the versioned `/rest/` surface. The image/video uploads and the
-`/v2/me` session check still call legacy `/v2/` paths. Targeting, forecast, audience-count and preview calls follow LinkedIn's
+previews use the versioned `/rest/` surface, and the image/video uploads use the
+Images and Videos APIs (`/rest/images`, `/rest/videos`). Only the `/v2/me`
+session check still calls a legacy `/v2/` path. Targeting, forecast, audience-count and preview calls follow LinkedIn's
 documentation (read 2026-10-01) but have not been run against a live account.
 
 ## Development
@@ -312,6 +313,7 @@ pnpm run typecheck
 - Budget values are `CurrencyAmount` objects with `currencyCode` and `amount` (amount is a decimal string in major units, e.g. `"100.00"`)
 - `ARCHIVED` is reversible; only DRAFT entities can be deleted, anything else goes to `PENDING_DELETION`
 - Get, update, delete, duplicate, the bulk updates and bid adjustments take the owning `adAccountUrn`
+- `linkedin_upload_image` / `linkedin_upload_video` take an `ownerUrn` (an organization or person, **not** the ad account) and return a `urn:li:image:…` / `urn:li:video:…`. A creative cannot reference it directly: put it in a post's `content.media.id` (Posts API, not wrapped here) and create the creative from the post. Images are `initializeUpload` + one PUT; videos are `initializeUpload` (with the file size), one PUT per 4 MB part (ETags collected), then `finalizeUpload`
 
 ### Transport
 

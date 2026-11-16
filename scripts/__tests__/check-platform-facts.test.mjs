@@ -109,6 +109,7 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
     ["linkedin.conversions_are_listed_by_account_finder", "2026-11-13"],
     ["linkedin.only_draft_is_deletable", "2026-11-14"],
+    ["linkedin.uploads_use_images_and_videos_api", "2026-11-16"],
     // Amazon Ads advertiser-accounts API: read from Amazon's docs and OpenAPI file, not called live.
     ["amazon_dsp.advertiser_accounts_api", "2026-11-13"],
     ["amazon_dsp.account_id_header_value", "2026-11-13"],
