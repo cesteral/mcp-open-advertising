@@ -1,6 +1,6 @@
 # @cesteral/linkedin-mcp
 
-LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; only the `/v2/me` session check is still on legacy `/v2/`, see Current Status).
+LinkedIn Ads MCP Server - Campaign management via the LinkedIn Marketing API (versioned `/rest/` surface, `LinkedIn-Version: 202610`; see Current Status).
 
 ## Purpose
 
@@ -26,15 +26,14 @@ per-session Bearer token authentication.
 
 #### 1. `linkedin_list_entities`
 
-List LinkedIn entities. Creatives page with a cursor (`pageToken`), conversion rules come back in one response, and the other types page with the `start` offset; `pagination.nextPageInputKey` says which to send.
+List LinkedIn entities. Ad accounts, campaign groups, campaigns and creatives page with a cursor: pass the previous response's `pagination.nextCursor` as `pageToken`. Conversion rules come back in one response.
 
 **Parameters:**
 
 - `entityType` (string, required): Type of entity to list
 - `adAccountUrn` (string, required except for `adAccount`): Ad Account URN to scope results
-- `start` (number, optional): Offset for pagination (default 0); not for creatives
-- `pageToken` (string, optional): Creatives only, the previous page's `pagination.nextCursor`
-- `count` (number, optional): Results per page (default 25, max 100)
+- `pageToken` (string, optional): The previous page's `pagination.nextCursor` (not for `conversionRule`)
+- `count` (number, optional): Page size (default 25; max 1000, creatives 100)
 
 #### 2. `linkedin_get_entity`
 
@@ -81,12 +80,12 @@ Delete a LinkedIn entity. LinkedIn deletes only DRAFT entities this way (a creat
 
 #### 6. `linkedin_list_ad_accounts`
 
-List ad accounts accessible to the authenticated user.
+List ad accounts accessible to the authenticated user (`GET /rest/adAccounts?q=search`, cursor paging).
 
 **Parameters:**
 
-- `start` (number, optional): Offset for pagination (default 0)
-- `count` (number, optional): Number of accounts to return (default 25)
+- `pageToken` (string, optional): The previous page's `pagination.nextCursor`
+- `count` (number, optional): Number of accounts per page (default 25, max 1000)
 
 ### Analytics
 
@@ -256,12 +255,13 @@ exercised against a live LinkedIn account. Each endpoint is recorded in
 `platform-facts.json`: `verified` where it was read from LinkedIn's own
 documentation, `unverified` where it was not.
 
-The `/v2/` → `/rest/` migration is nearly complete (#210): every entity's list,
+The `/v2/` → `/rest/` migration is done in code (#210), and nothing calls `/v2/`: every entity's list,
 create, get, update and delete (creatives on the Creatives API), analytics,
 targeting (facets and entities), delivery forecasts, audience counts and ad
-previews use the versioned `/rest/` surface, and the image/video uploads use the
-Images and Videos APIs (`/rest/images`, `/rest/videos`). Only the `/v2/me`
-session check still calls a legacy `/v2/` path. Targeting, forecast, audience-count and preview calls follow LinkedIn's
+previews use the versioned `/rest/` surface, every search finder pages with
+a cursor (`pageSize`/`pageToken`), and the image/video uploads use the Images
+and Videos APIs (`/rest/images`, `/rest/videos`). Sessions are validated with
+`GET /rest/adAccountUsers?q=authenticatedUser`, which needs only `r_ads`. Targeting, forecast, audience-count and preview calls follow LinkedIn's
 documentation (read 2026-10-01) but have not been run against a live account.
 
 ## Development

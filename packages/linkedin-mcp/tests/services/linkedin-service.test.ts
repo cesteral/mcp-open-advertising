@@ -39,7 +39,7 @@ describe("LinkedInService", () => {
           { id: 111222333, name: "Campaign A" },
           { id: 444555666, name: "Campaign B" },
         ],
-        paging: { count: 2, start: 0, total: 2 },
+        metadata: { nextPageToken: "next-1" },
       });
 
       const result = await service.listEntities(
@@ -49,7 +49,7 @@ describe("LinkedInService", () => {
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.nextPageToken).toBe("next-1");
 
       const [path, params] = mockHttpClient.get.mock.calls[0];
       // THE structural change (#210): the ad account moves out of the query
@@ -57,47 +57,53 @@ describe("LinkedInService", () => {
       // goes there.
       expect(path).toBe("/rest/adAccounts/123456789/adCampaigns");
       expect(params).not.toHaveProperty("accounts[0]");
-      expect(params).toMatchObject({
-        q: "search",
-      });
+      expect(params).toEqual({ q: "search", pageSize: "25" });
     });
 
-    it("respects start and count pagination params", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        elements: [],
-        paging: { count: 0, start: 50, total: 50 },
-      });
+    it("sends count as pageSize and the pageToken back", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ elements: [], metadata: {} });
 
-      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", {
-        start: 50,
+      const out = await service.listEntities("campaign", "urn:li:sponsoredAccount:123", {
+        pageToken: "tok",
         count: 10,
       });
 
       const [, params] = mockHttpClient.get.mock.calls[0];
-      expect(params.start).toBe("50");
-      expect(params.count).toBe("10");
+      expect(params).toEqual({ q: "search", pageSize: "10", pageToken: "tok" });
+      expect(params).not.toHaveProperty("start");
+      expect(params).not.toHaveProperty("count");
+      expect(out.nextPageToken).toBeUndefined();
     });
 
-    it("caps count at 100", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ elements: [], paging: {} });
+    it("accepts a campaign page of 1,000 and refuses a larger one", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ elements: [], metadata: {} });
+      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", { count: 1000 });
+      expect(mockHttpClient.get.mock.calls[0][1].pageSize).toBe("1000");
 
-      await service.listEntities("campaign", "urn:li:sponsoredAccount:123", { count: 200 });
+      await expect(
+        service.listEntities("campaign", "urn:li:sponsoredAccount:123", { count: 1001 })
+      ).rejects.toThrow(/at most 1000/);
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
+    });
 
-      const [, params] = mockHttpClient.get.mock.calls[0];
-      expect(parseInt(params.count, 10)).toBeLessThanOrEqual(100);
+    it("refuses a creative page larger than 100", async () => {
+      await expect(
+        service.listEntities("creative", "urn:li:sponsoredAccount:123", { count: 101 })
+      ).rejects.toThrow(/at most 100 per page/);
+      expect(mockHttpClient.get).not.toHaveBeenCalled();
     });
 
     it("does not include accounts filter for adAccount entity type", async () => {
       mockHttpClient.get.mockResolvedValueOnce({
         elements: [{ id: 123456789 }],
-        paging: { count: 1, start: 0, total: 1 },
+        metadata: {},
       });
 
       await service.listEntities("adAccount", undefined, {});
 
       const [path, params] = mockHttpClient.get.mock.calls[0];
       expect(path).toBe("/rest/adAccounts");
-      expect(params).not.toHaveProperty("accounts[0]");
+      expect(params).toEqual({ q: "search", pageSize: "25" });
     });
   });
 
@@ -178,10 +184,10 @@ describe("LinkedInService", () => {
       expect(out.nextPageToken).toBeUndefined();
     });
 
-    it("refuses a pageToken for an offset-paged finder", async () => {
+    it("refuses a pageToken for the unpaged conversion-rule finder", async () => {
       await expect(
-        service.listEntities("campaign", "urn:li:sponsoredAccount:7", { pageToken: "x" })
-      ).rejects.toThrow(/start\/count/);
+        service.listEntities("conversionRule", "urn:li:sponsoredAccount:7", { pageToken: "x" })
+      ).rejects.toThrow(/one response/);
       expect(mockHttpClient.get).not.toHaveBeenCalled();
     });
 
@@ -286,21 +292,6 @@ describe("LinkedInService", () => {
 
       const [path] = mockHttpClient.delete.mock.calls[0];
       expect(path).toBe("/rest/adAccounts/7/adCampaigns/111222333");
-    });
-  });
-
-  describe("listAdAccounts()", () => {
-    it("calls the adAccounts endpoint", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({
-        elements: [{ id: 123456789, name: "My Ad Account" }],
-        paging: { count: 1, start: 0, total: 1 },
-      });
-
-      const result = await service.listAdAccounts();
-
-      expect(result.accounts).toHaveLength(1);
-      const [path] = mockHttpClient.get.mock.calls[0];
-      expect(path).toBe("/rest/adAccounts");
     });
   });
 

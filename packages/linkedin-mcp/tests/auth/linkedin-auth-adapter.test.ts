@@ -18,6 +18,19 @@ import {
 } from "../../src/auth/linkedin-auth-adapter.js";
 import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
+/**
+ * basis: LinkedIn Ad Account Users page (read 2026-11-16), "Find Ad Accounts
+ * by Authenticated User": `GET /rest/adAccountUsers?q=authenticatedUser`
+ * returns `{ elements: [{ account, user, role, … }], paging }`, `user` being
+ * the token's member as a person URN.
+ */
+function accountUsersResponse(user: string) {
+  return {
+    elements: [{ account: "urn:li:sponsoredAccount:516413367", role: "VIEWER", user }],
+    paging: { count: 1, links: [], start: 0, total: 1 },
+  };
+}
+
 describe("LinkedInAccessTokenAdapter", () => {
   beforeEach(() => {
     mockFetchWithTimeout.mockReset();
@@ -27,7 +40,7 @@ describe("LinkedInAccessTokenAdapter", () => {
     it("validates successfully and sets personId", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-xyz789", vanityName: "jane-smith" }),
+        json: async () => accountUsersResponse("urn:li:person:person-xyz789"),
       } as unknown as Response);
 
       const adapter = new LinkedInAccessTokenAdapter(
@@ -38,13 +51,13 @@ describe("LinkedInAccessTokenAdapter", () => {
 
       await adapter.validate();
 
-      expect(adapter.personId).toBe("person-xyz789");
+      expect(adapter.personId).toBe("urn:li:person:person-xyz789");
     });
 
     it("only calls API once (caches validated state)", async () => {
       mockFetchWithTimeout.mockResolvedValue({
         ok: true,
-        json: async () => ({ id: "person-cached", vanityName: "test" }),
+        json: async () => accountUsersResponse("urn:li:person:person-cached"),
       } as unknown as Response);
 
       const adapter = new LinkedInAccessTokenAdapter(
@@ -79,7 +92,7 @@ describe("LinkedInAccessTokenAdapter", () => {
     it("sends correct LinkedIn headers in validation request", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-headers-test", vanityName: "test" }),
+        json: async () => accountUsersResponse("urn:li:person:person-headers-test"),
       } as unknown as Response);
 
       const adapter = new LinkedInAccessTokenAdapter(
@@ -90,11 +103,35 @@ describe("LinkedInAccessTokenAdapter", () => {
 
       await adapter.validate();
 
-      const callOptions = mockFetchWithTimeout.mock.calls[0][3];
+      // basis: LinkedIn Ad Account Users page (read 2026-11-16): "Find Ad
+      // Accounts by Authenticated User" is GET https://api.linkedin.com/rest/
+      // adAccountUsers?q=authenticatedUser with Authorization, Linkedin-Version
+      // and X-Restli-Protocol-Version: 2.0.0; q=authenticatedUser is "the only
+      // required parameter". It needs r_ads, like every tool here; /v2/me
+      // (the profile API) is on no Marketing page.
+      const [url, , , callOptions] = mockFetchWithTimeout.mock.calls[0];
+      expect(url).toBe("https://api.linkedin.com/rest/adAccountUsers?q=authenticatedUser");
       const headers = callOptions?.headers as Record<string, string> | undefined;
       expect(headers?.["Authorization"]).toBe("Bearer my-token");
       expect(headers?.["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
       expect(headers?.["X-Restli-Protocol-Version"]).toBe("2.0.0");
+    });
+
+    it("accepts a valid token whose member has no ad account role, with no person URN", async () => {
+      // A 200 with no rows proves the token; there is just no `user` to read.
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ elements: [], paging: { count: 0, links: [], start: 0, total: 0 } }),
+      } as unknown as Response);
+
+      const adapter = new LinkedInAccessTokenAdapter(
+        "my-token",
+        "https://api.linkedin.com",
+        TEST_LINKEDIN_API_VERSION
+      );
+
+      await expect(adapter.validate()).resolves.toBeUndefined();
+      expect(adapter.personId).toBe("");
     });
   });
 
@@ -179,10 +216,7 @@ const MOCK_TOKEN_RESPONSE = {
   refresh_token_expires_in: 31536000,
 };
 
-const MOCK_ME_RESPONSE = {
-  id: "person-123",
-  vanityName: "testuser",
-};
+const MOCK_ACCOUNT_USERS_RESPONSE = accountUsersResponse("urn:li:person:person-123");
 
 describe("LinkedInRefreshTokenAdapter", () => {
   beforeEach(() => {
@@ -201,7 +235,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
     } as unknown as Response);
   }
 
-  function mockMeResponse(body = MOCK_ME_RESPONSE) {
+  function mockAccountUsersResponse(body = MOCK_ACCOUNT_USERS_RESPONSE) {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       json: async () => body,
@@ -436,17 +470,17 @@ describe("LinkedInRefreshTokenAdapter", () => {
 
       // First call: token exchange (getAccessToken inside validate)
       mockTokenExchange();
-      // Second call: GET /v2/me
-      mockMeResponse();
+      // Second call: GET /rest/adAccountUsers?q=authenticatedUser
+      mockAccountUsersResponse();
 
       await adapter.validate();
 
-      expect(adapter.personId).toBe("person-123");
+      expect(adapter.personId).toBe("urn:li:person:person-123");
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
 
-      // Verify the /v2/me call has correct headers
+      // Verify the validation call's URL and headers
       const meCall = mockFetchWithTimeout.mock.calls[1];
-      expect(meCall[0]).toContain("/v2/me");
+      expect(meCall[0]).toBe("https://api.linkedin.com/rest/adAccountUsers?q=authenticatedUser");
       const meOptions = meCall[3] as { headers: Record<string, string> };
       expect(meOptions.headers["Authorization"]).toBe("Bearer li-new-token");
       expect(meOptions.headers["LinkedIn-Version"]).toBe(TEST_LINKEDIN_API_VERSION);
@@ -454,7 +488,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
     });
 
     // Fleet review linkedin #20: the access-token adapter memoized validate()
-    // but the refresh adapter re-ran a token refresh + /v2/me on every call.
+    // but the refresh adapter re-ran a token refresh + validation call on every call.
     it("memoizes a successful validation", async () => {
       const adapter = new LinkedInRefreshTokenAdapter(
         MOCK_REFRESH_CREDENTIALS,
@@ -462,13 +496,13 @@ describe("LinkedInRefreshTokenAdapter", () => {
         TEST_LINKEDIN_API_VERSION
       );
       mockTokenExchange();
-      mockMeResponse();
+      mockAccountUsersResponse();
 
       await adapter.validate();
       await adapter.validate();
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
-      expect(adapter.personId).toBe("person-123");
+      expect(adapter.personId).toBe("urn:li:person:person-123");
     });
   });
 

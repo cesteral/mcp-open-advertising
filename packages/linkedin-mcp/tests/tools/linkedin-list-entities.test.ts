@@ -38,9 +38,7 @@ describe("linkedin_list_entities tool", () => {
     it("lists campaigns for an ad account", async () => {
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities: [{ id: 111222333, name: "Test Campaign", status: "ACTIVE" }],
-        total: 1,
-        start: 0,
-        paging: "offset",
+        paging: "cursor",
       });
 
       const result = await listEntitiesLogic(
@@ -55,20 +53,19 @@ describe("linkedin_list_entities tool", () => {
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0]).toMatchObject({ name: "Test Campaign" });
       expect(result.pagination.pageSize).toBe(1);
-      expect(result.pagination.totalCount).toBe(1);
+      expect(result.pagination.totalCount).toBeUndefined();
       expect(result.pagination.hasMore).toBe(false);
       expect(result.pagination.nextCursor).toBeNull();
-      expect(result.pagination.nextPageInputKey).toBe("start");
+      expect(result.pagination.nextPageInputKey).toBe("pageToken");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("correctly calculates hasMore when total exceeds current page", async () => {
+    it("surfaces LinkedIn's nextPageToken as the next cursor", async () => {
       const entities = Array.from({ length: 25 }, (_, i) => ({ id: i }));
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities,
-        total: 100,
-        start: 0,
-        paging: "offset",
+        paging: "cursor",
+        nextPageToken: "DgGerr1i",
       });
 
       const result = await listEntitiesLogic(
@@ -82,7 +79,7 @@ describe("linkedin_list_entities tool", () => {
 
       expect(result.pagination.hasMore).toBe(true);
       expect(result.pagination.pageSize).toBe(25);
-      expect(result.pagination.nextCursor).toBe("25");
+      expect(result.pagination.nextCursor).toBe("DgGerr1i");
     });
 
     it("throws when adAccountUrn is missing for account-scoped entity types", async () => {
@@ -100,9 +97,7 @@ describe("linkedin_list_entities tool", () => {
     it("does not require adAccountUrn for adAccount entity type", async () => {
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities: [{ id: 123456789, name: "My Account" }],
-        total: 1,
-        start: 0,
-        paging: "offset",
+        paging: "cursor",
       });
 
       const result = await listEntitiesLogic(
@@ -119,16 +114,14 @@ describe("linkedin_list_entities tool", () => {
     it("passes pagination params to service", async () => {
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities: [],
-        total: 0,
-        start: 50,
-        paging: "offset",
+        paging: "cursor",
       });
 
       await listEntitiesLogic(
         {
           entityType: "campaign",
           adAccountUrn: "urn:li:sponsoredAccount:123456789",
-          start: 50,
+          pageToken: "tok",
           count: 10,
         },
         mockContext as any
@@ -137,7 +130,7 @@ describe("linkedin_list_entities tool", () => {
       expect(mockLinkedInService.listEntities).toHaveBeenCalledWith(
         "campaign",
         "urn:li:sponsoredAccount:123456789",
-        { start: 50, count: 10, pageToken: undefined },
+        { count: 10, pageToken: "tok" },
         mockContext
       );
     });
@@ -150,7 +143,7 @@ describe("linkedin_list_entities tool", () => {
         hasMore: nextCursor !== null,
         pageSize,
         ...(totalCount !== undefined ? { totalCount } : {}),
-        nextPageInputKey: "start",
+        nextPageInputKey: "pageToken",
       };
     }
 

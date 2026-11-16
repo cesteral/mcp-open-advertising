@@ -330,7 +330,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:88"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:102"],
       "note": "Read 2026-10-01: every endpoint page under learn.microsoft.com/en-us/linkedin/marketing documents https://api.linkedin.com/rest/... and the migrations table lists the unversioned Marketing APIs as Deprecated (sunset 2024-12-16)."
     },
     {
@@ -346,8 +346,8 @@
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": [
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:117",
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:120"
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:133",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:134"
       ],
       "note": "Read 2026-10-01 from the Campaigns page: get is GET /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID}; the only account-less /rest/adCampaigns appears in a generic header illustration on the versioning page, which the Campaigns page contradicts."
     },
@@ -364,8 +364,8 @@
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": [
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:107",
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:110"
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:122",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:123"
       ],
       "note": "Read 2026-10-01 from the Campaign Groups page."
     },
@@ -396,7 +396,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:634"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:602"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string and no account. Not exercised against a live account."
     },
     {
@@ -411,7 +411,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:688"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:649"],
       "note": "Not exercised against a live account."
     },
     {
@@ -486,7 +486,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:807"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:768"],
       "note": "The page's samples write the range both as timeRange.start=... and as timeRange=(start:...,end:...); the record form is sent. Not exercised against a live account."
     },
     {
@@ -501,24 +501,23 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:694"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:665"],
       "note": "The page's samples show no Linkedin-Version header; the client sends it on every request. Not exercised against a live account."
     },
     {
-      "id": "linkedin.me_stays_unversioned",
+      "id": "linkedin.session_check_is_ad_account_users_finder",
       "package": "linkedin-mcp",
       "class": "behavioral-constraint",
-      "claim": "Token validation via GET /v2/me is profile/auth, not a Marketing product, and is not part of the /rest/ migration",
-      "value": "/v2/me",
-      "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaigns",
-      "status": "unverified",
-      "verifiedAt": null,
-      "verifyBy": "2026-12-15",
+      "claim": "Session validation calls GET /rest/adAccountUsers?q=authenticatedUser (\"Find Ad Accounts by Authenticated User\"), a Marketing API finder whose only required parameter is q=authenticatedUser and which needs the r_ads scope every tool here needs. It returns one { account, user, role } row per ad account the token's member holds a role on, user being the member's person URN, which becomes the session's userId. It replaces GET /v2/me, the profile API, which no Marketing page documents. Read from LinkedIn's Ad Account Users page, 2026-11-16.",
+      "value": "/rest/adAccountUsers?q=authenticatedUser",
+      "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-account-users",
+      "status": "verified",
+      "verifiedAt": "2026-11-16",
+      "verifyBy": "2027-05-15",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/auth/linkedin-auth-adapter.ts:13"],
-      "verificationBasis": "inferred",
-      "note": "Inferred from LinkedIn's documented /v2/ -> /rest/ split. No source was read and no call was made; api.linkedin.com is unreachable from here and no advertiser credentials exist."
+      "codeRefs": ["packages/linkedin-mcp/src/auth/linkedin-auth-adapter.ts:57"],
+      "note": "Replaces linkedin.me_stays_unversioned (#210). A member with no ad account role gets 200 with no rows: the token is accepted and the session carries no person URN. The page documents no paging parameters for this finder; none are sent. Not exercised against a live account."
     },
     {
       "id": "linkedin.creatives_need_schema_rewrite",
@@ -532,7 +531,7 @@
       "verifyBy": "2027-05-13",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:143"],
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:157"],
       "note": "List, create, get, update and delete all use the Creatives API (#210). Not exercised against a live account."
     },
     {
@@ -548,8 +547,8 @@
       "refreshDue": null,
       "loadBearing": true,
       "codeRefs": [
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:157",
-        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:159"
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:171",
+        "packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:172"
       ],
       "note": "Item get/update use /rest/conversions/{id}?account={sponsoredAccountUrn}, the account coming from the tools' adAccountUrn (#210). No delete is documented for a conversion rule, so linkedin_delete_entity does not offer one."
     },
@@ -598,23 +597,23 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:815"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:789"],
       "note": "Replaces linkedin.ad_previews_is_an_action, whose claim (that the versioned equivalent is only the livePreviewForCreative action) was REFUTED for existing creatives by the Ad Preview page. Not exercised against a live account."
     },
     {
       "id": "linkedin.rest_uses_cursor_pagination",
       "package": "linkedin-mcp",
       "class": "behavioral-constraint",
-      "claim": "AdAccounts, campaign groups, campaigns and creatives search finders moved to cursor-based pagination at version 202401: pageSize (default 100; max 1000, creatives 100) and pageToken, with the next token in metadata.nextPageToken and no paging block. This package pages creatives with pageSize/pageToken and still sends offset start/count for the others. Read from LinkedIn's Cursor-based Pagination page, 2026-10-01.",
-      "value": null,
+      "claim": "AdAccounts, campaign groups, campaigns and creatives search finders moved to cursor-based pagination at version 202401: pageSize (default 100; max 1,000, creatives 100) and pageToken, with the next token in metadata.nextPageToken and no paging block; a response without nextPageToken is the end of the dataset. Every list this package pages (ad accounts, campaign groups, campaigns, creatives) uses pageSize/pageToken, and no offset start/count is sent. Read from LinkedIn's Cursor-based Pagination, Ad Accounts, Campaign Groups and Campaigns pages, 2026-11-16.",
+      "value": "paging: \"cursor\", maxPageSize: 1000",
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/cursor-based-pagination",
       "status": "verified",
-      "verifiedAt": "2026-10-01",
-      "verifyBy": "2027-03-30",
+      "verifiedAt": "2026-11-16",
+      "verifyBy": "2027-05-15",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:329"],
-      "note": "Read 2026-10-01. /rest/images and /rest/videos q=associatedAccount, and adAnalytics, still take start/count."
+      "codeRefs": ["packages/linkedin-mcp/src/mcp-server/tools/utils/entity-mapping.ts:92"],
+      "note": "First read 2026-10-01; re-read 2026-11-16 when the search finders were switched (#210). /rest/images and /rest/videos q=associatedAccount, and adAnalytics, still take start/count. Not exercised against a live account."
     },
     {
       "id": "amazon_dsp.rate_limit_default",

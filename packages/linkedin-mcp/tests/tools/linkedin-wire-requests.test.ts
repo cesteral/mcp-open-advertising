@@ -80,6 +80,11 @@ import {
   ListEntitiesInputSchema,
 } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
 import {
+  listAdAccountsLogic,
+  ListAdAccountsInputSchema,
+} from "../../src/mcp-server/tools/definitions/list-ad-accounts.tool.js";
+import { LinkedInAccessTokenAdapter } from "../../src/auth/linkedin-auth-adapter.js";
+import {
   updateEntityLogic,
   UpdateEntityInputSchema,
 } from "../../src/mcp-server/tools/definitions/update-entity.tool.js";
@@ -1530,19 +1535,196 @@ describe("linkedin_list_entities → creative (Creatives API criteria finder)", 
     expect(out.pagination.nextCursor).toBeNull();
   });
 
-  it("refuses an offset `start` for creatives (cursor paging only)", async () => {
+  it("refuses a creative page larger than 100 before any request", async () => {
     await expect(
       listEntitiesLogic(
         ListEntitiesInputSchema.parse({
           entityType: "creative",
           adAccountUrn: ACCOUNT_URN,
-          start: 25,
+          count: 101,
         }),
         ctx,
         sdk
       )
-    ).rejects.toThrow(/pageToken/);
+    ).rejects.toThrow(/at most 100 per page/);
     expect(stub.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * basis: LinkedIn Cursor-based Pagination page (read 2026-11-16): "From
+ * 202401 version and above" the adAccounts, adCampaignGroups, adCampaigns and
+ * adCreatives search APIs page with `pageSize` and `pageToken`; the next token
+ * is `metadata.nextPageToken`, and a response without one is the end of the
+ * dataset. The Campaigns and Campaign Groups pages (read 2026-11-16) give the
+ * account-scoped `GET /rest/adAccounts/{adAccountId}/adCampaigns?q=search` and
+ * `/adCampaignGroups?q=search` with "Max is 1,000" for pageSize, and pass the
+ * token back as `&pageToken=…` on the same search.
+ */
+describe("linkedin_list_entities → campaign / campaignGroup (search finder, cursor paging)", () => {
+  for (const [entityType, collection] of [
+    ["campaign", "adCampaigns"],
+    ["campaignGroup", "adCampaignGroups"],
+  ] as const) {
+    it(`${entityType}: q=search&pageSize=N, no start/count, nextPageToken as the cursor`, async () => {
+      stub.route({
+        method: "GET",
+        path: `/rest/adAccounts/${ACCOUNT_ID}/${collection}`,
+        response: {
+          metadata: { nextPageToken: "DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo" },
+          elements: [{ id: 1 }, { id: 2 }],
+        },
+      });
+      const out = await listEntitiesLogic(
+        ListEntitiesInputSchema.parse({ entityType, adAccountUrn: ACCOUNT_URN, count: 1000 }),
+        ctx,
+        sdk
+      );
+      const [req] = apiRequests();
+      expect(apiRequests()).toHaveLength(1);
+      expect(req!.method).toBe("GET");
+      expect(req!.url).toBe(
+        `${API_BASE_URL}/rest/adAccounts/${ACCOUNT_ID}/${collection}?q=search&pageSize=1000`
+      );
+      expect(req!.headers["x-restli-method"]).toBe("FINDER");
+      expect(out.pagination.nextCursor).toBe("DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo");
+      expect(out.pagination.nextPageInputKey).toBe("pageToken");
+    });
+
+    it(`${entityType}: sends the pageToken back; no token means the last page`, async () => {
+      stub.route({
+        method: "GET",
+        path: `/rest/adAccounts/${ACCOUNT_ID}/${collection}`,
+        response: { metadata: {}, elements: [{ id: 3 }] },
+      });
+      const out = await listEntitiesLogic(
+        ListEntitiesInputSchema.parse({
+          entityType,
+          adAccountUrn: ACCOUNT_URN,
+          pageToken: "DgGerr1i",
+        }),
+        ctx,
+        sdk
+      );
+      expect(apiRequests()[0]!.rawQuery).toBe("q=search&pageSize=25&pageToken=DgGerr1i");
+      expect(out.pagination.nextCursor).toBeNull();
+      expect(out.pagination.hasMore).toBe(false);
+    });
+  }
+
+  it("refuses a page larger than 1,000 before any request", async () => {
+    expect(() =>
+      ListEntitiesInputSchema.parse({
+        entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
+        count: 1001,
+      })
+    ).toThrow();
+    expect(stub.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * basis: LinkedIn Ad Accounts page (read 2026-11-16), "Search for Accounts":
+ * `GET https://api.linkedin.com/rest/adAccounts?q=search`, where an omitted
+ * search criterion returns "all accounts the caller has access to"; the
+ * adAccounts API pages with `pageSize`/`pageToken` ("The max allowed pageSize
+ * is 1,000") and the sample response carries `metadata.nextPageToken`.
+ */
+describe("linkedin_list_ad_accounts → adAccounts search finder (cursor paging)", () => {
+  it("first page: GET /rest/adAccounts?q=search&pageSize=N", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: {
+        elements: [{ id: 507404993, name: "Dunder Mifflin Account", currency: "USD" }],
+        metadata: { nextPageToken: "DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo" },
+      },
+    });
+    const out = await listAdAccountsLogic(ListAdAccountsInputSchema.parse({}), ctx, sdk);
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.method).toBe("GET");
+    expect(req!.url).toBe(`${API_BASE_URL}/rest/adAccounts?q=search&pageSize=25`);
+    expect(out.accounts).toHaveLength(1);
+    expect(out.pagination.nextCursor).toBe("DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo");
+    expect(out.pagination.nextPageInputKey).toBe("pageToken");
+  });
+
+  it("next page: sends the pageToken back; no token means the last page", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: { elements: [], metadata: {} },
+    });
+    const out = await listAdAccountsLogic(
+      ListAdAccountsInputSchema.parse({ pageToken: "DgGerr1i", count: 1000 }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests()[0]!.rawQuery).toBe("q=search&pageSize=1000&pageToken=DgGerr1i");
+    expect(out.pagination.nextCursor).toBeNull();
+  });
+
+  it("linkedin_list_entities adAccount sends the same request", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: { elements: [], metadata: {} },
+    });
+    await listEntitiesLogic(ListEntitiesInputSchema.parse({ entityType: "adAccount" }), ctx, sdk);
+    expect(apiRequests()[0]!.url).toBe(`${API_BASE_URL}/rest/adAccounts?q=search&pageSize=25`);
+  });
+});
+
+/**
+ * basis: LinkedIn Ad Account Users page (read 2026-11-16), "Find Ad Accounts
+ * by Authenticated User": `GET https://api.linkedin.com/rest/adAccountUsers?
+ * q=authenticatedUser` ("The only required parameter is q=authenticatedUser")
+ * with Authorization, Linkedin-Version and X-Restli-Protocol-Version: 2.0.0; it
+ * needs the r_ads scope, and each row's `user` is the token's member.
+ */
+describe("session validation → adAccountUsers authenticatedUser finder", () => {
+  it("GET /rest/adAccountUsers?q=authenticatedUser; the person URN is the row's user", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccountUsers",
+      response: {
+        elements: [
+          {
+            account: "urn:li:sponsoredAccount:516413367",
+            role: "ACCOUNT_BILLING_ADMIN",
+            user: "urn:li:person:K1RwyVNukt",
+          },
+        ],
+        paging: { count: 1, links: [], start: 0, total: 1 },
+      },
+    });
+    const adapter = new LinkedInAccessTokenAdapter(TEST_ACCESS_TOKEN, API_BASE_URL, API_VERSION);
+    await adapter.validate();
+
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.method).toBe("GET");
+    expect(req!.url).toBe(`${API_BASE_URL}/rest/adAccountUsers?q=authenticatedUser`);
+    expect(req!.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
+    expect(req!.headers["linkedin-version"]).toBe(API_VERSION);
+    expect(req!.headers["x-restli-protocol-version"]).toBe("2.0.0");
+    expect(adapter.personId).toBe("urn:li:person:K1RwyVNukt");
+    expect(stub.requests.some((r) => r.path.startsWith("/v2/"))).toBe(false);
+  });
+
+  it("a 401 is Unauthorized", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccountUsers",
+      status: 401,
+      response: { status: 401, message: "Invalid access token" },
+    });
+    const adapter = new LinkedInAccessTokenAdapter(TEST_ACCESS_TOKEN, API_BASE_URL, API_VERSION);
+    await expect(adapter.validate()).rejects.toMatchObject({
+      code: JsonRpcErrorCode.Unauthorized,
+    });
   });
 });
 

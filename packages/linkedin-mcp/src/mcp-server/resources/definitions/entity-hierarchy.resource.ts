@@ -84,8 +84,9 @@ by setting its status (or \`intendedStatus\`) to \`PENDING_DELETION\`. ARCHIVED 
 reversible. LinkedIn documents no delete for a conversion rule.
 
 ### List: one finder per entity
-- Campaigns and campaign groups: \`GET /rest/adAccounts/{accountId}/{entityPath}?q=search&start={n}&count={n}\`, offset paging, \`elements\` and \`paging\` in the response.
-- Creatives: \`GET /rest/adAccounts/{accountId}/creatives?q=criteria&pageSize={n}\`, cursor paging: pass the response's \`metadata.nextPageToken\` back as \`pageToken\` (\`linkedin_list_entities\` returns it as \`pagination.nextCursor\`). Max page size 100.
+- Ad accounts: \`GET /rest/adAccounts?q=search&pageSize={n}\`. Campaigns and campaign groups: \`GET /rest/adAccounts/{accountId}/{entityPath}?q=search&pageSize={n}\`. Max page size 1,000.
+- Creatives: \`GET /rest/adAccounts/{accountId}/creatives?q=criteria&pageSize={n}\`. Max page size 100.
+- These four page with a cursor (since version 202401): pass the response's \`metadata.nextPageToken\` back as \`pageToken\` (the list tools return it as \`pagination.nextCursor\`); no token means the last page. The response has \`elements\` and \`metadata\`, no \`paging\` block or total.
 - Conversion rules: \`GET /rest/conversions?q=account&account={urn}\`, everything in one response.
 
 Every list call sends \`X-Restli-Method: FINDER\`.
@@ -102,7 +103,7 @@ Every list call sends \`X-Restli-Method: FINDER\`.
 
 | Tool | Purpose | Batch? |
 |------|---------|--------|
-| \`linkedin_list_entities\` | List entities with offset pagination | |
+| \`linkedin_list_entities\` | List entities with cursor pagination | |
 | \`linkedin_get_entity\` | Get single entity by URN | |
 | \`linkedin_create_entity\` | Create single entity | |
 | \`linkedin_update_entity\` | Update single entity (PATCH) | |
