@@ -47,6 +47,8 @@ export const TEMPLATE_TYPES = {
     writeTools: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
     addedWithWrites: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
     terminalTools: ["delete_entity"],
+    pacingGuidance:
+      "To populate budget and flight dates, first call `{{key}}_get_entity` for the campaign.",
     label: "Management",
     purpose: "campaign management",
     description: "management — entity CRUD, validation, reporting and pacing",
@@ -66,6 +68,8 @@ export const TEMPLATE_TYPES = {
     writeTools: ["submit_report"],
     addedWithWrites: ["submit_report", "check_report_status", "download_report"],
     terminalTools: [],
+    pacingGuidance:
+      "To populate spend-to-date, first call `{{key}}_get_report` for the campaign; budget and flight dates come from the caller.",
     label: "Reporting only",
     purpose: "reporting",
     description: "reporting — synchronous and async reports, pacing",
@@ -94,6 +98,8 @@ export const TEMPLATE_TYPES = {
       "insert_conversions",
     ],
     terminalTools: [],
+    pacingGuidance:
+      "To populate budget and flight dates, first call `{{key}}_get_entity` for the campaign.",
     label: "Reporting + conversions",
     purpose: "reporting and conversion upload",
     description: "reporting and conversions — entities, reports, offline conversion upload, pacing",
@@ -189,6 +195,12 @@ function fill(text, vars, where) {
 
 /** Path (relative to the package) → rendered text, for `type`. */
 export function renderTemplate(root, type, vars, { writes = false } = {}) {
+  // Per-type text a base file needs (the pacing tool names the type's own
+  // budget source), itself filled from the caller's vars.
+  vars = {
+    ...vars,
+    pacingGuidance: fill(typeOf(type).pacingGuidance, vars, `${type} pacingGuidance`),
+  };
   const files = new Map();
   for (const layer of typeOf(type).layers) {
     for (const [rel, abs] of layerMap(root, layer, writes)) files.set(rel, { layer, abs });

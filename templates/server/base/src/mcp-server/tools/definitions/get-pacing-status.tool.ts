@@ -13,7 +13,7 @@ export const getPacingStatusTool = createPacingTool({
   campaignIdSchema: z.string().min(1).describe("{{displayName}} campaign ID to check pacing for"),
   platformApi: "the {{displayName}} API",
   populateGuidance:
-    "To populate budget and flight dates, first call `{{key}}_get_entity` for the campaign.",
+    "{{pacingGuidance}}",
   exampleIds: [
     { accountId: "1234567890", campaignId: "1800123456789" },
     { accountId: "1234567891", campaignId: "1800123456790" },

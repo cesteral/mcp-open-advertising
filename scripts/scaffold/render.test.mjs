@@ -56,6 +56,26 @@ describe("scaffold: template layers", () => {
     }
   });
 
+  it("code names only tools its own type registers", () => {
+    // A base file's text (a tool description, say) reaches every type, so
+    // entity wording in base names a tool a reporting server does not have.
+    // Workflow ids (mcp.execute.<key>_...) are not tool names; READMEs may
+    // name a tool the contributor adds later.
+    const strays = [];
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      for (const writes of [false, true]) {
+        const tools = new Set(TEMPLATE_TOOLS("foo_bar", { type, writes }));
+        for (const [path, text] of renderTemplate(TEMPLATE_DIR, type, vars, { writes })) {
+          if (!/^(src|tests)\//.test(path)) continue;
+          for (const [, tok] of text.matchAll(/(?<!mcp\.execute\.)\b(foo_bar_[a-z0-9_]+)/g)) {
+            if (!tools.has(tok)) strays.push(`${type}${writes ? "+writes" : ""} ${path}: ${tok}`);
+          }
+        }
+      }
+    }
+    expect(strays).toEqual([]);
+  });
+
   it("an unknown type throws", () => {
     expect(() => renderTemplate(TEMPLATE_DIR, "bogus", vars)).toThrow(
       /unknown server type "bogus"/
