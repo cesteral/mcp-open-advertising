@@ -1,0 +1,52 @@
+{
+  "name": "@cesteral/{{package}}",
+  "mcpName": "io.github.cesteral/{{package}}",
+  "version": "0.1.0",
+  "description": "{{displayName}} MCP Server - campaign entity management via the {{displayName}} API (scaffolded; experimental)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/mcp-open-advertising.git",
+    "directory": "packages/{{package}}"
+  },
+  "homepage": "https://github.com/cesteral/mcp-open-advertising#readme",
+  "keywords": ["mcp", "model-context-protocol", "advertising", "{{package}}"],
+  "files": ["dist/", "README.md", "LICENSE.md"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "{{package}}": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "dev:http": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@cesteral/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "catalog:",
+    "pino": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}
