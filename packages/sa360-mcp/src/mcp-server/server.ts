@@ -1,31 +1,15 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  createManifestEntryResolver,
-  registerToolsFromDefinitions,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const SA360_PACKAGE_NAME = "sa360-mcp";
-const SA360_PLATFORM = "sa360";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -65,130 +49,32 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("sa360-mcp", {
-      version: packageJson.version,
-      description:
-        "Search Ads 360 reporting and conversion upload server. " +
-        "Provides cross-engine unified reporting via SA360 Reporting API v0 and " +
-        "offline conversion upload via legacy v2 API. " +
-        "Supports 8 entity types (customer, campaign, adGroup, adGroupAd, " +
-        "adGroupCriterion, campaignCriterion, biddingStrategy, conversionAction).",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Search Ads 360 reporting and conversion upload server. " +
-        "Use sa360_list_accounts to discover accounts, sa360_gaql_search for flexible queries. " +
-        "SA360 provides cross-engine reporting across Google Ads, Microsoft Ads, Yahoo Japan, and Baidu. " +
-        "Entity data is read-only; only conversion upload is supported for writes.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: SA360_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: SA360_PACKAGE_NAME,
-    platform: SA360_PLATFORM,
-    workflowIdByToolName: sa360WorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "sa360-mcp",
+    platform: "sa360",
+    version: packageJson.version,
+    description:
+      "Search Ads 360 reporting and conversion upload server. " +
+      "Provides cross-engine unified reporting via SA360 Reporting API v0 and " +
+      "offline conversion upload via legacy v2 API. " +
+      "Supports 8 entity types (customer, campaign, adGroup, adGroupAd, " +
+      "adGroupCriterion, campaignCriterion, biddingStrategy, conversionAction).",
+    instructions:
+      "Search Ads 360 reporting and conversion upload server. " +
+      "Use sa360_list_accounts to discover accounts, sa360_gaql_search for flexible queries. " +
+      "SA360 provides cross-engine reporting across Google Ads, Microsoft Ads, Yahoo Japan, and Baidu. " +
+      "Entity data is read-only; only conversion upload is supported for writes.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: sa360WorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
   });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

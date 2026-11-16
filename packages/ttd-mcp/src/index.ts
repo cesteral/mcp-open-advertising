@@ -6,48 +6,29 @@ import { mcpConfig } from "./config/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
-import { TtdDirectTokenAuthAdapter } from "./auth/ttd-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("ttd-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a direct-token adapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const directToken = mcpConfig.ttdApiToken;
-
-  if (!directToken) {
-    logger.warn("No TTD API token found in env vars. Set TTD_API_TOKEN for stdio mode.");
-    return false;
-  }
-
-  const authAdapter = new TtdDirectTokenAuthAdapter(directToken, mcpConfig.ttdGraphqlUrl);
-
-  // Validate credentials at startup to fail fast on invalid credentials
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    {
-      baseUrl: mcpConfig.ttdApiBaseUrl,
-      graphqlUrl: mcpConfig.ttdGraphqlUrl,
-      reportPollIntervalMs: mcpConfig.ttdReportPollIntervalMs,
-      reportMaxPollAttempts: mcpConfig.ttdReportMaxPollAttempts,
-    },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+/** Stdio credentials come from the pre-generated TTD_API_TOKEN env var. */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () => buildEnvAuthAdapter(mcpConfig),
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No TTD API token found in env vars. Set TTD_API_TOKEN for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

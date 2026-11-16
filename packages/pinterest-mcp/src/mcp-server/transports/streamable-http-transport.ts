@@ -17,13 +17,15 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { PinterestBearerAuthStrategy } from "../../auth/pinterest-auth-strategy.js";
 import {
   PINTEREST_ADVERTISER_ID_HEADER,
   type PinterestAuthAdapter,
 } from "../../auth/pinterest-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { PINTEREST_RETRY_CONFIG } from "../../services/pinterest/pinterest-http-client.js";
 
@@ -60,115 +62,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: PINTEREST_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For pinterest-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as PinterestAuthAdapter | undefined;
-      if (adapter) {
-        const cfg = appConfig as AppConfig;
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: cfg.pinterestApiBaseUrl,
-            apiVersion: cfg.pinterestApiVersion,
-            reportPollIntervalMs: cfg.pinterestReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const pinterestAdAccountId = cfg.pinterestAdAccountId;
-
-        // Prefer refresh token flow if app credentials are available
-        if (
-          cfg.pinterestAppId &&
-          cfg.pinterestAppSecret &&
-          cfg.pinterestRefreshToken &&
-          pinterestAdAccountId
-        ) {
-          const { PinterestRefreshTokenAdapter } = await import(
-            "../../auth/pinterest-auth-adapter.js"
-          );
-          const envAdapter = new PinterestRefreshTokenAdapter(
-            {
-              appId: cfg.pinterestAppId,
-              appSecret: cfg.pinterestAppSecret,
-              refreshToken: cfg.pinterestRefreshToken,
-            },
-            pinterestAdAccountId,
-            cfg.pinterestApiBaseUrl
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfg.pinterestApiBaseUrl,
-              apiVersion: cfg.pinterestApiVersion,
-              reportPollIntervalMs: cfg.pinterestReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        const pinterestToken = cfg.pinterestAccessToken;
-        if (pinterestToken && pinterestAdAccountId) {
-          const { PinterestAccessTokenAdapter } = await import(
-            "../../auth/pinterest-auth-adapter.js"
-          );
-          const envAdapter = new PinterestAccessTokenAdapter(
-            pinterestToken,
-            pinterestAdAccountId,
-            cfg.pinterestApiBaseUrl
-          );
-          await envAdapter.validate();
-          const cfgFallback = appConfig as AppConfig;
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfgFallback.pinterestApiBaseUrl,
-              apiVersion: cfgFallback.pinterestApiVersion,
-              reportPollIntervalMs: cfgFallback.pinterestReportPollIntervalMs,
-              reportMaxPollAttempts: cfgFallback.pinterestReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Pinterest access token and ad account ID required. Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=pinterest-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "Pinterest API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as PinterestAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Pinterest access token and ad account ID required. Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=pinterest-bearer.",
+      unsupportedModeMessage: "Pinterest API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

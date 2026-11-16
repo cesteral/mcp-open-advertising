@@ -4,11 +4,7 @@
 import type { Logger } from "pino";
 import type { AmazonDspAuthAdapter } from "../auth/amazon-dsp-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
-import {
-  deleteSpilledObjectsForSession,
-  ReportCsvStore,
-  SessionServiceStore,
-} from "@cesteral/shared";
+import { createSessionBoundReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { AmazonDspHttpClient } from "./amazon-dsp/amazon-dsp-http-client.js";
 import { AmazonDspService } from "./amazon-dsp/amazon-dsp-service.js";
@@ -71,16 +67,7 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * Served through the `report-csv://{id}` MCP resource template. Entries
  * expire after 30 minutes.
  */
-export const reportCsvStore = new ReportCsvStore({
-  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
-  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
-  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
-});
-
-// On session close, sweep this session's GCS spill objects and clear its
-// in-memory report-csv entries. Note: slug "amazon_dsp" matches the
-// canonical ReportingPlatform value used by the spill helper.
-sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("amazon_dsp", sessionId);
-  reportCsvStore.clearForSession(sessionId);
+export const reportCsvStore = createSessionBoundReportCsvStore({
+  sessionServiceStore,
+  spillPlatform: "amazon_dsp",
 });

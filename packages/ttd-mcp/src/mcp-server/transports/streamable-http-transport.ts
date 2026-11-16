@@ -17,11 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { TtdTokenAuthStrategy } from "../../auth/ttd-auth-strategy.js";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
-import { TtdDirectTokenAuthAdapter } from "../../auth/ttd-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { TTD_RETRY_CONFIG } from "../../services/ttd/ttd-http-client.js";
 
@@ -57,68 +58,15 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: TTD_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const ttdConfig = appConfig as AppConfig;
-
-      // Case 1: Platform adapter available (ttd-token mode)
-      const adapter = authResult.platformAuthAdapter as TtdAuthAdapter | undefined;
-      if (adapter) {
-        await adapter.validate();
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: ttdConfig.ttdApiBaseUrl,
-            graphqlUrl: ttdConfig.ttdGraphqlUrl,
-            reportPollIntervalMs: ttdConfig.ttdReportPollIntervalMs,
-            reportMaxPollAttempts: ttdConfig.ttdReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // Case 2: none/jwt mode with env var credentials
-      if (
-        (ttdConfig.mcpAuthMode === "none" || ttdConfig.mcpAuthMode === "jwt") &&
-        ttdConfig.ttdApiToken
-      ) {
-        const envAdapter = new TtdDirectTokenAuthAdapter(
-          ttdConfig.ttdApiToken,
-          ttdConfig.ttdGraphqlUrl
-        );
-        await envAdapter.validate();
-        const services = createSessionServices(
-          envAdapter,
-          {
-            baseUrl: ttdConfig.ttdApiBaseUrl,
-            graphqlUrl: ttdConfig.ttdGraphqlUrl,
-            reportPollIntervalMs: ttdConfig.ttdReportPollIntervalMs,
-            reportMaxPollAttempts: ttdConfig.ttdReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // Case 3: none mode without credentials — protocol-only session (tools will fail at runtime)
-      if (ttdConfig.mcpAuthMode === "none") {
-        return { services: null };
-      }
-
-      // Case 4: jwt mode without env credentials — error
-      return {
-        services: null,
-        error: {
-          message:
-            "TTD credentials required. Set TTD_API_TOKEN env var, or use MCP_AUTH_MODE=ttd-token.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) => authResult.platformAuthAdapter as TtdAuthAdapter | undefined,
+      validateAuthAdapter: true,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "TTD credentials required. Set TTD_API_TOKEN env var, or use MCP_AUTH_MODE=ttd-token.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

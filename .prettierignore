@@ -28,3 +28,7 @@ packages/*/dist/
 docs/reviews/*/*.md
 !docs/reviews/*/README.md
 !docs/reviews/*/STATUS.md
+
+# Server templates carry `{{placeholders}}` that are not valid TypeScript or
+# JSON until rendered. `pnpm new:server` runs prettier over what it writes.
+templates/server/

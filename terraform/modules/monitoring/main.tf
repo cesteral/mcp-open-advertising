@@ -185,29 +185,100 @@ resource "google_monitoring_alert_policy" "error_rate" {
 # The Cloud Run 5xx alert above cannot see tool failures: an MCP tool error is
 # returned as a JSON-RPC error / isError result inside an HTTP 200. An upstream
 # platform 429, 5xx or auth failure therefore never trips the Cloud Run alerts.
-# These policies read the OpenTelemetry counters the servers export through the
-# Google Cloud Monitoring exporter (packages/shared/src/utils/observability/
-# metrics.ts), which publishes them as custom metrics under
-# `workload.googleapis.com/`. The exporter cannot write Cloud Run resource
-# types, so the series sit on `generic_task`, where `job` is the OTEL
-# service.name; the per-server grouping below relies on that label.
+# Both policies read log-based metrics, not the OpenTelemetry counters the
+# servers export (`mcp.tool.execution.count`, `mcp.rate_limit.hit.count`).
+# Cloud Monitoring creates a custom metric's descriptor only when the first data
+# point arrives, and the API refuses (404) to create an alert policy on a metric
+# that does not exist yet. An event counter has no data until the event first
+# happens (a tool call, a rejection), so a policy on it cannot be applied to a
+# fleet that has had no traffic. A log-based metric exists from the moment it is
+# applied. The OTEL counters still feed the dashboard.
+
+# Every tool call that passed authentication writes one `tool_access` audit
+# line (tool-handler-factory.ts), with `success` true or false. The error rate
+# is the failures over all of them. A call rejected before the handler runs
+# (bad credentials, access denied) is a different event and is not counted.
+resource "google_logging_metric" "tool_calls" {
+  name    = "cesteral/tool_calls_${var.environment}"
+  project = var.project_id
+
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    jsonPayload.component="audit"
+    jsonPayload.event="tool_access"
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Cesteral MCP tool calls"
+
+    labels {
+      key         = "service"
+      value_type  = "STRING"
+      description = "Cloud Run service name"
+    }
+  }
+
+  label_extractors = {
+    "service" = "EXTRACT(resource.labels.service_name)"
+  }
+}
+
+resource "google_logging_metric" "tool_call_errors" {
+  name    = "cesteral/tool_call_errors_${var.environment}"
+  project = var.project_id
+
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    jsonPayload.component="audit"
+    jsonPayload.event="tool_access"
+    jsonPayload.success=false
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Cesteral MCP tool call errors"
+
+    labels {
+      key         = "service"
+      value_type  = "STRING"
+      description = "Cloud Run service name"
+    }
+  }
+
+  label_extractors = {
+    "service" = "EXTRACT(resource.labels.service_name)"
+  }
+}
 
 resource "google_monitoring_alert_policy" "tool_error_rate" {
   display_name = "Cesteral MCP tool error rate > ${var.tool_error_rate_threshold}% (${var.environment})"
   project      = var.project_id
   combiner     = "OR"
 
+  # The filters below name the metrics by string, so Terraform cannot see the
+  # dependency: without this the policy can be created before the metrics.
+  depends_on = [
+    google_logging_metric.tool_calls,
+    google_logging_metric.tool_call_errors,
+  ]
+
   conditions {
-    display_name = "MCP tool calls with status=error, as a share of all calls (per server)"
+    display_name = "MCP tool calls that ended in an error, as a share of all calls (per server)"
 
     condition_threshold {
       filter = <<-EOT
-        metric.type = "workload.googleapis.com/mcp.tool.execution.count"
-        AND metric.labels.status = "error"
+        resource.type="cloud_run_revision"
+        AND metric.type="logging.googleapis.com/user/cesteral/tool_call_errors_${var.environment}"
       EOT
 
       denominator_filter = <<-EOT
-        metric.type = "workload.googleapis.com/mcp.tool.execution.count"
+        resource.type="cloud_run_revision"
+        AND metric.type="logging.googleapis.com/user/cesteral/tool_calls_${var.environment}"
       EOT
 
       comparison      = "COMPARISON_GT"
@@ -216,16 +287,16 @@ resource "google_monitoring_alert_policy" "tool_error_rate" {
 
       aggregations {
         alignment_period     = "300s"
-        per_series_aligner   = "ALIGN_RATE"
+        per_series_aligner   = "ALIGN_SUM"
         cross_series_reducer = "REDUCE_SUM"
-        group_by_fields      = ["resource.labels.job"]
+        group_by_fields      = ["metric.labels.service"]
       }
 
       denominator_aggregations {
         alignment_period     = "300s"
-        per_series_aligner   = "ALIGN_RATE"
+        per_series_aligner   = "ALIGN_SUM"
         cross_series_reducer = "REDUCE_SUM"
-        group_by_fields      = ["resource.labels.job"]
+        group_by_fields      = ["metric.labels.service"]
       }
     }
   }
@@ -240,9 +311,42 @@ resource "google_monitoring_alert_policy" "tool_error_rate" {
     content   = <<-EOT
       More than ${var.tool_error_rate_threshold}% of MCP tool calls on a server ended in an error for 10 minutes in ${var.environment}. These return HTTP 200, so the Cloud Run 5xx alert does not fire for them.
 
-      Find the cause in the `tool_failure` records (see docs/architecture/tool-failure-logging.md): the redacted upstream request trail shows whether it was an upstream 429/5xx or an auth failure. The failing server is the `job` label on the incident.
+      Find the cause in the `tool_failure` records (see docs/architecture/tool-failure-logging.md): the redacted upstream request trail shows whether it was an upstream 429/5xx or an auth failure. The failing server is the `service` label on the incident.
     EOT
     mime_type = "text/markdown"
+  }
+}
+
+# Every failed tool call logs an error line whose `code` is the JSON-RPC error
+# code (ErrorHandler.handleError). The server's own limiter is the only source
+# of `RateLimited` errors with a `data.reason` of `wait_exceeds_max` or
+# `tokens_exceed_limit` (packages/shared/src/utils/http/rate-limiter.ts); an
+# upstream platform 429 carries no such reason, so it is not counted here.
+resource "google_logging_metric" "rate_limit_rejections" {
+  name    = "cesteral/rate_limit_rejections_${var.environment}"
+  project = var.project_id
+
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    jsonPayload.code=-32003
+    jsonPayload.data.reason=("wait_exceeds_max" OR "tokens_exceed_limit")
+  EOT
+
+  metric_descriptor {
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
+    display_name = "Cesteral MCP rate-limit rejections"
+
+    labels {
+      key         = "service"
+      value_type  = "STRING"
+      description = "Cloud Run service name"
+    }
+  }
+
+  label_extractors = {
+    "service" = "EXTRACT(resource.labels.service_name)"
   }
 }
 
@@ -251,12 +355,17 @@ resource "google_monitoring_alert_policy" "rate_limit_hits" {
   project      = var.project_id
   combiner     = "OR"
 
+  # The filter below names the metric by string, so Terraform cannot see the
+  # dependency: without this the policy can be created before the metric.
+  depends_on = [google_logging_metric.rate_limit_rejections]
+
   conditions {
     display_name = "MCP server-side rate-limit rejections (per server)"
 
     condition_threshold {
       filter = <<-EOT
-        metric.type = "workload.googleapis.com/mcp.rate_limit.hit.count"
+        resource.type="cloud_run_revision"
+        AND metric.type="logging.googleapis.com/user/cesteral/rate_limit_rejections_${var.environment}"
       EOT
 
       comparison      = "COMPARISON_GT"
@@ -265,9 +374,9 @@ resource "google_monitoring_alert_policy" "rate_limit_hits" {
 
       aggregations {
         alignment_period     = "300s"
-        per_series_aligner   = "ALIGN_DELTA"
+        per_series_aligner   = "ALIGN_SUM"
         cross_series_reducer = "REDUCE_SUM"
-        group_by_fields      = ["resource.labels.job"]
+        group_by_fields      = ["metric.labels.service"]
       }
     }
   }
@@ -280,7 +389,7 @@ resource "google_monitoring_alert_policy" "rate_limit_hits" {
 
   documentation {
     content   = <<-EOT
-      More than ${var.rate_limit_hit_threshold} requests were rejected by an MCP server's own rate limiter in 5 minutes in ${var.environment}. This is the server throttling a caller, returned to the client as a tool error inside an HTTP 200. The `key_pattern` label on the metric says which limiter. An upstream platform's 429 is counted in the tool error-rate alert, not here.
+      More than ${var.rate_limit_hit_threshold} requests were rejected by an MCP server's own rate limiter in 5 minutes in ${var.environment}. This is the server throttling a caller, returned to the client as a tool error inside an HTTP 200. The `data.key` field of the matching error logs (filter on `jsonPayload.data.reason`) says which limiter. An upstream platform's 429 is counted in the tool error-rate alert, not here.
     EOT
     mime_type = "text/markdown"
   }

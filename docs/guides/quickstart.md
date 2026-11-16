@@ -25,7 +25,7 @@ work, jump to [No-credential evaluation](#no-credential-evaluation).
 ## Prerequisites
 
 - Node.js 26+
-- pnpm 10 -- the repo pins `packageManager: pnpm@10.34.5`; run `corepack enable` (or prefix commands with `corepack pnpm`)
+- pnpm 10.34.5, the repo's `packageManager` -- Node 26 no longer bundles corepack, so `npm install -g pnpm@10.34.5` (or prefix commands with `npx -y pnpm@10.34.5`)
 - An ad platform account with API access for one of the paths above
 
 ---

@@ -5,17 +5,13 @@ import { describe, it, expect } from "vitest";
 import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { assertSchemaSizesUnderLimit } from "@cesteral/shared";
+import { describeSchemaSizeGuard } from "@cesteral/shared/testkit";
 import { allTools } from "../src/mcp-server/tools/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 
-describe("schema size guard", () => {
-  it("each tool inputSchema and outputSchema stays under its per-tool limit and the aggregates stay under their limits", () => {
-    assertSchemaSizesUnderLimit(allTools);
-  });
-});
+describeSchemaSizeGuard(allTools);
 
 // Budget check on the generator output. A regression here usually means the
 // schema-extraction root-set in config/v1-schema-extraction.config.ts widened

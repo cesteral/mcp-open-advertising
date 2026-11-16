@@ -4,11 +4,7 @@
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../auth/tiktok-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
-import {
-  deleteSpilledObjectsForSession,
-  ReportCsvStore,
-  SessionServiceStore,
-} from "@cesteral/shared";
+import { createSessionBoundReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TikTokHttpClient } from "./tiktok/tiktok-http-client.js";
 import { TikTokService } from "./tiktok/tiktok-service.js";
@@ -73,15 +69,7 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * persists on demand (via `storeRawCsv: true`). Served through the
  * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
  */
-export const reportCsvStore = new ReportCsvStore({
-  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
-  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
-  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
-});
-
-// On session close, sweep this session's GCS spill objects and clear its
-// in-memory report-csv entries.
-sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("tiktok", sessionId);
-  reportCsvStore.clearForSession(sessionId);
+export const reportCsvStore = createSessionBoundReportCsvStore({
+  sessionServiceStore,
+  spillPlatform: "tiktok",
 });

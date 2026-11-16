@@ -6,27 +6,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerReportCsvResource,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const AMAZON_DSP_PACKAGE_NAME = "amazon-dsp-mcp";
-const AMAZON_DSP_PLATFORM = "amazon_dsp";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -80,149 +63,33 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("amazon-dsp-mcp", {
-      version: packageJson.version,
-      description:
-        "Amazon DSP campaign management and reporting via the Amazon Advertising API. Supports campaign, ad group, creative, audience, profile-scoped auth, async reporting, targeting, and preview workflows.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Amazon DSP campaign management and reporting server. Supports campaign, ad group, creative, audience, async reporting, targeting, and bulk operations via the Amazon Advertising API. " +
-        "Use amazon_dsp_list_advertisers to discover accounts, amazon_dsp_list_entities to browse entities. " +
-        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: AMAZON_DSP_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: AMAZON_DSP_PACKAGE_NAME,
-    platform: AMAZON_DSP_PLATFORM,
+    gcsBucket,
+    packageName: "amazon-dsp-mcp",
+    platform: "amazon_dsp",
+    version: packageJson.version,
+    description:
+      "Amazon DSP campaign management and reporting via the Amazon Advertising API. Supports campaign, ad group, creative, audience, profile-scoped auth, async reporting, targeting, and preview workflows.",
+    instructions:
+      "Amazon DSP campaign management and reporting server. Supports campaign, ad group, creative, audience, async reporting, targeting, and bulk operations via the Amazon Advertising API. " +
+      "Use amazon_dsp_list_advertisers to discover accounts, amazon_dsp_list_entities to browse entities. " +
+      "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
+    tools: allTools,
+    resources: allResources,
+    prompts: promptRegistry.values(),
     workflowIdByToolName: amazonDspWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-    // Drop the session when a tool call fails Unauthorized (e.g. LwA rejected
-    // the refresh token with invalid_grant — expired after Amazon's 365-day
-    // lifetime, or revoked). The next request then re-authenticates at the
-    // transport and gets a clean HTTP 401 + authErrorHint instead of retrying
-    // into the same in-band error forever.
-    onAuthError: (staleSessionId) => {
-      logger.warn(
-        { sessionId: staleSessionId },
-        "Dropping session after Unauthorized tool failure — credentials are no longer valid"
-      );
-      sessionServiceStore.delete(staleSessionId);
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    dropSessionOnAuthError: true,
+    reportCsv: {
+      store: reportCsvStore,
+      platformLabel: "Amazon DSP",
+      downloadToolName: "amazon_dsp_download_report",
     },
   });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
-    resources: allResources,
-    logger,
-  });
-
-  // Register `report-csv://{id}` template for raw report bodies stored on
-  // demand by `amazon_dsp_download_report` (storeRawCsv: true). Amazon DSP
-  // reports may be JSON or CSV; the store records the actual mimeType.
-  registerReportCsvResource({
-    server,
-    ResourceTemplate,
-    store: reportCsvStore,
-    platform: "Amazon DSP",
-    downloadToolName: "amazon_dsp_download_report",
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

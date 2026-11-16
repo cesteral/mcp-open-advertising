@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { SnapchatBearerAuthStrategy } from "../../auth/snapchat-auth-strategy.js";
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { SNAPCHAT_RETRY_CONFIG } from "../../services/snapchat/snapchat-http-client.js";
 
@@ -58,114 +60,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: SNAPCHAT_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For snapchat-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as SnapchatAuthAdapter | undefined;
-      if (adapter) {
-        const cfg = appConfig as AppConfig;
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: cfg.snapchatApiBaseUrl,
-            reportPollIntervalMs: cfg.snapchatReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const snapchatAdAccountId = cfg.snapchatAdAccountId;
-
-        // Prefer refresh token flow if app credentials are available
-        if (
-          cfg.snapchatAppId &&
-          cfg.snapchatAppSecret &&
-          cfg.snapchatRefreshToken &&
-          snapchatAdAccountId
-        ) {
-          const { SnapchatRefreshTokenAdapter } = await import(
-            "../../auth/snapchat-auth-adapter.js"
-          );
-          const envAdapter = new SnapchatRefreshTokenAdapter(
-            {
-              appId: cfg.snapchatAppId,
-              appSecret: cfg.snapchatAppSecret,
-              refreshToken: cfg.snapchatRefreshToken,
-            },
-            snapchatAdAccountId,
-            cfg.snapchatApiBaseUrl,
-            cfg.snapchatOrgId ?? ""
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfg.snapchatApiBaseUrl,
-              reportPollIntervalMs: cfg.snapchatReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        const snapchatToken = cfg.snapchatAccessToken;
-        if (snapchatToken && snapchatAdAccountId) {
-          const { SnapchatAccessTokenAdapter } = await import(
-            "../../auth/snapchat-auth-adapter.js"
-          );
-          const envAdapter = new SnapchatAccessTokenAdapter(
-            snapchatToken,
-            snapchatAdAccountId,
-            cfg.snapchatApiBaseUrl,
-            cfg.snapchatOrgId ?? ""
-          );
-          await envAdapter.validate();
-          const cfgFallback = appConfig as AppConfig;
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfgFallback.snapchatApiBaseUrl,
-              reportPollIntervalMs: cfgFallback.snapchatReportPollIntervalMs,
-              reportMaxPollAttempts: cfgFallback.snapchatReportMaxPollAttempts,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "Snapchat access token and ad account ID required. Set SNAPCHAT_ACCESS_TOKEN and SNAPCHAT_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=snapchat-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "Snapchat API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as SnapchatAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "Snapchat access token and ad account ID required. Set SNAPCHAT_ACCESS_TOKEN and SNAPCHAT_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=snapchat-bearer.",
+      unsupportedModeMessage: "Snapchat API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

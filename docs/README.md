@@ -38,7 +38,7 @@ Navigation index for the `docs/` directory. Every file under `docs/` is reachabl
 | [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                                                 | Standards all management MCP servers must follow                      |
 | [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md)                                       | Environment configuration reference for all servers                   |
 | [`guides/platform-mapping.md`](guides/platform-mapping.md)                                             | Platform-to-package mapping and naming rules                          |
-| [`guides/adding-a-new-server.md`](guides/adding-a-new-server.md)                                       | Step-by-step guide for adding a new MCP server                        |
+| [`guides/adding-a-new-server.md`](guides/adding-a-new-server.md)                                       | Adding a platform: `pnpm new:server`, the template, what CI checks    |
 | [`architecture/mcp-microservice-topology.md`](architecture/mcp-microservice-topology.md)               | Service topology and inter-server access patterns                     |
 | [`architecture/monorepo-strategy.md`](architecture/monorepo-strategy.md)                               | Why one monorepo, and what stays independent                          |
 | [`architecture/server-card-operational-envelope.md`](architecture/server-card-operational-envelope.md) | The server card's `operational` block: rate limits, retries, rollback |

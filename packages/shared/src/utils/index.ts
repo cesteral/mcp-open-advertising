@@ -18,6 +18,7 @@ export * from "./mcp/pagination.js";
 export * from "./mcp/prompt-handler-factory.js";
 export * from "./mcp/raw-tool-args.js";
 export * from "./mcp/pacing-tool-factory.js";
+export * from "./mcp/platform-server-factory.js";
 export * from "./mcp/resource-handler-factory.js";
 export * from "./mcp/schema-size-guard.js";
 export * from "./mcp/tool-examples-resource.js";
@@ -37,6 +38,7 @@ export * from "./transport/operational-envelope.js";
 export * from "./transport/server-bootstrap.js";
 export * from "./transport/server-card-builder.js";
 export * from "./transport/session-resolver.js";
+export * from "./transport/env-credential-session.js";
 export * from "./transport/session-store.js";
 
 // Upstream HTTP: fetch, retry, rate limiting, downloads
@@ -65,6 +67,7 @@ export * from "./reporting/date-presets.js";
 export * from "./reporting/metric-context.js";
 export * from "./reporting/pacing.js";
 export * from "./reporting/report-csv-resource.js";
+export * from "./reporting/report-csv-session.js";
 export * from "./reporting/report-csv-store.js";
 export * from "./reporting/report-download-view.js";
 export * from "./reporting/report-errors.js";

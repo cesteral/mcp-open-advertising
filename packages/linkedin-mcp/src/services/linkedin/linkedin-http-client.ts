@@ -171,27 +171,32 @@ export class LinkedInHttpClient {
   }
 
   /**
-   * PUT binary data directly to a URL (for LinkedIn asset upload second step).
-   * LinkedIn-Version and Auth headers are included.
+   * PUT bytes to an upload URL an initializeUpload action returned, and hand
+   * back the response's ETag (a video part's id for finalizeUpload).
+   *
+   * The upload URL is a `dms-uploads` URL, not a Rest.li resource: neither of
+   * LinkedIn's upload samples sends LinkedIn-Version or the Rest.li protocol
+   * header to it, so neither is sent. An image PUT carries the OAuth token; a
+   * video part PUT does not accept one (LinkedIn Vector Asset page, read
+   * 2026-11-16), so `withAccessToken` is the caller's choice.
    */
   async putBinary(
     uploadUrl: string,
     buffer: Buffer,
     contentType: string,
+    options: { withAccessToken: boolean },
     context?: RequestContext
-  ): Promise<void> {
+  ): Promise<{ etag: string | null }> {
     return withLinkedInApiSpan("api.binary.PUT", uploadUrl, async (span) => {
       span.setAttribute("http.request.method", "PUT");
       span.setAttribute("http.url", uploadUrl);
-      const accessToken = await this.authAdapter.getAccessToken();
+      const headers: Record<string, string> = { "Content-Type": contentType };
+      if (options.withAccessToken) {
+        headers.Authorization = `Bearer ${await this.authAdapter.getAccessToken()}`;
+      }
       const response = await fetchWithTimeout(uploadUrl, 300_000, context, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": contentType,
-          "LinkedIn-Version": this.apiVersion,
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
+        headers,
         body: buffer,
       });
       span.setAttribute("http.response.status_code", response.status);
@@ -202,6 +207,7 @@ export class LinkedInHttpClient {
           `LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
         );
       }
+      return { etag: response.headers.get("etag") };
     });
   }
 

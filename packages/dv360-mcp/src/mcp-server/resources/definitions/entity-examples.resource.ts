@@ -6,7 +6,7 @@
  * Provides curated examples of common update patterns for DV360 entity types
  */
 
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
+import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
 import {
   getSupportedEntityTypesDynamic,
   isEntityTypeSupported,
@@ -27,7 +27,7 @@ const URI_TEMPLATE = "entity-examples://{entityType}";
 /**
  * Read entity examples resource
  */
-async function readEntityExamples(params: Record<string, string>): Promise<ResourceContent> {
+async function readEntityExamples(params: Record<string, string>): Promise<string> {
   const { entityType } = params;
 
   if (!entityType) {
@@ -46,7 +46,7 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
   const cacheKey = `entity-examples://${entityType}`;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: "application/json", text: cached };
+    return cached;
   }
 
   // Get examples for this entity type
@@ -87,17 +87,13 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
   const text = JSON.stringify(examplesDocument, null, 2);
   resourceCache.set(cacheKey, text);
 
-  return {
-    uri: cacheKey,
-    mimeType: "application/json",
-    text,
-  };
+  return text;
 }
 
 /**
  * List all available entity examples resources
  */
-async function listEntityExamples(): Promise<ResourceListItem[]> {
+async function listEntityExamples(): Promise<TemplatedResourceListing[]> {
   const entityTypesWithExamples = getEntityTypesWithExamples();
 
   return entityTypesWithExamples.map((entityType) => {
@@ -114,11 +110,11 @@ async function listEntityExamples(): Promise<ResourceListItem[]> {
 /**
  * Entity Examples Resource Definition
  */
-export const entityExamplesResource: ResourceDefinition = {
+export const entityExamplesResource: TemplatedResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
   mimeType: "application/json",
-  read: readEntityExamples,
+  resolveContent: (_uri, variables) => readEntityExamples(variables as Record<string, string>),
   list: listEntityExamples,
 };

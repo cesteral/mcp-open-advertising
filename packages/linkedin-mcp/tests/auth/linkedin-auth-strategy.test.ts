@@ -9,6 +9,20 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 import { fetchWithTimeout } from "@cesteral/shared";
 import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
+
+/**
+ * basis: LinkedIn Ad Account Users page (read 2026-11-16), "Find Ad Accounts
+ * by Authenticated User": `GET /rest/adAccountUsers?q=authenticatedUser`
+ * returns `{ elements: [{ account, user, role, … }], paging }`, `user` being
+ * the token's member as a person URN.
+ */
+function accountUsersResponse(user: string) {
+  return {
+    elements: [{ account: "urn:li:sponsoredAccount:516413367", role: "VIEWER", user }],
+    paging: { count: 1, links: [], start: 0, total: 1 },
+  };
+}
+
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 const mockLogger: any = {
@@ -33,7 +47,7 @@ describe("LinkedInBearerAuthStrategy", () => {
     it("returns correct AuthResult shape on valid token", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-abc123", vanityName: "john-doe" }),
+        json: async () => accountUsersResponse("urn:li:person:person-abc123"),
       } as unknown as Response);
 
       const strategy = new LinkedInBearerAuthStrategy(
@@ -46,8 +60,8 @@ describe("LinkedInBearerAuthStrategy", () => {
       });
 
       expect(result.authInfo).toEqual({
-        clientId: "person-abc123",
-        subject: "person-abc123",
+        clientId: "urn:li:person:person-abc123",
+        subject: "urn:li:person:person-abc123",
         authType: "linkedin-bearer",
       });
       expect(result.platformAuthAdapter).toBeDefined();
@@ -106,10 +120,10 @@ describe("LinkedInBearerAuthStrategy", () => {
           refresh_token: "li-new-refresh",
         }),
       } as unknown as Response);
-      // Second call: /v2/me validation
+      // Second call: adAccountUsers validation
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-refresh-123", vanityName: "refreshed" }),
+        json: async () => accountUsersResponse("urn:li:person:person-refresh-123"),
       } as unknown as Response);
 
       const strategy = new LinkedInBearerAuthStrategy(
@@ -125,15 +139,15 @@ describe("LinkedInBearerAuthStrategy", () => {
       });
 
       expect(result.authInfo).toEqual({
-        clientId: "person-refresh-123",
-        subject: "person-refresh-123",
+        clientId: "urn:li:person:person-refresh-123",
+        subject: "urn:li:person:person-refresh-123",
         authType: "linkedin-bearer",
       });
       expect(result.platformAuthAdapter).toBeDefined();
       expect(result.credentialFingerprint).toBeDefined();
       expect(result.credentialFingerprint).toHaveLength(32);
 
-      // 2 fetch calls: token exchange + /v2/me
+      // 2 fetch calls: token exchange + adAccountUsers
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
@@ -143,10 +157,10 @@ describe("LinkedInBearerAuthStrategy", () => {
         ok: true,
         json: async () => ({ access_token: "token-a", expires_in: 5184000 }),
       } as unknown as Response);
-      // /v2/me
+      // adAccountUsers
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-1" }),
+        json: async () => accountUsersResponse("urn:li:person:person-1"),
       } as unknown as Response);
 
       const strategy = new LinkedInBearerAuthStrategy(
@@ -175,7 +189,7 @@ describe("LinkedInBearerAuthStrategy", () => {
       // Only client-id provided, missing secret + refresh — falls back to static
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "person-static", vanityName: "static" }),
+        json: async () => accountUsersResponse("urn:li:person:person-static"),
       } as unknown as Response);
 
       const strategy = new LinkedInBearerAuthStrategy(
@@ -189,8 +203,8 @@ describe("LinkedInBearerAuthStrategy", () => {
         // Missing client-secret and refresh-token
       });
 
-      expect(result.authInfo.clientId).toBe("person-static");
-      // Only 1 fetch (/v2/me for static token)
+      expect(result.authInfo.clientId).toBe("urn:li:person:person-static");
+      // Only 1 fetch (adAccountUsers for static token)
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
   });

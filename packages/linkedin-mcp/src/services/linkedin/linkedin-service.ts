@@ -30,7 +30,51 @@ import type {
   CreateLinkedInCampaignRequest,
   CreateLinkedInCreativeRequest,
 } from "./types.js";
-import type { LinkedInRegisterUploadResponse } from "../../mcp-server/tools/utils/media-types.js";
+import type {
+  LinkedInInitializeImageUploadResponse,
+  LinkedInInitializeVideoUploadResponse,
+  LinkedInVideoUploadInstruction,
+} from "../../mcp-server/tools/utils/media-types.js";
+
+/**
+ * The upload instructions, checked to cover the file exactly once in order
+ * (the Videos API: "Parts are sorted by non-overlapping byte-range" starting at
+ * byte 0). Checked before any byte is sent, so a malformed response uploads
+ * nothing.
+ */
+function videoUploadParts(
+  instructions: LinkedInVideoUploadInstruction[] | undefined,
+  fileSizeBytes: number
+): Array<{ uploadUrl: string; firstByte: number; lastByte: number }> {
+  const parts: Array<{ uploadUrl: string; firstByte: number; lastByte: number }> = [];
+  let next = 0;
+  for (const i of instructions ?? []) {
+    if (!i.uploadUrl || i.firstByte !== next || i.lastByte === undefined || i.lastByte < next) {
+      break;
+    }
+    parts.push({ uploadUrl: i.uploadUrl, firstByte: i.firstByte, lastByte: i.lastByte });
+    next = i.lastByte + 1;
+  }
+  if (
+    parts.length === 0 ||
+    parts.length !== (instructions ?? []).length ||
+    next !== fileSizeBytes
+  ) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `LinkedIn video initializeUpload returned upload instructions that do not cover the ${fileSizeBytes}-byte file`
+    );
+  }
+  return parts;
+}
+
+/** An ETag header may be quoted (`"e438…"`); the part id is the bare value. */
+function unquoteEtag(etag: string): string {
+  const trimmed = etag.trim();
+  return trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')
+    ? trimmed.slice(1, -1)
+    : trimmed;
+}
 
 /**
  * Tokens a write draws from `linkedin:default` (a read draws 1). This is the
@@ -160,96 +204,158 @@ export class LinkedInService {
 
   // ─── Media uploads ─────────────────────────────────────────────────
   //
-  // The upload tools used to reach the HTTP client through a `client` getter,
-  // so the registerUpload POST and the binary PUT drew no limiter token. These
-  // draw from `linkedin:default` like every other call: both are writes, at
-  // LINKEDIN_WRITE_TOKENS, the server's own cost (no LinkedIn source states
-  // one). The flow has no status poll. The getter is gone so no tool can
-  // bypass the limiter again.
+  // Images API and Videos API (#210; they replace the Assets API's
+  // `/v2/assets?action=registerUpload`). Read from LinkedIn's Images API,
+  // Videos API and Vector Asset pages, li-lms-2026-10, 2026-11-16; not
+  // exercised against LinkedIn.
+  //
+  // The Rest.li actions (initializeUpload, finalizeUpload) draw
+  // LINKEDIN_WRITE_TOKENS from `linkedin:default`, the server's own cost (no
+  // LinkedIn source states one). The byte PUTs go to the `dms-uploads` URLs the
+  // initialize response hands back, not to the Marketing API, and draw nothing:
+  // a video is uploaded in 4 MB parts, so a per-part draw would make any video
+  // over a few parts outlast the per-minute budget. The flow has no status
+  // poll: the media is PROCESSING until LinkedIn marks it AVAILABLE.
 
-  /** `POST /v2/assets?action=registerUpload` — register one ads asset upload. */
-  async registerAssetUpload(
+  /**
+   * Upload one image: `POST /rest/images?action=initializeUpload`, then PUT the
+   * bytes (with the OAuth token) to the returned uploadUrl. Returns the
+   * `urn:li:image:…`.
+   */
+  async uploadImage(
     ownerUrn: string,
-    recipe: "urn:li:digitalmediaRecipe:ads-image" | "urn:li:digitalmediaRecipe:ads-video",
-    context?: RequestContext
-  ): Promise<LinkedInRegisterUploadResponse> {
-    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
-    return (await this.httpClient.post(
-      "/v2/assets?action=registerUpload",
-      {
-        registerUploadRequest: {
-          owner: ownerUrn,
-          recipes: [recipe],
-          serviceRelationships: [
-            {
-              identifier: "urn:li:userGeneratedContent",
-              relationshipType: "OWNER",
-            },
-          ],
-        },
-      },
-      context
-    )) as LinkedInRegisterUploadResponse;
-  }
-
-  /** `PUT {uploadUrl}` — the binary, to the URL registerUpload returned. */
-  async uploadAssetBinary(
-    uploadUrl: string,
     buffer: Buffer,
     contentType: string,
     context?: RequestContext
-  ): Promise<void> {
+  ): Promise<string> {
     await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
-    await this.httpClient.putBinary(uploadUrl, buffer, contentType, context);
+    const init = (await this.httpClient.post(
+      "/rest/images?action=initializeUpload",
+      { initializeUploadRequest: { owner: ownerUrn } },
+      context
+    )) as LinkedInInitializeImageUploadResponse;
+    const uploadUrl = init.value?.uploadUrl;
+    const imageUrn = init.value?.image;
+    if (!uploadUrl || !imageUrn) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        "LinkedIn image initializeUpload returned no uploadUrl or image URN"
+      );
+    }
+    await this.httpClient.putBinary(
+      uploadUrl,
+      buffer,
+      contentType,
+      { withAccessToken: true },
+      context
+    );
+    return imageUrn;
+  }
+
+  /**
+   * Upload one video: `POST /rest/videos?action=initializeUpload` with the file
+   * size, PUT each part the upload instructions name (inclusive byte ranges,
+   * no OAuth token) keeping each response's ETag, then
+   * `POST /rest/videos?action=finalizeUpload` with the ETags in instruction
+   * order. Returns the `urn:li:video:…`. A failure after initialize leaves the
+   * video WAITING_UPLOAD upstream; the Videos API documents no delete for it.
+   */
+  async uploadVideo(ownerUrn: string, buffer: Buffer, context?: RequestContext): Promise<string> {
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
+    const init = (await this.httpClient.post(
+      "/rest/videos?action=initializeUpload",
+      {
+        initializeUploadRequest: {
+          owner: ownerUrn,
+          fileSizeBytes: buffer.length,
+          uploadCaptions: false,
+          uploadThumbnail: false,
+        },
+      },
+      context
+    )) as LinkedInInitializeVideoUploadResponse;
+    const videoUrn = init.value?.video;
+    if (!videoUrn) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        "LinkedIn video initializeUpload returned no video URN"
+      );
+    }
+    const parts = videoUploadParts(init.value?.uploadInstructions, buffer.length);
+
+    const uploadedPartIds: string[] = [];
+    for (const part of parts) {
+      const { etag } = await this.httpClient.putBinary(
+        part.uploadUrl,
+        buffer.subarray(part.firstByte, part.lastByte + 1),
+        "application/octet-stream",
+        { withAccessToken: false },
+        context
+      );
+      if (!etag) {
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
+          `LinkedIn returned no ETag for video part bytes ${part.firstByte}-${part.lastByte}, so the upload cannot be finalized`
+        );
+      }
+      uploadedPartIds.push(unquoteEtag(etag));
+    }
+
+    await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
+    await this.httpClient.post(
+      "/rest/videos?action=finalizeUpload",
+      {
+        finalizeUploadRequest: {
+          video: videoUrn,
+          uploadToken: init.value?.uploadToken ?? "",
+          uploadedPartIds,
+        },
+      },
+      context
+    );
+    return videoUrn;
   }
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
   /**
-   * One page of a finder. `page.start` applies to offset finders and
-   * `page.pageToken` to cursor finders (creatives); passing the other kind is
-   * refused rather than silently ignored.
+   * One page of a finder. Cursor finders take `page.count` as the page size
+   * (default 25, refused above the finder's documented maximum) and
+   * `page.pageToken` from the previous page; a `none` finder returns every
+   * element at once, so a `pageToken` is refused rather than silently ignored.
    */
   async listEntities<T extends LinkedInEntityType>(
     entityType: T,
     adAccountUrn: string | undefined,
-    page: { start?: number; count?: number; pageToken?: string },
+    page: { count?: number; pageToken?: string },
     context?: RequestContext
   ): Promise<{
     entities: LinkedInEntityMap[T][];
-    total?: number;
-    start?: number;
     paging: LinkedInListPaging;
     /** Cursor finders only: the token for the next page, absent on the last. */
     nextPageToken?: string;
   }> {
     const config = getEntityConfig(entityType);
-    const finder = config.listFinder ?? { name: "search", paging: "offset" as const };
+    const finder = config.listFinder;
 
-    if (finder.paging !== "offset" && page.start !== undefined && page.start > 0) {
+    if (finder.paging === "none" && page.pageToken !== undefined) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
-        finder.paging === "cursor"
-          ? `LinkedIn pages ${entityType} lists with a cursor: pass the previous response's pageToken, not start.`
-          : `LinkedIn returns every ${entityType} in one response; start does not apply.`
+        `LinkedIn returns every ${entityType} in one response; pageToken does not apply.`
       );
     }
-    if (finder.paging !== "cursor" && page.pageToken !== undefined) {
+    if (finder.paging === "cursor" && page.count !== undefined && page.count > finder.maxPageSize) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
-        `pageToken applies to cursor-paged lists only; ${entityType} lists page with start/count.`
+        `LinkedIn pages ${entityType} lists at most ${finder.maxPageSize} per page; count ${page.count} is larger.`
       );
     }
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
 
     const params: Record<string, RestliQueryValue> = { q: finder.name };
-    const count = String(Math.min(page.count ?? 25, 100));
-    if (finder.paging === "offset") {
-      params.start = String(page.start ?? 0);
-      params.count = count;
-    } else if (finder.paging === "cursor") {
-      params.pageSize = count;
+    if (finder.paging === "cursor") {
+      params.pageSize = String(page.count ?? 25);
       if (page.pageToken !== undefined) params.pageToken = page.pageToken;
     }
 
@@ -271,8 +377,6 @@ export class LinkedInService {
 
     return {
       entities: result.elements ?? [],
-      total: result.paging?.total,
-      start: result.paging?.start,
       paging: finder.paging,
       ...(finder.paging === "cursor" && result.metadata?.nextPageToken
         ? { nextPageToken: result.metadata.nextPageToken }
@@ -361,36 +465,6 @@ export class LinkedInService {
     await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.delete(item.path, context, item.query);
-  }
-
-  // ─── Ad Accounts ───────────────────────────────────────────────────
-
-  /**
-   * List ad accounts accessible to the authenticated user.
-   */
-  async listAdAccounts(
-    start?: number,
-    count?: number,
-    context?: RequestContext
-  ): Promise<{ accounts: LinkedInAdAccount[]; total?: number }> {
-    await this.rateLimiter.consume(`linkedin:default`);
-
-    const params: Record<string, string> = {
-      q: "search",
-      start: String(start ?? 0),
-      count: String(Math.min(count ?? 25, 100)),
-    };
-
-    const result = (await this.httpClient.get(
-      "/rest/adAccounts",
-      params,
-      context
-    )) as LinkedInElementsResponse<LinkedInAdAccount>;
-
-    return {
-      accounts: result.elements ?? [],
-      total: result.paging?.total,
-    };
   }
 
   // ─── Bulk Operations ──────────────────────────────────────────────

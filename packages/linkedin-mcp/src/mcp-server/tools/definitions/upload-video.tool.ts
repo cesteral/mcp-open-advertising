@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { UploadOwnerUrnSchema } from "../utils/media-types.js";
 import {
   downloadFileToBuffer,
   NO_UNTRUSTED_CONTENT,
@@ -26,28 +27,31 @@ import type {
 
 const TOOL_NAME = "linkedin_upload_video";
 const TOOL_TITLE = "Upload Video to LinkedIn Ads";
-const TOOL_DESCRIPTION = `Upload a video to LinkedIn Ads from a URL.
+const TOOL_DESCRIPTION = `Upload a video to LinkedIn from a URL, on LinkedIn's Videos API.
 
-The server downloads the video and uploads it to LinkedIn's Digital Media Assets library.
-Two requests after the download: register the upload (\`POST /v2/assets?action=registerUpload\`),
-then PUT the bytes to the returned upload URL. No confirm or finalize request is sent; the
-asset URN comes from the register response.
+The server downloads the video, then: \`POST /rest/videos?action=initializeUpload\` with the owner and
+the file size; a PUT of each part to the upload URLs LinkedIn returns (parts of about 4MB, each answered
+with an ETag); and \`POST /rest/videos?action=finalizeUpload\` with those ETags in order. The result is a
+video URN (\`urn:li:video:…\`), PROCESSING until LinkedIn marks it AVAILABLE. If a part fails, the video
+stays WAITING_UPLOAD upstream; upload it again.
+
+**Owner:** \`ownerUrn\` is the organization (or person) that owns the video, normally the organization
+whose page authors the post the ad sponsors. It is not the ad account.
 
 **Video requirements:**
-- Formats: MP4 (H.264)
-- Max file size: 200MB
+- Format: MP4
 - Duration: 3 seconds to 30 minutes
-- Recommended: 1920x1080px (16:9), 1080x1080px (1:1)
+- File size: 75KB to 500MB for ads on LinkedIn; this server refuses files over 200MB, because it holds the
+  whole file in memory (checked before anything is sent)
 
-**Usage:** The returned assetUrn is referenced in creative → content → media → reference`;
+**Usage:** put the videoUrn in a post's content.media.id (Posts API, not wrapped by this server), then
+create the creative with content.reference set to that post's URN.`;
 
 const ASSET_TYPE = "video";
 
 export const UploadVideoInputSchema = z
   .object({
-    adAccountUrn: z
-      .string()
-      .describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
+    ownerUrn: UploadOwnerUrnSchema,
     mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
     dry_run: z
       .boolean()
@@ -61,11 +65,11 @@ export const UploadVideoInputSchema = z
 
 export const UploadVideoOutputSchema = z
   .object({
-    assetUrn: z
+    videoUrn: z
       .string()
       .optional()
       .describe(
-        "Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads. Absent on a dry_run (nothing was uploaded)."
+        "Video URN (urn:li:video:...) for a post's content.media.id. Absent on a dry_run (nothing was uploaded)."
       ),
     uploadedAt: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
@@ -78,7 +82,7 @@ export const UploadVideoOutputSchema = z
       "The concrete (operation, entityKind) this call resolved to — `upload` with `canonicalEntityKind: null` (effect class). Present on every response."
     ),
   })
-  .describe("Uploaded LinkedIn video asset");
+  .describe("Uploaded LinkedIn video");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -108,50 +112,30 @@ export async function uploadVideoLogic(
 
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  // Step 1: Download and size-check the file BEFORE registering, so a bad
-  // mediaUrl or an oversized file fails without leaving an orphaned registered
-  // asset upstream. The size limit is the caller's input, so InvalidParams.
-  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 300_000, context);
+  // Download and size-check the file BEFORE initializing the upload, so a bad
+  // mediaUrl or an oversized file fails without leaving an initialized
+  // video upstream. The size limit is the caller's input, so InvalidParams.
+  const { buffer } = await downloadFileToBuffer(input.mediaUrl, 300_000, context);
 
+  // LinkedIn takes up to 500MB for ads (Videos API); this server holds the
+  // whole file in memory, so it stops at 200MB.
   const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
   if (buffer.length > MAX_VIDEO_SIZE) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
-      `Video file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 200MB limit`
+      `Video file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds this server's 200MB upload limit`
     );
   }
 
-  // Step 2: Register upload
-  const registerResult = await linkedInService.registerAssetUpload(
-    input.adAccountUrn,
-    "urn:li:digitalmediaRecipe:ads-video",
-    context
-  );
-
-  const uploadRequest =
-    registerResult.value?.uploadMechanism?.[
-      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-    ];
-  const uploadUrl = uploadRequest?.uploadUrl;
-  const assetUrn = registerResult.value?.asset;
-
-  if (!uploadUrl || !assetUrn) {
-    throw new McpError(
-      JsonRpcErrorCode.InternalError,
-      "LinkedIn register upload failed: missing uploadUrl or asset URN"
-    );
-  }
-
-  // Step 3: PUT the binary to the registered upload URL
-  await linkedInService.uploadAssetBinary(uploadUrl, buffer, contentType, context);
+  const videoUrn = await linkedInService.uploadVideo(input.ownerUrn, buffer, context);
 
   const effect: EffectResult = {
     effectKind: "asset_uploaded",
-    summary: { asset_type: ASSET_TYPE, asset_handle: assetUrn },
+    summary: { asset_type: ASSET_TYPE, asset_handle: videoUrn },
   };
 
   return {
-    assetUrn,
+    videoUrn,
     uploadedAt: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -218,7 +202,11 @@ export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpText
   return [
     {
       type: "text" as const,
-      text: `Video uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
+      text: `Video uploaded to LinkedIn.
+
+Video URN: ${result.videoUrn}
+
+LinkedIn processes it before it can be served. Put the videoUrn in a post's content.media.id, then create the creative with content.reference set to the post URN.`,
     },
   ];
 }
@@ -259,7 +247,7 @@ export const uploadVideoTool = {
     {
       label: "Upload a video ad for LinkedIn",
       input: {
-        adAccountUrn: "urn:li:sponsoredAccount:123456",
+        ownerUrn: "urn:li:organization:2414183",
         mediaUrl: "https://example.com/video-ad-1080p.mp4",
       },
     },

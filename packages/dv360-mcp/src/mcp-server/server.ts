@@ -4,28 +4,12 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
-import { resourceRegistry } from "./resources/index.js";
+import { allResources, allTemplatedResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
-import { ErrorHandler, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const DV360_PACKAGE_NAME = "dv360-mcp";
-const DV360_PLATFORM = "dv360";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -78,221 +62,28 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  // Register all resources
-  resourceRegistry.registerAll();
-  logger.info({ resourceCount: resourceRegistry.getResourceCount() }, "Registered MCP resources");
-
-  const server = new McpServer(
-    buildServerInfo("dv360-mcp", {
-      version: packageJson.version,
-      description:
-        "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "DV360 campaign management server. Supports CRUD for campaigns, insertion orders, line items, and targeting via Display & Video 360 API. " +
-        "Use dv360_list_entities to discover entities, MCP Resources (entity-schema://{entityType}) for field details, " +
-        "and MCP Prompts (full_campaign_setup_workflow) for multi-step workflows.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: DV360_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: DV360_PACKAGE_NAME,
-    platform: DV360_PLATFORM,
+    gcsBucket,
+    packageName: "dv360-mcp",
+    platform: "dv360",
+    version: packageJson.version,
+    description:
+      "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
+    instructions:
+      "DV360 campaign management server. Supports CRUD for campaigns, insertion orders, line items, and targeting via Display & Video 360 API. " +
+      "Use dv360_list_entities to discover entities, MCP Resources (entity-schema://{entityType}) for field details, " +
+      "and MCP Prompts (full_campaign_setup_workflow) for multi-step workflows.",
+    tools: allTools,
+    resources: allResources,
+    templatedResources: allTemplatedResources,
+    prompts: promptRegistry.values(),
     workflowIdByToolName: dv360WorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
   });
-
-  // Register DV360 parameterized resources
-  const resources = resourceRegistry.getAllResources();
-  for (const resource of resources) {
-    const isParameterized = resource.uriTemplate.includes("{");
-    const resourceId = resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_");
-
-    const metadata = {
-      title: resource.name,
-      description: resource.description,
-      mimeType: resource.mimeType || "application/json",
-    };
-
-    if (isParameterized) {
-      const template = new ResourceTemplate(resource.uriTemplate, {
-        list: resource.list
-          ? async () => {
-              const items = await resource.list!();
-              return {
-                resources: items.map((item) => ({
-                  uri: item.uri,
-                  name: item.name,
-                  description: item.description,
-                  mimeType: item.mimeType || "application/json",
-                })),
-              };
-            }
-          : undefined,
-      });
-
-      server.registerResource(resourceId, template, metadata, async (uri, variables) => {
-        logger.info({ uri: uri.href, variables }, "Reading parameterized resource");
-        const match = resourceRegistry.findResourceByUri(uri.href);
-        if (!match) {
-          throw new McpError(JsonRpcErrorCode.NotFound, `Resource not found: ${uri.href}`);
-        }
-        try {
-          const content = await match.resource.read(match.params);
-          logger.debug(
-            {
-              uri: uri.href,
-              contentBytes: Buffer.byteLength(content.text, "utf-8"),
-            },
-            "Resource content size"
-          );
-          return {
-            contents: [
-              {
-                uri: content.uri,
-                mimeType: content.mimeType,
-                text: content.text,
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ uri: uri.href, error }, "Failed to read resource");
-          throw ErrorHandler.handleError(
-            error,
-            { operation: "resource:read", context: { uri: uri.href } },
-            logger
-          );
-        }
-      });
-    } else {
-      server.registerResource(resourceId, resource.uriTemplate, metadata, async (uri) => {
-        logger.info({ uri: uri.href }, "Reading static resource");
-        const match = resourceRegistry.findResourceByUri(uri.href);
-        if (!match) {
-          throw new McpError(JsonRpcErrorCode.NotFound, `Resource not found: ${uri.href}`);
-        }
-        try {
-          const content = await match.resource.read(match.params);
-          logger.debug(
-            {
-              uri: uri.href,
-              contentBytes: Buffer.byteLength(content.text, "utf-8"),
-            },
-            "Resource content size"
-          );
-          return {
-            contents: [
-              {
-                uri: content.uri,
-                mimeType: content.mimeType,
-                text: content.text,
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ uri: uri.href, error }, "Failed to read resource");
-          throw ErrorHandler.handleError(
-            error,
-            { operation: "resource:read", context: { uri: uri.href } },
-            logger
-          );
-        }
-      });
-    }
-  }
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const {
-      conformanceResources,
-      conformanceResourceTemplate,
-      conformancePrompts,
-      registerStaticResourcesFromDefinitions,
-    } = await import("@cesteral/shared");
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new ResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**
