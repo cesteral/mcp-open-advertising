@@ -8,7 +8,7 @@
 // It works in a throwaway `git worktree` of HEAD, so it never touches the
 // checkout it runs from, and always removes the worktree.
 //
-//   node scripts/scaffold/smoke.mjs
+//   node scripts/scaffold/smoke.mjs [--variant read-only | journey]
 //
 // Set PNPM to override the pnpm command (e.g. PNPM="npx -y pnpm@10.34.5" where
 // the global pnpm is too old).
@@ -20,11 +20,23 @@ import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
 import { failuresFromReport } from "./report.mjs";
+import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
 
 const ROOT = join(import.meta.dirname, "../..");
 const KEY = "zzscaffold";
 const PACKAGE = "zzscaffold-mcp";
 const PNPM = process.env.PNPM ?? "pnpm";
+
+/**
+ * read-only: the default scaffold, which must pass with no failure at all and
+ * stay out of the deploy lists. journey: the same scaffold, then
+ * `--add-write-stubs` and `promote:server`; only the stubs' wire-request
+ * coverage may fail, and the deploy lists must name the server.
+ */
+const VARIANTS = ["read-only", "journey"];
+const variantArg = process.argv.indexOf("--variant");
+const VARIANT = variantArg > 0 ? process.argv[variantArg + 1] : "read-only";
+const WRITES = VARIANT === "journey";
 
 function run(cmd, cwd) {
   console.log(`\n$ ${cmd}`);
@@ -54,7 +66,7 @@ async function uncoveredWrites(tree) {
 }
 
 function compare(failed) {
-  const expected = new Set(expectedTodoFailures(KEY));
+  const expected = new Set(expectedTodoFailures(KEY, { writes: WRITES }));
   const unexpected = [...failed.keys()].filter((n) => !expected.has(n));
   const missing = [...expected].filter((n) => !failed.has(n));
   const problems = [];
@@ -68,6 +80,11 @@ function compare(failed) {
 }
 
 async function main() {
+  if (!VARIANTS.includes(VARIANT)) {
+    console.error(`usage: smoke.mjs [--variant ${VARIANTS.join(" | ")}]`);
+    return 2;
+  }
+  console.log(`scaffold smoke: ${VARIANT}`);
   const tmp = mkdtempSync(join(tmpdir(), "scaffold-smoke-"));
   const tree = join(tmp, "repo");
   run(`git worktree add --detach "${tree}" HEAD`, ROOT);
@@ -80,6 +97,10 @@ async function main() {
         `--base-url https://api.example.invalid/v1 --docs-url https://docs.example.invalid`,
       tree
     );
+    if (WRITES) {
+      run(`node scripts/new-server.mjs ${KEY} --add-write-stubs`, tree);
+      run(`node scripts/promote-server.mjs ${KEY}`, tree);
+    }
     run(`${PNPM} install --no-frozen-lockfile`, tree);
     run(`${PNPM} run build`, tree);
     // Generated from the built servers; the CLI prints it as a next step.
@@ -99,7 +120,18 @@ async function main() {
       run(`${PNPM} run ${script}`, tree);
     }
     run(`${PNPM} --filter @cesteral/${PACKAGE} run lint`, tree);
-    run(`${PNPM} --filter @cesteral/${PACKAGE} run test`, tree);
+    // Every package's tests, @cesteral/shared's included: its resolver-coverage
+    // and testkit suites read the registry entry the scaffold wrote.
+    run(`${PNPM} run test`, tree);
+    const deployLists = DEPLOY_SITE_FILES.filter((f) =>
+      readFileSync(join(tree, f), "utf8").includes(PACKAGE)
+    );
+    const wantLists = WRITES ? DEPLOY_SITE_FILES : [];
+    if (JSON.stringify(deployLists) !== JSON.stringify(wantLists)) {
+      throw new Error(
+        `${PACKAGE} is in deploy lists [${deployLists.join(", ")}], expected [${wantLists.join(", ")}]`
+      );
+    }
 
     const report = join(tmp, "r.json");
     try {
@@ -127,7 +159,7 @@ async function main() {
       return 1;
     }
     const uncovered = await uncoveredWrites(tree);
-    const want = [...expectedTodoTools(KEY)].sort();
+    const want = [...expectedTodoTools(KEY, { writes: WRITES })].sort();
     if (JSON.stringify(uncovered) !== JSON.stringify(want)) {
       console.error(
         `\nscaffold smoke FAILED: uncovered write tools are [${uncovered.join(", ")}], ` +

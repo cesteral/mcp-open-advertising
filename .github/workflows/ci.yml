@@ -261,13 +261,20 @@ jobs:
         run: pnpm run test:conformance:ci
 
   # Generates a throwaway server with `pnpm new:server` in a git worktree and
-  # proves it passes the fleet checks, except the wire-request coverage of its
-  # four write stubs (scripts/scaffold/expected-todo.mjs). A change to the
+  # proves it passes the fleet checks: the read-only scaffold with no failure
+  # at all, and the promotion journey with only its write stubs' wire-request
+  # coverage failing (scripts/scaffold/expected-todo.mjs). A change to the
   # template or to any fleet check that a new server would trip fails here.
   scaffold-smoke:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # read-only: the default scaffold must pass everything. journey: it then
+        # gains write stubs and is promoted; only their wire coverage may fail.
+        variant: [read-only, journey]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -283,7 +290,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Scaffold a server and run the fleet checks on it
-        run: node scripts/scaffold/smoke.mjs
+        run: node scripts/scaffold/smoke.mjs --variant ${{ matrix.variant }}
 
   terraform-validate:
     runs-on: ubuntu-latest
