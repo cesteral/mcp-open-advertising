@@ -71,6 +71,34 @@ export const TEMPLATE_TYPES = {
     description: "reporting — synchronous and async reports, pacing",
     runtime: "performance reports",
   },
+  reporting_conversions: {
+    layers: ["base", "entities", "reports", "reporting_conversions"],
+    tools: [
+      "list_accounts",
+      "list_entities",
+      "get_entity",
+      "validate_entity",
+      "get_report",
+      "submit_report",
+      "check_report_status",
+      "download_report",
+      "insert_conversions",
+      "get_pacing_status",
+      "search_tools",
+    ],
+    writeTools: ["submit_report", "insert_conversions"],
+    addedWithWrites: [
+      "submit_report",
+      "check_report_status",
+      "download_report",
+      "insert_conversions",
+    ],
+    terminalTools: [],
+    label: "Reporting + conversions",
+    purpose: "reporting and conversion upload",
+    description: "reporting and conversions — entities, reports, offline conversion upload, pacing",
+    runtime: "entities, performance reports, offline conversions",
+  },
 };
 
 /** The per-type metadata other scaffold modules read (labels, terminal tools). */

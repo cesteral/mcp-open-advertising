@@ -110,3 +110,55 @@ describe("scaffold: the reporting type", () => {
     expect(fleetChecks(tmp)).toEqual([]);
   });
 });
+
+describe("scaffold: the reporting_conversions type", () => {
+  const opts = { ...SCAFFOLD_OPTS, type: "reporting_conversions" };
+
+  it("scaffolds an experimental, ungoverned, read-only server that passes the fleet checks", async () => {
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    const entry = registryOf(tmp).servers.at(-1);
+    expect(entry).toMatchObject({
+      type: "reporting_conversions",
+      status: "experimental",
+      governed: false,
+    });
+    expect(entry.tools).toEqual(
+      expect.arrayContaining(["foo_bar_list_entities", "foo_bar_get_entity", "foo_bar_get_report"])
+    );
+    expect(entry.tools).not.toContain("foo_bar_insert_conversions");
+    expect(fleetChecks(tmp)).toEqual([]);
+    expect(read(tmp, "docs/CROSS_SERVER_CONTRACT.md")).toMatch(
+      /^\| foo-bar-mcp\s+\| `foo_bar`\s+\| Reporting \+ conversions\s+\|/m
+    );
+  });
+
+  it("cannot be promoted read-only: conversion upload is a MUST", async () => {
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    await expect(planPromotion(tmp, "foo_bar")).rejects.toThrow(/foo_bar_insert_conversions/);
+  });
+
+  it("the journey: --add-write-stubs equals --with-writes, then promotes with every check green", async () => {
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    const plan = await planAddWrites(tmp, "foo_bar");
+    expect(plan.manual).toEqual([]);
+    applyPlan(tmp, plan);
+    applyPlan(twin, await planScaffold(twin, { ...opts, writes: true }, TODAY));
+    expect(filesUnder(join(tmp, PKG))).toEqual(filesUnder(join(twin, PKG)));
+    const tools = registryOf(tmp).servers.at(-1).tools;
+    for (const t of [
+      "submit_report",
+      "check_report_status",
+      "download_report",
+      "insert_conversions",
+    ]) {
+      expect(tools).toContain(`foo_bar_${t}`);
+    }
+    expect(expectedTodoTools("foo_bar", { type: "reporting_conversions", writes: true })).toEqual([
+      "foo_bar_submit_report",
+      "foo_bar_insert_conversions",
+    ]);
+    applyPlan(tmp, await planPromotion(tmp, "foo_bar"));
+    expect(registryOf(tmp).servers.at(-1)).toMatchObject({ status: "stable", governed: true });
+    expect(fleetChecks(tmp)).toEqual([]);
+  });
+});
