@@ -54,13 +54,14 @@ export interface LinkedInEntityConfig {
    */
   listScopingParam?: { name: "account" };
   /**
-   * The finder a list call names in `q`, and how it pages: `offset` sends
-   * `start`/`count`, `cursor` sends `pageSize`/`pageToken` and reads
-   * `metadata.nextPageToken`, `none` sends neither. Absent means `q=search`
-   * with offset paging. LinkedIn names finders per resource, and a wrong name
-   * 404s with "No virtual resource found" (#301).
+   * The finder a list call names in `q`, and how it pages: `cursor` sends
+   * `pageSize`/`pageToken` and reads `metadata.nextPageToken` (at most
+   * `maxPageSize` per page), `none` sends neither and gets every element in one
+   * response. LinkedIn names finders per resource, and a wrong name 404s with
+   * "No virtual resource found" (#301). No finder this server calls pages by
+   * offset: the search finders moved to cursors at version 202401.
    */
-  listFinder?: { name: string; paging: LinkedInListPaging };
+  listFinder: LinkedInListFinder;
   /** Display name for messages */
   displayName: string;
   /** Default fields to request when listing/getting */
@@ -75,7 +76,20 @@ export interface LinkedInEntityConfig {
 }
 
 /** How a list finder pages (see `listFinder`). */
-export type LinkedInListPaging = "offset" | "cursor" | "none";
+export type LinkedInListPaging = "cursor" | "none";
+
+/** A list finder: its `q` name and how it pages (see `listFinder`). */
+export type LinkedInListFinder =
+  | { name: string; paging: "cursor"; maxPageSize: number }
+  | { name: string; paging: "none" };
+
+/**
+ * The `search` finder of ad accounts, campaign groups and campaigns: cursor
+ * paging since version 202401, `pageSize` default 100 and max 1,000 (LinkedIn's
+ * Ad Accounts, Campaign Groups, Campaigns and Cursor-based Pagination pages,
+ * read 2026-11-16).
+ */
+const SEARCH_FINDER: LinkedInListFinder = { name: "search", paging: "cursor", maxPageSize: 1000 };
 
 /** One entity's item path, plus the query parameters it needs (conversions take `account`). */
 export interface LinkedInItemRequest {
@@ -87,6 +101,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
   adAccount: {
     collectionPath: () => "/rest/adAccounts",
     accountScoped: false,
+    listFinder: SEARCH_FINDER,
     displayName: "Ad Account",
     defaultFields: ["id", "name", "status", "currency", "type", "reference"],
     // `/rest/adAccounts/{adAccountID}` — the NUMERIC id, not the encoded URN.
@@ -110,6 +125,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "campaignGroup")}/adCampaignGroups/${numericIdFromUrn(entityUrn, "li", "sponsoredCampaignGroup")}`,
     }),
     accountScoped: true,
+    listFinder: SEARCH_FINDER,
     displayName: "Campaign Group",
     defaultFields: ["id", "name", "status", "account", "totalBudget", "runSchedule"],
   },
@@ -120,6 +136,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "campaign")}/adCampaigns/${numericIdFromUrn(entityUrn, "li", "sponsoredCampaign")}`,
     }),
     accountScoped: true,
+    listFinder: SEARCH_FINDER,
     displayName: "Campaign",
     defaultFields: [
       "id",
@@ -142,7 +159,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     // account (`account` is read-only), so the path comes from adAccountUrn.
     collectionPath: (id) => `/rest/adAccounts/${requireAccountId(id, "creative")}/creatives`,
     accountScoped: true,
-    listFinder: { name: "criteria", paging: "cursor" },
+    listFinder: { name: "criteria", paging: "cursor", maxPageSize: 100 },
     // Item calls key on the URL-encoded URN, not the numeric id.
     itemRequest: (entityUrn, adAccountUrn) => ({
       path: `/rest/adAccounts/${itemAccountId(adAccountUrn, "creative")}/creatives/${encodeURIComponent(`urn:li:sponsoredCreative:${numericIdFromUrn(entityUrn, "li", "sponsoredCreative")}`)}`,

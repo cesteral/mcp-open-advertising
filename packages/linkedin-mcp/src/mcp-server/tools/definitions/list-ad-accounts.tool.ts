@@ -16,18 +16,22 @@ const TOOL_TITLE = "List LinkedIn Ad Accounts";
 const TOOL_DESCRIPTION = `List LinkedIn Ads accounts accessible to the authenticated user.
 
 Returns ad accounts with their URNs, names, status, and currency.
-Use the returned URNs as \`adAccountUrn\` in other tools.`;
+Use the returned URNs as \`adAccountUrn\` in other tools. Pages with a cursor: pass the previous response's \`pagination.nextCursor\` as \`pageToken\`.`;
 
 export const ListAdAccountsInputSchema = z
   .object({
-    start: z.number().int().min(0).optional().describe("Offset for pagination (default 0)"),
+    pageToken: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("The cursor from the previous page's pagination.nextCursor"),
     count: z
       .number()
       .int()
       .min(1)
-      .max(100)
+      .max(1000)
       .optional()
-      .describe("Number of accounts per page (default 25, max 100)"),
+      .describe("Number of accounts per page (default 25, max 1000)"),
   })
   .describe("Parameters for listing LinkedIn ad accounts");
 
@@ -49,23 +53,19 @@ export async function listAdAccountsLogic(
 ): Promise<ListAdAccountsOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const result = await linkedInService.listAdAccounts(input.start, input.count, context);
-
-  const total = result.total;
-  const currentStart = input.start ?? 0;
-  const pageSize = result.accounts.length;
-  const requestedCount = input.count ?? 25;
-  const hasMore =
-    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
-  const nextStart = currentStart + pageSize;
+  const result = await linkedInService.listEntities(
+    "adAccount",
+    undefined,
+    { count: input.count, pageToken: input.pageToken },
+    context
+  );
 
   return {
-    accounts: result.accounts as unknown as Record<string, unknown>[],
+    accounts: result.entities as unknown as Record<string, unknown>[],
     pagination: buildPaginationOutput({
-      nextCursor: hasMore ? String(nextStart) : null,
-      pageSize,
-      totalCount: total,
-      nextPageInputKey: "start",
+      nextCursor: result.nextPageToken ?? null,
+      pageSize: result.entities.length,
+      nextPageInputKey: "pageToken",
     }),
     timestamp: new Date().toISOString(),
   };
@@ -101,7 +101,7 @@ export const listAdAccountsTool = {
     },
     {
       label: "List next page",
-      input: { start: 25, count: 25 },
+      input: { pageToken: "DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo", count: 25 },
     },
   ],
   logic: listAdAccountsLogic,
