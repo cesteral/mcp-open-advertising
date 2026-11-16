@@ -12,10 +12,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { {{Pascal}}BearerAuthStrategy } from "../../auth/{{key}}-auth-strategy.js";
 import type { {{Pascal}}AuthAdapter } from "../../auth/{{key}}-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { {{ENV}}_RETRY_CONFIG } from "../../services/{{key}}/{{key}}-http-client.js";
 
@@ -44,53 +46,18 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     rateLimiter,
     // The server card publishes the retry policy callers actually meet.
     retryDescriptor: { maxRetries: {{ENV}}_RETRY_CONFIG.maxRetries },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const cfg = appConfig as AppConfig;
-      const adapter = authResult.platformAuthAdapter as {{Pascal}}AuthAdapter | undefined;
-      if (adapter) {
-        const services = createSessionServices(adapter, { baseUrl: cfg.apiBaseUrl }, log, rateLimiter);
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // jwt / none: credentials from env vars
-      if (cfg.mcpAuthMode === "none" || cfg.mcpAuthMode === "jwt") {
-        if (cfg.accessToken && cfg.accountId) {
-          const { {{Pascal}}AccessTokenAdapter } = await import("../../auth/{{key}}-auth-adapter.js");
-          const envAdapter = new {{Pascal}}AccessTokenAdapter(
-            cfg.accessToken,
-            cfg.accountId,
-            cfg.apiBaseUrl
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: cfg.apiBaseUrl },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (cfg.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "{{displayName}} access token and account ID required. Set {{ENV}}_ACCESS_TOKEN and {{ENV}}_ACCOUNT_ID, or use MCP_AUTH_MODE={{key}}-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none without credentials: protocol-only session (tools fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: { message: "{{displayName}} API credentials required.", status: 400 as const },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as {{Pascal}}AuthAdapter | undefined,
+      // The bearer strategy validates at verify time.
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "{{displayName}} access token and account ID required. Set {{ENV}}_ACCESS_TOKEN and {{ENV}}_ACCOUNT_ID, or use MCP_AUTH_MODE={{key}}-bearer.",
+      unsupportedModeMessage: "{{displayName}} API credentials required.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

@@ -64,6 +64,27 @@ describe("scaffold: management template", () => {
     for (const key of keys) expect(key, key).toMatch(/^`foo_bar:user:\$\{[^}]+\}/);
   });
 
+  it("server.ts uses createPlatformMcpServer with the literals the fleet checks read", () => {
+    // platform-keys reads `platform: "<key>"` and the definition-hash resolver
+    // coverage reads `manifestUrl: new URL(...)` from server.ts as source text.
+    const server = rendered.get("src/mcp-server/server.ts");
+    expect(server).toContain("createPlatformMcpServer(");
+    expect(server).toMatch(/^\s+platform: "foo_bar",$/m);
+    expect(server).toMatch(
+      /^\s+manifestUrl: new URL\("\.\.\/cesteral-manifest\.json", import\.meta\.url\),$/m
+    );
+  });
+
+  it("the package runs the fleet's shared test suites", () => {
+    for (const [file, suite] of [
+      ["tests/schema-size.test.ts", "describeSchemaSizeGuard"],
+      ["tests/cross-server-contract.test.ts", "describeCrossServerContract"],
+      ["tests/integration/server-card.test.ts", "describeServerCard"],
+    ]) {
+      expect(rendered.get(file) ?? "", file).toContain(suite);
+    }
+  });
+
   it("TEMPLATE_TOOLS matches the rendered tool barrel", () => {
     // A Set: write tools also name their read partner with `toolName:`.
     const names = new Set();
