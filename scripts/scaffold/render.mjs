@@ -46,8 +46,37 @@ export const TEMPLATE_TYPES = {
     ],
     writeTools: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
     addedWithWrites: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
+    terminalTools: ["delete_entity"],
+    label: "Management",
+    purpose: "campaign management",
+    description: "management — entity CRUD, validation, reporting and pacing",
+    runtime: "campaigns and child entities, reports",
+  },
+  reporting: {
+    layers: ["base", "reports", "reporting"],
+    tools: [
+      "list_accounts",
+      "get_report",
+      "submit_report",
+      "check_report_status",
+      "download_report",
+      "get_pacing_status",
+      "search_tools",
+    ],
+    writeTools: ["submit_report"],
+    addedWithWrites: ["submit_report", "check_report_status", "download_report"],
+    terminalTools: [],
+    label: "Reporting only",
+    purpose: "reporting",
+    description: "reporting — synchronous and async reports, pacing",
+    runtime: "performance reports",
   },
 };
+
+/** The per-type metadata other scaffold modules read (labels, terminal tools). */
+export function templateType(type) {
+  return typeOf(type);
+}
 
 /** Paths a later layer may replace, with the reason (render.test.mjs holds the rest to none). */
 export const SHADOWED = {};

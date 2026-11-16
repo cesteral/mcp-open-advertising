@@ -18,6 +18,7 @@
 // }
 
 import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
+import { templateType } from "./render.mjs";
 
 function missing(file, list) {
   return new Error(`${file}: cannot find ${list} to insert into`);
@@ -220,7 +221,7 @@ export const SITE_INSERTERS = {
       "the Server Inventory table",
       "## Server Inventory",
       /^\| [a-z0-9-]+-mcp +\|/,
-      `| ${s.package} | \`${s.key}\` | Management | \`accountId\` |`
+      `| ${s.package} | \`${s.key}\` | ${templateType(s.type ?? "management").label} | \`accountId\` |`
     ),
 
   "docs/guides/platform-mapping.md": (text, s) =>
@@ -230,7 +231,7 @@ export const SITE_INSERTERS = {
       "the Current Platforms table",
       "## Current Platforms",
       /^\|[^|\n]+\| `packages\/[a-z0-9-]+-mcp`/,
-      `| ${s.displayName} | \`packages/${s.package}\` | ${s.displayName} campaign management | Experimental |`
+      `| ${s.displayName} | \`packages/${s.package}\` | ${s.displayName} ${templateType(s.type ?? "management").purpose} | Experimental |`
     ),
 };
 

@@ -16,8 +16,8 @@ export function expectedTodoTools(key, { type = "management", writes = false } =
 }
 
 /** Full vitest names (describe + test) of the cases that fail until the stubs are implemented. */
-export function expectedTodoFailures(key, { writes = false } = {}) {
-  if (!writes) return [];
+export function expectedTodoFailures(key, { type = "management", writes = false } = {}) {
+  if (!writes || WRITE_TOOLS(key, type).length === 0) return [];
   return [
     "every write tool is exercised by a vendor-sourced wire-request test " +
       `${names(key).package}: uncovered write tools are allowlisted, and only those`,

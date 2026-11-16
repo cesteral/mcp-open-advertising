@@ -71,8 +71,8 @@ describe("scaffold: plan and apply", () => {
   });
 
   it("refuses an unsupported type", async () => {
-    await expect(planScaffold(tmp, { ...opts, type: "reporting" }, TODAY)).rejects.toThrow(
-      /not supported yet.*PR 3/
+    await expect(planScaffold(tmp, { ...opts, type: "bogus" }, TODAY)).rejects.toThrow(
+      /--type bogus is not supported; one of management/
     );
   });
 

@@ -10,6 +10,16 @@
 
 import { SERVER_TYPES, meets } from "../lib/contract-tiers.mjs";
 import { REFRESH_DAYS } from "../check/check-platform-facts.mjs";
+import { templateType } from "./render.mjs";
+
+/** The scaffold's terminal declaration for a destructive stub (e.g. `_delete_entity`). */
+export function terminalOperation(tool) {
+  return {
+    tool,
+    operations: ["delete"],
+    note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
+  };
+}
 
 export const KEY_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
 
@@ -60,8 +70,8 @@ export function buildRegistryEntry(opts, registry, tools) {
     // Ungoverned means no write tools (scripts/lib/governed-packages.mjs).
     governed: Boolean(opts.writes),
     title: `${opts.displayName} MCP Server`,
-    description: `${opts.displayName} management — entity CRUD, validation and pacing (scaffolded; experimental)`,
-    runtime_description: `${opts.displayName} API: campaigns and child entities.`,
+    description: `${opts.displayName} ${templateType(opts.type).description} (scaffolded; experimental)`,
+    runtime_description: `${opts.displayName} API: ${templateType(opts.type).runtime}.`,
     platform: opts.displayName,
     platform_display_name: opts.displayName,
     documentation_url: opts.docsUrl,
@@ -74,13 +84,7 @@ export function buildRegistryEntry(opts, registry, tools) {
     untrustedContent: { pathReporting: "per-response" },
     operational: {
       terminalOperations: opts.writes
-        ? [
-            {
-              tool: `${n.key}_delete_entity`,
-              operations: ["delete"],
-              note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
-            },
-          ]
+        ? templateType(opts.type).terminalTools.map((t) => terminalOperation(`${n.key}_${t}`))
         : [],
     },
   };

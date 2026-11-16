@@ -15,8 +15,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { names } from "./entries.mjs";
-import { TEMPLATE_DIR, TEMPLATE_TOOLS, renderTemplate } from "./render.mjs";
+import { names, terminalOperation } from "./entries.mjs";
+import { TEMPLATE_DIR, TEMPLATE_TOOLS, renderTemplate, templateType } from "./render.mjs";
 import { ScaffoldError, format } from "./scaffold.mjs";
 
 /** The variables the server was scaffolded with, read back from what the scaffold wrote. */
@@ -124,11 +124,10 @@ export async function planAddWrites(root, key) {
       ...entry.operational,
       terminalOperations: [
         ...(entry.operational?.terminalOperations ?? []),
-        {
-          tool: `${key}_delete_entity`,
-          operations: ["delete"],
-          note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
-        },
+        ...templateType(entry.type)
+          .terminalTools.map((t) => `${key}_${t}`)
+          .filter((t) => !(entry.operational?.terminalOperations ?? []).some((o) => o.tool === t))
+          .map(terminalOperation),
       ],
     },
   };
