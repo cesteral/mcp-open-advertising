@@ -1,6 +1,6 @@
 # Adding a New MCP Server
 
-How to add an ad platform to this repo. The short version: agree the platform key in a proposal, run `pnpm new:server`, then work through the to-do list the generated package's README ends with. CI's `scaffold-smoke` job generates a server from the same template on every pull request, so the generated code passes the fleet's checks as they stand today. That is why this guide points at the template instead of reproducing code.
+How to add an ad platform to this repo. The short version: agree the platform key in a proposal, run `pnpm new:server`, and land the server as an **experimental, read-only** server first. Add its write tools later, then `pnpm promote:server` it into publish and deploy. Each stage has a to-do list at the end of the generated package's README. CI's `scaffold-smoke` job generates a server from the same template on every pull request, so the generated code passes the fleet's checks as they stand today. That is why this guide points at the template instead of reproducing code.
 
 Treat CI as the authority. Almost every rule a server must meet is a check, and each failure names the file to change. Run `pnpm ci:local` early and often: it runs `.github/workflows/ci.yml`'s jobs in order and reports a job it cannot run locally (Terraform, gitleaks) as NOT RUN rather than passed.
 
@@ -8,6 +8,7 @@ Treat CI as the authority. Almost every rule a server must meet is a check, and 
 
 - [Before you start](#before-you-start)
 - [Generate the server](#generate-the-server)
+- [Add the write tools and promote](#add-the-write-tools-and-promote)
 - [What the template gives you](#what-the-template-gives-you)
 - [Implementing the write tools](#implementing-the-write-tools)
 - [Adding a tool later](#adding-a-tool-later)
@@ -22,7 +23,7 @@ Treat CI as the authority. Almost every rule a server must meet is a check, and 
 **Agree three things in a [New Platform Proposal](https://github.com/cesteral/mcp-open-advertising/issues/new?template=new_platform_proposal.yml) first.**
 
 1. **The platform key.** One key names the platform everywhere: the package (`reddit` → `reddit-mcp`), the tool prefix (`reddit_list_entities`), the registry's `tool_prefix` and `platform_key`, every governed tool's `cesteral.platform` and `contractPlatformSlug` (so every `contractId` starts with it), the telemetry platform, the rate-limit and span keys, and the `platform-facts.json` id prefix. Use lower snake case (`amazon_dsp`, not `amazon-dsp`) and the platform's common short name (`reddit`, not `reddit_ads`). It cannot be renamed later without re-admitting every governed tool, because the governance layer keys write admission on it. The rule and the frozen exceptions of older servers are in [the platform-key decision](../plans/2026-10-11-platform-keys-and-contract-decisions.md) and `scripts/lib/platform-keys.mjs`.
-2. **The server type.** `management`, `reporting` or `reporting_conversions` (registry `type`). The type decides the tools the server MUST ship and the ones it SHOULD ship (`scripts/lib/contract-tiers.mjs`; [CROSS_SERVER_CONTRACT.md](../CROSS_SERVER_CONTRACT.md)). The scaffold generates `management` servers only; a read-only server needs an issue first, because `scripts/lib/governed-packages.test.mjs` allows an ungoverned server only for `dbm-mcp` today.
+2. **The server type.** `management`, `reporting` or `reporting_conversions` (registry `type`). The type decides the tools the server MUST ship and the ones it SHOULD ship (`scripts/lib/contract-tiers.mjs`; [CROSS_SERVER_CONTRACT.md](../CROSS_SERVER_CONTRACT.md)). The scaffold generates `management` servers today; reporting templates are next.
 3. **The auth model.** Which credentials a request carries and how the adapter validates them. [Reference](#auth-patterns) lists what the fleet uses.
 
 **Hosted governance must add the platform.** Cesteral's hosted governance layer admits a governed write only for a platform key it knows. Until it adds yours, it refuses your server's governed writes, however correct the annotations are. Self-hosted servers are unaffected (their decision-token mode defaults to `off`). Ask for this in the proposal so the work runs in parallel with yours.
@@ -35,13 +36,13 @@ pnpm new:server reddit --display-name "Reddit Ads" --base-url https://ads-api.re
 
 Add `--dry-run` to list the files first. `--port` defaults to one past the highest port in `registry.json`, and `--rate-limit` to 25 requests per minute. The command writes nothing until every check passes: a taken key, prefix or port, an invalid port, or an existing package exits 2 and names the owner.
 
-It writes `packages/reddit-mcp` from [`templates/server/management/`](../../templates/server/management/), and adds the server to:
+It writes `packages/reddit-mcp` from [`templates/server/management/`](../../templates/server/management/) as an **experimental, read-only** server: registry `status: "experimental"` and `governed: false`. CI builds, tests and conformance-runs it like any other server, but it is never published or deployed: publish, Cloud Build, `deploy.sh`, `smoke-test.sh` and Terraform cover stable servers only (`node scripts/fleet.mjs deployable`). It adds the server to:
 
 - `registry.json`, and the registry data `@cesteral/shared` compiles in (serverInfo and the server card read it)
 - `packages/reddit-mcp/server.json`
 - `platform-facts.json` (the API base and the rate-limit default, `unverified`, due in 180 days) and the fact counts in its doc
 - the README fleet table
-- every hand-maintained list `scripts/lib/fleet-inventory.mjs` checks: Cloud Build's `images:`, the three Terraform maps, the issue-form dropdowns, `CROSS_SERVER_CONTRACT.md` and `platform-mapping.md`
+- the hand-maintained lists `scripts/lib/fleet-inventory.mjs` checks that are not about deploying: the issue-form dropdowns, `CROSS_SERVER_CONTRACT.md` and `platform-mapping.md`. The deploy lists (Cloud Build's `images:`, the three Terraform maps, the tfvars examples) wait for promotion.
 
 Then build, record the new tools' untrusted-content declarations (they are read from the built server), and test:
 
@@ -51,13 +52,22 @@ pnpm sync:untrusted-declarations
 pnpm run test
 ```
 
-At this point CI passes except for one check: `wire-request-coverage` fails for the four write stubs until each has a wire test. Nothing else should fail; if something does, the template has drifted from the fleet, and `scaffold-smoke` on `main` would be red too.
+At this point CI passes in full. If something fails, the template has drifted from the fleet, and `scaffold-smoke` on `main` would be red too. The generated `packages/reddit-mcp/README.md` ends with **Before this server can merge** (the read stage) and **Before it can be promoted**.
 
-The generated `packages/reddit-mcp/README.md` ends with **Before this server can merge**: the full to-do list. Work through it in that order.
+`--with-writes` generates the governed write stubs from the start instead; the server is still experimental, and CI then fails only `wire-request-coverage` for the four stubs until each has a wire test.
+
+## Add the write tools and promote
+
+A management server's write tools are required only at promotion: while it is experimental, `contract-tiers` holds it to its type's read requirements (list, get, validate, pacing), and `governed: false` is allowed because it ships no write tool (`scripts/lib/governed-packages.test.mjs`).
+
+1. **Start the writes:** `pnpm new:server reddit --add-write-stubs`. It adds governed `create_entity`, `update_entity`, `delete_entity` and `bulk_update_status` stubs, wires `manifestUrl`, and sets `governed: true`, the terminal operation for `_delete_entity` and the registry `tools`. It re-renders only the template files you have not changed since the scaffold; for the others it prints the lines to add.
+2. **Implement them** ([next sections](#implementing-the-write-tools)), each with its wire test, and run `pnpm sync:untrusted-declarations`. That part is yours: the command never edits tool code you wrote.
+3. **Promote:** `pnpm promote:server reddit` flips `status` to `stable` and adds the server to the deploy lists. It refuses, writing nothing, unless the server meets its type's whole contract: every MUST, and an exception for every SHOULD it lacks (the scaffold records those from the start). Promotion proves the contract is complete, not that the writes work: `wire-request-coverage` still blocks the merge until each write has a wire test.
+4. **Before it deploys,** add the platform's credential secrets to its `mcp_secret_env_vars` entry ([below](#what-no-check-covers)).
 
 ## What the template gives you
 
-Ten tools. `list_accounts`, `list_entities`, `get_entity`, `validate_entity`, `get_pacing_status` and `search_tools` work against placeholder endpoints. `create_entity`, `update_entity`, `delete_entity` and `bulk_update_status` are **governed stubs**: their schemas and governance annotations are complete, and every call, including `dry_run`, returns an error until you implement it.
+Six read tools: `list_accounts`, `list_entities`, `get_entity`, `validate_entity`, `get_pacing_status` and `search_tools`, against placeholder endpoints. With writes (`--with-writes` or `--add-write-stubs`), `create_entity`, `update_entity`, `delete_entity` and `bulk_update_status` are **governed stubs**: their schemas and governance annotations are complete, and every call, including `dry_run`, returns an error until you implement it.
 
 The files are the reference; read them before changing them. What each one leaves to you:
 
@@ -109,7 +119,7 @@ The `cesteral` block inside a tool's `annotations` is what makes it **governed**
 
 ## What CI checks
 
-The gate is `pnpm ci:local` (one job: `--job <name>`; the plan: `--list`). Conformance binds ports 3001 upward, so stop local dev servers first. A freshly generated server satisfies every row except the wire-request coverage of its four write stubs; the table is what you must keep true as you change the package.
+The gate is `pnpm ci:local` (one job: `--job <name>`; the plan: `--list`). Conformance binds ports 3001 upward, so stop local dev servers first. A read-only scaffold satisfies every row; one with write stubs fails only their wire-request coverage. The table is what you must keep true as you change the package.
 
 | Requirement                                                                                            | Enforced by                                                        |
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
@@ -130,6 +140,8 @@ The gate is `pnpm ci:local` (one job: `--job <name>`; the plan: `--list`). Confo
 | `manifestUrl` passed in `server.ts`                                                                    | `definition-hash-resolver-coverage` (shared)                       |
 | Platform facts for the base URL and rate-limit default, pinned to the config lines                     | `check:platform-facts`                                             |
 | README fleet row with the live tool count                                                              | `check:doc-tool-counts`                                            |
+| `status` is `experimental` or `stable`; deploy lists and deploy scripts cover stable servers only      | `server-status`, `fleet-inventory`, `deploy-filter`                |
+| `governed: false` only while the server ships no write tool                                            | `governed-packages`                                                |
 | The template itself still generates a server that passes all of the above                              | `scaffold-smoke`                                                   |
 
 The checks live in `scripts/lib/*.test.mjs`, `scripts/__tests__/`, `evals/` and `packages/shared/tests/`. The root scripts suite boots every server once and hands the result to every file (`scripts/lib/fleet-snapshot-inject.mjs`); a new check should read that rather than boot servers itself.
@@ -143,9 +155,9 @@ Before the server merges:
 - [ ] The platform facts are verified against the vendor's pages, or knowingly left `unverified` with their deadline
 - [ ] `docs/guides/ENV-VARIABLES-GUIDE.md`, `.env.example` and `scripts/create-secrets.sh` list the server's env vars
 
-Before it deploys, because the checks prove the server is _listed_, not that it will _run_ on Cloud Run:
+Before it is promoted and deploys, because the checks prove the server is _listed_, not that it will _run_ on Cloud Run:
 
-- [ ] Its `mcp_secret_env_vars` entry in `terraform/variables.tf` maps every credential env var to a Secret Manager secret. The scaffold adds only `MCP_AUTH_SECRET_KEY`: a reference to a secret that does not exist fails the deploy, so add the rest when the secrets exist.
+- [ ] Its `mcp_secret_env_vars` entry in `terraform/variables.tf` maps every credential env var to a Secret Manager secret. `promote:server` adds only `MCP_AUTH_SECRET_KEY`: a reference to a secret that does not exist fails the deploy, so add the rest when the secrets exist.
 - [ ] Those secrets are created (`scripts/create-secrets.sh`) and hold values
 - [ ] Per-environment settings in your tfvars (resources, auth-mode overrides, invokers)
 - [ ] A `terraform plan` against the real project shows the new module resolving
