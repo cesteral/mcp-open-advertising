@@ -92,7 +92,7 @@ describe("the shipped ledger", () => {
     ["linkedin.campaign_groups_are_account_scoped", "2026-10-01"],
     ["linkedin.ad_analytics_path", "2026-10-01"],
     ["linkedin.ad_targeting_facets_path", "2026-10-01"],
-    ["linkedin.rest_uses_cursor_pagination", "2026-10-01"],
+    ["linkedin.rest_uses_cursor_pagination", "2026-11-16"],
     ["linkedin.creatives_need_schema_rewrite", "2026-11-14"],
     ["linkedin.restli_protocol_header", "2026-10-01"],
     ["linkedin.ad_analytics_fields", "2026-10-01"],
@@ -109,6 +109,7 @@ describe("the shipped ledger", () => {
     ["linkedin.ad_previews_existing_creative_is_a_get", "2026-10-01"],
     ["linkedin.conversions_are_listed_by_account_finder", "2026-11-13"],
     ["linkedin.only_draft_is_deletable", "2026-11-14"],
+    ["linkedin.session_check_is_ad_account_users_finder", "2026-11-16"],
     // Amazon Ads advertiser-accounts API: read from Amazon's docs and OpenAPI file, not called live.
     ["amazon_dsp.advertiser_accounts_api", "2026-11-13"],
     ["amazon_dsp.account_id_header_value", "2026-11-13"],

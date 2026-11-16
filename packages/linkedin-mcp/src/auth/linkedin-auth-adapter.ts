@@ -10,7 +10,8 @@
  *    auto-refresh access tokens (60-day expiry). Caching + single-flight refresh
  *    come from OAuth2RefreshAdapterBase in @cesteral/shared.
  *
- * Validates tokens by hitting GET /v2/me?projection=(id,vanityName) on the API.
+ * Validates tokens with GET /rest/adAccountUsers?q=authenticatedUser, a
+ * Marketing API finder that needs only the r_ads scope every tool here needs.
  */
 
 import {
@@ -29,12 +30,23 @@ import {
 export interface LinkedInAuthAdapter {
   getAccessToken(): Promise<string>;
   validate(): Promise<void>;
+  /** The member's person URN (`urn:li:person:…`), set by validate(); empty when it has no ad account role. */
   readonly personId: string;
 }
 
 /**
- * Validate a LinkedIn access token against GET /v2/me and return the
- * authenticated person's id. Throws Unauthorized on any non-2xx response.
+ * Validate a LinkedIn access token and return the authenticated member's
+ * person URN. Throws Unauthorized on any non-2xx response.
+ *
+ * The call is LinkedIn's "Find Ad Accounts by Authenticated User" finder
+ * (Ad Account Users page): `GET /rest/adAccountUsers?q=authenticatedUser`
+ * returns one `{ account, user, role }` row per ad account the token's member
+ * holds a role on, `user` being that member's person URN. It replaces
+ * `GET /v2/me`, the profile API, which no Marketing page documents and which
+ * needs a profile scope a Marketing-only token may not carry (#210).
+ *
+ * A member with no ad account role gets 200 with no rows: the token is valid,
+ * but there is no person URN to read, so `personId` stays empty.
  */
 async function fetchLinkedInPersonId(
   token: string,
@@ -42,7 +54,7 @@ async function fetchLinkedInPersonId(
   apiVersion: string
 ): Promise<string> {
   const response = await fetchWithTimeout(
-    `${baseUrl}/v2/me?projection=(id,vanityName)`,
+    `${baseUrl}/rest/adAccountUsers?q=authenticatedUser`,
     10_000,
     undefined,
     {
@@ -62,13 +74,13 @@ async function fetchLinkedInPersonId(
     );
   }
 
-  const data = (await response.json()) as { id: string; vanityName?: string };
-  return data.id;
+  const data = (await response.json()) as { elements?: Array<{ user?: string }> };
+  return data.elements?.find((row) => typeof row.user === "string")?.user ?? "";
 }
 
 /**
  * Simple access token adapter — holds a pre-generated LinkedIn access token.
- * Validates the token on first use by calling GET /v2/me.
+ * Validates the token on first use (see fetchLinkedInPersonId).
  */
 export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
   private validated = false;
@@ -114,7 +126,7 @@ export interface LinkedInRefreshCredentials {
  *
  * LinkedIn access tokens expire after 60 days. Caching + single-flight refresh
  * live in OAuth2RefreshAdapterBase; this subclass owns the LinkedIn-specific
- * token-exchange request and the /v2/me validation call.
+ * token-exchange request and the validation call.
  */
 export class LinkedInRefreshTokenAdapter
   extends OAuth2RefreshAdapterBase<{ appId: string; appSecret: string; refreshToken: string }>
@@ -194,7 +206,7 @@ export class LinkedInRefreshTokenAdapter
 
   async validate(): Promise<void> {
     // Memoized like LinkedInAccessTokenAdapter: the credentials were proven
-    // once; re-validating would spend a token refresh and a /v2/me call each time.
+    // once; re-validating would spend a token refresh and a validation call each time.
     if (this.validated) return;
     const token = await this.getAccessToken();
     this._personId = await fetchLinkedInPersonId(token, this.baseUrl, this.apiVersion);

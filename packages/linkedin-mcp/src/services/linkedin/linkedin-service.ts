@@ -206,50 +206,43 @@ export class LinkedInService {
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
   /**
-   * One page of a finder. `page.start` applies to offset finders and
-   * `page.pageToken` to cursor finders (creatives); passing the other kind is
-   * refused rather than silently ignored.
+   * One page of a finder. Cursor finders take `page.count` as the page size
+   * (default 25, refused above the finder's documented maximum) and
+   * `page.pageToken` from the previous page; a `none` finder returns every
+   * element at once, so a `pageToken` is refused rather than silently ignored.
    */
   async listEntities<T extends LinkedInEntityType>(
     entityType: T,
     adAccountUrn: string | undefined,
-    page: { start?: number; count?: number; pageToken?: string },
+    page: { count?: number; pageToken?: string },
     context?: RequestContext
   ): Promise<{
     entities: LinkedInEntityMap[T][];
-    total?: number;
-    start?: number;
     paging: LinkedInListPaging;
     /** Cursor finders only: the token for the next page, absent on the last. */
     nextPageToken?: string;
   }> {
     const config = getEntityConfig(entityType);
-    const finder = config.listFinder ?? { name: "search", paging: "offset" as const };
+    const finder = config.listFinder;
 
-    if (finder.paging !== "offset" && page.start !== undefined && page.start > 0) {
+    if (finder.paging === "none" && page.pageToken !== undefined) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
-        finder.paging === "cursor"
-          ? `LinkedIn pages ${entityType} lists with a cursor: pass the previous response's pageToken, not start.`
-          : `LinkedIn returns every ${entityType} in one response; start does not apply.`
+        `LinkedIn returns every ${entityType} in one response; pageToken does not apply.`
       );
     }
-    if (finder.paging !== "cursor" && page.pageToken !== undefined) {
+    if (finder.paging === "cursor" && page.count !== undefined && page.count > finder.maxPageSize) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
-        `pageToken applies to cursor-paged lists only; ${entityType} lists page with start/count.`
+        `LinkedIn pages ${entityType} lists at most ${finder.maxPageSize} per page; count ${page.count} is larger.`
       );
     }
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
 
     const params: Record<string, RestliQueryValue> = { q: finder.name };
-    const count = String(Math.min(page.count ?? 25, 100));
-    if (finder.paging === "offset") {
-      params.start = String(page.start ?? 0);
-      params.count = count;
-    } else if (finder.paging === "cursor") {
-      params.pageSize = count;
+    if (finder.paging === "cursor") {
+      params.pageSize = String(page.count ?? 25);
       if (page.pageToken !== undefined) params.pageToken = page.pageToken;
     }
 
@@ -271,8 +264,6 @@ export class LinkedInService {
 
     return {
       entities: result.elements ?? [],
-      total: result.paging?.total,
-      start: result.paging?.start,
       paging: finder.paging,
       ...(finder.paging === "cursor" && result.metadata?.nextPageToken
         ? { nextPageToken: result.metadata.nextPageToken }
@@ -361,36 +352,6 @@ export class LinkedInService {
     await this.rateLimiter.consume(`linkedin:default`, LINKEDIN_WRITE_TOKENS);
 
     return this.httpClient.delete(item.path, context, item.query);
-  }
-
-  // ─── Ad Accounts ───────────────────────────────────────────────────
-
-  /**
-   * List ad accounts accessible to the authenticated user.
-   */
-  async listAdAccounts(
-    start?: number,
-    count?: number,
-    context?: RequestContext
-  ): Promise<{ accounts: LinkedInAdAccount[]; total?: number }> {
-    await this.rateLimiter.consume(`linkedin:default`);
-
-    const params: Record<string, string> = {
-      q: "search",
-      start: String(start ?? 0),
-      count: String(Math.min(count ?? 25, 100)),
-    };
-
-    const result = (await this.httpClient.get(
-      "/rest/adAccounts",
-      params,
-      context
-    )) as LinkedInElementsResponse<LinkedInAdAccount>;
-
-    return {
-      accounts: result.elements ?? [],
-      total: result.paging?.total,
-    };
   }
 
   // ─── Bulk Operations ──────────────────────────────────────────────

@@ -72,7 +72,11 @@ describe("staged migration invariants", () => {
     expect(getEntityConfig("creative").collectionPath("123")).toBe(
       "/rest/adAccounts/123/creatives"
     );
-    expect(getEntityConfig("creative").listFinder).toEqual({ name: "criteria", paging: "cursor" });
+    expect(getEntityConfig("creative").listFinder).toEqual({
+      name: "criteria",
+      paging: "cursor",
+      maxPageSize: 100,
+    });
   });
 
   it("still requires an ad account to list conversion rules", () => {

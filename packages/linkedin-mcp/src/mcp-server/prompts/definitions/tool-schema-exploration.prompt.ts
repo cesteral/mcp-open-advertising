@@ -50,7 +50,7 @@ Fetch these resources for detailed schema information:
 
 ### Read Operations
 - \`linkedin_list_ad_accounts\` — Discover accessible accounts
-- \`linkedin_list_entities\` — List entities with offset pagination
+- \`linkedin_list_entities\` — List entities with cursor pagination
 - \`linkedin_get_entity\` — Get single entity by URN
 
 ### Write Operations

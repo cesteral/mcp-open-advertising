@@ -19,7 +19,7 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_list_entities";
 const TOOL_TITLE = "List LinkedIn Ads Entities";
-const TOOL_DESCRIPTION = `List LinkedIn Ads entities. Every type but adAccount requires \`adAccountUrn\`. All LinkedIn IDs are URNs (e.g., \`urn:li:sponsoredAccount:123\`). Paging follows the entity: creatives page with \`pageToken\` (pass the previous response's next cursor; \`count\` is the page size), conversion rules come back in one response, and the other types page with the \`start\` offset. \`pagination.nextPageInputKey\` names the input to send for the next page.`;
+const TOOL_DESCRIPTION = `List LinkedIn Ads entities. Every type but adAccount requires \`adAccountUrn\`. All LinkedIn IDs are URNs (e.g., \`urn:li:sponsoredAccount:123\`). Ad accounts, campaign groups, campaigns and creatives page with a cursor: \`count\` is the page size, and the next page is fetched by passing the previous response's \`pagination.nextCursor\` as \`pageToken\`. Conversion rules come back in one response.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -28,24 +28,20 @@ export const ListEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Ad Account URN (required for campaignGroup, campaign, creative, conversionRule)"),
-    start: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Offset for pagination (default 0); not for creatives, which use pageToken"),
     pageToken: z
       .string()
       .min(1)
       .optional()
-      .describe("Creatives only: the cursor from the previous page's pagination.nextCursor"),
+      .describe(
+        "The cursor from the previous page's pagination.nextCursor (not for conversionRule)"
+      ),
     count: z
       .number()
       .int()
       .min(1)
-      .max(100)
+      .max(1000)
       .optional()
-      .describe("Number of entities per page (default 25, max 100)"),
+      .describe("Page size (default 25; max 1000, creatives 100)"),
   })
   .describe("Parameters for listing LinkedIn Ads entities");
 
@@ -78,48 +74,19 @@ export async function listEntitiesLogic(
   const result = await linkedInService.listEntities(
     input.entityType as LinkedInEntityType,
     input.adAccountUrn,
-    { start: input.start, count: input.count, pageToken: input.pageToken },
+    { count: input.count, pageToken: input.pageToken },
     context
   );
 
-  const pageSize = result.entities.length;
-  const total = result.total;
-  const entities = result.entities as unknown as Record<string, unknown>[];
-  const timestamp = new Date().toISOString();
-
-  if (result.paging === "cursor") {
-    return {
-      entities,
-      pagination: buildPaginationOutput({
-        nextCursor: result.nextPageToken ?? null,
-        pageSize,
-        totalCount: total,
-        nextPageInputKey: "pageToken",
-      }),
-      timestamp,
-    };
-  }
-
-  const currentStart = result.start ?? 0;
-  const requestedCount = input.count ?? 25;
-  // A finder with no start/count returns everything; a cursor would be ignored.
-  const hasMore =
-    result.paging === "none"
-      ? false
-      : total !== undefined
-        ? currentStart + pageSize < total
-        : pageSize >= requestedCount;
-  const nextStart = currentStart + pageSize;
-
   return {
-    entities,
+    entities: result.entities as unknown as Record<string, unknown>[],
+    // A `none` finder returns everything, so it has no next page to point at.
     pagination: buildPaginationOutput({
-      nextCursor: hasMore ? String(nextStart) : null,
-      pageSize,
-      totalCount: total,
-      nextPageInputKey: "start",
+      nextCursor: result.nextPageToken ?? null,
+      pageSize: result.entities.length,
+      nextPageInputKey: "pageToken",
     }),
-    timestamp,
+    timestamp: new Date().toISOString(),
   };
 }
 
