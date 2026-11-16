@@ -99,3 +99,19 @@ export function assertManifestCoverage({ registry, entryCounts }) {
 
   return failures;
 }
+
+/**
+ * An ungoverned server is one that ships no write tool. `governed: false` used
+ * to be allowed for dbm-mcp by name; now any server may set it while every
+ * tool it lists reads (`readOnlyHint` not false), and its first write must be
+ * governed, which flips the flag. A line per violation.
+ */
+export function checkUngovernedHasNoWrites(server, tools) {
+  if (server.governed !== false) return [];
+  const writes = tools.filter((t) => t.annotations?.readOnlyHint === false).map((t) => t.name);
+  return writes.length
+    ? [
+        `${server.package}: "governed": false, but it ships write tool(s) ${writes.join(", ")}; govern them (a cesteral block each) and set "governed": true`,
+      ]
+    : [];
+}
