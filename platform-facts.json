@@ -316,7 +316,7 @@
       "verifyBy": "2027-03-16",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/amazon-dsp-mcp/src/index.ts:99"]
+      "codeRefs": ["packages/amazon-dsp-mcp/src/index.ts:50"]
     },
     {
       "id": "linkedin.rest_is_the_versioned_surface",

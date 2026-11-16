@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { TikTokBearerAuthStrategy } from "../../auth/tiktok-auth-strategy.js";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { TIKTOK_RETRY_CONFIG } from "../../services/tiktok/tiktok-http-client.js";
 
@@ -57,116 +59,18 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: TIKTOK_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For tiktok-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as TikTokAuthAdapter | undefined;
-      if (adapter) {
-        const cfg = appConfig as AppConfig;
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: cfg.tiktokApiBaseUrl,
-            reportPollIntervalMs: cfg.tiktokReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts,
-            apiVersion: cfg.tiktokApiVersion,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-        const tiktokAdvertiserId = cfg.tiktokAdvertiserId;
-
-        // Refresh credentials only when no static token is configured: TikTok
-        // documents no refresh endpoint, so TikTokRefreshTokenAdapter.validate()
-        // rejects with a clear Unauthorized error. A configured static token wins.
-        if (
-          !cfg.tiktokAccessToken &&
-          cfg.tiktokAppId &&
-          cfg.tiktokAppSecret &&
-          cfg.tiktokRefreshToken &&
-          tiktokAdvertiserId
-        ) {
-          const { TikTokRefreshTokenAdapter } = await import("../../auth/tiktok-auth-adapter.js");
-          const envAdapter = new TikTokRefreshTokenAdapter(
-            {
-              appId: cfg.tiktokAppId,
-              appSecret: cfg.tiktokAppSecret,
-              refreshToken: cfg.tiktokRefreshToken,
-            },
-            tiktokAdvertiserId,
-            cfg.tiktokApiBaseUrl,
-            cfg.tiktokApiVersion
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfg.tiktokApiBaseUrl,
-              reportPollIntervalMs: cfg.tiktokReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts,
-              apiVersion: cfg.tiktokApiVersion,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        const tiktokToken = cfg.tiktokAccessToken;
-        if (tiktokToken && tiktokAdvertiserId) {
-          const { TikTokAccessTokenAdapter } = await import("../../auth/tiktok-auth-adapter.js");
-          const envAdapter = new TikTokAccessTokenAdapter(
-            tiktokToken,
-            tiktokAdvertiserId,
-            cfg.tiktokApiBaseUrl,
-            cfg.tiktokApiVersion
-          );
-          await envAdapter.validate();
-          const cfgFallback = appConfig as AppConfig;
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: cfgFallback.tiktokApiBaseUrl,
-              reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs,
-              reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts,
-              apiVersion: cfgFallback.tiktokApiVersion,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "TikTok access token and advertiser ID required. Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID env vars, or use MCP_AUTH_MODE=tiktok-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "TikTok API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      // tiktok-bearer mode: the strategy already validated the adapter.
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as TikTokAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "TikTok access token and advertiser ID required. Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID env vars, or use MCP_AUTH_MODE=tiktok-bearer.",
+      unsupportedModeMessage: "TikTok API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

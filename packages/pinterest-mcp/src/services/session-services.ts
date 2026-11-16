@@ -4,11 +4,7 @@
 import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../auth/pinterest-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
-import {
-  deleteSpilledObjectsForSession,
-  ReportCsvStore,
-  SessionServiceStore,
-} from "@cesteral/shared";
+import { createSessionBoundReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { PinterestHttpClient } from "./pinterest/pinterest-http-client.js";
 import { PinterestService } from "./pinterest/pinterest-service.js";
@@ -63,23 +59,13 @@ export function createSessionServices(
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();
 
-// On session close, sweep any GCS spill objects persisted for this session
-// under the `pinterest/{sessionId}/` prefix. Belt-and-braces alongside the
-// 24h bucket lifecycle rule — keeps short-lived sessions from accumulating
-// cost.
-sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("pinterest", sessionId);
-  reportCsvStore.clearForSession(sessionId);
-});
-
 /**
  * Per-process singleton for raw report CSV resources. Reads via
  * `report-csv://{id}` are not session-scoped at the MCP protocol level, so the
  * store is a module-level singleton. Sessions can opt into scoped cleanup by
  * passing their sessionId when storing.
  */
-export const reportCsvStore = new ReportCsvStore({
-  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
-  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
-  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
+export const reportCsvStore = createSessionBoundReportCsvStore({
+  sessionServiceStore,
+  spillPlatform: "pinterest",
 });

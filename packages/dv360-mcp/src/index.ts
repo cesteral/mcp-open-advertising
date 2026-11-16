@@ -14,65 +14,49 @@ import {
   detectTransportMode,
   createServerLogger,
   bootstrapMcpServer,
+  createStdioSessionSetup,
 } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("dv360-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a GoogleAuthAdapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  let credentialsJson: string | undefined;
+/** Stdio credentials come from a service account in env vars (file path or base64 JSON). */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () => {
+    let credentialsJson: string | undefined;
 
-  if (mcpConfig.dv360ServiceAccountFile) {
-    logger.info(
-      { file: mcpConfig.dv360ServiceAccountFile },
-      "Loading service account from file (stdio mode)"
-    );
-    credentialsJson = readFileSync(mcpConfig.dv360ServiceAccountFile, "utf-8");
-  } else if (mcpConfig.dv360ServiceAccountJson) {
-    credentialsJson = Buffer.from(mcpConfig.dv360ServiceAccountJson, "base64").toString();
-  }
+    if (mcpConfig.dv360ServiceAccountFile) {
+      logger.info(
+        { file: mcpConfig.dv360ServiceAccountFile },
+        "Loading service account from file (stdio mode)"
+      );
+      credentialsJson = readFileSync(mcpConfig.dv360ServiceAccountFile, "utf-8");
+    } else if (mcpConfig.dv360ServiceAccountJson) {
+      credentialsJson = Buffer.from(mcpConfig.dv360ServiceAccountJson, "base64").toString();
+    }
 
-  if (!credentialsJson) {
-    logger.warn(
-      "No DV360 service account credentials found in env vars. " +
-        "Set DV360_SERVICE_ACCOUNT_JSON or DV360_SERVICE_ACCOUNT_FILE for stdio mode."
-    );
-    return false;
-  }
+    if (!credentialsJson) return undefined;
 
-  let credentials: ServiceAccountCredentials;
-  try {
-    credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
-  } catch {
-    throw new Error(
-      "Failed to parse DV360 service account credentials — ensure the JSON in DV360_SERVICE_ACCOUNT_JSON (base64) or DV360_SERVICE_ACCOUNT_FILE is valid"
-    );
-  }
-  const authAdapter = createGoogleAuthAdapter(credentials, [
-    "https://www.googleapis.com/auth/display-video",
-  ]);
-
-  // Validate credentials at startup to fail fast on invalid service account
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    { baseUrl: mcpConfig.dv360ApiBaseUrl },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+    let credentials: ServiceAccountCredentials;
+    try {
+      credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
+    } catch {
+      throw new Error(
+        "Failed to parse DV360 service account credentials — ensure the JSON in DV360_SERVICE_ACCOUNT_JSON (base64) or DV360_SERVICE_ACCOUNT_FILE is valid"
+      );
+    }
+    return createGoogleAuthAdapter(credentials, ["https://www.googleapis.com/auth/display-video"]);
+  },
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No DV360 service account credentials found in env vars. Set DV360_SERVICE_ACCOUNT_JSON or DV360_SERVICE_ACCOUNT_FILE for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

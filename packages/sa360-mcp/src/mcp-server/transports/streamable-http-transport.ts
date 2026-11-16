@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { SA360HeadersAuthStrategy } from "../../auth/sa360-auth-strategy.js";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { SA360_RETRY_CONFIG } from "../../services/sa360/sa360-http-client.js";
 
@@ -57,72 +59,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: SA360_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const adapter = authResult.platformAuthAdapter as SA360AuthAdapter | undefined;
-      if (adapter) {
-        await adapter.validate();
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: (appConfig as AppConfig).sa360ApiBaseUrl,
-            v2BaseUrl: (appConfig as AppConfig).sa360V2ApiBaseUrl,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var creds if available
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const typedConfig = appConfig as AppConfig;
-        if (
-          typedConfig.sa360ClientId &&
-          typedConfig.sa360ClientSecret &&
-          typedConfig.sa360RefreshToken
-        ) {
-          const { SA360RefreshTokenAuthAdapter } = await import("../../auth/sa360-auth-adapter.js");
-          const envAdapter = new SA360RefreshTokenAuthAdapter({
-            clientId: typedConfig.sa360ClientId,
-            clientSecret: typedConfig.sa360ClientSecret,
-            refreshToken: typedConfig.sa360RefreshToken,
-            loginCustomerId: typedConfig.sa360LoginCustomerId,
-          });
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: typedConfig.sa360ApiBaseUrl, v2BaseUrl: typedConfig.sa360V2ApiBaseUrl },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "SA360 credentials required. Set SA360_CLIENT_ID, SA360_CLIENT_SECRET, and SA360_REFRESH_TOKEN env vars, or use MCP_AUTH_MODE=sa360-headers.",
-              status: 400 as const,
-            },
-          };
-        }
-
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "SA360 API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as SA360AuthAdapter | undefined,
+      validateAuthAdapter: true,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "SA360 credentials required. Set SA360_CLIENT_ID, SA360_CLIENT_SECRET, and SA360_REFRESH_TOKEN env vars, or use MCP_AUTH_MODE=sa360-headers.",
+      unsupportedModeMessage: "SA360 API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },
