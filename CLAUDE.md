@@ -114,19 +114,19 @@ The governance layer parses a governed write's read partner (`*_get_entity`) `st
 
 Platform quirks that are easy to forget live next to the code, in `packages/<server>/CLAUDE.md`. Claude Code loads that file when you work in the package; read it before changing the package's tools or clients.
 
-| Package          | Notes cover                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `dv360-mcp`      | Hard delete, archive-before-delete, duplicate landing non-running; the dynamic schema pattern     |
-| `ttd-mcp`        | REST + GraphQL only; bulk operations; sandbox-only `ttd_graphql_mutation_bulk`; sandbox mode      |
-| `linkedin-mcp`   | Staged `/v2/` → `/rest/` migration (#210), Rest.li 2.0 queries, targeting names, what is verified |
-| `tiktok-mcp`     | Advertiser-ID header in HTTP mode, uploads                                                        |
-| `meta-mcp`       | Graph API v26 field lists, the unconfirmed v26 targeting changes (#229)                           |
-| `gads-mcp`       | `gads_duplicate_entity` (campaigns only, always `PAUSED`)                                         |
-| `cm360-mcp`      | `profileId` on every call, profile discovery, report schedules                                    |
-| `pinterest-mcp`  | `bookmark` pagination, video-only media upload, duplicate                                         |
-| `snapchat-mcp`   | Ad Squads, cursor pagination, duplicate                                                           |
-| `amazon-dsp-mcp` | Unified API entity surface (#234), reporting scope, LwA refresh-token auth                        |
-| `sa360-mcp`      | Read-only entity API; offline conversions are the only governed writes                            |
+| Package          | Notes cover                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `dv360-mcp`      | Hard delete, archive-before-delete, duplicate landing non-running; the dynamic schema pattern |
+| `ttd-mcp`        | REST + GraphQL only; bulk operations; sandbox-only `ttd_graphql_mutation_bulk`; sandbox mode  |
+| `linkedin-mcp`   | `/rest/` surface and uploads (#210), Rest.li 2.0 queries, targeting names, what is verified   |
+| `tiktok-mcp`     | Advertiser-ID header in HTTP mode, uploads                                                    |
+| `meta-mcp`       | Graph API v26 field lists, the unconfirmed v26 targeting changes (#229)                       |
+| `gads-mcp`       | `gads_duplicate_entity` (campaigns only, always `PAUSED`)                                     |
+| `cm360-mcp`      | `profileId` on every call, profile discovery, report schedules                                |
+| `pinterest-mcp`  | `bookmark` pagination, video-only media upload, duplicate                                     |
+| `snapchat-mcp`   | Ad Squads, cursor pagination, duplicate                                                       |
+| `amazon-dsp-mcp` | Unified API entity surface (#234), reporting scope, LwA refresh-token auth                    |
+| `sa360-mcp`      | Read-only entity API; offline conversions are the only governed writes                        |
 
 `dbm-mcp` and `msads-mcp` have no notes of this kind.
 

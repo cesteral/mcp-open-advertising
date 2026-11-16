@@ -396,7 +396,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:489"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:602"],
       "note": "Read 2026-10-01: 'GET https://api.linkedin.com/rest/adTargetingFacets' with no query string and no account. Not exercised against a live account."
     },
     {
@@ -411,7 +411,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:536"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:649"],
       "note": "Not exercised against a live account."
     },
     {
@@ -486,7 +486,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:655"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:768"],
       "note": "The page's samples write the range both as timeRange.start=... and as timeRange=(start:...,end:...); the record form is sent. Not exercised against a live account."
     },
     {
@@ -501,7 +501,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:552"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:665"],
       "note": "The page's samples show no Linkedin-Version header; the client sends it on every request. Not exercised against a live account."
     },
     {
@@ -568,6 +568,24 @@
       "note": "linkedin_delete_entity's dry-run reports a non-DRAFT campaign as not deletable and points at PENDING_DELETION. Whether PENDING_DELETION can be reversed is not documented and has not been tried against a live account."
     },
     {
+      "id": "linkedin.uploads_use_images_and_videos_api",
+      "package": "linkedin-mcp",
+      "class": "behavioral-constraint",
+      "claim": "The Images and Videos APIs replace the Assets API for uploads. An image is POST /rest/images?action=initializeUpload with { initializeUploadRequest: { owner } }, returning value.uploadUrl and value.image (urn:li:image:...), then a PUT of the bytes to uploadUrl with the OAuth token. A video is POST /rest/videos?action=initializeUpload with { initializeUploadRequest: { owner, fileSizeBytes, uploadCaptions, uploadThumbnail } }, returning value.video (urn:li:video:...), value.uploadToken and value.uploadInstructions[{ uploadUrl, firstByte, lastByte }] (inclusive, sorted byte ranges of about 4 MB); each part is PUT as application/octet-stream without an OAuth token and its ETag kept; then POST /rest/videos?action=finalizeUpload with { finalizeUploadRequest: { video, uploadToken, uploadedPartIds } }, the ETags in instruction order. initializeUploadRequest.owner is a person or organization URN, not an ad account. Ads videos are MP4, 3 seconds to 30 minutes, 75 KB to 500 MB. A creative reaches the media through a post (content.media.id) or the Creatives API's createInline action. Read from LinkedIn's Images API, Videos API, Vector Asset and Image Ads pages (li-lms-2026-10), 2026-11-16.",
+      "value": "?action=initializeUpload",
+      "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api",
+      "status": "verified",
+      "verifiedAt": "2026-11-16",
+      "verifyBy": "2027-05-15",
+      "refreshDue": null,
+      "loadBearing": true,
+      "codeRefs": [
+        "packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:233",
+        "packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:266"
+      ],
+      "note": "The Images API page does not describe the image PUT itself; it links to the Vector Asset page's 'Upload the Image' step, which says the PUT needs the OAuth token and the video upload call does not accept one. Neither page's upload sample sends LinkedIn-Version or X-Restli-Protocol-Version to the upload URL, so the PUTs send neither. The server's own limit is 200 MB per video (it holds the file in memory). Not exercised against a live account (#210)."
+    },
+    {
       "id": "linkedin.ad_previews_existing_creative_is_a_get",
       "package": "linkedin-mcp",
       "class": "behavioral-constraint",
@@ -579,7 +597,7 @@
       "verifyBy": "2027-03-30",
       "refreshDue": null,
       "loadBearing": true,
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:676"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-service.ts:789"],
       "note": "Replaces linkedin.ad_previews_is_an_action, whose claim (that the versioned equivalent is only the livePreviewForCreative action) was REFUTED for existing creatives by the Ad Preview page. Not exercised against a live account."
     },
     {
@@ -764,7 +782,7 @@
       "claim": "X-Restli-Protocol-Version: 2.0.0 must be sent to use Rest.li 2.0 query syntax (List(...), (k:v)); without it a call defaults to protocol 1.0, which LinkedIn plans to deprecate. Read from LinkedIn's Protocol Version page, 2026-10-01.",
       "value": "2.0.0",
       "sourceUrl": "https://learn.microsoft.com/en-us/linkedin/shared/api-guide/concepts/protocol-version",
-      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-http-client.ts:193"],
+      "codeRefs": ["packages/linkedin-mcp/src/services/linkedin/linkedin-http-client.ts:263"],
       "status": "verified",
       "verifiedAt": "2026-10-01",
       "verifyBy": "2027-03-30",
