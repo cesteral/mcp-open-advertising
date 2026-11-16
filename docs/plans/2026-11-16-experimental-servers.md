@@ -8,7 +8,7 @@
 
 **Tech Stack:** ESM `.mjs` scripts with no dependencies, vitest (`vitest.config.scripts.ts`), Terraform, Cloud Build YAML, bash.
 
-**Spec:** the decisions taken 2026-11-16 (ungoverned = "no writes" rule; experimental = out of publish and deploy, `new:server` generates experimental, `promote:server` graduates; experimental servers may ship read-only, writes at promotion; PR 3 split into 3a policy and 3b reporting templates), on top of `docs/plans/2026-11-15-new-server-scaffold.md` and `docs/plans/2026-10-11-platform-keys-and-contract-decisions.md` decision 5.
+**Spec:** the decisions taken 2026-11-16, revised by the 2026-11-16 design review (conditional manifest wiring, full-contract promotion, a tested read-only → writes → stable journey, behavioural deploy checks), (ungoverned = "no writes" rule; experimental = out of publish and deploy, `new:server` generates experimental, `promote:server` graduates; experimental servers may ship read-only, writes at promotion; PR 3 split into 3a policy and 3b reporting templates), on top of `docs/plans/2026-11-15-new-server-scaffold.md` and `docs/plans/2026-10-11-platform-keys-and-contract-decisions.md` decision 5.
 
 ## Global Constraints
 
@@ -16,18 +16,22 @@
 - _Deployable_ means `status === "stable"`. Publish (npm and MCP Registry), Cloud Build image builds and deploys, `deploy.sh`, `smoke-test.sh`, Terraform services, and the hand-maintained deploy lists (`cloudbuild*.yaml` `images:`, `terraform/main.tf` `service_auth_defaults`, `terraform/variables.tf` `mcp_secret_env_vars`, `terraform/{dev,prod}.tfvars.example` `mcp_images`) cover deployable servers only. Everything else (CI, conformance, `dev-server.sh`, issue forms, the docs tables, README) covers every server.
 - `governed: false` ⇔ the server's live `tools/list` has no tool with `readOnlyHint: false`.
 - An experimental server is checked against its type's **read** requirements only; write requirements (`create_entity`, `update_entity`, `delete_entity`, `bulk_update_status`, `duplicate_entity`, `bid_adjustment`, `conversion_upload`) apply at `stable`.
-- `pnpm new:server` writes `status: "experimental"`; without `--with-writes` the server has no write tools and `governed: false`.
-- `pnpm promote:server <key>` exits 2, writing nothing, when the server is not experimental or does not ship its type's full MUST set.
+- `pnpm new:server` writes `status: "experimental"`; without `--with-writes` the server has no write tools, `governed: false`, and no `manifestUrl` in `server.ts` (`packages/shared/tests/governance/definition-hash-resolver-coverage.test.ts` forbids it on an ungoverned server).
+- The scaffold records a `contract.exceptions` entry for every SHOULD the server lacks, write SHOULDs included. They are tolerated while experimental and carried into `stable`, so promotion needs no new ones; replacing their scaffold reasons is on the to-do list.
+- **Who owns the transition.** The contributor implements the writes. `pnpm new:server <key> --add-write-stubs` starts them on an existing read-only server: it writes the write-only template files, re-renders each template file that carries a `{{#writes}}` section only where the file is still byte-identical to its read-only render (otherwise it prints the exact lines to add), and sets `governed: true`, the terminal operation and the registry `tools`. `pnpm promote:server` owns only the status flip and the deploy-list entries, and refuses unless the candidate stable entry passes the **whole** `checkContractTiers` (MUSTs and SHOULD exceptions).
+- **Promotion proves contract completeness, not implementation readiness.** Correctly named, governed write stubs promote; the wire-request coverage check still blocks merging until each write has a wire test.
+- `pnpm promote:server <key>` exits 2, writing nothing, when the server is unknown, not experimental, or its entry with `status: "stable"` fails `checkContractTiers`.
 - One `fleet.mjs` subcommand per list: `servers` (all, unchanged) and `deployable` (new).
 - Reporting templates are PR 3b; `--type reporting` still exits 2 here.
 
 ## Review Focus
 
-1. **A deploy consumer still reading the full list.** Any of Cloud Build, `deploy.sh`, `publish-all.sh` (including `--registry-only`), `smoke-test.sh` or Terraform picking up an experimental server would publish or deploy it. Pinned in Task 2 by the `DERIVED`-style assertion that each deploy consumer reads `fleet.mjs deployable` and by the fake-experimental-server inventory test.
+1. **A deploy consumer still reading the full list.** Any of Cloud Build, `deploy.sh`, `publish-all.sh` (including `--registry-only`), `smoke-test.sh` or Terraform picking up an experimental server would publish or deploy it. Pinned in Task 2 by running `publish-all.sh --dry-run` (and `--registry-only --dry-run`), `deploy.sh` and `smoke-test.sh` against a fixture registry with an experimental server, with `npm`, `pnpm`, `mcp-publisher`, `gcloud`, `docker`, `terraform` and `curl` replaced by logging shims, and asserting the experimental package appears in no logged command; Cloud Build by asserting `.fleet-services` (from `fleet.mjs deployable`) is the only source of service names in its steps; Terraform by `terraform console` on `local.fleet_service_names` with the fixture (skipped without the binary).
 2. **An experimental server listed in a deploy site.** Terraform would plan a Cloud Run service. Pinned in Task 2 (fleet-inventory fails both ways).
 3. **`governed: false` on a server that ships a write.** Its writes would bypass the manifest and the decision-token path. Pinned in Task 3.
-4. **Promotion that leaves a deploy list out.** Pinned in Task 6 by running fleet-inventory after `promote:server` and by the smoke's promoted variant.
-5. **A stable server that loses a write MUST.** Pinned in Task 4: the read-only relaxation keys on `status`, never on the tool list.
+4. **Promotion that leaves a deploy list out, or leaves CI red.** Pinned in Task 6 (fleet-inventory and the full contract-tier check after promotion; a missing SHOULD exception refuses promotion) and by the smoke's journey variant.
+5. **A read-only server that gains writes keeps ungoverned wiring.** Pinned in Task 6's journey test and the smoke: after `--add-write-stubs`, `manifestUrl` is wired, `governed` is true, and the shared resolver test passes.
+6. **A stable server that loses a write MUST.** Pinned in Task 4: the read-only relaxation keys on `status`, never on the tool list.
 
 ---
 
@@ -60,7 +64,7 @@
 - `INVENTORY_SITES` entries for the deploy files gain `expected: (servers) => deployableServers({ servers }).map(p)`; `CENSUS` counts only the expected packages for those files.
 - `DERIVED` entries for the five deploy consumers require `reads: "fleet.mjs deployable"` (Terraform: `status`).
 
-- [ ] **Step 1: Failing tests** in `fleet-inventory.test.mjs`: with a fake experimental server appended to the registry, (a) the deploy sites must NOT list it (listing it is a violation `lists <pkg>, which is experimental`), (b) the listing sites (issue forms, docs tables) MUST list it; (c) each deploy consumer in `DERIVED` reads `fleet.mjs deployable`. Run; expect FAIL.
+- [ ] **Step 1: Failing tests** in `fleet-inventory.test.mjs`: with a fake experimental server appended to the registry, (a) the deploy sites must NOT list it (listing it is a violation `lists <pkg>, which is experimental`), (b) the listing sites (issue forms, docs tables) MUST list it; (c) each deploy consumer in `DERIVED` reads `fleet.mjs deployable`. Add `scripts/lib/deploy-filter.test.mjs`: copy `scripts/`, `registry.json` (plus an experimental fixture) into a temp root, put logging shims for `npm`, `pnpm`, `mcp-publisher`, `gcloud`, `docker`, `terraform` and `curl` first on `PATH`, run `publish-all.sh --dry-run`, `publish-all.sh --registry-only --dry-run`, `deploy.sh dev` and `smoke-test.sh dev`, and assert the experimental package is in no logged command while a stable one is. Assert every Cloud Build step that names a service reads `/workspace/.fleet-services`, and that file is written by `fleet.mjs deployable`. If `terraform` is installed, `terraform console` evaluates `local.fleet_service_names` to the stable fixtures. Run; expect FAIL.
 - [ ] **Step 2: Implement** the consumers and the inventory change. Every existing server is stable, so the real-registry check stays green.
 - [ ] **Step 3: Run** `vitest … scripts/lib/fleet-inventory.test.mjs scripts/lib/cloudbuild-substitutions.test.mjs` and `terraform fmt -check terraform/` (+ `terraform validate` if available). Expect PASS.
 - [ ] **Step 4: Commit** `feat: publish and deploy only stable servers`
@@ -107,13 +111,13 @@
 - `expectedTodoFailures(key, { writes })`: `[]` without writes; today's single wire-coverage case with writes.
 - CLI: `--with-writes`.
 
-- [ ] **Step 1: Failing tests:** render without writes has none of `TEMPLATE_TOOLS(key, {writes:true})`'s write tools and no `{{#`; with writes it equals today's output; the plan without writes leaves every deploy site untouched and the fleet-inventory/contract-tiers/platform-keys checks pass on the temp tree; the registry entry is `experimental`, `governed: false`, no terminal operations.
+- [ ] **Step 1: Failing tests:** render without writes has none of `TEMPLATE_TOOLS(key, {writes:true})`'s write tools, no `manifestUrl` line in `server.ts`, and no `{{#`; with writes it equals today's output; the plan without writes leaves every deploy site untouched and the fleet-inventory/contract-tiers/platform-keys checks pass on the temp tree; the registry entry is `experimental`, `governed: false`, no terminal operations.
 - [ ] **Step 2: Run** `vitest … scripts/scaffold/`. Expect FAIL.
-- [ ] **Step 3: Implement**, marking the write-only lines in `server.ts` (workflow map), `resources/definitions/index.ts`, `tests/*.test.ts`, `README.md`.
+- [ ] **Step 3: Implement**, marking the write-only lines in `server.ts` (workflow map and the `manifestUrl` line), `resources/definitions/index.ts`, `tests/*.test.ts`, `README.md`. Add `--add-write-stubs` (`planAddWrites(root, key)`, pure): the write-only files; the `{{#writes}}` files re-rendered when byte-identical to their read-only render, otherwise listed with the lines to add (exit 0, printed as manual steps); registry `governed: true`, `terminalOperations` for `_delete_entity`, `tools` appended. It refuses when the package is missing, not experimental, or already has a write-only file.
 - [ ] **Step 4: Run** it. Expect PASS.
 - [ ] **Step 5: Commit** `feat(scaffold): new servers start experimental and read-only`
 
-### Task 6: `pnpm promote:server`
+### Task 6: `pnpm promote:server` and the transition journey
 
 **Files:**
 
@@ -122,9 +126,13 @@
 
 **Interfaces:**
 
-- `planPromotion(root, key): { writes: Map }` (pure). Flips `"status": "experimental"` → `"stable"` in the entry's text; inserts the deploy sites via `insertIntoSites(…, { deploy: true, listing: false })`; throws `ScaffoldError` when the server is unknown, already stable, or `checkContractTiers` with `status: "stable"` reports a MUST it lacks (naming the tools).
+- `planPromotion(root, key): { writes: Map }` (pure). Flips `"status": "experimental"` → `"stable"` in the entry's text, inserts the deploy sites with `insertIntoSites(…, { deploy: true, listing: false })`, and first runs `checkContractTiers` on the registry with the candidate entry stable; any violation throws `ScaffoldError` listing them. It also throws when the server is unknown or already stable. It does not touch tool files.
 
-- [ ] **Step 1: Failing tests:** scaffold `--with-writes` into a temp tree, promote, then fleet-inventory and contract-tiers pass and the deploy sites list it; promoting a read-only scaffold throws naming `create_entity`…; promoting twice throws; nothing is written on any throw.
+- [ ] **Step 1: Failing tests** (temp trees):
+  - **The journey:** `new:server` (read-only) → `--add-write-stubs` → `promote:server`. Afterwards: fleet-inventory, the full `checkContractTiers`, `checkRegistryKeys` and the platform-facts validator pass; `server.ts` wires `manifestUrl`; the entry is `governed: true`, `stable`, with the four write tools in `tools` and `_delete_entity` terminal; the deploy sites list it.
+  - Promoting a read-only scaffold throws naming `create_entity`, `update_entity`, `delete_entity`, `bulk_update_status`.
+  - Promoting with a write SHOULD exception removed throws naming `duplicate_entity`.
+  - Promoting twice throws; nothing is written on any throw.
 - [ ] **Step 2: Run**; expect FAIL.
 - [ ] **Step 3: Implement** plan, apply (prettier on written json/md), CLI (exit 2 on `ScaffoldError`).
 - [ ] **Step 4: Run** it. Expect PASS.
@@ -134,19 +142,21 @@
 
 **Files:**
 
-- Modify: `scripts/scaffold/smoke.mjs` (`--variant read-only | writes-promoted`), `.github/workflows/ci.yml` (`scaffold-smoke` gets `strategy.matrix.variant`)
+- Modify: `scripts/scaffold/smoke.mjs` (`--variant read-only | journey`), `.github/workflows/ci.yml` (`scaffold-smoke` gets `strategy.matrix.variant`)
 
-- `read-only`: `new:server` default; expected failures `[]`; uncovered writes `[]`.
-- `writes-promoted`: `new:server --with-writes`, then `promote:server`; expected failures = the wire-coverage case; uncovered writes = the four stubs; the deploy sites list the server.
+Both variants run `pnpm run test` (every package, `@cesteral/shared` included, so the resolver-coverage and testkit suites see the generated registry entry) in place of the new package's tests alone.
+
+- `read-only`: `new:server` default; expected failures `[]`; uncovered writes `[]`; the deploy sites do not list the server.
+- `journey`: `new:server`, `--add-write-stubs`, `promote:server`; expected failures = the wire-coverage case; uncovered writes = the four stubs; the deploy sites list the server.
 
 - [ ] **Step 1:** Implement; run `node scripts/scaffold/smoke.mjs --variant read-only` locally once. Expect exit 0, `failed = expected (0)`. The CI matrix runs both.
-- [ ] **Step 2: Commit** `ci: scaffold smoke for the read-only and promoted paths`
+- [ ] **Step 2: Commit** `ci: scaffold smoke for the read-only path and the promotion journey`
 
 ### Task 8: Docs
 
 **Files:**
 
-- Modify: `docs/guides/adding-a-new-server.md` (generate → experimental read-only; add writes; promote), `CLAUDE.md` (a line on `status` under Deployment), the template `README.md` to-do list (split into "before merge" and "before promotion")
+- Modify: `docs/guides/adding-a-new-server.md` (generate → experimental read-only; `--add-write-stubs` and what stays the contributor's; promote, stating that promotion proves contract completeness while wire coverage gates merge), `CLAUDE.md` (a line on `status` under Deployment), the template `README.md` to-do list (split into "before merge" and "before promotion")
 
 - [ ] **Step 1:** Write; `./node_modules/.bin/prettier --check` the files; check every link and anchor resolves.
 - [ ] **Step 2: Commit** `docs: experimental servers and promotion`
