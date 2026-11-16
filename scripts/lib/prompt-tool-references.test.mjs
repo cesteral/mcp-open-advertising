@@ -26,7 +26,8 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { serverSnapshot } from "./fleet-snapshot-inject.mjs";
 import { registryPrefixes } from "../../evals/lib/merged-catalog.mjs";
 
 const packages = readdirSync(join(ROOT, "packages"))
@@ -41,11 +42,6 @@ const packages = readdirSync(join(ROOT, "packages"))
 export const TOOL_PREFIXES = [...registryPrefixes().values()].filter(Boolean).sort();
 
 const TOOL_TOKEN = new RegExp(`\\b(?:${TOOL_PREFIXES.join("|")})_[a-z0-9_]+\\b`, "g");
-
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
-};
 
 /**
  * Platform API field names that happen to start with a platform prefix. They are
@@ -85,14 +81,14 @@ describe("unknownToolReferences", () => {
     ]);
   });
 
-  it("never lists a registered tool name as a platform field", async () => {
-    const { names } = await collectFleet();
+  it("never lists a registered tool name as a platform field", () => {
+    const { names } = collectFleet();
     for (const token of PLATFORM_FIELD_TOKENS.keys()) {
       expect(names.has(token), `${token} is a tool; remove it from PLATFORM_FIELD_TOKENS`).toBe(
         false
       );
     }
-  }, 120_000);
+  });
 
   it("ignores unprefixed words, env vars and registered names", () => {
     expect(
@@ -102,54 +98,24 @@ describe("unknownToolReferences", () => {
 });
 
 /** Everything the fleet publishes that a prompt or resource may refer to. */
-async function collectFleet() {
+function collectFleet() {
   const names = new Set();
   const texts = [];
   for (const pkg of packages) {
-    await withServerClient(pkg, async (client) => {
-      for (const tool of await listRawTools(client)) names.add(tool.name);
-      const caps = client.getServerCapabilities() ?? {};
-
-      if (caps.prompts) {
-        const { prompts } = await client.request(
-          { method: "prompts/list", params: {} },
-          IDENTITY_SCHEMA
-        );
-        for (const prompt of prompts) {
-          names.add(prompt.name);
-          const args = {};
-          for (const arg of prompt.arguments ?? []) if (arg.required) args[arg.name] = "x";
-          const result = await client.request(
-            { method: "prompts/get", params: { name: prompt.name, arguments: args } },
-            IDENTITY_SCHEMA
-          );
-          const text = (result.messages ?? []).map((m) => m.content?.text ?? "").join("\n");
-          texts.push({ pkg, where: `prompt ${prompt.name}`, text });
-        }
-      }
-
-      if (caps.resources) {
-        const { resources } = await client.request(
-          { method: "resources/list", params: {} },
-          IDENTITY_SCHEMA
-        );
-        for (const resource of resources) {
-          const result = await client.request(
-            { method: "resources/read", params: { uri: resource.uri } },
-            IDENTITY_SCHEMA
-          );
-          const text = (result.contents ?? []).map((c) => c.text ?? "").join("\n");
-          texts.push({ pkg, where: `resource ${resource.uri}`, text });
-        }
-      }
-    });
+    const { tools, prompts, resources } = serverSnapshot(pkg);
+    for (const tool of tools) names.add(tool.name);
+    for (const { prompt, renders } of prompts) {
+      names.add(prompt.name);
+      for (const { text } of renders) texts.push({ pkg, where: `prompt ${prompt.name}`, text });
+    }
+    for (const { uri, text } of resources) texts.push({ pkg, where: `resource ${uri}`, text });
   }
   return { names, texts };
 }
 
 describe("prompts and resources name only registered tools", () => {
-  it("every {prefix}_* token in fleet prompt and resource text is a tool or prompt", async () => {
-    const { names, texts } = await collectFleet();
+  it("every {prefix}_* token in fleet prompt and resource text is a tool or prompt", () => {
+    const { names, texts } = collectFleet();
     expect(texts.length).toBeGreaterThan(0);
 
     const problems = [];
@@ -158,5 +124,5 @@ describe("prompts and resources name only registered tools", () => {
       if (unknown.length > 0) problems.push(`${pkg} ${where}: ${unknown.join(", ")}`);
     }
     expect(problems).toEqual([]);
-  }, 120_000);
+  });
 });

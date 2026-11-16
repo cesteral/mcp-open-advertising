@@ -34,6 +34,7 @@ const ENTITY_EXAMPLES: Record<string, string> = {
 {
   "entityType": "campaignGroup",
   "entityUrn": "urn:li:sponsoredCampaignGroup:987654321",
+  "adAccountUrn": "urn:li:sponsoredAccount:123456789",
   "data": { "status": "PAUSED" }
 }
 \`\`\`
@@ -116,11 +117,12 @@ const ENTITY_EXAMPLES: Record<string, string> = {
 \`\`\`json
 {
   "entityType": "creative",
+  "adAccountUrn": "urn:li:sponsoredAccount:123456789",
   "data": {
     "campaign": "urn:li:sponsoredCampaign:111222333",
-    "status": "DRAFT",
-    "reference": "urn:li:ugcPost:123456789",
-    "type": "SPONSORED_STATUS_UPDATE"
+    "content": { "reference": "urn:li:ugcPost:123456789" },
+    "name": "Awareness creative A",
+    "intendedStatus": "DRAFT"
   }
 }
 \`\`\`

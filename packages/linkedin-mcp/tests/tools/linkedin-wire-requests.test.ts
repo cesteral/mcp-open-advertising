@@ -41,9 +41,10 @@
  * shape (201, no body, id in `x-restli-id`).
  *
  * What they do NOT pin: which LinkedIn resource paths exist at version
- * `mcpConfig.linkedinApiVersion` (the account-scoped `/rest/adAccounts/{id}/…`
- * collections and the legacy `/v2/` item paths are platform-facts
- * `linkedin.*` claims, all `unverified`), and any entity field model. The
+ * `mcpConfig.linkedinApiVersion`, and any entity field model. The item paths
+ * (get / update / delete under `/rest/adAccounts/{id}/…`, and
+ * `/rest/conversions/{id}?account=`) are read off LinkedIn's own Marketing API
+ * pages instead, cited at each test (platform-facts `linkedin.*`, `verified`). The
  * official clients' own ads examples (README, versions 202209/202210) address
  * `/adCampaignGroups` UN-nested — they predate the claimed move under
  * `/adAccounts/{id}` and neither confirm nor refute it. Everything in that
@@ -59,8 +60,9 @@
  *
  * Rate limiting: one process-wide key, `linkedin:default`
  * (`bulk-capacity.ts LINKEDIN_ENTITY_KEY`): an entity read draws 1 token and
- * every create / partial update / delete, and each media-upload POST and
- * binary PUT, 3 (`linkedin-service.ts LINKEDIN_WRITE_TOKENS`). Default
+ * every create / partial update / delete, and each media-upload initialize /
+ * finalize POST, 3 (`linkedin-service.ts LINKEDIN_WRITE_TOKENS`); the byte PUTs
+ * to LinkedIn's upload URLs draw none. Default
  * limit `mcpConfig.linkedinRateLimitPerMinute` (10/min) — each test stays
  * within one window.
  */
@@ -77,6 +79,11 @@ import {
   listEntitiesLogic,
   ListEntitiesInputSchema,
 } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
+import {
+  listAdAccountsLogic,
+  ListAdAccountsInputSchema,
+} from "../../src/mcp-server/tools/definitions/list-ad-accounts.tool.js";
+import { LinkedInAccessTokenAdapter } from "../../src/auth/linkedin-auth-adapter.js";
 import {
   updateEntityLogic,
   UpdateEntityInputSchema,
@@ -145,6 +152,24 @@ const CAMPAIGN_URN_2 = "urn:li:sponsoredCampaign:700000002";
  * `ids=List(urn%3Ali%3Amember%3A123,…)`).
  */
 const enc = (urn: string) => urn.replace(/:/g, "%3A");
+
+/**
+ * Item paths, all on /rest/ and under the owning account (#210).
+ * basis: LinkedIn Campaigns page, "Get a Campaign" / "Update" / "Delete a
+ * Campaign": GET, POST (X-RestLi-Method: PARTIAL_UPDATE, `{patch:{$set}}`) and
+ * DELETE on /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID}; Campaign
+ * Groups page, the same on .../adCampaignGroups/{adCampaignGroupId}; Creatives
+ * page, the same on .../creatives/{creative ID} with the URN encoded
+ * (`creatives/urn%3Ali%3AsponsoredCreative%3A120491345`). All read from
+ * learn.microsoft.com/en-us/linkedin/marketing (li-lms-2026-10) on 2026-11-14.
+ * Campaign and group keys are the numeric ids the pages' samples use.
+ */
+const numericId = (urn: string) => urn.split(":").pop()!;
+const campaignItem = (urn: string) =>
+  `/rest/adAccounts/${ACCOUNT_ID}/adCampaigns/${numericId(urn)}`;
+const groupItem = (urn: string) =>
+  `/rest/adAccounts/${ACCOUNT_ID}/adCampaignGroups/${numericId(urn)}`;
+const creativeItem = (urn: string) => `/rest/adAccounts/${ACCOUNT_ID}/creatives/${enc(urn)}`;
 
 let stub: FetchStub;
 let session: WireSession;
@@ -287,27 +312,77 @@ describe("linkedin_create_entity → Rest.li CREATE", () => {
     expect(out.entity).toEqual({ id: "600000009" });
   });
 
-  it("creative → POST /v2/adCreatives (legacy, not migrated), id decoded from x-restli-id", async () => {
+  it("creative → POST /rest/adAccounts/{id}/creatives, the account from adAccountUrn", async () => {
     // basis: [py] client_test.py CREATE "complex entity id" — x-restli-id
     // carries a reduced-encoded URN (`urn%3Ali%3Aapp%3A123`).
-    createdRoute("/v2/adCreatives", "urn%3Ali%3AsponsoredCreative%3A800000009");
+    createdRoute(
+      `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      "urn%3Ali%3AsponsoredCreative%3A800000009"
+    );
     const data = {
       campaign: CAMPAIGN_URN,
-      status: "ACTIVE",
-      reference: "urn:li:share:123",
+      content: { reference: "urn:li:share:123" },
+      intendedStatus: "DRAFT",
+      name: "Autumn A",
     };
     const out = await createEntityLogic(
-      CreateEntityInputSchema.parse({ entityType: "creative", data }),
+      CreateEntityInputSchema.parse({ entityType: "creative", adAccountUrn: ACCOUNT_URN, data }),
       ctx,
       sdk
     );
     const req = onlyWrite();
-    // basis: unverified (code-only) — platform-facts
-    // linkedin.creatives_need_schema_rewrite: creatives stay on /v2/adCreatives.
-    expect(req.url).toBe(`${API_BASE_URL}/v2/adCreatives`);
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Create a Creative":
+    // POST /rest/adAccounts/{adAccountId}/creatives with body { content,
+    // campaign, intendedStatus } (`account` is read-only, so it is not sent);
+    // 201 with the id in x-restli-id, e.g. urn:li:sponsoredCreative:120491345.
+    expect(req.url).toBe(`${API_BASE_URL}/rest/adAccounts/${ACCOUNT_ID}/creatives`);
     expectRestliHeaders(req, { json: true });
     expect(req.body).toEqual(data);
     expect(out.entity).toEqual({ id: "urn:li:sponsoredCreative:800000009" });
+  });
+
+  it("a creative create without adAccountUrn is refused before any request", () => {
+    expect(() =>
+      CreateEntityInputSchema.parse({
+        entityType: "creative",
+        data: { campaign: CAMPAIGN_URN, content: { reference: "urn:li:share:1" } },
+      })
+    ).toThrow(/adAccountUrn is required/);
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("a creative `status` is refused (its field is intendedStatus)", async () => {
+    await expect(
+      createEntityLogic(
+        CreateEntityInputSchema.parse({
+          entityType: "creative",
+          adAccountUrn: ACCOUNT_URN,
+          data: {
+            campaign: CAMPAIGN_URN,
+            content: { reference: "urn:li:share:1" },
+            status: "DRAFT",
+          },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toMatchObject({ code: JsonRpcErrorCode.InvalidParams });
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("refuses an adAccountUrn that disagrees with a campaign's data.account", async () => {
+    await expect(
+      createEntityLogic(
+        CreateEntityInputSchema.parse({
+          entityType: "campaign",
+          adAccountUrn: "urn:li:sponsoredAccount:1",
+          data: { name: "x", account: ACCOUNT_URN, campaignGroup: GROUP_URN },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/different ad account/);
+    expect(stub.requests).toHaveLength(0);
   });
 
   it("conversionRule → POST /rest/conversions (account stays in the body)", async () => {
@@ -358,7 +433,7 @@ describe("linkedin_create_entity → Rest.li CREATE", () => {
 
 describe("linkedin_update_entity → Rest.li PARTIAL_UPDATE", () => {
   it("campaign → GET pre-state, POST {patch:{$set}} with X-Restli-Method PARTIAL_UPDATE, GET post-state", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({ method: "GET", path: item, response: campaignEntity(CAMPAIGN_URN) });
     noContentRoute("POST", item);
 
@@ -366,6 +441,7 @@ describe("linkedin_update_entity → Rest.li PARTIAL_UPDATE", () => {
       UpdateEntityInputSchema.parse({
         entityType: "campaign",
         entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
         data: { status: "ACTIVE", dailyBudget: { amount: "75.00", currencyCode: "USD" } },
       }),
       ctx,
@@ -386,9 +462,9 @@ describe("linkedin_update_entity → Rest.li PARTIAL_UPDATE", () => {
     // (fixture "Partial update using patchSetObject"); [py] client_test.py
     // PARTIAL_UPDATE checks `X-RestLi-Method: PARTIAL_UPDATE` and the same body;
     // [js] constants.ts RESTLI_METHOD_TO_HTTP_METHOD_MAP PARTIAL_UPDATE → POST.
-    // basis: unverified (code-only) — the legacy /v2/adCampaigns/{urn} item
-    // path: linkedin-service.ts entityItemPath keeps /v2/ for get/update/delete
-    // because a URN does not carry its account (#210).
+    // basis: LinkedIn Campaigns page (read 2026-11-14) — partial update is
+    // POST /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID} with
+    // X-RestLi-Method: PARTIAL_UPDATE and body {"patch":{"$set":{…}}}.
     expect(req.method).toBe("POST");
     expect(req.url).toBe(`${API_BASE_URL}${item}`);
     expect(req.rawQuery).toBe("");
@@ -425,31 +501,100 @@ describe("linkedin_update_entity → Rest.li PARTIAL_UPDATE", () => {
     expect(remaining()).toBe(LIMIT - 3);
   });
 
-  it("campaignGroup → POST /v2/adCampaignGroups/{urn}", async () => {
-    const item = `/v2/adCampaignGroups/${enc(GROUP_URN)}`;
+  it("campaignGroup → POST /rest/adAccounts/{id}/adCampaignGroups/{numeric id}", async () => {
+    const item = groupItem(GROUP_URN);
     noContentRoute("POST", item);
     await updateEntityLogic(
       UpdateEntityInputSchema.parse({
         entityType: "campaignGroup",
         entityUrn: GROUP_URN,
+        adAccountUrn: ACCOUNT_URN,
         data: { status: "PAUSED" },
       }),
       ctx,
       sdk
     );
     const req = onlyWrite();
-    // basis: unverified (code-only) — legacy /v2/ item path (#210).
+    // basis: LinkedIn Campaign Groups page (read 2026-11-14), "To update the
+    // status": POST /rest/adAccounts/{adAccountId}/adCampaignGroups/{adCampaignGroupId}
+    // with {"patch":{"$set":{"status":…}}}.
     expect(req.url).toBe(`${API_BASE_URL}${item}`);
+    expectRestliHeaders(req, { json: true, method: "PARTIAL_UPDATE" });
     expect(req.body).toEqual({ patch: { $set: { status: "PAUSED" } } });
   });
 
+  it("conversionRule → POST /rest/conversions/{id}?account={encoded account URN}", async () => {
+    const path = "/rest/conversions/104004";
+    noContentRoute("POST", path);
+    await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "conversionRule",
+        entityUrn: "urn:lla:llaPartnerConversion:104004",
+        adAccountUrn: ACCOUNT_URN,
+        data: { name: "Signups" },
+      }),
+      ctx,
+      sdk
+    );
+    const req = onlyWrite();
+    // basis: LinkedIn Conversion Tracking page (read 2026-11-13 and
+    // 2026-11-14), "Update a Conversion": POST
+    // /rest/conversions/107524?account=urn%3Ali%3AsponsoredAccount%3A519072844
+    // with X-RestLi-Method partial_update and {"patch":{"$set":{…}}}. It
+    // replaces the legacy /v2/conversions/{urn} item path.
+    expect(req.method).toBe("POST");
+    expect(req.path).toBe(path);
+    expect(req.rawQuery).toBe(`account=${enc(ACCOUNT_URN)}`);
+    expectRestliHeaders(req, { json: true, method: "PARTIAL_UPDATE" });
+    expect(req.body).toEqual({ patch: { $set: { name: "Signups" } } });
+  });
+
+  it("creative → POST /rest/adAccounts/{id}/creatives/{encoded URN} with intendedStatus", async () => {
+    const urn = "urn:li:sponsoredCreative:800000001";
+    noContentRoute("POST", creativeItem(urn));
+    await updateEntityLogic(
+      UpdateEntityInputSchema.parse({
+        entityType: "creative",
+        entityUrn: urn,
+        adAccountUrn: ACCOUNT_URN,
+        data: { intendedStatus: "PAUSED" },
+      }),
+      ctx,
+      sdk
+    );
+    const req = onlyWrite();
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Update a Creative":
+    // POST /rest/adAccounts/{adAccountId}/creatives/urn%3Ali%3AsponsoredCreative%3A…
+    // with X-RestLi-Method: PARTIAL_UPDATE and {"patch":{"$set":{"intendedStatus":…}}}.
+    expect(req.url).toBe(`${API_BASE_URL}${creativeItem(urn)}`);
+    expectRestliHeaders(req, { json: true, method: "PARTIAL_UPDATE" });
+    expect(req.body).toEqual({ patch: { $set: { intendedStatus: "PAUSED" } } });
+  });
+
+  it("a creative `status` is refused before any request (its field is intendedStatus)", async () => {
+    await expect(
+      updateEntityLogic(
+        UpdateEntityInputSchema.parse({
+          entityType: "creative",
+          entityUrn: "urn:li:sponsoredCreative:800000001",
+          adAccountUrn: ACCOUNT_URN,
+          data: { status: "PAUSED" },
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toMatchObject({ code: JsonRpcErrorCode.InvalidParams });
+    expect(stub.requests).toHaveLength(0);
+  });
+
   it("dry_run reads the entity and writes nothing", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({ method: "GET", path: item, response: campaignEntity(CAMPAIGN_URN) });
     await updateEntityLogic(
       UpdateEntityInputSchema.parse({
         entityType: "campaign",
         entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
         data: { status: "ACTIVE" },
         dry_run: true,
       }),
@@ -462,8 +607,8 @@ describe("linkedin_update_entity → Rest.li PARTIAL_UPDATE", () => {
 });
 
 describe("linkedin_delete_entity → Rest.li DELETE", () => {
-  it("campaign → confirm, GET pre-state, DELETE /v2/adCampaigns/{urn} with no body", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+  it("campaign → confirm, GET pre-state, DELETE /rest/adAccounts/{id}/adCampaigns/{numeric id} with no body", async () => {
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({
       method: "GET",
       path: item,
@@ -472,7 +617,11 @@ describe("linkedin_delete_entity → Rest.li DELETE", () => {
     noContentRoute("DELETE", item);
 
     const out = await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({ entityType: "campaign", entityUrn: CAMPAIGN_URN }),
+      DeleteEntityInputSchema.parse({
+        entityType: "campaign",
+        entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
+      }),
       ctx,
       sdk
     );
@@ -485,34 +634,57 @@ describe("linkedin_delete_entity → Rest.li DELETE", () => {
     // basis: [js] restli-client.ts `delete` — HTTP DELETE on the entity URL,
     // no body (fixture "Delete on a collection resource": path
     // /testResource/123, status 204); [js] constants.ts DELETE → DELETE.
-    // basis: unverified (code-only) — legacy /v2/ item path (#210).
+    // basis: LinkedIn Campaigns page (read 2026-11-14), "Delete a Campaign":
+    // DELETE /rest/adAccounts/{adAccountId}/adCampaigns/{campaignID} deletes a
+    // DRAFT campaign. X-RestLi-Method: DELETE is sent on every delete: the
+    // Creatives page says it "must be included", and [js]/[py] send it too.
     expect(req.method).toBe("DELETE");
     expect(req.url).toBe(`${API_BASE_URL}${item}`);
-    expectRestliHeaders(req, { json: false });
+    expectRestliHeaders(req, { json: false, method: "DELETE" });
     expect(req.rawBody).toBeUndefined();
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
     expect(out.confirmed).toBe(true);
     expect(remaining()).toBe(LIMIT - 1 - 3);
   });
 
-  it("creative → DELETE /v2/adCreatives/{urn} (no pre-read: out of snapshot scope)", async () => {
+  it("creative → DELETE /rest/adAccounts/{id}/creatives/{encoded URN} with X-RestLi-Method DELETE", async () => {
     const urn = "urn:li:sponsoredCreative:800000001";
-    noContentRoute("DELETE", `/v2/adCreatives/${enc(urn)}`);
+    noContentRoute("DELETE", creativeItem(urn));
     await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({ entityType: "creative", entityUrn: urn }),
+      DeleteEntityInputSchema.parse({
+        entityType: "creative",
+        entityUrn: urn,
+        adAccountUrn: ACCOUNT_URN,
+      }),
       ctx,
       sdk
     );
-    // basis: unverified (code-only) — creatives stay on /v2/adCreatives.
+    // basis: LinkedIn Creatives page (read 2026-11-14), "Delete a Creative":
+    // DELETE /rest/adAccounts/{adAccountId}/creatives/{creative ID}, the ID
+    // being the encoded URN, and "The header X-RestLi-Method must be included
+    // in the request and set to DELETE".
     // The pre-delete read is best-effort and runs for every type; for a
     // creative it reads, finds no canonical kind, and moves on.
-    expect(onlyWrite().url).toBe(`${API_BASE_URL}/v2/adCreatives/${enc(urn)}`);
+    const req = onlyWrite();
+    expect(req.url).toBe(`${API_BASE_URL}${creativeItem(urn)}`);
+    expectRestliHeaders(req, { json: false, method: "DELETE" });
+  });
+
+  it("refuses a delete without adAccountUrn before any request", () => {
+    expect(() =>
+      DeleteEntityInputSchema.parse({ entityType: "campaign", entityUrn: CAMPAIGN_URN })
+    ).toThrow(/adAccountUrn is required/);
+    expect(stub.requests).toHaveLength(0);
   });
 
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
     const out = await deleteEntityLogic(
-      DeleteEntityInputSchema.parse({ entityType: "campaign", entityUrn: CAMPAIGN_URN }),
+      DeleteEntityInputSchema.parse({
+        entityType: "campaign",
+        entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
+      }),
       ctx,
       sdk
     );
@@ -522,12 +694,13 @@ describe("linkedin_delete_entity → Rest.li DELETE", () => {
   });
 
   it("dry_run reads, does not prompt, and deletes nothing", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({ method: "GET", path: item, response: campaignEntity(CAMPAIGN_URN) });
     await deleteEntityLogic(
       DeleteEntityInputSchema.parse({
         entityType: "campaign",
         entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
         dry_run: true,
       }),
       ctx,
@@ -546,11 +719,12 @@ function sortedWrites(): WireRequest[] {
 describe("linkedin_bulk_update_status → one PARTIAL_UPDATE per entity", () => {
   it("2 campaigns PAUSED → 2 POSTs of {patch:{$set:{status}}}", async () => {
     for (const urn of [CAMPAIGN_URN, CAMPAIGN_URN_2]) {
-      noContentRoute("POST", `/v2/adCampaigns/${enc(urn)}`);
+      noContentRoute("POST", campaignItem(urn));
     }
     const out = await bulkUpdateStatusLogic(
       BulkUpdateStatusInputSchema.parse({
         entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
         entityUrns: [CAMPAIGN_URN, CAMPAIGN_URN_2],
         status: "PAUSED",
       }),
@@ -561,10 +735,11 @@ describe("linkedin_bulk_update_status → one PARTIAL_UPDATE per entity", () => 
     expect(reqs).toHaveLength(2);
     // basis: [js] `partialUpdate` / [py] PARTIAL_UPDATE (see update_entity).
     // LinkedIn's BATCH_PARTIAL_UPDATE ([js] `batchPartialUpdate`) is not used;
-    // each entity gets its own call. basis: unverified (code-only) — /v2/ path.
+    // each entity gets its own call. basis: LinkedIn Campaigns page — the
+    // account-scoped item path (see update_entity).
     expect(reqs.map((r) => r.url)).toEqual([
-      `${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN)}`,
-      `${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN_2)}`,
+      `${API_BASE_URL}${campaignItem(CAMPAIGN_URN)}`,
+      `${API_BASE_URL}${campaignItem(CAMPAIGN_URN_2)}`,
     ]);
     for (const req of reqs) {
       expect(req.method).toBe("POST");
@@ -577,11 +752,35 @@ describe("linkedin_bulk_update_status → one PARTIAL_UPDATE per entity", () => 
     expect(remaining()).toBe(LIMIT - 2 * 3);
   });
 
+  it("creatives → the status is sent as intendedStatus", async () => {
+    const urns = ["urn:li:sponsoredCreative:800000001", "urn:li:sponsoredCreative:800000002"];
+    for (const urn of urns) noContentRoute("POST", creativeItem(urn));
+    await bulkUpdateStatusLogic(
+      BulkUpdateStatusInputSchema.parse({
+        entityType: "creative",
+        adAccountUrn: ACCOUNT_URN,
+        entityUrns: urns,
+        status: "PAUSED",
+      }),
+      ctx,
+      sdk
+    );
+    // basis: LinkedIn Creatives page (read 2026-11-14) — a creative's status
+    // field is intendedStatus, set by partial update on its item path.
+    expect(sortedWrites().map((r) => [r.url, r.body])).toEqual(
+      urns.map((urn) => [
+        `${API_BASE_URL}${creativeItem(urn)}`,
+        { patch: { $set: { intendedStatus: "PAUSED" } } },
+      ])
+    );
+  });
+
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
     const out = await bulkUpdateStatusLogic(
       BulkUpdateStatusInputSchema.parse({
         entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
         entityUrns: [CAMPAIGN_URN],
         status: "ARCHIVED",
       }),
@@ -597,6 +796,7 @@ describe("linkedin_bulk_update_status → one PARTIAL_UPDATE per entity", () => 
     await bulkUpdateStatusLogic(
       BulkUpdateStatusInputSchema.parse({
         entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
         entityUrns: [CAMPAIGN_URN],
         status: "PAUSED",
         dry_run: true,
@@ -690,22 +890,23 @@ describe("linkedin_bulk_update_entities → one PARTIAL_UPDATE per item", () => 
 
   it("2 campaigns → 2 POSTs, each with its own $set", async () => {
     for (const urn of [CAMPAIGN_URN, CAMPAIGN_URN_2]) {
-      noContentRoute("POST", `/v2/adCampaigns/${enc(urn)}`);
+      noContentRoute("POST", campaignItem(urn));
     }
     const out = await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({ entityType: "campaign", items }),
+      BulkUpdateEntitiesInputSchema.parse({
+        entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
+        items,
+      }),
       ctx,
       sdk
     );
     const reqs = sortedWrites();
     // basis: [js] `partialUpdate` / [py] PARTIAL_UPDATE (see update_entity).
-    // basis: unverified (code-only) — /v2/ item path (#210).
+    // basis: LinkedIn Campaigns page — the account-scoped item path (see update_entity).
     expect(reqs.map((r) => [r.url, r.body])).toEqual([
-      [`${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN)}`, { patch: { $set: items[0]!.data } }],
-      [
-        `${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN_2)}`,
-        { patch: { $set: items[1]!.data } },
-      ],
+      [`${API_BASE_URL}${campaignItem(CAMPAIGN_URN)}`, { patch: { $set: items[0]!.data } }],
+      [`${API_BASE_URL}${campaignItem(CAMPAIGN_URN_2)}`, { patch: { $set: items[1]!.data } }],
     ]);
     for (const req of reqs) expectRestliHeaders(req, { json: true, method: "PARTIAL_UPDATE" });
     // A budget change is a sensitive field, so even 2 items prompt.
@@ -717,7 +918,11 @@ describe("linkedin_bulk_update_entities → one PARTIAL_UPDATE per item", () => 
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
     const out = await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({ entityType: "campaign", items }),
+      BulkUpdateEntitiesInputSchema.parse({
+        entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
+        items,
+      }),
       ctx,
       sdk
     );
@@ -728,7 +933,12 @@ describe("linkedin_bulk_update_entities → one PARTIAL_UPDATE per item", () => 
 
   it("dry_run sends nothing and does not prompt", async () => {
     await bulkUpdateEntitiesLogic(
-      BulkUpdateEntitiesInputSchema.parse({ entityType: "campaign", items, dry_run: true }),
+      BulkUpdateEntitiesInputSchema.parse({
+        entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
+        items,
+        dry_run: true,
+      }),
       ctx,
       sdk
     );
@@ -745,10 +955,10 @@ describe("linkedin_adjust_bids → PARTIAL_UPDATE of unitCost", () => {
 
   it("2 campaigns → sequential POSTs of {patch:{$set:{unitCost}}}", async () => {
     for (const urn of [CAMPAIGN_URN, CAMPAIGN_URN_2]) {
-      noContentRoute("POST", `/v2/adCampaigns/${enc(urn)}`);
+      noContentRoute("POST", campaignItem(urn));
     }
     const out = await adjustBidsLogic(
-      AdjustBidsInputSchema.parse({ adjustments, reason: "pacing" }),
+      AdjustBidsInputSchema.parse({ adAccountUrn: ACCOUNT_URN, adjustments, reason: "pacing" }),
       ctx,
       sdk
     );
@@ -756,16 +966,17 @@ describe("linkedin_adjust_bids → PARTIAL_UPDATE of unitCost", () => {
     // basis: [js] `partialUpdate` / [py] PARTIAL_UPDATE (see update_entity).
     // basis: unverified (code-only) — that a campaign's bid is the
     // `unitCost` field as `{ amount, currencyCode }` (no field model is
-    // published in any source here), and the /v2/ item path.
+    // published in any source here). basis: LinkedIn Campaigns page — the
+    // account-scoped item path (see update_entity).
     expect(reqs.map((r) => [r.method, r.url, r.body])).toEqual([
       [
         "POST",
-        `${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN)}`,
+        `${API_BASE_URL}${campaignItem(CAMPAIGN_URN)}`,
         { patch: { $set: { unitCost: { amount: "8.50", currencyCode: "USD" } } } },
       ],
       [
         "POST",
-        `${API_BASE_URL}/v2/adCampaigns/${enc(CAMPAIGN_URN_2)}`,
+        `${API_BASE_URL}${campaignItem(CAMPAIGN_URN_2)}`,
         { patch: { $set: { unitCost: { amount: "15.00", currencyCode: "USD" } } } },
       ],
     ]);
@@ -778,14 +989,22 @@ describe("linkedin_adjust_bids → PARTIAL_UPDATE of unitCost", () => {
 
   it("sends nothing when the confirmation is declined", async () => {
     sdk.elicitInput.mockResolvedValueOnce({ action: "decline" });
-    const out = await adjustBidsLogic(AdjustBidsInputSchema.parse({ adjustments }), ctx, sdk);
+    const out = await adjustBidsLogic(
+      AdjustBidsInputSchema.parse({ adAccountUrn: ACCOUNT_URN, adjustments }),
+      ctx,
+      sdk
+    );
     expect(out.confirmed).toBe(false);
     expect(stub.requests).toHaveLength(0);
     expect(remaining()).toBe(LIMIT);
   });
 
   it("dry_run sends nothing and does not prompt", async () => {
-    await adjustBidsLogic(AdjustBidsInputSchema.parse({ adjustments, dry_run: true }), ctx, sdk);
+    await adjustBidsLogic(
+      AdjustBidsInputSchema.parse({ adAccountUrn: ACCOUNT_URN, adjustments, dry_run: true }),
+      ctx,
+      sdk
+    );
     expect(sdk.elicitInput).not.toHaveBeenCalled();
     expect(stub.requests).toHaveLength(0);
   });
@@ -793,7 +1012,7 @@ describe("linkedin_adjust_bids → PARTIAL_UPDATE of unitCost", () => {
 
 describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () => {
   it("campaign → strips read-only fields, renames, forces DRAFT, POSTs to the account's collection", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({
       method: "GET",
       path: item,
@@ -809,7 +1028,11 @@ describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () =>
     createdRoute(`/rest/adAccounts/${ACCOUNT_ID}/adCampaigns`, "700000099");
 
     const out = await duplicateEntityLogic(
-      DuplicateEntityInputSchema.parse({ entityType: "campaign", entityUrn: CAMPAIGN_URN }),
+      DuplicateEntityInputSchema.parse({
+        entityType: "campaign",
+        entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
+      }),
       ctx,
       sdk
     );
@@ -839,13 +1062,77 @@ describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () =>
     expect(remaining()).toBe(LIMIT - 1 - 3);
   });
 
+  it("refuses to duplicate an adAccount (schema)", () => {
+    // basis: LinkedIn Ad Accounts page documents create but no copy.
+    expect(() =>
+      DuplicateEntityInputSchema.parse({
+        entityType: "adAccount",
+        entityUrn: ACCOUNT_URN,
+        adAccountUrn: ACCOUNT_URN,
+      })
+    ).toThrow();
+    expect(stub.requests).toHaveLength(0);
+  });
+
+  it("creative → GET it on the Creatives API, POST a DRAFT copy to the account's creatives", async () => {
+    const urn = "urn:li:sponsoredCreative:800000001";
+    stub.route({
+      method: "GET",
+      path: creativeItem(urn),
+      response: {
+        id: urn,
+        account: ACCOUNT_URN,
+        campaign: CAMPAIGN_URN,
+        name: "Autumn A",
+        intendedStatus: "ACTIVE",
+        content: { reference: "urn:li:share:123" },
+        createdAt: 1,
+        createdBy: "urn:li:person:x",
+        lastModifiedAt: 2,
+        lastModifiedBy: "urn:li:person:x",
+        isServing: true,
+        isTest: false,
+        review: { status: "APPROVED" },
+        servingHoldReasons: ["STOPPED"],
+      },
+    });
+    createdRoute(
+      `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      "urn%3Ali%3AsponsoredCreative%3A800000099"
+    );
+    await duplicateEntityLogic(
+      DuplicateEntityInputSchema.parse({
+        entityType: "creative",
+        entityUrn: urn,
+        adAccountUrn: ACCOUNT_URN,
+      }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests().map((r) => `${r.method} ${r.path}`)).toEqual([
+      `GET ${creativeItem(urn)}`,
+      `POST /rest/adAccounts/${ACCOUNT_ID}/creatives`,
+    ]);
+    // basis: LinkedIn Creatives page (read 2026-11-14) — the schema marks
+    // account, createdAt, createdBy, id, isServing, lastModified*, review and
+    // servingHoldReasons read-only; the status field is intendedStatus. That
+    // the copy is a DRAFT named "Copy of …" is this server's choice.
+    expect(onlyWrite().body).toEqual({
+      campaign: CAMPAIGN_URN,
+      name: "Copy of Autumn A",
+      intendedStatus: "DRAFT",
+      content: { reference: "urn:li:share:123" },
+    });
+  });
+
   it("dry_run reads the source and creates nothing", async () => {
-    const item = `/v2/adCampaigns/${enc(CAMPAIGN_URN)}`;
+    const item = campaignItem(CAMPAIGN_URN);
     stub.route({ method: "GET", path: item, response: campaignEntity(CAMPAIGN_URN) });
     await duplicateEntityLogic(
       DuplicateEntityInputSchema.parse({
         entityType: "campaign",
         entityUrn: CAMPAIGN_URN,
+        adAccountUrn: ACCOUNT_URN,
         newName: "Winter",
         dry_run: true,
       }),
@@ -856,179 +1143,589 @@ describe("linkedin_duplicate_entity → GET source, then CREATE the copy", () =>
   });
 });
 
-describe("linkedin_upload_image / linkedin_upload_video → registerUpload ACTION + binary PUT", () => {
+/**
+ * Uploads are on LinkedIn's Images and Videos APIs (#210), which replace the
+ * Assets API (`/v2/assets?action=registerUpload`).
+ *
+ * basis: LinkedIn Images API page
+ * (learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api,
+ * li-lms-2026-10, read 2026-11-16), "Initialize Image Upload": `POST
+ * /rest/images?action=initializeUpload` with body `{ initializeUploadRequest:
+ * { owner } }`, `owner` a person (`urn:li:person:…`) or organization
+ * (`urn:li:organization:…`) URN; the response is `{ value: { uploadUrlExpiresAt,
+ * uploadUrl, image: "urn:li:image:…" } }`. "Upload the Image" links to the
+ * Vector Asset page (…/shares/vector-asset-api, read 2026-11-16): a PUT of the
+ * bytes to the uploadUrl, which "requires a valid OAuth token in the
+ * 'Authorization' header" (its sample answers 201).
+ *
+ * basis: LinkedIn Videos API page (…/community-management/shares/videos-api,
+ * li-lms-2026-10, read 2026-11-16), "How to Upload Videos": initialize, split the
+ * file into parts, upload each part, finalize. `POST
+ * /rest/videos?action=initializeUpload` with `{ initializeUploadRequest: { owner,
+ * fileSizeBytes, uploadCaptions, uploadThumbnail } }` (owner a person or
+ * organization URN; fileSizeBytes required, and "determines how many parts the
+ * video upload will be broken into"); the response carries `video`,
+ * `uploadToken` and `uploadInstructions[{ uploadUrl, firstByte, lastByte }]`
+ * (inclusive byte ranges, sorted). "Upload the Video": a PUT of each part with
+ * `Content-Type: application/octet-stream` and no Authorization header in the
+ * sample (the Vector Asset page: the video upload call "doesn't accept an OAuth
+ * token"); each response's `ETag` header is saved. "Finalize Video Upload":
+ * `POST /rest/videos?action=finalizeUpload` with `{ finalizeUploadRequest: {
+ * video, uploadToken, uploadedPartIds } }`, the part ids being the ETags in the
+ * order of the upload instructions (schema: `ETag: "e438…"` corresponds to
+ * `uploadedPartIds: ["e438…"]`), answered 200.
+ *
+ * Neither page's upload sample sends `LinkedIn-Version` or
+ * `X-Restli-Protocol-Version` to the upload URL (it is a `dms-uploads` URL on
+ * www.linkedin.com, not a Rest.li resource), so the PUTs send neither.
+ */
+describe("linkedin_upload_image / linkedin_upload_video → Images / Videos API", () => {
   const MEDIA_HOST = "cdn.example.com";
-  const UPLOAD_URL =
-    "https://api.linkedin.com/mediaUpload/C5522AQGTYER3k3ByHQ/feedshare-uploadedImage/0?ca=vector_feedshare";
-  const ASSET = "urn:li:digitalmediaAsset:C5522AQGTYER3k3ByHQ";
+  const UPLOAD_HOST = "www.linkedin.com";
+  const ORG_URN = "urn:li:organization:5583111";
+  const IMAGE_URN = "urn:li:image:C4E10AQFoyyAjHPMQuQ";
+  const VIDEO_URN = "urn:li:video:C5505AQH-oV1qvnFtKA";
+  const IMAGE_UPLOAD_URL = `https://${UPLOAD_HOST}/dms-uploads/C4E10AQFoyyAjHPMQuQ/uploaded-image/0?ca=vector_ads&cn=uploads&sync=0&v=beta&ut=08zHQjMjAOLqc1`;
+  const VIDEO_PART_URLS = [
+    `https://${UPLOAD_HOST}/dms-uploads/C5505AQH-oV1qvnFtKA/uploadedVideo?sau=part0`,
+    `https://${UPLOAD_HOST}/dms-uploads/C5505AQH-oV1qvnFtKA/uploadedVideo/1?sau=part1`,
+  ];
 
-  const cases = [
-    {
-      tool: "linkedin_upload_image",
-      run: (mediaUrl: string, dry_run = false) =>
-        uploadImageLogic(
-          UploadImageInputSchema.parse({ adAccountUrn: ACCOUNT_URN, mediaUrl, dry_run }),
-          ctx,
-          sdk
-        ),
-      mediaPath: "/banner.png",
-      contentType: "image/png",
-      recipe: "urn:li:digitalmediaRecipe:ads-image",
-    },
-    {
-      tool: "linkedin_upload_video",
-      run: (mediaUrl: string, dry_run = false) =>
-        uploadVideoLogic(
-          UploadVideoInputSchema.parse({ adAccountUrn: ACCOUNT_URN, mediaUrl, dry_run }),
-          ctx,
-          sdk
-        ),
-      mediaPath: "/spot.mp4",
-      contentType: "video/mp4",
-      recipe: "urn:li:digitalmediaRecipe:ads-video",
-    },
-  ] as const;
+  const runImage = (mediaUrl: string, dry_run = false) =>
+    uploadImageLogic(
+      UploadImageInputSchema.parse({ ownerUrn: ORG_URN, mediaUrl, dry_run }),
+      ctx,
+      sdk
+    );
+  const runVideo = (mediaUrl: string, dry_run = false) =>
+    uploadVideoLogic(
+      UploadVideoInputSchema.parse({ ownerUrn: ORG_URN, mediaUrl, dry_run }),
+      ctx,
+      sdk
+    );
 
-  for (const c of cases) {
-    it(`${c.tool}: download, POST /v2/assets?action=registerUpload, PUT the bytes to the uploadUrl`, async () => {
-      const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
-      stub.route({
-        method: "GET",
-        host: MEDIA_HOST,
-        path: c.mediaPath,
-        rawBody: bytes,
-        contentType: c.contentType,
-      });
+  function mediaRoute(path: string, bytes: Uint8Array, contentType: string) {
+    stub.route({ method: "GET", host: MEDIA_HOST, path, rawBody: bytes, contentType });
+  }
+
+  const isAction = (name: string) => (req: WireRequest) => req.rawQuery === `action=${name}`;
+
+  describe("linkedin_upload_image", () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+
+    function imageRoutes(onInit?: (req: WireRequest) => boolean) {
+      mediaRoute("/banner.png", bytes, "image/png");
       stub.route({
         method: "POST",
-        path: "/v2/assets",
+        path: "/rest/images",
+        match: (req) => isAction("initializeUpload")(req) && (onInit ? onInit(req) : true),
         response: {
           value: {
-            uploadMechanism: {
-              "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-                uploadUrl: UPLOAD_URL,
-                headers: {},
-              },
-            },
-            asset: ASSET,
+            uploadUrlExpiresAt: 1650567510704,
+            uploadUrl: IMAGE_UPLOAD_URL,
+            image: IMAGE_URN,
           },
         },
       });
-      stub.route({ method: "PUT", path: new URL(UPLOAD_URL).pathname, status: 201, rawBody: "" });
+    }
 
-      const out = await c.run(`https://${MEDIA_HOST}${c.mediaPath}`);
-
-      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}`)).toEqual([
-        `GET ${MEDIA_HOST}${c.mediaPath}`,
-        `POST ${API_HOST}/v2/assets`,
-        `PUT ${API_HOST}${new URL(UPLOAD_URL).pathname}`,
-      ]);
-
-      const register = stub.requests[1]!;
-      // basis: [js] restli-client.ts `action` — POST to the resource with
-      // `?action=<actionName>` in the query and the action params as the JSON
-      // body (fixture "Action on a non-versioned resource":
-      // /testResource?action=doSomething); [restli] RestLiRouter: POST with an
-      // `action` param and no RMETHOD routes to ACTION. [py] README `action`
-      // example: `/liveAssetActions?action=register` with body
-      // `{ registerLiveEventRequest: { owner, recipes: ["urn:li:digitalmediaRecipe:…"] } }`
-      // — the same request-wrapper / owner / recipes shape.
-      // basis: unverified (code-only) — the `/v2/assets` resource, the
-      // `registerUpload` action name, the `ads-image` / `ads-video` recipes and
-      // `serviceRelationships`, and the response's `uploadMechanism` /
-      // `asset`: no source here documents the Assets API.
-      expect(register.url).toBe(`${API_BASE_URL}/v2/assets?action=registerUpload`);
-      expect(register.rawQuery).toBe("action=registerUpload");
-      expectRestliHeaders(register, { json: true });
-      expect(register.body).toEqual({
-        registerUploadRequest: {
-          owner: ACCOUNT_URN,
-          recipes: [c.recipe],
-          serviceRelationships: [
-            { identifier: "urn:li:userGeneratedContent", relationshipType: "OWNER" },
-          ],
-        },
-      });
-
-      const put = stub.requests[2]!;
-      // basis: unverified (code-only) — the binary PUT to the returned
-      // uploadUrl with the bearer token, the downloaded Content-Type and the
-      // Rest.li / version headers (linkedin-http-client.ts putBinary).
-      expect(put.url).toBe(UPLOAD_URL);
-      expect(put.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
-      expect(put.headers["content-type"]).toBe(c.contentType);
-      expect(put.headers["linkedin-version"]).toBe(API_VERSION);
-      expect(put.headers["x-restli-protocol-version"]).toBe("2.0.0");
-      expect(put.rawBody).toEqual(Buffer.from(bytes));
-
-      expect(out.assetUrn).toBe(ASSET);
-      // basis: unverified (code-only) — the server's own cost model, not a
-      // LinkedIn figure: the register POST and the binary PUT are each a write
-      // (`LINKEDIN_WRITE_TOKENS`, 3) on `linkedin:default`.
-      expect(remaining()).toBe(LIMIT - 2 * 3);
-    });
-
-    it(`${c.tool}: the register POST and the binary PUT each draw a write token before sending`, async () => {
-      // Tokens left at the moment each upstream request reaches fetch. The
-      // upload tools used to call the HTTP client directly, so both read LIMIT.
-      const seenAt: Record<string, number> = {};
-      const recordRemaining = (req: WireRequest) => {
-        seenAt[req.method] = remaining();
-        return true;
-      };
-      stub.route({
-        method: "GET",
-        host: MEDIA_HOST,
-        path: c.mediaPath,
-        rawBody: new Uint8Array([1, 2, 3]),
-        contentType: c.contentType,
-      });
-      stub.route({
-        method: "POST",
-        path: "/v2/assets",
-        match: recordRemaining,
-        response: {
-          value: {
-            uploadMechanism: {
-              "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-                uploadUrl: UPLOAD_URL,
-              },
-            },
-            asset: ASSET,
-          },
-        },
-      });
+    it("downloads, POSTs /rest/images?action=initializeUpload, PUTs the bytes with the token", async () => {
+      imageRoutes();
       stub.route({
         method: "PUT",
-        path: new URL(UPLOAD_URL).pathname,
-        match: recordRemaining,
+        host: UPLOAD_HOST,
+        path: new URL(IMAGE_UPLOAD_URL).pathname,
         status: 201,
         rawBody: "",
       });
 
-      await c.run(`https://${MEDIA_HOST}${c.mediaPath}`);
+      const out = await runImage(`https://${MEDIA_HOST}/banner.png`);
 
-      expect(seenAt).toEqual({
-        POST: LIMIT - 3,
-        PUT: LIMIT - 2 * 3,
+      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}`)).toEqual([
+        `GET ${MEDIA_HOST}/banner.png`,
+        `POST ${API_HOST}/rest/images`,
+        `PUT ${UPLOAD_HOST}${new URL(IMAGE_UPLOAD_URL).pathname}`,
+      ]);
+
+      const init = stub.requests[1]!;
+      // basis: Images API, "Initialize Image Upload" (see the block comment).
+      expect(init.url).toBe(`${API_BASE_URL}/rest/images?action=initializeUpload`);
+      expect(init.rawQuery).toBe("action=initializeUpload");
+      expectRestliHeaders(init, { json: true });
+      expect(init.body).toEqual({ initializeUploadRequest: { owner: ORG_URN } });
+
+      const put = stub.requests[2]!;
+      // basis: Vector Asset page, "Upload the Image": PUT with the OAuth token.
+      expect(put.url).toBe(IMAGE_UPLOAD_URL);
+      expect(put.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
+      expect(put.headers["content-type"]).toBe("image/png");
+      expect(put.headers["linkedin-version"]).toBeUndefined();
+      expect(put.headers["x-restli-protocol-version"]).toBeUndefined();
+      expect(put.rawBody).toEqual(Buffer.from(bytes));
+
+      expect(out.imageUrn).toBe(IMAGE_URN);
+      expect(out.effect).toEqual({
+        effectKind: "asset_uploaded",
+        summary: { asset_type: "image", asset_handle: IMAGE_URN },
       });
+      // basis: unverified (code-only) — the server's own cost model: the
+      // initialize POST is a write (LINKEDIN_WRITE_TOKENS, 3) on
+      // `linkedin:default`; the PUT goes to the upload host, not the API, and
+      // draws nothing.
+      expect(remaining()).toBe(LIMIT - 3);
     });
 
-    it(`${c.tool}: dry_run downloads and uploads nothing`, async () => {
-      await c.run(`https://${MEDIA_HOST}${c.mediaPath}`, true);
+    it("draws the write token before the initialize POST is sent", async () => {
+      let atInit: number | undefined;
+      imageRoutes(() => {
+        atInit = remaining();
+        return true;
+      });
+      stub.route({ method: "PUT", host: UPLOAD_HOST, path: /.*/, status: 201, rawBody: "" });
+
+      await runImage(`https://${MEDIA_HOST}/banner.png`);
+      expect(atInit).toBe(LIMIT - 3);
+    });
+
+    it("fails without a PUT when the initialize response has no uploadUrl or image", async () => {
+      mediaRoute("/banner.png", bytes, "image/png");
+      stub.route({ method: "POST", path: "/rest/images", response: { value: {} } });
+
+      await expect(runImage(`https://${MEDIA_HOST}/banner.png`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+    });
+
+    it("dry_run downloads and uploads nothing", async () => {
+      await runImage(`https://${MEDIA_HOST}/banner.png`, true);
       expect(stub.requests).toHaveLength(0);
     });
-  }
+  });
 
-  // The wire test above pins exactly two LinkedIn requests (register, PUT).
-  // The descriptions used to promise a third "confirm" step that is never sent.
-  for (const tool of [uploadImageTool, uploadVideoTool]) {
-    it(`${tool.name}: the description names the two requests sent and promises no confirm step`, () => {
-      expect(tool.description).not.toMatch(/3-step|→ confirm/);
-      expect(tool.description).toContain("POST /v2/assets?action=registerUpload");
-      expect(tool.description).toContain("No confirm or finalize request is sent");
+  describe("linkedin_upload_video", () => {
+    // Ten bytes, split by the initialize response into two parts (0-5, 6-9).
+    const bytes = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const instructions = [
+      { uploadUrl: VIDEO_PART_URLS[0], firstByte: 0, lastByte: 5 },
+      { uploadUrl: VIDEO_PART_URLS[1], firstByte: 6, lastByte: 9 },
+    ];
+    // The schema shows a quoted ETag; the "Upload the Video" sample an unquoted one.
+    const ETAGS = ['"e4383924336106965d6cd2a111beaceb"', "/ambry-videoei/signedId/AQHX97.bin"];
+    const PART_IDS = ["e4383924336106965d6cd2a111beaceb", "/ambry-videoei/signedId/AQHX97.bin"];
+
+    function videoRoutes(
+      opts: {
+        uploadInstructions?: unknown;
+        etags?: Array<string | undefined>;
+        onInit?: (req: WireRequest) => boolean;
+        onFinalize?: (req: WireRequest) => boolean;
+      } = {}
+    ) {
+      mediaRoute("/spot.mp4", bytes, "video/mp4");
+      stub.route({
+        method: "POST",
+        path: "/rest/videos",
+        match: (req) =>
+          isAction("initializeUpload")(req) && (opts.onInit ? opts.onInit(req) : true),
+        response: {
+          value: {
+            uploadUrlsExpireAt: 1633234498985,
+            video: VIDEO_URN,
+            uploadInstructions: opts.uploadInstructions ?? instructions,
+            uploadToken: "upload-token-1",
+          },
+        },
+      });
+      const etags = opts.etags ?? ETAGS;
+      VIDEO_PART_URLS.forEach((url, i) => {
+        const etag = etags[i];
+        stub.route({
+          method: "PUT",
+          host: UPLOAD_HOST,
+          path: new URL(url).pathname,
+          status: 200,
+          rawBody: "",
+          ...(etag !== undefined ? { headers: { etag } } : {}),
+        });
+      });
+      stub.route({
+        method: "POST",
+        path: "/rest/videos",
+        match: (req) =>
+          isAction("finalizeUpload")(req) && (opts.onFinalize ? opts.onFinalize(req) : true),
+        status: 200,
+        rawBody: "",
+      });
+    }
+
+    it("initializes with the file size, PUTs each part, then finalizes with the ETags in order", async () => {
+      videoRoutes();
+
+      const out = await runVideo(`https://${MEDIA_HOST}/spot.mp4`);
+
+      expect(stub.requests.map((r) => `${r.method} ${r.host}${r.path}?${r.rawQuery}`)).toEqual([
+        `GET ${MEDIA_HOST}/spot.mp4?`,
+        `POST ${API_HOST}/rest/videos?action=initializeUpload`,
+        `PUT ${UPLOAD_HOST}${new URL(VIDEO_PART_URLS[0]!).pathname}?sau=part0`,
+        `PUT ${UPLOAD_HOST}${new URL(VIDEO_PART_URLS[1]!).pathname}?sau=part1`,
+        `POST ${API_HOST}/rest/videos?action=finalizeUpload`,
+      ]);
+
+      const init = stub.requests[1]!;
+      // basis: Videos API, "Initialize Video Upload" (see the block comment).
+      expect(init.url).toBe(`${API_BASE_URL}/rest/videos?action=initializeUpload`);
+      expectRestliHeaders(init, { json: true });
+      expect(init.body).toEqual({
+        initializeUploadRequest: {
+          owner: ORG_URN,
+          fileSizeBytes: bytes.length,
+          uploadCaptions: false,
+          uploadThumbnail: false,
+        },
+      });
+
+      // basis: Videos API, "Upload the Video": each part's inclusive byte range,
+      // application/octet-stream, no OAuth token.
+      const parts = stub.requests.filter((r) => r.method === "PUT");
+      expect(parts.map((p) => p.url)).toEqual(VIDEO_PART_URLS);
+      expect(parts[0]!.rawBody).toEqual(Buffer.from(bytes.subarray(0, 6)));
+      expect(parts[1]!.rawBody).toEqual(Buffer.from(bytes.subarray(6, 10)));
+      for (const p of parts) {
+        expect(p.headers["content-type"]).toBe("application/octet-stream");
+        expect(p.headers["authorization"]).toBeUndefined();
+        expect(p.headers["linkedin-version"]).toBeUndefined();
+        expect(p.headers["x-restli-protocol-version"]).toBeUndefined();
+      }
+
+      const finalize = stub.requests[4]!;
+      // basis: Videos API, "Finalize Video Upload".
+      expect(finalize.url).toBe(`${API_BASE_URL}/rest/videos?action=finalizeUpload`);
+      expectRestliHeaders(finalize, { json: true });
+      expect(finalize.body).toEqual({
+        finalizeUploadRequest: {
+          video: VIDEO_URN,
+          uploadToken: "upload-token-1",
+          uploadedPartIds: PART_IDS,
+        },
+      });
+
+      expect(out.videoUrn).toBe(VIDEO_URN);
+      expect(out.effect).toEqual({
+        effectKind: "asset_uploaded",
+        summary: { asset_type: "video", asset_handle: VIDEO_URN },
+      });
+      // basis: unverified (code-only) — initialize and finalize are writes (3
+      // each); the part PUTs go to the upload host and draw nothing, so a long
+      // video's part count cannot exhaust the per-minute budget.
+      expect(remaining()).toBe(LIMIT - 2 * 3);
+    });
+
+    it("draws a write token before the initialize and the finalize POST, none for the parts", async () => {
+      const seen: number[] = [];
+      videoRoutes({
+        onInit: () => {
+          seen.push(remaining());
+          return true;
+        },
+        onFinalize: () => {
+          seen.push(remaining());
+          return true;
+        },
+      });
+
+      await runVideo(`https://${MEDIA_HOST}/spot.mp4`);
+      expect(seen).toEqual([LIMIT - 3, LIMIT - 2 * 3]);
+    });
+
+    it("does not finalize when a part's response carries no ETag", async () => {
+      videoRoutes({ etags: [ETAGS[0], undefined] });
+
+      await expect(runVideo(`https://${MEDIA_HOST}/spot.mp4`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => isAction("finalizeUpload")(r))).toHaveLength(0);
+    });
+
+    it("uploads nothing when the upload instructions do not cover the file", async () => {
+      videoRoutes({ uploadInstructions: [instructions[0]] });
+
+      await expect(runVideo(`https://${MEDIA_HOST}/spot.mp4`)).rejects.toMatchObject({
+        code: JsonRpcErrorCode.InternalError,
+      });
+      expect(stub.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+    });
+
+    it("dry_run downloads and uploads nothing", async () => {
+      await runVideo(`https://${MEDIA_HOST}/spot.mp4`, true);
+      expect(stub.requests).toHaveLength(0);
+    });
+  });
+
+  // basis: Images API / Videos API: initializeUploadRequest.owner "Can be a
+  // person(urn:li:person:123), or organization(urn:li:organization:123) URN".
+  for (const schema of [UploadImageInputSchema, UploadVideoInputSchema]) {
+    it("refuses an ad-account owner and accepts a person or organization", () => {
+      const base = { mediaUrl: "https://cdn.example.com/a" };
+      expect(schema.safeParse({ ...base, ownerUrn: ACCOUNT_URN }).success).toBe(false);
+      expect(schema.safeParse({ ...base, ownerUrn: ORG_URN }).success).toBe(true);
+      expect(schema.safeParse({ ...base, ownerUrn: "urn:li:person:A1b2-C3_d" }).success).toBe(true);
     });
   }
+
+  it("the descriptions name the requests each tool sends", () => {
+    expect(uploadImageTool.description).toContain("POST /rest/images?action=initializeUpload");
+    expect(uploadVideoTool.description).toContain("POST /rest/videos?action=initializeUpload");
+    expect(uploadVideoTool.description).toContain("POST /rest/videos?action=finalizeUpload");
+    for (const tool of [uploadImageTool, uploadVideoTool]) {
+      expect(tool.description).not.toMatch(/\/v2\/assets|registerUpload|digitalmediaAsset/);
+    }
+  });
+});
+
+describe("linkedin_list_entities → creative (Creatives API criteria finder)", () => {
+  // basis: LinkedIn Creatives page (read 2026-11-14), "Search For Creatives":
+  // GET /rest/adAccounts/{adAccountId}/creatives?q=criteria with
+  // X-RestLi-Method: FINDER ("must be included"); cursor paging with pageSize
+  // (max 100) and pageToken, the next token in metadata.nextPageToken.
+  it("first page: q=criteria&pageSize=N, FINDER header, nextPageToken as the cursor", async () => {
+    stub.route({
+      method: "GET",
+      path: `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      response: {
+        metadata: { nextPageToken: "DgGerr1i" },
+        elements: [{ id: "urn:li:sponsoredCreative:1", intendedStatus: "DRAFT" }],
+      },
+    });
+    const out = await listEntitiesLogic(
+      ListEntitiesInputSchema.parse({
+        entityType: "creative",
+        adAccountUrn: ACCOUNT_URN,
+        count: 10,
+      }),
+      ctx,
+      sdk
+    );
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.path).toBe(`/rest/adAccounts/${ACCOUNT_ID}/creatives`);
+    expect(req!.rawQuery).toBe("q=criteria&pageSize=10");
+    expect(req!.headers["x-restli-method"]).toBe("FINDER");
+    expect(out.entities).toHaveLength(1);
+    expect(out.pagination.nextCursor).toBe("DgGerr1i");
+    expect(out.pagination.nextPageInputKey).toBe("pageToken");
+  });
+
+  it("next page: sends the pageToken back; no token means the last page", async () => {
+    stub.route({
+      method: "GET",
+      path: `/rest/adAccounts/${ACCOUNT_ID}/creatives`,
+      response: { metadata: {}, elements: [] },
+    });
+    const out = await listEntitiesLogic(
+      ListEntitiesInputSchema.parse({
+        entityType: "creative",
+        adAccountUrn: ACCOUNT_URN,
+        pageToken: "DgGerr1i",
+      }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests()[0]!.rawQuery).toBe("q=criteria&pageSize=25&pageToken=DgGerr1i");
+    expect(out.pagination.nextCursor).toBeNull();
+  });
+
+  it("refuses a creative page larger than 100 before any request", async () => {
+    await expect(
+      listEntitiesLogic(
+        ListEntitiesInputSchema.parse({
+          entityType: "creative",
+          adAccountUrn: ACCOUNT_URN,
+          count: 101,
+        }),
+        ctx,
+        sdk
+      )
+    ).rejects.toThrow(/at most 100 per page/);
+    expect(stub.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * basis: LinkedIn Cursor-based Pagination page (read 2026-11-16): "From
+ * 202401 version and above" the adAccounts, adCampaignGroups, adCampaigns and
+ * adCreatives search APIs page with `pageSize` and `pageToken`; the next token
+ * is `metadata.nextPageToken`, and a response without one is the end of the
+ * dataset. The Campaigns and Campaign Groups pages (read 2026-11-16) give the
+ * account-scoped `GET /rest/adAccounts/{adAccountId}/adCampaigns?q=search` and
+ * `/adCampaignGroups?q=search` with "Max is 1,000" for pageSize, and pass the
+ * token back as `&pageToken=…` on the same search.
+ */
+describe("linkedin_list_entities → campaign / campaignGroup (search finder, cursor paging)", () => {
+  for (const [entityType, collection] of [
+    ["campaign", "adCampaigns"],
+    ["campaignGroup", "adCampaignGroups"],
+  ] as const) {
+    it(`${entityType}: q=search&pageSize=N, no start/count, nextPageToken as the cursor`, async () => {
+      stub.route({
+        method: "GET",
+        path: `/rest/adAccounts/${ACCOUNT_ID}/${collection}`,
+        response: {
+          metadata: { nextPageToken: "DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo" },
+          elements: [{ id: 1 }, { id: 2 }],
+        },
+      });
+      const out = await listEntitiesLogic(
+        ListEntitiesInputSchema.parse({ entityType, adAccountUrn: ACCOUNT_URN, count: 1000 }),
+        ctx,
+        sdk
+      );
+      const [req] = apiRequests();
+      expect(apiRequests()).toHaveLength(1);
+      expect(req!.method).toBe("GET");
+      expect(req!.url).toBe(
+        `${API_BASE_URL}/rest/adAccounts/${ACCOUNT_ID}/${collection}?q=search&pageSize=1000`
+      );
+      expect(req!.headers["x-restli-method"]).toBe("FINDER");
+      expect(out.pagination.nextCursor).toBe("DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo");
+      expect(out.pagination.nextPageInputKey).toBe("pageToken");
+    });
+
+    it(`${entityType}: sends the pageToken back; no token means the last page`, async () => {
+      stub.route({
+        method: "GET",
+        path: `/rest/adAccounts/${ACCOUNT_ID}/${collection}`,
+        response: { metadata: {}, elements: [{ id: 3 }] },
+      });
+      const out = await listEntitiesLogic(
+        ListEntitiesInputSchema.parse({
+          entityType,
+          adAccountUrn: ACCOUNT_URN,
+          pageToken: "DgGerr1i",
+        }),
+        ctx,
+        sdk
+      );
+      expect(apiRequests()[0]!.rawQuery).toBe("q=search&pageSize=25&pageToken=DgGerr1i");
+      expect(out.pagination.nextCursor).toBeNull();
+      expect(out.pagination.hasMore).toBe(false);
+    });
+  }
+
+  it("refuses a page larger than 1,000 before any request", async () => {
+    expect(() =>
+      ListEntitiesInputSchema.parse({
+        entityType: "campaign",
+        adAccountUrn: ACCOUNT_URN,
+        count: 1001,
+      })
+    ).toThrow();
+    expect(stub.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * basis: LinkedIn Ad Accounts page (read 2026-11-16), "Search for Accounts":
+ * `GET https://api.linkedin.com/rest/adAccounts?q=search`, where an omitted
+ * search criterion returns "all accounts the caller has access to"; the
+ * adAccounts API pages with `pageSize`/`pageToken` ("The max allowed pageSize
+ * is 1,000") and the sample response carries `metadata.nextPageToken`.
+ */
+describe("linkedin_list_ad_accounts → adAccounts search finder (cursor paging)", () => {
+  it("first page: GET /rest/adAccounts?q=search&pageSize=N", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: {
+        elements: [{ id: 507404993, name: "Dunder Mifflin Account", currency: "USD" }],
+        metadata: { nextPageToken: "DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo" },
+      },
+    });
+    const out = await listAdAccountsLogic(ListAdAccountsInputSchema.parse({}), ctx, sdk);
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.method).toBe("GET");
+    expect(req!.url).toBe(`${API_BASE_URL}/rest/adAccounts?q=search&pageSize=25`);
+    expect(out.accounts).toHaveLength(1);
+    expect(out.pagination.nextCursor).toBe("DgGerr1iVQreCJVjZDOW_grcp63nueBDipsS4DJpvJo");
+    expect(out.pagination.nextPageInputKey).toBe("pageToken");
+  });
+
+  it("next page: sends the pageToken back; no token means the last page", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: { elements: [], metadata: {} },
+    });
+    const out = await listAdAccountsLogic(
+      ListAdAccountsInputSchema.parse({ pageToken: "DgGerr1i", count: 1000 }),
+      ctx,
+      sdk
+    );
+    expect(apiRequests()[0]!.rawQuery).toBe("q=search&pageSize=1000&pageToken=DgGerr1i");
+    expect(out.pagination.nextCursor).toBeNull();
+  });
+
+  it("linkedin_list_entities adAccount sends the same request", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccounts",
+      response: { elements: [], metadata: {} },
+    });
+    await listEntitiesLogic(ListEntitiesInputSchema.parse({ entityType: "adAccount" }), ctx, sdk);
+    expect(apiRequests()[0]!.url).toBe(`${API_BASE_URL}/rest/adAccounts?q=search&pageSize=25`);
+  });
+});
+
+/**
+ * basis: LinkedIn Ad Account Users page (read 2026-11-16), "Find Ad Accounts
+ * by Authenticated User": `GET https://api.linkedin.com/rest/adAccountUsers?
+ * q=authenticatedUser` ("The only required parameter is q=authenticatedUser")
+ * with Authorization, Linkedin-Version and X-Restli-Protocol-Version: 2.0.0; it
+ * needs the r_ads scope, and each row's `user` is the token's member.
+ */
+describe("session validation → adAccountUsers authenticatedUser finder", () => {
+  it("GET /rest/adAccountUsers?q=authenticatedUser; the person URN is the row's user", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccountUsers",
+      response: {
+        elements: [
+          {
+            account: "urn:li:sponsoredAccount:516413367",
+            role: "ACCOUNT_BILLING_ADMIN",
+            user: "urn:li:person:K1RwyVNukt",
+          },
+        ],
+        paging: { count: 1, links: [], start: 0, total: 1 },
+      },
+    });
+    const adapter = new LinkedInAccessTokenAdapter(TEST_ACCESS_TOKEN, API_BASE_URL, API_VERSION);
+    await adapter.validate();
+
+    const [req] = apiRequests();
+    expect(apiRequests()).toHaveLength(1);
+    expect(req!.method).toBe("GET");
+    expect(req!.url).toBe(`${API_BASE_URL}/rest/adAccountUsers?q=authenticatedUser`);
+    expect(req!.headers["authorization"]).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
+    expect(req!.headers["linkedin-version"]).toBe(API_VERSION);
+    expect(req!.headers["x-restli-protocol-version"]).toBe("2.0.0");
+    expect(adapter.personId).toBe("urn:li:person:K1RwyVNukt");
+    expect(stub.requests.some((r) => r.path.startsWith("/v2/"))).toBe(false);
+  });
+
+  it("a 401 is Unauthorized", async () => {
+    stub.route({
+      method: "GET",
+      path: "/rest/adAccountUsers",
+      status: 401,
+      response: { status: 401, message: "Invalid access token" },
+    });
+    const adapter = new LinkedInAccessTokenAdapter(TEST_ACCESS_TOKEN, API_BASE_URL, API_VERSION);
+    await expect(adapter.validate()).rejects.toMatchObject({
+      code: JsonRpcErrorCode.Unauthorized,
+    });
+  });
 });
 
 describe("linkedin_list_entities → conversionRule", () => {

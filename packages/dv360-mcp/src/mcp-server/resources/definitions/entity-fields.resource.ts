@@ -6,7 +6,7 @@
  * Provides flat list of all field paths for a DV360 entity type
  */
 
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
+import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
 import {
   getEntitySchemaForOperation,
   getSupportedEntityTypesDynamic,
@@ -27,7 +27,7 @@ const URI_TEMPLATE = "entity-fields://{entityType}";
 /**
  * Read entity fields resource
  */
-async function readEntityFields(params: Record<string, string>): Promise<ResourceContent> {
+async function readEntityFields(params: Record<string, string>): Promise<string> {
   const { entityType } = params;
 
   if (!entityType) {
@@ -46,7 +46,7 @@ async function readEntityFields(params: Record<string, string>): Promise<Resourc
   const cacheKey = `entity-fields://${entityType}`;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: "application/json", text: cached };
+    return cached;
   }
 
   // Get schema for the entity type (use update schema as it's the most complete)
@@ -80,17 +80,13 @@ async function readEntityFields(params: Record<string, string>): Promise<Resourc
   const text = JSON.stringify(fieldsDocument, null, 2);
   resourceCache.set(cacheKey, text);
 
-  return {
-    uri: cacheKey,
-    mimeType: "application/json",
-    text,
-  };
+  return text;
 }
 
 /**
  * List all available entity fields resources
  */
-async function listEntityFields(): Promise<ResourceListItem[]> {
+async function listEntityFields(): Promise<TemplatedResourceListing[]> {
   const entityTypes = getSupportedEntityTypesDynamic();
 
   return entityTypes.map((entityType) => ({
@@ -104,11 +100,11 @@ async function listEntityFields(): Promise<ResourceListItem[]> {
 /**
  * Entity Fields Resource Definition
  */
-export const entityFieldsResource: ResourceDefinition = {
+export const entityFieldsResource: TemplatedResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
   mimeType: "application/json",
-  read: readEntityFields,
+  resolveContent: (_uri, variables) => readEntityFields(variables as Record<string, string>),
   list: listEntityFields,
 };

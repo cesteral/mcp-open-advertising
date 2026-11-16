@@ -1,31 +1,17 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTaskStore } from "@modelcontextprotocol/sdk/experimental/tasks";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import { registerRunCustomQueryAsyncTool } from "./tools/definitions/run-custom-query-async.tool.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const DBM_PACKAGE_NAME = "dbm-mcp";
-const DBM_PLATFORM = "dbm";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -62,123 +48,29 @@ export async function createMcpServer(
   // tasks/get routed to another instance reports "task not found".
   const taskStore = new InMemoryTaskStore();
 
-  const server = new McpServer(
-    buildServerInfo("dbm-mcp", {
-      version: packageJson.version,
-      description:
-        "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-        // `cancel` is deliberately not advertised: marking a task cancelled
-        // cannot stop the Bid Manager report already running upstream.
-        tasks: { list: {}, requests: { tools: { call: {} } } },
-      },
-      taskStore,
-      instructions:
-        "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
-        "Start with dbm_get_campaign_delivery or dbm_get_pacing_status. Use dbm_run_custom_query for advanced Bid Manager reports. " +
-        "See MCP Resources for metric/filter references and query examples.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: DBM_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  const server = await createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: DBM_PACKAGE_NAME,
-    platform: DBM_PLATFORM,
-    workflowIdByToolName: dbmWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "dbm-mcp",
+    platform: "dbm",
+    // `cancel` is deliberately not advertised: marking a task cancelled
+    // cannot stop the Bid Manager report already running upstream.
+    extraCapabilities: { tasks: { list: {}, requests: { tools: { call: {} } } } },
+    taskStore,
+    version: packageJson.version,
+    description:
+      "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
+    instructions:
+      "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
+      "Start with dbm_get_campaign_delivery or dbm_get_pacing_status. Use dbm_run_custom_query for advanced Bid Manager reports. " +
+      "See MCP Resources for metric/filter references and query examples.",
+    tools: allTools,
     resources: allResources,
-    logger,
-  });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: dbmWorkflowIdByToolName,
+    sessionServiceStore,
   });
 
   // Register task-based tools

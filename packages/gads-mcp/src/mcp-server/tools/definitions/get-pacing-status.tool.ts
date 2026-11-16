@@ -8,7 +8,7 @@ import { CustomerIdSchema } from "../utils/customer-id.js";
 export const getPacingStatusTool = createPacingTool({
   toolName: "gads_get_pacing_status",
   accountId: { field: "customerId", schema: CustomerIdSchema },
-  campaignIdSchema: z.string().describe("Google Ads Campaign ID"),
+  campaignIdSchema: z.string().min(1).describe("Google Ads Campaign ID"),
   platformApi: "the Google Ads API",
   populateGuidance:
     "To populate spend, first call `gads_get_insights`; to populate budget and flight dates, first call `gads_get_entity` for the campaign. Note: spendToDate should be in actual currency units (not micros).",

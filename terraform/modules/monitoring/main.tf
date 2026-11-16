@@ -203,11 +203,13 @@ resource "google_monitoring_alert_policy" "tool_error_rate" {
     condition_threshold {
       filter = <<-EOT
         metric.type = "workload.googleapis.com/mcp.tool.execution.count"
+        AND resource.type = "generic_task"
         AND metric.labels.status = "error"
       EOT
 
       denominator_filter = <<-EOT
         metric.type = "workload.googleapis.com/mcp.tool.execution.count"
+        AND resource.type = "generic_task"
       EOT
 
       comparison      = "COMPARISON_GT"
@@ -257,6 +259,7 @@ resource "google_monitoring_alert_policy" "rate_limit_hits" {
     condition_threshold {
       filter = <<-EOT
         metric.type = "workload.googleapis.com/mcp.rate_limit.hit.count"
+        AND resource.type = "generic_task"
       EOT
 
       comparison      = "COMPARISON_GT"

@@ -35,28 +35,17 @@ import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 const ctx = { requestId: "r" } as any;
 const sdk = { sessionId: "s" } as any;
 
-const registerResponse = {
-  value: {
-    uploadMechanism: {
-      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-        uploadUrl: "https://upload.linkedin.com/x",
-      },
-    },
-    asset: "urn:li:digitalmediaAsset:abc",
-  },
-};
-
 describe("linkedin uploads governance contract (effect class)", () => {
   let linkedInService: {
-    registerAssetUpload: ReturnType<typeof vi.fn>;
-    uploadAssetBinary: ReturnType<typeof vi.fn>;
+    uploadImage: ReturnType<typeof vi.fn>;
+    uploadVideo: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     linkedInService = {
-      registerAssetUpload: vi.fn().mockResolvedValue(registerResponse),
-      uploadAssetBinary: vi.fn().mockResolvedValue(undefined),
+      uploadImage: vi.fn().mockResolvedValue("urn:li:image:abc"),
+      uploadVideo: vi.fn().mockResolvedValue("urn:li:video:abc"),
     };
     mockResolveSessionServices.mockReturnValue({ linkedInService });
   });
@@ -68,7 +57,10 @@ describe("linkedin uploads governance contract (effect class)", () => {
       formatter: uploadImageResponseFormatter,
       schema: UploadImageOutputSchema,
       assetType: "image",
-      input: { adAccountUrn: "urn:li:sponsoredAccount:1", mediaUrl: "https://x.com/a.jpg" },
+      serviceMethod: "uploadImage",
+      urnKey: "imageUrn",
+      urn: "urn:li:image:abc",
+      input: { ownerUrn: "urn:li:organization:1", mediaUrl: "https://x.com/a.jpg" },
     },
     {
       label: "linkedin_upload_video",
@@ -76,7 +68,10 @@ describe("linkedin uploads governance contract (effect class)", () => {
       formatter: uploadVideoResponseFormatter,
       schema: UploadVideoOutputSchema,
       assetType: "video",
-      input: { adAccountUrn: "urn:li:sponsoredAccount:1", mediaUrl: "https://x.com/a.mp4" },
+      serviceMethod: "uploadVideo",
+      urnKey: "videoUrn",
+      urn: "urn:li:video:abc",
+      input: { ownerUrn: "urn:li:organization:1", mediaUrl: "https://x.com/a.mp4" },
     },
   ] as const;
 
@@ -84,8 +79,8 @@ describe("linkedin uploads governance contract (effect class)", () => {
     describe(c.label, () => {
       it("dry_run returns a symbolic effect preview, no download or API call", async () => {
         const result = await c.logic({ ...c.input, dry_run: true } as any, ctx, sdk);
-        expect(linkedInService.registerAssetUpload).not.toHaveBeenCalled();
-        expect(result.assetUrn).toBeUndefined();
+        expect(linkedInService[c.serviceMethod]).not.toHaveBeenCalled();
+        expect((result as Record<string, unknown>)[c.urnKey]).toBeUndefined();
         expect(result.dryRun?.expectedEffect).toEqual({
           effectKind: "asset_uploaded",
           summary: { asset_type: c.assetType },
@@ -110,11 +105,12 @@ describe("linkedin uploads governance contract (effect class)", () => {
 
       it("execute returns the effect identity + null-kind capability", async () => {
         const result = await c.logic({ ...c.input } as any, ctx, sdk);
-        expect(linkedInService.uploadAssetBinary).toHaveBeenCalledOnce();
-        expect(result.assetUrn).toBe("urn:li:digitalmediaAsset:abc");
+        expect(linkedInService[c.serviceMethod]).toHaveBeenCalledOnce();
+        expect(linkedInService[c.serviceMethod].mock.calls[0]![0]).toBe("urn:li:organization:1");
+        expect((result as Record<string, unknown>)[c.urnKey]).toBe(c.urn);
         expect(result.effect).toEqual({
           effectKind: "asset_uploaded",
-          summary: { asset_type: c.assetType, asset_handle: "urn:li:digitalmediaAsset:abc" },
+          summary: { asset_type: c.assetType, asset_handle: c.urn },
         });
         expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
         expect(() => c.schema.parse(result)).not.toThrow();

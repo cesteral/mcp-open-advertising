@@ -29,9 +29,12 @@ describe("linkedin-mcp cesteral.* annotations (round 3)", () => {
     expect(cesteral.entityKinds).toEqual(["campaign"]);
     expect(cesteral.entityIdArgs).toEqual(["entityUrn"]);
     expect(cesteral.readPartner.toolName).toBe("linkedin_get_entity");
+    // adAccountUrn: LinkedIn addresses a campaign under its account (#210),
+    // so the read partner needs it too.
     expect(cesteral.readPartner.argMap).toEqual({
       entityType: "entityType",
       entityUrn: "entityUrn",
+      adAccountUrn: "adAccountUrn",
     });
     // R3-U3: symbolic-apply dry-run + before/after capture.
     expect(cesteral.supportsDryRun).toBe(true);

@@ -15,10 +15,24 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Job layout. `build` produces every package's dist/ once and publishes it as
+# the `build-output` artifact; the jobs that need built packages download it
+# instead of rebuilding, and run in parallel.
+#
+#   checks          source-only checks, no build needed; runs beside `build`
+#   build           pnpm run build, then upload packages/*/dist
+#   lint            type-aware, so it reads the built declarations
+#   typecheck       turbo's `typecheck` and `test` depend on `^build`; `--only`
+#   test-packages   skips those, because the artifact already holds the builds
+#   test-scripts    the root scripts suite (vitest.config.scripts.ts)
+#   attestation     manifests + the registry/runtime check boot every server
+#   conformance     the MCP conformance harness against each server
+#
+# `pnpm ci:local` runs these same steps one job after another (scripts/ci-local.mjs).
 jobs:
-  build-and-test:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,33 +69,9 @@ jobs:
       - name: Check platform-facts ledger matches the code it describes
         run: pnpm run check:platform-facts
 
-      - name: Build
-        run: pnpm run build
-
-      # After build: the config is type-aware (parserOptions.project), so
-      # workspace imports must resolve to built declarations.
-      - name: Lint
-        run: pnpm run lint
-
-      - name: Test repo scripts
-        run: pnpm run test:scripts
-
-      - name: Generate + validate attestation manifests
-        run: pnpm run generate:manifests
-
-      - name: Check registry → live MCP advertisement (tools/list + prompts/list match registry)
-        run: pnpm run check:registry-runtime
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Test
-        run: pnpm run test
-
-  conformance:
-    needs: build-and-test
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -98,6 +88,174 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      # Everything `pnpm run build` produces is under packages/*/dist (see
+      # turbo.json `outputs`). Downloaded into packages/, it puts each dist/
+      # back where the workspace links resolve it.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-output
+          path: packages/*/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  lint:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
+
+      # Type-aware: the config sets parserOptions.project, so workspace imports
+      # must resolve to the built declarations restored above.
+      - name: Lint
+        run: pnpm run lint
+
+  typecheck:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
+
+      - name: Typecheck
+        run: pnpm exec turbo run typecheck --only
+
+  test-packages:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
+
+      - name: Test
+        run: pnpm exec turbo run test --only
+
+  test-scripts:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
+
+      - name: Test repo scripts
+        run: pnpm run test:scripts
+
+  attestation:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
+
+      - name: Generate + validate attestation manifests
+        run: pnpm run generate:manifests
+
+      - name: Check registry → live MCP advertisement (tools/list + prompts/list match registry)
+        run: pnpm run check:registry-runtime
+
+  conformance:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: build-output
+          path: packages
 
       - name: Run conformance tests
         run: pnpm run test:conformance:ci

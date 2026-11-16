@@ -1,31 +1,15 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const GADS_PACKAGE_NAME = "gads-mcp";
-const GADS_PLATFORM = "google_ads";
 
 /**
  * Interaction-log workflow id per tool. Every tool registered through the
@@ -67,138 +51,30 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    buildServerInfo("gads-mcp", {
-      version: packageJson.version,
-      description:
-        "Google Ads campaign management and reporting via Google Ads REST API v26. " +
-        "Supports GAQL queries, account listing, and full CRUD for 6 entity types " +
-        "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
-    }),
-    {
-      capabilities: {
-        logging: {},
-      },
-      instructions:
-        "Google Ads campaign management and reporting server. Supports GAQL queries and full CRUD for 6 entity types via Google Ads REST API v26. " +
-        "Use gads_list_accounts to discover accounts, gads_gaql_search for flexible queries. " +
-        "See MCP Resources for GAQL syntax reference and entity schema details.",
-    }
-  );
-
-  // Interaction logger for persisting tool execution data
-  const interactionLogger = InteractionLogger.shared({
-    serverName: GADS_PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register all tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({
-        operation: params.operation,
-        additionalContext: params.additionalContext,
-      }),
-    defaultTextFormat: "compact",
-    packageName: GADS_PACKAGE_NAME,
-    platform: GADS_PLATFORM,
-    workflowIdByToolName: gadsWorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
-    // Drop the session when a tool call fails Unauthorized (Google Ads 401, or
-    // the refresh token rejected with invalid_grant — expired or revoked). The
-    // next request then re-authenticates at the transport and gets a clean
-    // HTTP 401 + authErrorHint instead of retrying into the same in-band error.
-    onAuthError: (staleSessionId) => {
-      logger.warn(
-        { sessionId: staleSessionId },
-        "Dropping session after Unauthorized tool failure — credentials are no longer valid"
-      );
-      sessionServiceStore.delete(staleSessionId);
-    },
-  });
-
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({
-    server,
+    gcsBucket,
+    packageName: "gads-mcp",
+    platform: "google_ads",
+    version: packageJson.version,
+    description:
+      "Google Ads campaign management and reporting via Google Ads REST API v26. " +
+      "Supports GAQL queries, account listing, and full CRUD for 6 entity types " +
+      "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
+    instructions:
+      "Google Ads campaign management and reporting server. Supports GAQL queries and full CRUD for 6 entity types via Google Ads REST API v26. " +
+      "Use gads_list_accounts to discover accounts, gads_gaql_search for flexible queries. " +
+      "See MCP Resources for GAQL syntax reference and entity schema details.",
+    tools: allTools,
     resources: allResources,
-    logger,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: gadsWorkflowIdByToolName,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
+    dropSessionOnAuthError: true,
   });
-
-  // Register conformance fixtures (resources + prompts) when enabled
-  if (isConformanceFixturesEnabled()) {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
-      "@cesteral/shared"
-    );
-    const { ResourceTemplate: McpResourceTemplate } = await import(
-      "@modelcontextprotocol/sdk/server/mcp.js"
-    );
-
-    registerStaticResourcesFromDefinitions({
-      server,
-      resources: conformanceResources,
-      logger,
-    });
-
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
-      list: undefined,
-    });
-    server.registerResource(
-      "conformance_template",
-      template,
-      {
-        description: conformanceResourceTemplate.description,
-        mimeType: conformanceResourceTemplate.mimeType,
-      },
-      async (uri, variables) => {
-        const id = (variables.id as string) || "unknown";
-        const content = conformanceResourceTemplate.getContent(id);
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              mimeType: conformanceResourceTemplate.mimeType,
-              text: content,
-            },
-          ],
-        };
-      }
-    );
-
-    registerPromptsFromDefinitions({
-      server: server as unknown as McpServerPromptLike,
-      prompts: conformancePrompts,
-      logger,
-    });
-  }
-
-  // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
-    (def) => ({
-      name: def.prompt.name,
-      description: def.prompt.description ?? "",
-      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-      generateMessage: def.generateMessage,
-    })
-  );
-  registerPromptsFromDefinitions({
-    server: server as unknown as McpServerPromptLike,
-    prompts: allPrompts,
-    logger,
-  });
-
-  return server;
 }
 
 /**

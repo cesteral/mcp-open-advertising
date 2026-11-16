@@ -13,7 +13,12 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 const linkedInService = {
-  listEntities: vi.fn(async () => ({ entities: [{ id: "urn:li:test:1" }], total: 1, start: 0 })),
+  listEntities: vi.fn(async () => ({
+    entities: [{ id: "urn:li:test:1" }],
+    total: 1,
+    start: 0,
+    paging: "offset",
+  })),
   getEntity: vi.fn(async () => ({ id: "urn:li:test:1" })),
   createEntity: vi.fn(async () => ({ id: "urn:li:test:new" })),
   updateEntity: vi.fn(async () => ({})),
@@ -25,13 +30,17 @@ const linkedInService = {
   bulkUpdateStatus: vi.fn(async (entityType: string, entityUrns: string[]) => ({
     results: entityUrns.map((entityUrn: string) => ({ entityUrn, success: true })),
   })),
-  bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
-    results: items.map(() => ({ success: true, entity: { id: "urn:li:test:new" } })),
-  })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityUrn: string }>) => ({
-    results: items.map((item) => ({ entityUrn: item.entityUrn, success: true })),
-  })),
-  adjustBids: vi.fn(async (adjustments: Array<{ campaignUrn: string }>) => ({
+  bulkCreateEntities: vi.fn(
+    async (_entityType: string, _adAccountUrn: string, items: unknown[]) => ({
+      results: items.map(() => ({ success: true, entity: { id: "urn:li:test:new" } })),
+    })
+  ),
+  bulkUpdateEntities: vi.fn(
+    async (_entityType: string, _adAccountUrn: string, items: Array<{ entityUrn: string }>) => ({
+      results: items.map((item) => ({ entityUrn: item.entityUrn, success: true })),
+    })
+  ),
+  adjustBids: vi.fn(async (_adAccountUrn: string, adjustments: Array<{ campaignUrn: string }>) => ({
     results: adjustments.map((a) => ({ campaignUrn: a.campaignUrn, success: true })),
   })),
   getTargetingEntities: vi.fn(async () => ({ elements: [{ urn: "urn:li:industry:1" }] })),
@@ -40,17 +49,8 @@ const linkedInService = {
   duplicateEntity: vi.fn(async () => ({ id: "urn:li:test:copy" })),
   getAdSupplyForecast: vi.fn(async () => ({ elements: [] })),
   getAdPreviews: vi.fn(async () => ({ elements: [{ preview: "<iframe></iframe>" }] })),
-  registerAssetUpload: vi.fn(async () => ({
-    value: {
-      uploadMechanism: {
-        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
-          uploadUrl: "https://example.com/upload",
-        },
-      },
-      asset: "urn:li:digitalmediaAsset:test123",
-    },
-  })),
-  uploadAssetBinary: vi.fn(async () => undefined),
+  uploadImage: vi.fn(async () => "urn:li:image:test123"),
+  uploadVideo: vi.fn(async () => "urn:li:video:test123"),
 };
 
 const linkedInReportingService = {

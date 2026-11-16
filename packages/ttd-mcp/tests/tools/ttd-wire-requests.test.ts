@@ -55,7 +55,7 @@
  * Out of scope (GET only, or no upstream call): get_entity, get_ad_preview,
  * get_report_schedule, download_report, get_pacing_status, validate_entity.
  * GraphQL READ tools that POST a `query` document (get_context,
- * list_report_templates, get_report_template, list_report_types,
+ * get_report_template, list_report_types,
  * get_report_type_schema, get_entity_report_types, get_report_executions,
  * graphql_bulk_job) send no mutation and are not covered here; the REST
  * POST-query reads are covered at the end.
@@ -124,6 +124,10 @@ import {
   createReportTemplateLogic,
   CreateReportTemplateInputSchema,
 } from "../../src/mcp-server/tools/definitions/create-report-template.tool.js";
+import {
+  listReportTemplatesLogic,
+  ListReportTemplatesInputSchema,
+} from "../../src/mcp-server/tools/definitions/list-report-templates.tool.js";
 import {
   updateReportTemplateLogic,
   UpdateReportTemplateInputSchema,
@@ -1658,6 +1662,52 @@ const RESULT_SET = {
   fields: [{ columnId: "f-1", columnOrder: 1, includedInPivot: true }],
   metrics: [{ columnId: "m-1", columnOrder: 2, includedInPivot: false }],
 };
+
+describe("ttd_list_report_templates → reportingTemplates", () => {
+  // basis: TTD's `reportingTemplates` query page
+  // (https://open.thetradedesk.com/rest/openttd/advertiser/content/docs/AdvertiserReferences/api/gql-doc/reporting-templates:
+  // arguments `first`, `after`; returns `ReportingTemplatesConnection` with
+  // `nodes: [MyReportsTemplate!]`, `pageInfo`, `totalCount`; `MyReportsTemplate`
+  // has `id`, `name`, `format`) and TTD's "User-defined report templates" guide
+  // (.../GuidesAdvertiser/reds/doc/ReportTemplates, "Retrieve all report
+  // templates": `reportingTemplates (first: 10) { pageInfo { startCursor
+  // hasNextPage endCursor } nodes { id name userGenerated createdBy format } }`).
+  // The rename from `myReportsReportTemplates` is in the release notes of
+  // 2026-05-22 (.../AdvertiserNews/news/doc/ReleaseNotes). `totalCount` is on
+  // the connection page; the guide's example does not select it.
+  it("posts a reportingTemplates query with first/after variables and reads the connection", async () => {
+    routeGraphql("reportingTemplates", {
+      data: {
+        reportingTemplates: {
+          totalCount: 3,
+          pageInfo: { startCursor: "c0", hasNextPage: true, endCursor: "c1" },
+          nodes: [{ id: "tmpl1", name: "Perf", format: "EXCEL" }],
+        },
+      },
+    });
+
+    const out = await listReportTemplatesLogic(
+      ListReportTemplatesInputSchema.parse({ first: 10, after: "c0" }),
+      ctx,
+      sdk
+    );
+
+    expect(graphqlRequests()).toHaveLength(1);
+    const req = graphqlRequests()[0]!;
+    expectGraphqlRequest(req);
+    const query = gqlQuery(req);
+    expect(query).not.toMatch(/^\s*mutation\b/);
+    expect(query).toMatch(/reportingTemplates\(first: \$first, after: \$after\)/);
+    expect(query).not.toContain("myReportsReportTemplates");
+    expect(query).toMatch(/pageInfo\s*\{\s*startCursor\s+hasNextPage\s+endCursor\s*\}/);
+    expect(query).toMatch(/nodes\s*\{\s*id\s+name\s+format\s*\}/);
+    expect(gqlVariables(req)).toEqual({ first: 10, after: "c0" });
+    expect(out.templates).toEqual([{ id: "tmpl1", name: "Perf", format: "EXCEL" }]);
+    expect(out.pagination.nextCursor).toBe("c1");
+    expect(out.pagination.totalCount).toBe(3);
+    expect(remaining()).toBe(LIMIT - 1);
+  });
+});
 
 describe("ttd_create_report_template → myReportsTemplateCreate", () => {
   it("sends the mutation, then reads the newest template for its id", async () => {

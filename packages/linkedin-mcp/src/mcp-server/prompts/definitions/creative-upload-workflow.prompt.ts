@@ -23,10 +23,11 @@ export function getLinkedInCreativeUploadWorkflowMessage(args?: Record<string, s
 
 ## Prerequisites
 - Ad Account URN: \`${adAccountUrn}\`
-- Organization URN for your company page (e.g., urn:li:organization:123456)
+- Organization URN for your company page (e.g., urn:li:organization:123456): it owns the
+  uploaded image and authors the post
 
 ## Overview
-LinkedIn creative workflow: Upload image → Create Creative → Link to Campaign
+LinkedIn creative workflow: Upload image → Put it in a post → Create the creative from the post
 
 ---
 
@@ -34,46 +35,49 @@ LinkedIn creative workflow: Upload image → Create Creative → Link to Campaig
 
 \`\`\`json
 linkedin_upload_image({
-  "adAccountUrn": "${adAccountUrn}",
+  "ownerUrn": "{organization_urn}",
   "mediaUrl": "https://example.com/your-banner.jpg"
 })
 \`\`\`
 
-**Returns:** \`assetUrn\` (format: urn:li:digitalmediaAsset:...)
+**Returns:** \`imageUrn\` (format: urn:li:image:...)
 
-⚠️ **GOTCHA**: LinkedIn processes assets asynchronously. The assetUrn is returned immediately but may take 1-5 minutes to be fully available for creative creation. If creative creation fails with "ASSET_NOT_READY", wait and retry.
+⚠️ **GOTCHA**: \`ownerUrn\` is the organization (or a person), not the ad account: LinkedIn's
+Images API refuses an ad-account owner on upload. The image is PROCESSING after the upload and
+can be served once LinkedIn marks it AVAILABLE.
 
 **Image requirements:**
-- Formats: JPEG, PNG, GIF
-- Min 400x400px; recommended 1200x627px (1.91:1 ratio)
-- Max 5MB
-- Aspect ratios accepted: 1.91:1 (horizontal), 1:1 (square), 2:3 (vertical)
+- Formats: JPG, PNG, GIF (GIF up to 250 frames)
+- Fewer than 36,152,320 pixels
+- Max 5MB (this server's check)
 
-## Step 2: Create Creative
+For a video, \`linkedin_upload_video\` takes the same arguments and returns a \`videoUrn\`
+(urn:li:video:...).
+
+## Step 2: Create the Post, then the Creative
+
+A creative on LinkedIn's Creatives API sponsors a post: \`content.reference\` is a
+\`urn:li:share:…\` or \`urn:li:ugcPost:…\` (or \`urn:li:adInMailContent:…\`). The image is
+not referenced by the creative directly. Create the post that carries it first, with the
+imageUrn in the post's \`content.media.id\` (Posts API, \`POST /rest/posts\`, outside this
+server; LinkedIn's Image Ads page sets \`adContext.dscAdAccount\` to the ad account for an ad-only
+post), then create the creative from the post's URN. (The Creatives API's \`createInline\`
+action, which creates the post and the creative in one call, is not wrapped by this server.)
 
 \`\`\`json
 linkedin_create_entity({
   "entityType": "creative",
+  "adAccountUrn": "${adAccountUrn}",
   "data": {
-    "account": "${adAccountUrn}",
     "campaign": "{your_campaign_urn}",
-    "content": {
-      "contentType": "SPONSORED_IMAGE",
-      "media": {
-        "id": "{assetUrn_from_step_1}",
-        "headline": "Your Headline Here",
-        "description": "Your ad description",
-        "callToAction": "LEARN_MORE",
-        "landingPage": "https://yoursite.com"
-      }
-    },
-    "status": "DRAFT",
-    "type": "SPONSORED"
+    "content": { "reference": "{post_urn}" },
+    "name": "Your creative name",
+    "intendedStatus": "DRAFT"
   }
 })
 \`\`\`
 
-⚠️ **GOTCHA**: Creative must be created in DRAFT status. Move to ACTIVE only after review.
+⚠️ **GOTCHA**: The status field is \`intendedStatus\`, not \`status\`, and the body has no \`account\` (pass \`adAccountUrn\`). Create in DRAFT and move to ACTIVE after review.
 
 ## Step 3: Preview Creative
 
@@ -93,7 +97,8 @@ linkedin_create_entity({
 linkedin_update_entity({
   "entityType": "creative",
   "entityUrn": "{creativeUrn}",
-  "data": { "status": "ACTIVE" }
+  "adAccountUrn": "${adAccountUrn}",
+  "data": { "intendedStatus": "ACTIVE" }
 })
 \`\`\`
 
@@ -101,16 +106,16 @@ linkedin_update_entity({
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "ASSET_NOT_READY" | Asset still processing | Wait 1-5 min, retry |
-| "INVALID_ASPECT_RATIO" | Wrong image ratio | Use 1.91:1, 1:1, or 2:3 |
-| "MISSING_ORGANIZATION" | No org page linked | Link organization to ad account |
+| 403 "Accessing this image resource is forbidden" | The token's member is not an ADMIN or DSC poster of the owning organization | Use an organization the member administers |
+| "INVALID_URN_TYPE" | ownerUrn or a referenced URN is the wrong type | Owner is urn:li:organization or urn:li:person; content.reference is a post URN |
 | "CAMPAIGN_NOT_FOUND" | Wrong campaign URN | Verify using linkedin_list_entities |
 
 ## Common Call-to-Action Values
 LEARN_MORE, SIGN_UP, REGISTER, JOIN_NOW, REQUEST_DEMO, TRY_FREE, CONTACT_US, GET_QUOTE, APPLY_NOW, DOWNLOAD
 
 ## Success Criteria
-- [ ] Image uploaded (assetUrn obtained)
+- [ ] Image uploaded (imageUrn obtained)
+- [ ] Post created with the image in content.media.id
 - [ ] Creative created in DRAFT status
 - [ ] Preview reviewed
 - [ ] Creative activated when ready

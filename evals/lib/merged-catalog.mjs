@@ -50,18 +50,23 @@ export function derivePrefix(toolNames) {
   return prefix.length > 0 ? prefix.join("_") : null;
 }
 
+const bootAndListTools = (pkg) => withServerClient(pkg, (client) => listRawTools(client));
+
 /**
- * Boot every requested server and return the merged catalog: the raw wire tool
+ * Return the merged catalog of every requested server: the raw wire tool
  * objects a client would receive, each tagged with the server it came from.
+ * `toolsOf(pkg)` yields a server's raw `tools/list`; by default each server is
+ * booted. A caller that already holds them (the vitest suites, from the fleet
+ * snapshot) passes them in rather than booting the fleet again.
  *
  * `inputSchema` is kept. A client's model sees it, and the routing eval hands
  * the model the real thing rather than a trimmed summary of it — 314 tools with
  * schemas is ~128k tokens, which fits one cached request.
  */
-export async function buildMergedCatalog(packages = serverPackages()) {
+export async function buildMergedCatalog(packages = serverPackages(), toolsOf = bootAndListTools) {
   const servers = [];
   for (const pkg of packages) {
-    const tools = await withServerClient(pkg, (client) => listRawTools(client));
+    const tools = await toolsOf(pkg);
     servers.push({
       package: pkg,
       prefix: derivePrefix(tools.map((t) => t.name)),

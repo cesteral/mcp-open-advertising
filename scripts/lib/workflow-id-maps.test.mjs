@@ -3,8 +3,8 @@
 // Ratchet (fleet review 2026-09, _cross-fleet #26): every server's
 // interaction-log workflow-id map covers exactly the tools it registers.
 //
-// Each server.ts hands `registerToolsFromDefinitions` a hand-written
-// `*WorkflowIdByToolName` map; the factory stamps the entry on the tool's
+// Each server.ts hands `createPlatformMcpServer` a hand-written
+// `*WorkflowIdByToolName` map; the tool factory stamps the entry on the tool's
 // interaction-log record and OTEL span (`mcp.workflow.id`). A tool missing
 // from the map logs every call, and every failure, with no workflowId, so
 // BigQuery grouping by workflow silently drops it. The review found 81 such
@@ -19,7 +19,8 @@ import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 
 const packages = readdirSync(join(ROOT, "packages"))
   .filter((p) => p.endsWith("-mcp"))
@@ -60,9 +61,7 @@ describe("workflow-id maps match the registered tools", () => {
   for (const pkg of packages) {
     it(`${pkg}: every registered tool is mapped, and only those`, async () => {
       const map = await exportedMap(pkg);
-      const registered = await withServerClient(pkg, async (client) =>
-        (await listRawTools(client)).map((t) => t.name)
-      );
+      const registered = toolsOf(pkg).map((t) => t.name);
 
       const expected = registered.filter((n) => !isSearchTool(n) && !UNMAPPED.has(n));
       for (const n of registered) if (UNMAPPED.has(n)) seenUnmapped.add(n);

@@ -38,16 +38,16 @@ CI's `scaffold-smoke` job generates a server this way on every pull request and 
 
 **Copy from `packages/pinterest-mcp` and rename** (no platform logic, or only platform names):
 
-| File                                                                                                      | Change                                                                                                                        |
-| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `tsconfig.json`, `vitest.config.ts`                                                                       | nothing                                                                                                                       |
-| `src/mcp-server/tools/utils/resolve-session.ts`                                                           | names                                                                                                                         |
-| `src/mcp-server/tools/index.ts`, `src/mcp-server/resources/types.ts`, `src/mcp-server/resources/index.ts` | names                                                                                                                         |
-| `src/utils/platform.ts`                                                                                   | platform key and config field                                                                                                 |
-| `src/mcp-server/tools/definitions/get-pacing-status.tool.ts`                                              | a `createPacingTool` call: platform, account-id field and schema, description, example ids                                    |
-| `src/mcp-server/server.ts`                                                                                | names, description, instructions, workflow-id map; keep the conformance block and the `resolveManifestEntry` line as they are |
-| `src/mcp-server/transports/streamable-http-transport.ts`, `src/index.ts`                                  | auth strategy, headers, env-credential fallback                                                                               |
-| `package.json`                                                                                            | names, description, keywords; drop `generate` and `openapi-typescript` unless you generate types                              |
+| File                                                                                                      | Change                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tsconfig.json`, `vitest.config.ts`                                                                       | nothing                                                                                                                                                                              |
+| `src/mcp-server/tools/utils/resolve-session.ts`                                                           | names                                                                                                                                                                                |
+| `src/mcp-server/tools/index.ts`, `src/mcp-server/resources/types.ts`, `src/mcp-server/resources/index.ts` | names                                                                                                                                                                                |
+| `src/utils/platform.ts`                                                                                   | platform key and config field                                                                                                                                                        |
+| `src/mcp-server/tools/definitions/get-pacing-status.tool.ts`                                              | a `createPacingTool` call: tool name, account-id field and schema, description, example ids                                                                                          |
+| `src/mcp-server/server.ts`                                                                                | names, description, instructions, workflow-id map, the `reportCsv` / `templatedResources` / `dropSessionOnAuthError` options if you need them; keep `manifestUrl` (governed servers) |
+| `src/mcp-server/transports/streamable-http-transport.ts`, `src/index.ts`                                  | auth strategy, headers, env-credential fallback                                                                                                                                      |
+| `package.json`                                                                                            | names, description, keywords; drop `generate` and `openapi-typescript` unless you generate types                                                                                     |
 
 **Write yourself; the snippets only illustrate**: `src/config/index.ts`, the auth adapter and strategy, the HTTP client, the service, entity mapping, `session-services.ts`, the tools other than pacing, the resources' and prompts' content, and the tests. These hold the platform's API surface, and copying Pinterest's would carry Pinterest's API with them.
 
@@ -881,15 +881,18 @@ export const listEntitiesTool = {
 
 What a server must ship depends on its registry `type`. `scripts/lib/contract-tiers.mjs` checks it against `registry.json`'s tool list:
 
-| Category       | Tools                                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| **Core CRUD**  | `{prefix}_list_entities`, `_get_entity`, `_create_entity`, `_update_entity`, `_delete_entity`           |
-| **Account**    | `{prefix}_list_accounts` or similar                                                                     |
-| **Bulk**       | `{prefix}_bulk_update_status`                                                                           |
-| **Bids**       | `{prefix}_adjust_bids`                                                                                  |
-| **Validation** | `{prefix}_validate_entity`                                                                              |
-| **Pacing**     | `{prefix}_get_pacing_status` (every server ships it; build it with `createPacingTool`, see Pinterest's) |
-| **Discovery**  | `{prefix}_search_tools`, generated by `createToolSearchTool` (see the barrel below)                     |
+| Requirement                                                                                           | `management` | `reporting` | `reporting_conversions` |
+| ----------------------------------------------------------------------------------------------------- | ------------ | ----------- | ----------------------- |
+| `{prefix}_list_entities`, `_get_entity`                                                               | MUST         | —           | MUST                    |
+| `{prefix}_create_entity`, `_update_entity`, `_delete_entity` (or `_remove_entity`)                    | MUST         | —           | —                       |
+| `{prefix}_bulk_update_status`, `_validate_entity`                                                     | MUST         | —           | —                       |
+| `{prefix}_get_pacing_status` (build it with `createPacingTool`, see Pinterest's)                      | MUST         | MUST        | MUST                    |
+| A reporting tool (`get_report`, `submit_report`, `get_insights`, `get_analytics`, `run_custom_query`) | SHOULD       | MUST        | MUST                    |
+| `{prefix}_insert_conversions`                                                                         | —            | —           | MUST                    |
+| `{prefix}_duplicate_entity`                                                                           | SHOULD       | —           | —                       |
+| `{prefix}_adjust_bids` (or `_adjust_line_item_bids`)                                                  | SHOULD       | —           | —                       |
+| Account discovery (`list_accounts`, `list_ad_accounts`, `list_advertisers` or `list_user_profiles`)   | SHOULD       | —           | —                       |
+| `{prefix}_search_tools`, generated by `createToolSearchTool` (see the barrel below)                   | SHOULD       | SHOULD      | SHOULD                  |
 
 A MUST cannot be excepted. A SHOULD you do not ship needs an entry in your registry entry's `contract.exceptions`, with a reason (for example, CM360 has no bid adjustment because its API prices placements with pricing schedules). An exception for a tool you later add fails the check, so remove it then. Additional recommended tools: bulk create/update, targeting search and options, delivery estimate, ad preview, media upload.
 
@@ -1257,34 +1260,18 @@ Prompt and resource text may only name tools and prompts that are registered som
 
 ## Step 12: MCP Server Setup
 
-Create `src/mcp-server/server.ts`. This creates and configures the `McpServer` instance.
+Create `src/mcp-server/server.ts`. It holds the server's data and hands it to `createPlatformMcpServer()`, which builds and wires the `McpServer`.
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createOperationContext } from "@cesteral/shared";
+import { createPlatformMcpServer } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
-import {
-  buildServerInfo,
-  extractZodShape,
-  registerToolsFromDefinitions,
-  createManifestEntryResolver,
-  registerPromptsFromDefinitions,
-  registerStaticResourcesFromDefinitions,
-  InteractionLogger,
-  isConformanceFixturesEnabled,
-  type McpServerPromptLike,
-  type PromptDefinitionForFactory,
-  type PromptArgumentForFactory,
-} from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
-
-const PACKAGE_NAME = "{platform}-mcp";
-const PLATFORM = "{prefix}"; // telemetry platform: your platform key
 
 // Exported: scripts/lib/workflow-id-maps.test.mjs requires one entry per
 // registered tool (the generated {prefix}_search_tools excepted) and no others.
@@ -1302,69 +1289,26 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer(
-    // title and websiteUrl come from registry.json (scripts/lib/server-info.test.mjs)
-    buildServerInfo("{platform}-mcp", {
-      version: packageJson.version,
-      description: "{Platform} Ads campaign management and reporting via {Platform} API.",
-    }),
-    {
-      capabilities: { logging: {} },
-      instructions: "{Platform} Ads management server. Use {prefix}_list_accounts to discover accounts...",
-    }
-  );
-
-  const interactionLogger = new InteractionLogger({
-    serverName: PACKAGE_NAME,
-    logger,
-    gcsBucket,
-  });
-
-  // Register tools via shared factory
-  registerToolsFromDefinitions({
-    server,
-    tools: allTools,
+  return createPlatformMcpServer({
+    sdk: { McpServer, ResourceTemplate },
     logger,
     sessionId,
-    transformSchema: (schema) => extractZodShape(schema),
+    gcsBucket,
+    packageName: "{platform}-mcp", // title and websiteUrl come from registry.json (scripts/lib/server-info.test.mjs)
+    platform: "{prefix}", // telemetry platform: your platform key
+    version: packageJson.version,
+    description: "{Platform} Ads campaign management and reporting via {Platform} API.",
+    instructions: "{Platform} Ads management server. Use {prefix}_list_accounts to discover accounts...",
+    tools: allTools,
+    resources: allResources,
+    prompts: promptRegistry.values(),
+    workflowIdByToolName: {prefix}WorkflowIdByToolName,
     // Required for a governed server: lets the decision-token check compare each
     // tool against the definitionHash in the release manifest. Without it,
     // `warn` mode skips that comparison and `enforce` refuses every governed write.
-    resolveManifestEntry: createManifestEntryResolver(
-      new URL("../cesteral-manifest.json", import.meta.url)
-    ),
-    createRequestContext: (params) =>
-      createOperationContext({ operation: params.operation, additionalContext: params.additionalContext }),
-    defaultTextFormat: "compact",
-    packageName: PACKAGE_NAME,
-    platform: PLATFORM,
-    workflowIdByToolName: {prefix}WorkflowIdByToolName,
-    interactionLogger,
-    authContextResolver: sessionId
-      ? () => sessionServiceStore.getAuthContext(sessionId)
-      : undefined,
+    manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
+    sessionServiceStore,
   });
-
-  // Register resources
-  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
-
-  // Register conformance fixtures (for MCP protocol compliance testing).
-  // Copy the body of this `if` from packages/pinterest-mcp/src/mcp-server/server.ts
-  // unchanged; it is identical on every server. CI's conformance job needs it.
-  if (isConformanceFixturesEnabled()) {
-    // ... conformance resources, resource template and prompts from @cesteral/shared
-  }
-
-  // Register prompts
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
-    name: def.prompt.name,
-    description: def.prompt.description ?? "",
-    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-    generateMessage: def.generateMessage,
-  }));
-  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
-
-  return server;
 }
 
 export async function runStdioServer(server: McpServer, logger: Logger): Promise<void> {
@@ -1377,12 +1321,11 @@ export async function runStdioServer(server: McpServer, logger: Logger): Promise
 
 **Key points:**
 
-- `registerToolsFromDefinitions()` handles all the boilerplate: input validation, OTEL spans, error handling, response formatting, JWT scope enforcement, interaction logging
-- `extractZodShape()` converts Zod schemas to JSON Schema for MCP tool registration
+- `createPlatformMcpServer()` owns the template every server shared: the server info, the `InteractionLogger`, `registerToolsFromDefinitions()` (input validation, OTEL spans, error handling, response formatting, JWT scope enforcement, interaction logging), the resources, the conformance fixtures and the prompts. Registration order is fixed, and it is part of the wire contract (`tools/list` and the other listings follow it)
 - `workflowIdByToolName` maps tools to workflow categories for telemetry grouping
-- `InteractionLogger` persists tool execution data for debugging
-- `buildServerInfo()` reads `title` and `websiteUrl` from the registry entry you created in Step 0, item 4
-- If your server has a `download_report` tool, also call `registerReportCsvResource` as Pinterest does
+- The server info's `title` and `websiteUrl` come from the registry entry you created in Step 0, item 4
+- The shared package does not depend on the MCP SDK, so you pass the `McpServer` and `ResourceTemplate` classes in `sdk`
+- Optional, only where the server needs it: `templatedResources` (URI-template resources, as TTD, Meta and Microsoft Ads use for field rules), `reportCsv` (the `report-csv://` template for a `download_report` tool, as Pinterest does), `dropSessionOnAuthError` (for credentials that can die mid-session, as Google Ads does), `extraCapabilities` and `taskStore` (as dbm-mcp does for MCP Tasks)
 
 > **Reference:** `packages/pinterest-mcp/src/mcp-server/server.ts`
 
@@ -1816,7 +1759,7 @@ What the checks require of a new server, so a failure is not a surprise:
 | Rate-limit keys start with `{prefix}:`                                                                           | `rate-limit-keys`                                               |
 | One platform key: `platform_key` = `tool_prefix` = every governed `cesteral.platform` and `contractPlatformSlug` | `platform-keys`                                                 |
 | The required tools for your registry `type`; each missing SHOULD has a reasoned `contract.exceptions` entry      | `contract-tiers`                                                |
-| `resolveManifestEntry` passed in `server.ts` (governed servers)                                                  | `definition-hash-resolver-coverage` (shared)                    |
+| `manifestUrl` passed in `server.ts` (governed servers)                                                           | `definition-hash-resolver-coverage` (shared)                    |
 | Platform facts for base URL and rate-limit default                                                               | `check-platform-facts`                                          |
 | README fleet row                                                                                                 | `check:doc-tool-counts`                                         |
 

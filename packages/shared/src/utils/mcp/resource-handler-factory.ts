@@ -19,6 +19,8 @@ import type { Logger } from "pino";
 export interface StaticResourceDefinition {
   uri: string;
   name: string;
+  /** Display title in `resources/list`. Omitted from the listing when absent. */
+  title?: string;
   description: string;
   mimeType: string;
   getContent: (uri?: URL) => string | Promise<string>;
@@ -31,7 +33,7 @@ interface McpServerResourceLike {
   registerResource(
     id: string,
     uri: string,
-    metadata: { description: string; mimeType: string },
+    metadata: { description: string; mimeType: string; title?: string },
     handler: (uri: URL) => Promise<{
       contents: Array<{ uri: string; mimeType: string; text: string }>;
     }>
@@ -59,6 +61,7 @@ export function registerStaticResourcesFromDefinitions(opts: RegisterStaticResou
       {
         description: resource.description,
         mimeType: resource.mimeType,
+        ...(resource.title !== undefined && { title: resource.title }),
       },
       async (uri: URL) => {
         logger.info({ resourceUri: resource.uri }, "Handling resource read");

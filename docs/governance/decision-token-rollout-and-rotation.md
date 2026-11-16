@@ -249,9 +249,15 @@ does not recognise is treated as unresolved (fails closed under `enforce`).
 
 **Consequence for the minter:** the algorithm is a property of the _release_, not a
 global switch. Governance reads the `hashAlg` of the manifest entry it attested and
-stamps that same value on the token, computing `actionHash` under it. A server on a
-legacy manifest is never sent an `rfc8785` token. A governance build that predates the
-field strips it from the manifest, mints legacy tokens, and fails closed
-(`HASH_ALG_MISMATCH`) against an `rfc8785` entry. That is safe but loud, so upgrade
-governance before any server publishes an `rfc8785` manifest. See
-[the handoff](../plans/2026-10-09-hash-alg-selector-handoff.md).
+stamps that same value on the token, computing `actionHash` under it. Governance learns a
+server's algorithm only when its bake of the pinned `@cesteral/*-mcp` manifests is
+regenerated and deployed (per [#271](https://github.com/cesteral/mcp-open-advertising/issues/271);
+there is no live manifest read), so the algorithm follows the release only after that step.
+Either order breaks for a while: a server publishing `rfc8785` before governance re-bakes
+gets legacy tokens, and governance re-baking before the server ships sends `rfc8785` to a
+legacy server. Both answer `HASH_ALG_MISMATCH`, and under `enforce` that is a full write
+outage for that server that governance cannot detect (the hashes do not change, so its
+trust state stays `attested`). A governance build that predates the field strips it and
+fails the same way. Cut a server over only while its contracts are in `warn` or `off`, and
+confirm `HASH_ALG_MISMATCH` has stopped in the verdict logs before moving them to `enforce`.
+See [the handoff](../plans/2026-10-09-hash-alg-selector-handoff.md).

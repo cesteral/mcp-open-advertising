@@ -103,18 +103,18 @@ The three non-paging platform reads (meta, pinterest, tiktok) are documented as 
 
 `{prefix}_upload_image` / `{prefix}_upload_video` are **effect-class** convenience tools that create a reusable media/creative asset (they return an asset handle referenced by ads, not a canonical entity). Coverage is **not uniform**, and the remaining gaps are API limitations, not omissions — a platform only gets an upload tool where its API actually accepts one. Enumeration code must not assume fleet-wide coverage.
 
-| Server                      | `upload_image`      | `upload_video`           | Notes                                                                                             |
-| --------------------------- | ------------------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
-| dv360-mcp                   | ✅ binary           | ✅ binary                | Uploads bytes via the DV360 asset API (`advertisers/{id}/assets`).                                |
-| gads-mcp                    | ✅ binary           | ⚠️ **YouTube reference** | See below — the video tool references a YouTube video; it uploads no file.                        |
-| meta-mcp                    | ✅ binary           | ✅ binary                | Ad-account media library.                                                                         |
-| linkedin-mcp                | ✅ binary           | ✅ binary                | Vector/registerUpload flow.                                                                       |
-| tiktok-mcp                  | ✅ binary           | ✅ binary                | `/file/image` + `/file/video` upload.                                                             |
-| snapchat-mcp                | ✅ binary           | ✅ binary                | Media create → binary POST → poll `READY`.                                                        |
-| pinterest-mcp               | ❌ (URL-referenced) | ✅ binary                | Image creatives reference URLs directly; only `/v5/media` (`media_type="video"`) takes an upload. |
-| ttd-mcp                     | ❌                  | ✅ binary                | See below — TTD-hosted video via generate-upload-URL → PUT → create creative.                     |
-| amazon-dsp-mcp              | ❌                  | ✅ binary                | See below — Creative Asset Library upload → register.                                             |
-| cm360 / msads / sa360 / dbm | ❌                  | ❌                       | Not applicable to these servers' scope.                                                           |
+| Server                      | `upload_image`      | `upload_video`           | Notes                                                                                               |
+| --------------------------- | ------------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
+| dv360-mcp                   | ✅ binary           | ✅ binary                | Uploads bytes via the DV360 asset API (`advertisers/{id}/assets`).                                  |
+| gads-mcp                    | ✅ binary           | ⚠️ **YouTube reference** | See below — the video tool references a YouTube video; it uploads no file.                          |
+| meta-mcp                    | ✅ binary           | ✅ binary                | Ad-account media library.                                                                           |
+| linkedin-mcp                | ✅ binary           | ✅ binary                | Images / Videos API `initializeUpload`; the owner is an organization or person, not the ad account. |
+| tiktok-mcp                  | ✅ binary           | ✅ binary                | `/file/image` + `/file/video` upload.                                                               |
+| snapchat-mcp                | ✅ binary           | ✅ binary                | Media create → binary POST → poll `READY`.                                                          |
+| pinterest-mcp               | ❌ (URL-referenced) | ✅ binary                | Image creatives reference URLs directly; only `/v5/media` (`media_type="video"`) takes an upload.   |
+| ttd-mcp                     | ❌                  | ✅ binary                | See below — TTD-hosted video via generate-upload-URL → PUT → create creative.                       |
+| amazon-dsp-mcp              | ❌                  | ✅ binary                | See below — Creative Asset Library upload → register.                                               |
+| cm360 / msads / sa360 / dbm | ❌                  | ❌                       | Not applicable to these servers' scope.                                                             |
 
 ### gads — video assets reference YouTube (no file upload here)
 

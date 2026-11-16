@@ -7,44 +7,32 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import { MetaAccessTokenAdapter } from "./auth/meta-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("meta-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a MetaAccessTokenAdapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const accessToken = mcpConfig.metaAccessToken;
-
-  if (!accessToken) {
-    logger.warn(
-      "No Meta credentials found in env vars. " + "Set META_ACCESS_TOKEN for stdio mode."
-    );
-    return false;
-  }
-
-  const authAdapter = new MetaAccessTokenAdapter(accessToken, mcpConfig.metaApiBaseUrl);
-
-  // Validate token at startup to fail fast on invalid credentials
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    { baseUrl: mcpConfig.metaApiBaseUrl },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+/** Stdio credentials come from env vars: a static access token. */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () =>
+    mcpConfig.metaAccessToken
+      ? new MetaAccessTokenAdapter(mcpConfig.metaAccessToken, mcpConfig.metaApiBaseUrl)
+      : undefined,
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No Meta credentials found in env vars. Set META_ACCESS_TOKEN for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

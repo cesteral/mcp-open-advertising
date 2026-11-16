@@ -16,7 +16,7 @@ describe("DV360 capabilities overview", () => {
     .map((tool) => tool.name)
     .filter((name) => !CONFORMANCE_TOOL_NAMES.has(name));
   const capabilitiesResource = allResources.find(
-    (resource) => resource.uriTemplate === "server-capabilities://dv360-mcp/overview"
+    (resource) => resource.uri === "server-capabilities://dv360-mcp/overview"
   );
 
   it("registers the DV360 capabilities overview resource", () => {
@@ -24,8 +24,7 @@ describe("DV360 capabilities overview", () => {
   });
 
   it("groups every registered DV360 tool for progressive discovery", async () => {
-    const result = await capabilitiesResource!.read({});
-    const content = JSON.parse(result.text);
+    const content = JSON.parse(await capabilitiesResource!.getContent());
     const groupedNames = Object.values(content.toolGroups).flat() as string[];
     const uniqueGroupedNames = [...new Set(groupedNames)].sort();
 
@@ -36,8 +35,7 @@ describe("DV360 capabilities overview", () => {
   });
 
   it("does not reference unknown tools in the capabilities overview", async () => {
-    const result = await capabilitiesResource!.read({});
-    const content = JSON.parse(result.text);
+    const content = JSON.parse(await capabilitiesResource!.getContent());
     const groupedNames = Object.values(content.toolGroups).flat() as string[];
     const unknownNames = groupedNames.filter((name) => !registeredNames.includes(name));
 
@@ -45,8 +43,7 @@ describe("DV360 capabilities overview", () => {
   });
 
   it("uses a registered tool as the startHere entry point", async () => {
-    const result = await capabilitiesResource!.read({});
-    const content = JSON.parse(result.text);
+    const content = JSON.parse(await capabilitiesResource!.getContent());
     expect(registeredNames).toContain(content.startHere);
   });
 });

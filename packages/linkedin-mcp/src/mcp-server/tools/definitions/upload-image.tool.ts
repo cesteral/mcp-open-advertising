@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { UploadOwnerUrnSchema } from "../utils/media-types.js";
 import {
   downloadFileToBuffer,
   NO_UNTRUSTED_CONTENT,
@@ -26,28 +27,28 @@ import type {
 
 const TOOL_NAME = "linkedin_upload_image";
 const TOOL_TITLE = "Upload Image to LinkedIn Ads";
-const TOOL_DESCRIPTION = `Upload an image to LinkedIn Ads from a URL.
+const TOOL_DESCRIPTION = `Upload an image to LinkedIn from a URL, on LinkedIn's Images API.
 
-The server downloads the image and uploads it to LinkedIn's Digital Media Assets library.
-Two requests after the download: register the upload (\`POST /v2/assets?action=registerUpload\`),
-then PUT the bytes to the returned upload URL. No confirm or finalize request is sent; the
-asset URN comes from the register response.
+The server downloads the image, then sends two requests: \`POST /rest/images?action=initializeUpload\`
+with the owner, and a PUT of the bytes to the upload URL LinkedIn returns. The result is an image URN
+(\`urn:li:image:…\`), PROCESSING until LinkedIn marks it AVAILABLE.
+
+**Owner:** \`ownerUrn\` is the organization (or person) that owns the image, normally the organization
+whose page authors the post the ad sponsors. It is not the ad account.
 
 **Image requirements:**
-- Formats: JPEG, PNG, GIF
-- Min: 400x400px (Sponsored Content), recommended 1200x627px
-- Max file size: 5MB
-- Aspect ratios: 1.91:1 (horizontal), 1:1 (square), 2:3 (vertical)
+- Formats: JPG, PNG, GIF (GIF up to 250 frames)
+- Fewer than 36,152,320 pixels
+- Max file size: 5MB (checked before anything is sent)
 
-**Usage:** The returned assetUrn is referenced in creative → content → media → reference`;
+**Usage:** put the imageUrn in a post's content.media.id (Posts API, not wrapped by this server), then
+create the creative with content.reference set to that post's URN.`;
 
 const ASSET_TYPE = "image";
 
 export const UploadImageInputSchema = z
   .object({
-    adAccountUrn: z
-      .string()
-      .describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
+    ownerUrn: UploadOwnerUrnSchema,
     mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
     dry_run: z
       .boolean()
@@ -61,11 +62,11 @@ export const UploadImageInputSchema = z
 
 export const UploadImageOutputSchema = z
   .object({
-    assetUrn: z
+    imageUrn: z
       .string()
       .optional()
       .describe(
-        "Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads. Absent on a dry_run (nothing was uploaded)."
+        "Image URN (urn:li:image:...) for a post's content.media.id. Absent on a dry_run (nothing was uploaded)."
       ),
     uploadedAt: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
@@ -78,7 +79,7 @@ export const UploadImageOutputSchema = z
       "The concrete (operation, entityKind) this call resolved to — `upload` with `canonicalEntityKind: null` (effect class). Present on every response."
     ),
   })
-  .describe("Uploaded LinkedIn image asset");
+  .describe("Uploaded LinkedIn image");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
@@ -108,9 +109,9 @@ export async function uploadImageLogic(
 
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  // Step 1: Download and size-check the file BEFORE registering, so a bad
-  // mediaUrl or an oversized file fails without leaving an orphaned registered
-  // asset upstream. The size limit is the caller's input, so InvalidParams.
+  // Download and size-check the file BEFORE initializing the upload, so a bad
+  // mediaUrl or an oversized file fails without leaving an initialized
+  // image upstream. The size limit is the caller's input, so InvalidParams.
   const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 120_000, context);
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -121,37 +122,15 @@ export async function uploadImageLogic(
     );
   }
 
-  // Step 2: Register upload
-  const registerResult = await linkedInService.registerAssetUpload(
-    input.adAccountUrn,
-    "urn:li:digitalmediaRecipe:ads-image",
-    context
-  );
-
-  const uploadRequest =
-    registerResult.value?.uploadMechanism?.[
-      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-    ];
-  const uploadUrl = uploadRequest?.uploadUrl;
-  const assetUrn = registerResult.value?.asset;
-
-  if (!uploadUrl || !assetUrn) {
-    throw new McpError(
-      JsonRpcErrorCode.InternalError,
-      "LinkedIn register upload failed: missing uploadUrl or asset URN"
-    );
-  }
-
-  // Step 3: PUT the binary to the registered upload URL
-  await linkedInService.uploadAssetBinary(uploadUrl, buffer, contentType, context);
+  const imageUrn = await linkedInService.uploadImage(input.ownerUrn, buffer, contentType, context);
 
   const effect: EffectResult = {
     effectKind: "asset_uploaded",
-    summary: { asset_type: ASSET_TYPE, asset_handle: assetUrn },
+    summary: { asset_type: ASSET_TYPE, asset_handle: imageUrn },
   };
 
   return {
-    assetUrn,
+    imageUrn,
     uploadedAt: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -218,7 +197,11 @@ export function uploadImageResponseFormatter(result: UploadImageOutput): McpText
   return [
     {
       type: "text" as const,
-      text: `Image uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
+      text: `Image uploaded to LinkedIn.
+
+Image URN: ${result.imageUrn}
+
+LinkedIn processes it before it can be served. Put the imageUrn in a post's content.media.id, then create the creative with content.reference set to the post URN.`,
     },
   ];
 }
@@ -259,7 +242,7 @@ export const uploadImageTool = {
     {
       label: "Upload a banner image for LinkedIn ads",
       input: {
-        adAccountUrn: "urn:li:sponsoredAccount:123456",
+        ownerUrn: "urn:li:organization:2414183",
         mediaUrl: "https://example.com/banner-1200x627.jpg",
       },
     },

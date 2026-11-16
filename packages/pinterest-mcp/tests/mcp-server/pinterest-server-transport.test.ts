@@ -2,9 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => ({
   connect: vi.fn(),
-  registerTools: vi.fn(),
-  registerResources: vi.fn(),
-  registerPrompts: vi.fn(),
+  createPlatformMcpServer: vi.fn(),
   createHttpTransport: vi.fn(),
   startHttpServer: vi.fn(),
 }));
@@ -31,15 +29,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
   return {
     ...actual,
-    extractZodShape: vi.fn((schema: unknown) => schema),
-    registerToolsFromDefinitions: hoisted.registerTools,
-    registerStaticResourcesFromDefinitions: hoisted.registerResources,
-    registerPromptsFromDefinitions: hoisted.registerPrompts,
-    InteractionLogger: {
-      shared: vi.fn().mockImplementation(function () {
-        return { kind: "logger" };
-      }),
-    },
+    createPlatformMcpServer: hoisted.createPlatformMcpServer,
     createTransportEntrypoints: vi.fn(() => ({
       createMcpHttpServer: hoisted.createHttpTransport,
       startHttpServer: hoisted.startHttpServer,
@@ -55,14 +45,24 @@ import {
 } from "../../src/mcp-server/transports/streamable-http-transport.js";
 
 describe("Pinterest server + transport", () => {
-  it("registers tools/resources/prompts and connects stdio", async () => {
+  it("builds the server through the shared factory and connects stdio", async () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+    hoisted.createPlatformMcpServer.mockImplementationOnce(
+      async (opts: { sdk: { McpServer: new (...args: unknown[]) => unknown } }) =>
+        new opts.sdk.McpServer({}, {})
+    );
     const server = await createMcpServer(logger, "session-1", "test-bucket");
 
     expect(server).toBeDefined();
-    expect(hoisted.registerTools).toHaveBeenCalledOnce();
-    expect(hoisted.registerResources).toHaveBeenCalledOnce();
-    expect(hoisted.registerPrompts).toHaveBeenCalledOnce();
+    expect(hoisted.createPlatformMcpServer).toHaveBeenCalledOnce();
+    expect(hoisted.createPlatformMcpServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        packageName: "pinterest-mcp",
+        platform: "pinterest",
+        sessionId: "session-1",
+        gcsBucket: "test-bucket",
+      })
+    );
 
     await runStdioServer(server, logger);
     expect(hoisted.connect).toHaveBeenCalledOnce();

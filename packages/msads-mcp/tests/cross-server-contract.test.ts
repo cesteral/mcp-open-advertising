@@ -1,11 +1,38 @@
 import { describe, it, expect } from "vitest";
-import {
-  CROSS_PLATFORM_PROMPTS,
-  isBoundedReportViewInputSchema,
-  getBoundedReportViewOutputMissingKeys,
-} from "@cesteral/shared";
+import { CROSS_PLATFORM_PROMPTS } from "@cesteral/shared";
+import { describeCrossServerContract } from "@cesteral/shared/testkit";
 import { productionTools } from "../src/mcp-server/tools/definitions/index.js";
 import { promptRegistry } from "../src/mcp-server/prompts/index.js";
+
+describeCrossServerContract({
+  tools: productionTools,
+  prefix: "msads_",
+  requiredTools: [
+    "list_entities",
+    "get_entity",
+    "create_entity",
+    "update_entity",
+    "delete_entity",
+    "list_accounts",
+    "get_report",
+    "submit_report",
+    "check_report_status",
+    "download_report",
+    "bulk_create_entities",
+    "bulk_update_entities",
+    "bulk_update_status",
+    "adjust_bids",
+    "manage_ad_extensions",
+    "manage_criterions",
+    "get_ad_details",
+    "validate_entity",
+    "import_from_google",
+    "search_targeting",
+  ],
+  // Bulk create and update are governed as one batch effect, so they report
+  // `results` / `totalItems` / `timestamp` instead of per-item success counters.
+  bulkOutputExemptTools: ["bulk_create_entities", "bulk_update_entities"],
+});
 
 describe("msads-mcp cross-server contract", () => {
   it("all tool names follow msads_ prefix convention", () => {
@@ -43,53 +70,4 @@ describe("msads-mcp cross-server contract", () => {
   it("exports at least 5 prompts", () => {
     expect(promptRegistry.size).toBeGreaterThanOrEqual(5);
   });
-
-  it("expected tool names are present", () => {
-    const toolNames = productionTools.map((t) => t.name);
-    const expectedTools = [
-      "msads_list_entities",
-      "msads_get_entity",
-      "msads_create_entity",
-      "msads_update_entity",
-      "msads_delete_entity",
-      "msads_list_accounts",
-      "msads_get_report",
-      "msads_submit_report",
-      "msads_check_report_status",
-      "msads_download_report",
-      "msads_bulk_create_entities",
-      "msads_bulk_update_entities",
-      "msads_bulk_update_status",
-      "msads_adjust_bids",
-      "msads_manage_ad_extensions",
-      "msads_manage_criterions",
-      "msads_get_ad_details",
-      "msads_validate_entity",
-      "msads_import_from_google",
-      "msads_search_targeting",
-    ];
-
-    for (const name of expectedTools) {
-      expect(toolNames, `Missing tool: ${name}`).toContain(name);
-    }
-  });
-});
-
-describe("bounded report-view contract", () => {
-  const reportTools = productionTools.filter((t: any) =>
-    isBoundedReportViewInputSchema(t.inputSchema)
-  );
-
-  if (reportTools.length === 0) {
-    it("has no bounded report-view tools registered", () => {
-      expect(reportTools).toEqual([]);
-    });
-  } else {
-    for (const tool of reportTools) {
-      it(`${tool.name} output schema includes bounded report-view fields`, () => {
-        const missing = getBoundedReportViewOutputMissingKeys((tool as any).outputSchema);
-        expect(missing).toEqual([]);
-      });
-    }
-  }
 });

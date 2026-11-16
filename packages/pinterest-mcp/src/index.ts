@@ -7,8 +7,14 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import { PinterestAccessTokenAdapter } from "./auth/pinterest-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
@@ -16,46 +22,24 @@ const transportMode = detectTransportMode();
 const logger = createServerLogger("pinterest-mcp", transportMode, otelLogMixin());
 
 /**
- * Set up credentials for stdio mode from environment variables.
- * Creates a PinterestAccessTokenAdapter and session services for the "stdio" session.
+ * Stdio credentials come from env vars: a static access token and ad account id.
  */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const accessToken = mcpConfig.pinterestAccessToken;
-  const adAccountId = mcpConfig.pinterestAdAccountId;
-
-  if (!accessToken || !adAccountId) {
-    logger.warn(
-      "No Pinterest credentials found in env vars. " +
-        "Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID for stdio mode."
-    );
-    return false;
-  }
-
-  const authAdapter = new PinterestAccessTokenAdapter(
-    accessToken,
-    adAccountId,
-    mcpConfig.pinterestApiBaseUrl
-  );
-
-  // Validate token at startup to fail fast on invalid credentials
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    {
-      baseUrl: mcpConfig.pinterestApiBaseUrl,
-      apiVersion: mcpConfig.pinterestApiVersion,
-      reportPollIntervalMs: mcpConfig.pinterestReportPollIntervalMs,
-      reportMaxPollAttempts: mcpConfig.pinterestReportMaxPollAttempts,
-    },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () =>
+    mcpConfig.pinterestAccessToken && mcpConfig.pinterestAdAccountId
+      ? new PinterestAccessTokenAdapter(
+          mcpConfig.pinterestAccessToken,
+          mcpConfig.pinterestAdAccountId,
+          mcpConfig.pinterestApiBaseUrl
+        )
+      : undefined,
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No Pinterest credentials found in env vars. " +
+    "Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

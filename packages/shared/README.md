@@ -58,6 +58,7 @@ The module tables below name files without their folder.
 | `tool-handler-factory.ts`     | `registerToolsFromDefinitions()`, `ToolDefinitionForFactory` | Core factory that eliminates ~90 lines of boilerplate per server. Handles Zod validation, OTEL spans, JWT scope enforcement, interaction logging, response formatting, error handling |
 | `prompt-handler-factory.ts`   | `registerPromptsFromDefinitions()`                           | Prompt registration with standardized handling                                                                                                                                        |
 | `resource-handler-factory.ts` | `registerStaticResourcesFromDefinitions()`                   | Static resource registration                                                                                                                                                          |
+| `platform-server-factory.ts`  | `createPlatformMcpServer()`                                  | Builds a platform's `McpServer`: server info, tools, resources, `report-csv://`, conformance fixtures and prompts, in a fixed registration order                                      |
 | `zod-helpers.ts`              | `extractZodShape()`                                          | Unwraps ZodEffects for MCP SDK registration                                                                                                                                           |
 
 #### Example: Registering tools

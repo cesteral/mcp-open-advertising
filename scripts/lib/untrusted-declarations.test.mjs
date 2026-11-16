@@ -44,7 +44,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { ROOT } from "./boot-server.mjs";
+import { toolsOf } from "./fleet-snapshot-inject.mjs";
 import {
   OPEN_FIELD_ALLOWLIST,
   SNAPSHOT_PATH,
@@ -160,71 +161,67 @@ describe("untrusted-content declarations match each server's claim (#204)", () =
     expect(packages.filter((p) => claimFor(p) === "per-response").length).toBeGreaterThan(0);
   });
 
-  it.each(packages)(
-    "%s",
-    async (pkg) => {
-      const tools = await withServerClient(pkg, (client) => listRawTools(client));
-      expect(tools.length, `${pkg} lists no tools`).toBeGreaterThan(0);
+  it.each(packages)("%s", (pkg) => {
+    const tools = toolsOf(pkg);
+    expect(tools.length, `${pkg} lists no tools`).toBeGreaterThan(0);
 
-      const undeclared = [];
-      for (const tool of tools) {
-        const declaration = tool._meta?.[KEY];
-        if (declaration === undefined) {
-          undeclared.push(tool.name);
-          continue;
-        }
-
-        expect(declaration.v, `${tool.name}: declaration version`).toBe(1);
-        expect(Array.isArray(declaration.structuredPaths), tool.name).toBe(true);
-        expect(Array.isArray(declaration.contentBlocks), tool.name).toBe(true);
-
-        const schemaProps = tool.outputSchema?.properties ?? {};
-        const properties = Object.keys(schemaProps);
-        for (const path of declaration.structuredPaths) {
-          expect(
-            properties,
-            `${tool.name}: ${path} names no top-level property of its outputSchema`
-          ).toContain(firstSegment(path));
-        }
-
-        const declared = new Set(declaration.structuredPaths.map(firstSegment));
-        const openUndeclared = properties.filter((p) => {
-          if (declared.has(p) || !isOpen(schemaProps[p], tool.outputSchema)) return false;
-          const key = `${tool.name}.${p}`;
-          if (!(key in OPEN_FIELD_ALLOWLIST)) return true;
-          allowlistHits.add(key);
-          return false;
-        });
-        expect(
-          openUndeclared,
-          `${tool.name}: open outputSchema fields can carry raw platform objects; declare them`
-        ).toEqual([]);
+    const undeclared = [];
+    for (const tool of tools) {
+      const declaration = tool._meta?.[KEY];
+      if (declaration === undefined) {
+        undeclared.push(tool.name);
+        continue;
       }
 
-      for (const tool of tools) fleetToolNames.add(tool.name);
+      expect(declaration.v, `${tool.name}: declaration version`).toBe(1);
+      expect(Array.isArray(declaration.structuredPaths), tool.name).toBe(true);
+      expect(Array.isArray(declaration.contentBlocks), tool.name).toBe(true);
 
-      if (claimFor(pkg) === "per-response") {
+      const schemaProps = tool.outputSchema?.properties ?? {};
+      const properties = Object.keys(schemaProps);
+      for (const path of declaration.structuredPaths) {
         expect(
-          undeclared,
-          `${pkg} claims per-response, but these tools declare nothing; add untrustedContent`
-        ).toEqual([]);
-        expect(
-          declarationsOf(tools),
-          `${pkg}: declarations differ from untrusted-declarations.snapshot.json. If the change is intended, run \`pnpm sync:untrusted-declarations\``
-        ).toEqual(snapshot[pkg]);
-      } else {
-        expect(
-          snapshot[pkg],
-          `${pkg} is pinned in untrusted-declarations.snapshot.json but does not claim per-response`
-        ).toBeUndefined();
-        expect(
-          undeclared.length,
-          `${pkg}: every tool declares; set untrustedContent.pathReporting to "per-response" in registry.json`
-        ).toBeGreaterThan(0);
+          properties,
+          `${tool.name}: ${path} names no top-level property of its outputSchema`
+        ).toContain(firstSegment(path));
       }
-    },
-    120_000
-  );
+
+      const declared = new Set(declaration.structuredPaths.map(firstSegment));
+      const openUndeclared = properties.filter((p) => {
+        if (declared.has(p) || !isOpen(schemaProps[p], tool.outputSchema)) return false;
+        const key = `${tool.name}.${p}`;
+        if (!(key in OPEN_FIELD_ALLOWLIST)) return true;
+        allowlistHits.add(key);
+        return false;
+      });
+      expect(
+        openUndeclared,
+        `${tool.name}: open outputSchema fields can carry raw platform objects; declare them`
+      ).toEqual([]);
+    }
+
+    for (const tool of tools) fleetToolNames.add(tool.name);
+
+    if (claimFor(pkg) === "per-response") {
+      expect(
+        undeclared,
+        `${pkg} claims per-response, but these tools declare nothing; add untrustedContent`
+      ).toEqual([]);
+      expect(
+        declarationsOf(tools),
+        `${pkg}: declarations differ from untrusted-declarations.snapshot.json. If the change is intended, run \`pnpm sync:untrusted-declarations\``
+      ).toEqual(snapshot[pkg]);
+    } else {
+      expect(
+        snapshot[pkg],
+        `${pkg} is pinned in untrusted-declarations.snapshot.json but does not claim per-response`
+      ).toBeUndefined();
+      expect(
+        undeclared.length,
+        `${pkg}: every tool declares; set untrustedContent.pathReporting to "per-response" in registry.json`
+      ).toBeGreaterThan(0);
+    }
+  });
 
   // Declared after the per-server cases, so vitest runs it once they have all
   // filled fleetToolNames and allowlistHits.

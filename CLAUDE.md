@@ -44,6 +44,8 @@ packages/{server-name}/src/
 └── utils/
 ```
 
+A server's `mcp-server/server.ts` holds only its data (name, description, instructions, the tool / resource / prompt lists, the workflow-id map) and passes it to `createPlatformMcpServer()` from `@cesteral/shared`. The factory owns the server info, the interaction logger, tool / resource / prompt registration, the optional `report-csv://` template and the conformance fixtures, in one fixed registration order. That order is part of the wire contract: `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` follow it. Several `scripts/lib` ratchets and `shared` tests read `server.ts` as source (`platform-keys`, `definition-hash-resolver-coverage`), so keep the `platform: "<key>"` and `manifestUrl: new URL(...)` lines literal. dbm-mcp is `governed: false`, ships no manifest and so passes no `manifestUrl`.
+
 ### Creating a New MCP Tool
 
 Each tool is a single file in `src/mcp-server/tools/definitions/` exporting three things:
@@ -112,19 +114,19 @@ The governance layer parses a governed write's read partner (`*_get_entity`) `st
 
 Platform quirks that are easy to forget live next to the code, in `packages/<server>/CLAUDE.md`. Claude Code loads that file when you work in the package; read it before changing the package's tools or clients.
 
-| Package          | Notes cover                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `dv360-mcp`      | Hard delete, archive-before-delete, duplicate landing non-running; the dynamic schema pattern     |
-| `ttd-mcp`        | REST + GraphQL only; bulk operations; sandbox-only `ttd_graphql_mutation_bulk`; sandbox mode      |
-| `linkedin-mcp`   | Staged `/v2/` → `/rest/` migration (#210), Rest.li 2.0 queries, targeting names, what is verified |
-| `tiktok-mcp`     | Advertiser-ID header in HTTP mode, uploads                                                        |
-| `meta-mcp`       | Graph API v26 field lists, the unconfirmed v26 targeting changes (#229)                           |
-| `gads-mcp`       | `gads_duplicate_entity` (campaigns only, always `PAUSED`)                                         |
-| `cm360-mcp`      | `profileId` on every call, profile discovery, report schedules                                    |
-| `pinterest-mcp`  | `bookmark` pagination, video-only media upload, duplicate                                         |
-| `snapchat-mcp`   | Ad Squads, cursor pagination, duplicate                                                           |
-| `amazon-dsp-mcp` | Unified API entity surface (#234), reporting scope, LwA refresh-token auth                        |
-| `sa360-mcp`      | Read-only entity API; offline conversions are the only governed writes                            |
+| Package          | Notes cover                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `dv360-mcp`      | Hard delete, archive-before-delete, duplicate landing non-running; the dynamic schema pattern |
+| `ttd-mcp`        | REST + GraphQL only; bulk operations; sandbox-only `ttd_graphql_mutation_bulk`; sandbox mode  |
+| `linkedin-mcp`   | `/rest/` surface and uploads (#210), Rest.li 2.0 queries, targeting names, what is verified   |
+| `tiktok-mcp`     | Advertiser-ID header in HTTP mode, uploads                                                    |
+| `meta-mcp`       | Graph API v26 field lists, the unconfirmed v26 targeting changes (#229)                       |
+| `gads-mcp`       | `gads_duplicate_entity` (campaigns only, always `PAUSED`)                                     |
+| `cm360-mcp`      | `profileId` on every call, profile discovery, report schedules                                |
+| `pinterest-mcp`  | `bookmark` pagination, video-only media upload, duplicate                                     |
+| `snapchat-mcp`   | Ad Squads, cursor pagination, duplicate                                                       |
+| `amazon-dsp-mcp` | Unified API entity surface (#234), reporting scope, LwA refresh-token auth                    |
+| `sa360-mcp`      | Read-only entity API; offline conversions are the only governed writes                        |
 
 `dbm-mcp` and `msads-mcp` have no notes of this kind.
 
@@ -178,6 +180,14 @@ Each of these has a CI ratchet or a runtime guarantee that a change can trip. Re
 ## Wire-Request Coverage (#236)
 
 A write tool (`readOnlyHint: false`) needs a wire-request test, not just a mocked unit test. Each package's `tests/**/*wire*.test.ts` calls the tool's `*Logic` with only `fetch` stubbed and asserts the exact upstream method, URL and body against a vendor source cited in a `// basis:` comment. `scripts/lib/wire-request-coverage.test.mjs` boots every server and fails if a write tool's `*Logic` is never called (or its name never appears as a string literal; comments do not count) in a basis-citing wire test of its own package. Every write tool on all 13 servers is covered, so `wire-request-coverage-allowlist.json` lists no gaps; an entry added there needs a reason, and the list may only shrink: an entry that is now covered, no longer a write, or gone fails too.
+
+## Shared Test Suites
+
+The tests every server repeats (schema-size guard, the cross-server contract, the server card against `registry.json`) are parameterised suites in `@cesteral/shared/testkit`: `describeSchemaSizeGuard`, `describeCrossServerContract`, `describeServerCard`. A server's `tests/schema-size.test.ts`, `tests/cross-server-contract.test.ts` and `tests/integration/server-card.test.ts` are one call each; what genuinely differs (required tools, destructive pins, terminal operations, platform config) is a parameter, and a server-only check stays a local test beside the call. Change a fleet-wide check in the suite, never in a server's copy. The testkit imports `vitest`, so it is a test-only entry: nothing else in `@cesteral/shared` may import it, and `vitest` stays a devDependency (an optional peer of shared).
+
+## Root Scripts Suite: Don't Boot Servers Per Test File
+
+`pnpm run test:scripts` (`vitest.config.scripts.ts`) boots every server once in vitest's `globalSetup` and hands what each advertises (`tools/list`, serverInfo, prompts and their rendered text, resources) to every test file. A suite that only needs that reads it with `toolsOf(pkg)` / `serverSnapshot(pkg)` from `scripts/lib/fleet-snapshot-inject.mjs`; it must not call `withServerClient` itself, because each test file is its own worker and pays a cold import of the server's whole dist graph per boot (316 boots per run before the snapshot, and the flakes under load that came with them). Boot your own only to drive a server or compare a fresh boot, and say why in `scripts/README.md`.
 
 ## TypeScript Build Issues
 

@@ -14,52 +14,44 @@ import {
   detectTransportMode,
   createServerLogger,
   bootstrapMcpServer,
+  createStdioSessionSetup,
 } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("dbm-mcp", transportMode, otelLogMixin());
 
-/**
- * Set up credentials for stdio mode from environment variables.
- * Creates a GoogleAuthAdapter and session services for the "stdio" session.
- */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  let credentialsJson: string | undefined;
+/** Stdio credentials come from a service account in env vars (file path or base64 JSON). */
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () => {
+    let credentialsJson: string | undefined;
 
-  if (mcpConfig.serviceAccountFile) {
-    logger.info(
-      { file: mcpConfig.serviceAccountFile },
-      "Loading service account from file (stdio mode)"
-    );
-    credentialsJson = readFileSync(mcpConfig.serviceAccountFile, "utf-8");
-  } else if (mcpConfig.serviceAccountJson) {
-    credentialsJson = Buffer.from(mcpConfig.serviceAccountJson, "base64").toString();
-  }
+    if (mcpConfig.serviceAccountFile) {
+      logger.info(
+        { file: mcpConfig.serviceAccountFile },
+        "Loading service account from file (stdio mode)"
+      );
+      credentialsJson = readFileSync(mcpConfig.serviceAccountFile, "utf-8");
+    } else if (mcpConfig.serviceAccountJson) {
+      credentialsJson = Buffer.from(mcpConfig.serviceAccountJson, "base64").toString();
+    }
 
-  if (!credentialsJson) {
-    logger.warn(
-      "No service account credentials found in env vars. " +
-        "Set SERVICE_ACCOUNT_JSON or SERVICE_ACCOUNT_FILE for stdio mode."
-    );
-    return false;
-  }
+    if (!credentialsJson) return undefined;
 
-  const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
-  const authAdapter = createGoogleAuthAdapter(credentials, [
-    "https://www.googleapis.com/auth/doubleclickbidmanager",
-  ]);
-
-  // Validate credentials at startup to fail fast on invalid service account
-  await authAdapter.validate();
-
-  const services = createSessionServices(authAdapter, mcpConfig, logger, rateLimiter);
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+    const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
+    return createGoogleAuthAdapter(credentials, [
+      "https://www.googleapis.com/auth/doubleclickbidmanager",
+    ]);
+  },
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No service account credentials found in env vars. Set SERVICE_ACCOUNT_JSON or SERVICE_ACCOUNT_FILE for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).
