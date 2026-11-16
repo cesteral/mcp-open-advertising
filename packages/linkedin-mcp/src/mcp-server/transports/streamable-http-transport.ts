@@ -17,10 +17,12 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
 import { LinkedInBearerAuthStrategy } from "../../auth/linkedin-auth-strategy.js";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildEnvAuthAdapter, buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { LINKEDIN_RETRY_CONFIG } from "../../services/linkedin/linkedin-http-client.js";
 
@@ -60,98 +62,17 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: LINKEDIN_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      // For linkedin-bearer mode, the adapter is returned via platformAuthAdapter
-      const adapter = authResult.platformAuthAdapter as LinkedInAuthAdapter | undefined;
-      if (adapter) {
-        const services = createSessionServices(
-          adapter,
-          {
-            baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl,
-            apiVersion: (appConfig as AppConfig).linkedinApiVersion,
-          },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-
-      // For none/jwt modes without a platform adapter, use env var credentials
-      if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const cfg = appConfig as AppConfig;
-
-        // Prefer refresh token flow if client credentials are available
-        if (cfg.linkedinClientId && cfg.linkedinClientSecret && cfg.linkedinRefreshToken) {
-          const { LinkedInRefreshTokenAdapter } = await import(
-            "../../auth/linkedin-auth-adapter.js"
-          );
-          const envAdapter = new LinkedInRefreshTokenAdapter(
-            {
-              clientId: cfg.linkedinClientId,
-              clientSecret: cfg.linkedinClientSecret,
-              refreshToken: cfg.linkedinRefreshToken,
-            },
-            cfg.linkedinApiBaseUrl,
-            cfg.linkedinApiVersion
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            { baseUrl: cfg.linkedinApiBaseUrl, apiVersion: cfg.linkedinApiVersion },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-
-        // Fallback: static access token
-        const linkedInToken = cfg.linkedinAccessToken;
-        if (linkedInToken) {
-          const { LinkedInAccessTokenAdapter } = await import(
-            "../../auth/linkedin-auth-adapter.js"
-          );
-          const envAdapter = new LinkedInAccessTokenAdapter(
-            linkedInToken,
-            cfg.linkedinApiBaseUrl,
-            cfg.linkedinApiVersion
-          );
-          await envAdapter.validate();
-          const services = createSessionServices(
-            envAdapter,
-            {
-              baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl,
-              apiVersion: (appConfig as AppConfig).linkedinApiVersion,
-            },
-            log,
-            rateLimiter
-          );
-          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-          return { services };
-        }
-        if (appConfig.mcpAuthMode !== "none") {
-          return {
-            services: null,
-            error: {
-              message:
-                "LinkedIn access token required. Set LINKEDIN_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=linkedin-bearer.",
-              status: 400 as const,
-            },
-          };
-        }
-        // none auth without credentials — protocol-only session (tools will fail at runtime)
-        return { services: null };
-      }
-
-      return {
-        services: null,
-        error: {
-          message: "LinkedIn API credentials required for this server.",
-          status: 400 as const,
-        },
-      };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.platformAuthAdapter as LinkedInAuthAdapter | undefined,
+      validateAuthAdapter: false,
+      buildServices: buildSessionServices,
+      buildEnvAdapter: buildEnvAuthAdapter,
+      credentialsRequiredMessage:
+        "LinkedIn access token required. Set LINKEDIN_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=linkedin-bearer.",
+      unsupportedModeMessage: "LinkedIn API credentials required for this server.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

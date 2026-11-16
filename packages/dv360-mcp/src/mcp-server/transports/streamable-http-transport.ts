@@ -18,8 +18,10 @@ import {
   type TransportFactoryConfig,
   buildServerCardExtras,
   createTransportEntrypoints,
+  createSessionForAuthWithEnvFallback,
 } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
+import { sessionServiceStore } from "../../services/session-services.js";
+import { buildSessionServices } from "../../services/session-wiring.js";
 import { rateLimiter } from "../../utils/platform.js";
 import { DV360_RETRY_CONFIG } from "../../services/dv360/dv360-http-client.js";
 
@@ -55,32 +57,15 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
     retryDescriptor: {
       maxRetries: DV360_RETRY_CONFIG.maxRetries,
     },
-    async createSessionForAuth(authResult, sessionId, appConfig, log) {
-      const adapter = authResult.googleAuthAdapter as GoogleAuthAdapter | undefined;
-      if (adapter) {
-        await adapter.validate();
-        const services = createSessionServices(
-          adapter,
-          { baseUrl: (appConfig as AppConfig).dv360ApiBaseUrl },
-          log,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        return { services };
-      }
-      if (appConfig.mcpAuthMode !== "none") {
-        return {
-          services: null,
-          error: {
-            message:
-              "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
-            status: 400,
-          },
-        };
-      }
-      // none auth without credentials — protocol-only session
-      return { services: null };
-    },
+    createSessionForAuth: createSessionForAuthWithEnvFallback({
+      sessionServiceStore,
+      adapterFromAuth: (authResult) =>
+        authResult.googleAuthAdapter as GoogleAuthAdapter | undefined,
+      validateAuthAdapter: true,
+      buildServices: buildSessionServices,
+      credentialsRequiredMessage:
+        "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
+    }),
     async createMcpServer(log, sessionId, gcsBucket) {
       return createMcpServer(log, sessionId, gcsBucket);
     },

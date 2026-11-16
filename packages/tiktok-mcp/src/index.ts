@@ -7,8 +7,14 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import { TikTokAccessTokenAdapter } from "./auth/tiktok-auth-adapter.js";
-import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
-import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
+import {
+  detectTransportMode,
+  createServerLogger,
+  bootstrapMcpServer,
+  createStdioSessionSetup,
+} from "@cesteral/shared";
+import { sessionServiceStore } from "./services/session-services.js";
+import { buildSessionServices } from "./services/session-wiring.js";
 import { rateLimiter } from "./utils/platform.js";
 import { allTools } from "./mcp-server/tools/definitions/index.js";
 
@@ -16,47 +22,26 @@ const transportMode = detectTransportMode();
 const logger = createServerLogger("tiktok-mcp", transportMode, otelLogMixin());
 
 /**
- * Set up credentials for stdio mode from environment variables.
- * Creates a TikTokAccessTokenAdapter and session services for the "stdio" session.
+ * Stdio credentials come from env vars: a static access token only. TikTok
+ * documents no refresh endpoint, so there is no refresh-token flow here.
  */
-async function setupStdioCredentials(sessionId: string): Promise<boolean> {
-  const accessToken = mcpConfig.tiktokAccessToken;
-  const advertiserId = mcpConfig.tiktokAdvertiserId;
-
-  if (!accessToken || !advertiserId) {
-    logger.warn(
-      "No TikTok credentials found in env vars. " +
-        "Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID for stdio mode."
-    );
-    return false;
-  }
-
-  const authAdapter = new TikTokAccessTokenAdapter(
-    accessToken,
-    advertiserId,
-    mcpConfig.tiktokApiBaseUrl,
-    mcpConfig.tiktokApiVersion
-  );
-
-  // Validate token at startup to fail fast on invalid credentials
-  await authAdapter.validate();
-
-  const services = createSessionServices(
-    authAdapter,
-    {
-      baseUrl: mcpConfig.tiktokApiBaseUrl,
-      reportPollIntervalMs: mcpConfig.tiktokReportPollIntervalMs,
-      reportMaxPollAttempts: mcpConfig.tiktokReportMaxPollAttempts,
-      apiVersion: mcpConfig.tiktokApiVersion,
-    },
-    logger,
-    rateLimiter
-  );
-
-  sessionServiceStore.set(sessionId, services);
-  logger.info("Stdio session services created successfully");
-  return true;
-}
+const setupStdioCredentials = createStdioSessionSetup({
+  sessionServiceStore,
+  logger,
+  buildEnvAdapter: () =>
+    mcpConfig.tiktokAccessToken && mcpConfig.tiktokAdvertiserId
+      ? new TikTokAccessTokenAdapter(
+          mcpConfig.tiktokAccessToken,
+          mcpConfig.tiktokAdvertiserId,
+          mcpConfig.tiktokApiBaseUrl,
+          mcpConfig.tiktokApiVersion
+        )
+      : undefined,
+  buildServices: (adapter) => buildSessionServices(mcpConfig, adapter, logger),
+  missingCredentialsWarning:
+    "No TikTok credentials found in env vars. " +
+    "Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID for stdio mode.",
+});
 
 bootstrapMcpServer({
   // Boot-time governance posture check + process-wide jti store (#166).

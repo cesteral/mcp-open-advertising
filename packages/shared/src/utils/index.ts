@@ -38,6 +38,7 @@ export * from "./transport/operational-envelope.js";
 export * from "./transport/server-bootstrap.js";
 export * from "./transport/server-card-builder.js";
 export * from "./transport/session-resolver.js";
+export * from "./transport/env-credential-session.js";
 export * from "./transport/session-store.js";
 
 // Upstream HTTP: fetch, retry, rate limiting, downloads
@@ -66,6 +67,7 @@ export * from "./reporting/date-presets.js";
 export * from "./reporting/metric-context.js";
 export * from "./reporting/pacing.js";
 export * from "./reporting/report-csv-resource.js";
+export * from "./reporting/report-csv-session.js";
 export * from "./reporting/report-csv-store.js";
 export * from "./reporting/report-download-view.js";
 export * from "./reporting/report-errors.js";

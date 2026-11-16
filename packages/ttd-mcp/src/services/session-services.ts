@@ -4,11 +4,7 @@
 import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../auth/ttd-auth-adapter.js";
 import type { RateLimiter } from "@cesteral/shared";
-import {
-  deleteSpilledObjectsForSession,
-  ReportCsvStore,
-  SessionServiceStore,
-} from "@cesteral/shared";
+import { createSessionBoundReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TtdHttpClient } from "./ttd/ttd-http-client.js";
 import { TtdService } from "./ttd/ttd-service.js";
@@ -57,16 +53,7 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes
  * (see ReportCsvStore default TTL).
  */
-export const reportCsvStore = new ReportCsvStore({
-  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
-  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
-  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
-});
-
-// On session close, sweep this session's GCS spill objects and clear its
-// in-memory report-csv store entries. Belt-and-braces alongside the 24h
-// bucket lifecycle rule.
-sessionServiceStore.onDelete((sessionId) => {
-  void deleteSpilledObjectsForSession("ttd", sessionId);
-  reportCsvStore.clearForSession(sessionId);
+export const reportCsvStore = createSessionBoundReportCsvStore({
+  sessionServiceStore,
+  spillPlatform: "ttd",
 });
