@@ -46,7 +46,7 @@ const CampaignForecastDescriptionSchema = z
       .max(5)
       .optional()
       .describe("Restrict forecast to specific flights (max 5)"),
-    replanningSettings: z.record(z.unknown()).optional(),
+    replanningSettings: z.record(z.string(), z.unknown()).optional(),
   })
   .describe("Forecast scope: which campaign + flights, plus optional features");
 

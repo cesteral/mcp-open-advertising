@@ -83,7 +83,7 @@ export const UpdateEntityInputSchema = z
       .optional()
       .describe("AdExtensionType, needed to read the ad extension. Required for adExtension"),
     data: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .describe("Partial fields to update (do not include Id — it is injected)"),
     dry_run: z
       .boolean()
@@ -98,7 +98,7 @@ export const UpdateEntityInputSchema = z
 
 export const UpdateEntityOutputSchema = z
   .object({
-    result: z.record(z.any()),
+    result: z.record(z.string(), z.any()),
     entityId: z.string(),
     entityType: z.string(),
     updated: z.boolean(),

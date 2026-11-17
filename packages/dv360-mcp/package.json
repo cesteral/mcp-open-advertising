@@ -57,8 +57,7 @@
     "@cesteral/shared": "workspace:*",
     "@modelcontextprotocol/server": "catalog:",
     "pino": "catalog:",
-    "zod": "catalog:",
-    "zod-to-json-schema": "^3.24.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

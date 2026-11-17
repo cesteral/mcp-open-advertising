@@ -37,7 +37,9 @@ export const CreateEntityInputSchema = z
   .object({
     profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
-    data: z.record(z.any()).describe("Entity data to create (fields vary by entity type)"),
+    data: z
+      .record(z.string(), z.any())
+      .describe("Entity data to create (fields vary by entity type)"),
     dry_run: z
       .boolean()
       .optional()
@@ -50,7 +52,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data"),
+    entity: z.record(z.string(), z.any()).describe("Created entity data"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

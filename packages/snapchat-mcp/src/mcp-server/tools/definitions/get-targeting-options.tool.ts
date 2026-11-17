@@ -60,7 +60,7 @@ export const GetTargetingOptionsInputSchema = z
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
-    options: z.record(z.any()).describe("Available targeting options"),
+    options: z.record(z.string(), z.any()).describe("Available targeting options"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

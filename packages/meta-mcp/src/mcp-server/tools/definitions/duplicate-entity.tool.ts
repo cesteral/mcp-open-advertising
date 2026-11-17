@@ -66,7 +66,7 @@ export const DuplicateEntityInputSchema = z
 
 export const DuplicateEntityOutputSchema = z
   .object({
-    result: z.record(z.any()).describe("Duplication result (includes new entity ID)"),
+    result: z.record(z.string(), z.any()).describe("Duplication result (includes new entity ID)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

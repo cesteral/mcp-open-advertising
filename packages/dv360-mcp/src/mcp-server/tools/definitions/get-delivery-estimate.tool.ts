@@ -28,7 +28,7 @@ export const GetDeliveryEstimateInputSchema = z
 export const GetDeliveryEstimateOutputSchema = z
   .object({
     estimate: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Delivery estimate data including targeting and configuration"),
     timestamp: z.string().datetime(),
   })

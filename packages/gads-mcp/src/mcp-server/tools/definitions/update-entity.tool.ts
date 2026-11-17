@@ -36,7 +36,7 @@ export const UpdateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
     customerId: CustomerIdSchema,
     entityId: z.string().min(1).describe("The entity ID to update"),
-    data: z.record(z.any()).describe("Entity data fields to update"),
+    data: z.record(z.string(), z.any()).describe("Entity data fields to update"),
     updateMask: z
       .string()
       .min(1)
@@ -62,7 +62,7 @@ export const UpdateEntityInputSchema = z
 
 export const UpdateEntityOutputSchema = z
   .object({
-    mutateResult: z.record(z.any()).describe("Mutate operation result"),
+    mutateResult: z.record(z.string(), z.any()).describe("Mutate operation result"),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. The mutation was NOT applied; `mutateResult` is empty."

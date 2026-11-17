@@ -1291,7 +1291,7 @@ export const DemandGenCarouselAd = z.object({
   /** Required. The list of cards shown on the ad. */
   cards: z.array(z.lazy(() => CarouselCard)),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
   /** Required. The description of the ad. */
   description: z.string(),
   /** Required. The URL address of the webpage that people reach after they click the  */
@@ -1317,7 +1317,7 @@ export const DemandGenImageAd = z.object({
   /** Required. The call-to-action button shown on the ad. */
   callToAction: z.string(),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
   /** Required. The list of descriptions shown on the ad. */
   descriptions: z.array(z.string()),
   /** Optional. The URL address of the webpage that people reach after they click the  */
@@ -1351,7 +1351,7 @@ export const DemandGenProductAd = z.object({
   /** Required. The call-to-action button shown on the ad. The supported values are: * */
   callToAction: z.enum(["CALL_TO_ACTION_UNSPECIFIED", "AUTOMATED", "LEARN_MORE", "GET_QUOTE", "APPLY_NOW", "SIGN_UP", "CONTACT_US", "SUBSCRIBE", "DOWNLOAD", "BOOK_NOW", "SHOP_NOW", "BUY_NOW", "DONATE_NOW", "ORDER_NOW", "PLAY_NOW", "SEE_MORE", "START_NOW", "VISIT_SITE", "WATCH_NOW"]),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
   /** Required. The description of the ad. */
   description: z.string(),
   /** Optional. The first piece after the domain in the display URL. */
@@ -1395,7 +1395,7 @@ export const DemandGenVideoAd = z.object({
   /** Optional. The companion banner used by this ad. */
   companionBanner: z.lazy(() => ImageAsset).optional(),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
   /** Required. The list of descriptions shown on the ad. */
   descriptions: z.array(z.string()),
   /** Optional. The first piece after the domain in the display URL. */
@@ -1715,7 +1715,7 @@ export const InStreamAd = z.object({
   /** Required. Common ad attributes. */
   commonInStreamAttribute: z.lazy(() => CommonInStreamAttribute),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
 });
 
 /**
@@ -2154,7 +2154,7 @@ export const NonSkippableAd = z.object({
   /** Required. Common ad attributes. */
   commonInStreamAttribute: z.lazy(() => CommonInStreamAttribute),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
 });
 
 /**
@@ -2498,7 +2498,7 @@ export const Status = z.object({
   /** The status code, which should be an enum value of google.rpc.Code. */
   code: z.number().int().optional(),
   /** A list of messages that carry the error details. There is a common set of messag */
-  details: z.array(z.record(z.unknown())).optional(),
+  details: z.array(z.record(z.string(), z.unknown())).optional(),
   /** A developer-facing error message, which should be in English. Any user-facing er */
   message: z.string().optional(),
 });
@@ -2730,7 +2730,7 @@ export const VideoPerformanceAd = z.object({
   /** Optional. The list of companion banners used by this ad. */
   companionBanners: z.array(z.lazy(() => ImageAsset)).optional(),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
-  customParameters: z.record(z.string()).optional(),
+  customParameters: z.record(z.string(), z.string()).optional(),
   /** Optional. The list of descriptions shown on the call-to-action banner. */
   descriptions: z.array(z.string()).optional(),
   /** Optional. The first piece after the domain in the display URL. */

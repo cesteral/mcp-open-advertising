@@ -48,7 +48,7 @@ export const BulkCreateEntitiesInputSchema = z
       .describe("Campaign ID — required when entityType is 'adGroup'"),
     adSquadId: z.string().optional().describe("Ad Squad ID — required when entityType is 'ad'"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),

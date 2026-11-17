@@ -38,7 +38,7 @@ export const UpdateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
     accountId: z.string().min(1).describe("{{displayName}} account ID"),
     entityId: z.string().min(1).describe("The entity ID to update"),
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()

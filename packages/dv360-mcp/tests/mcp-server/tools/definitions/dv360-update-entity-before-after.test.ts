@@ -84,7 +84,7 @@ vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
       campaignId: z.string().optional(),
       insertionOrderId: z.string().optional(),
       lineItemId: z.string().optional(),
-      data: z.record(z.any()),
+      data: z.record(z.string(), z.any()),
       updateMask: z.string(),
       reason: z.string().optional(),
       dry_run: z.boolean().optional().default(false),

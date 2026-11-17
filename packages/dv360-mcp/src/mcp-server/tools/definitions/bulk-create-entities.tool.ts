@@ -56,7 +56,7 @@ export const BulkCreateEntitiesInputSchema = z
       .min(1)
       .describe("Advertiser ID (required for advertiser-scoped entities)"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe(

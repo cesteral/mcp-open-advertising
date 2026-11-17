@@ -32,7 +32,7 @@ export const GetTargetingOptionsInputSchema = z
 export const GetTargetingOptionsOutputSchema = z
   .object({
     options: z
-      .record(z.array(z.record(z.any())))
+      .record(z.string(), z.array(z.record(z.string(), z.any())))
       .describe("Targeting option values keyed by targeting type"),
     timestamp: z.string().datetime(),
   })

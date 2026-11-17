@@ -51,7 +51,9 @@ export const CreateEntityInputSchema = z
     entityType: z.enum(getCreatableEntityTypeEnum()).describe("Type of entity to create"),
     profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
     accountId: AccountIdSchema,
-    data: z.record(z.any()).describe("Entity fields as key-value pairs (Unified API field names)"),
+    data: z
+      .record(z.string(), z.any())
+      .describe("Entity fields as key-value pairs (Unified API field names)"),
     dry_run: z
       .boolean()
       .optional()
@@ -65,7 +67,7 @@ export const CreateEntityInputSchema = z
 export const CreateEntityOutputSchema = z
   .object({
     entity: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Created entity as Amazon returns it (includes its ID: campaignId / adGroupId / adId / targetId / adAssociationId)"
       ),

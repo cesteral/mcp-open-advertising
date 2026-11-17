@@ -44,7 +44,10 @@ const EFFECT_KIND = "entities_created";
 export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
-    items: z.array(z.record(z.unknown())).min(1).describe("Array of entity data objects to create"),
+    items: z
+      .array(z.record(z.string(), z.unknown()))
+      .min(1)
+      .describe("Array of entity data objects to create"),
     ...parentIdInputFields,
     dry_run: z
       .boolean()
@@ -58,7 +61,7 @@ export const BulkCreateEntitiesInputSchema = z
 
 export const BulkCreateEntitiesOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     entityType: z.string(),
     totalItems: z.number(),
     timestamp: z.string().datetime(),

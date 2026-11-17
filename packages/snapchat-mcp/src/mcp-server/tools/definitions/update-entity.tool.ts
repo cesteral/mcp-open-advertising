@@ -42,7 +42,7 @@ export const UpdateEntityInputSchema = z
     campaignId: z.string().optional().describe("Campaign ID required when entityType is 'adGroup'"),
     adSquadId: z.string().optional().describe("Ad Squad ID required when entityType is 'ad'"),
     entityId: z.string().min(1).describe("The entity ID to update"),
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()

@@ -13,11 +13,18 @@ describe("extractZodShape", () => {
     expect(Object.keys(result as Record<string, unknown>).sort()).toEqual(["count", "id"]);
   });
 
-  it("unwraps ZodEffects (refine/transform) to the inner ZodObject shape", () => {
+  it("returns the shape of a refined object (Zod 4 keeps refine on the ZodObject)", () => {
     const inner = z.object({ a: z.string() });
     const refined = inner.refine((v) => v.a.length > 0);
-    const result = extractZodShape(refined);
-    expect(result).toBe(inner.shape);
+    const result = extractZodShape(refined) as z.ZodRawShape;
+    expect(Object.keys(result)).toEqual(["a"]);
+    expect(result.a).toBe(inner.shape.a);
+  });
+
+  it("unwraps a transform (ZodPipe) to the input object's shape", () => {
+    const inner = z.object({ a: z.string() });
+    const transformed = inner.transform((v) => ({ ...v, b: 1 }));
+    expect(extractZodShape(transformed)).toBe(inner.shape);
   });
 
   it("returns the schema itself for ZodDiscriminatedUnion (so registerTool keeps the validator)", () => {

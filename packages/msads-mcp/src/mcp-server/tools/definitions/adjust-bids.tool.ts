@@ -92,7 +92,7 @@ export const AdjustBidsOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.any()),
+    result: z.record(z.string(), z.any()),
     entityType: z.string(),
     adjustmentCount: z.number(),
     timestamp: z.string().datetime(),

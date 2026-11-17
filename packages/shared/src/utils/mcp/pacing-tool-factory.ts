@@ -109,7 +109,7 @@ export interface PacingToolOptions<K extends string> {
 
 export type PacingTool<K extends string> = Omit<
   ToolDefinition<
-    z.ZodType<PacingToolInput<K>, z.ZodTypeDef, PacingToolRawInput<K>>,
+    z.ZodType<PacingToolInput<K>, PacingToolRawInput<K>>,
     z.ZodType<PacingToolOutput<K>>
   >,
   "responseFormatter"
@@ -149,7 +149,6 @@ export function createPacingTool<K extends string>(opts: PacingToolOptions<K>): 
     })
     .describe("Parameters for checking campaign pacing status") as unknown as z.ZodType<
     PacingToolInput<K>,
-    z.ZodTypeDef,
     PacingToolRawInput<K>
   >;
 

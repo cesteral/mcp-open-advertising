@@ -58,7 +58,7 @@ const FullUpdateEntityInputSchema = z
   .object({
     entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
     ...EntityIdFieldsSchema,
-    data: z.record(z.any()),
+    data: z.record(z.string(), z.any()),
     updateMask: z.string().min(1),
     reason: z.string().optional(),
     dry_run: z.boolean().optional().default(false),
@@ -84,8 +84,8 @@ export const UpdateEntityInputSchema = createSimplifiedUpdateEntityInputSchema()
 );
 
 export const UpdateEntityOutputSchema = z.object({
-  entity: z.record(z.any()),
-  previousValues: z.record(z.any()).optional(),
+  entity: z.record(z.string(), z.any()),
+  previousValues: z.record(z.string(), z.any()).optional(),
   timestamp: z.string().datetime(),
   dryRun: DryRunResultSchema.optional().describe(
     "Present only when the request was made with `dry_run: true`. The mutation was NOT applied; `entity` reflects the symbolic post-state and `previousValues` is empty."

@@ -59,7 +59,7 @@ The module tables below name files without their folder.
 | `prompt-handler-factory.ts`   | `registerPromptsFromDefinitions()`                           | Prompt registration with standardized handling                                                                                                                                        |
 | `resource-handler-factory.ts` | `registerStaticResourcesFromDefinitions()`                   | Static resource registration                                                                                                                                                          |
 | `platform-server-factory.ts`  | `createPlatformMcpServer()`                                  | Builds a platform's `McpServer`: server info, tools, resources, `report-csv://`, conformance fixtures and prompts, in a fixed registration order                                      |
-| `zod-helpers.ts`              | `extractZodShape()`                                          | Unwraps ZodEffects for MCP SDK registration                                                                                                                                           |
+| `zod-helpers.ts`              | `extractZodShape()`                                          | Unwraps a `.transform()` ZodPipe to the object shape for SDK registration                                                                                                             |
 
 #### Example: Registering tools
 

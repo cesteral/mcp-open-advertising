@@ -49,7 +49,7 @@ export const UpdateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
     advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     entityId: z.string().min(1).describe("The entity ID to update"),
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()

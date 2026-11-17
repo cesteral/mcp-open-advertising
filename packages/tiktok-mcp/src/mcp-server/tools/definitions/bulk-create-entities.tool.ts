@@ -54,7 +54,7 @@ export const BulkCreateEntitiesInputSchema = z
         "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
       ),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),

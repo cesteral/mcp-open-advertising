@@ -38,7 +38,7 @@ export const CreateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     customerId: CustomerIdSchema,
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Entity data to create (fields vary by entity type — see entity-schema resources)"),
     dry_run: z
       .boolean()
@@ -59,7 +59,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    mutateResult: z.record(z.any()).describe("Mutate operation result"),
+    mutateResult: z.record(z.string(), z.any()).describe("Mutate operation result"),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entity was created."

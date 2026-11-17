@@ -35,7 +35,9 @@ export const ListReportTemplatesInputSchema = z
 
 export const ListReportTemplatesOutputSchema = z
   .object({
-    templates: z.array(z.record(z.unknown())).describe("List of report template header objects"),
+    templates: z
+      .array(z.record(z.string(), z.unknown()))
+      .describe("List of report template header objects"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

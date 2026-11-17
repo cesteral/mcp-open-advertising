@@ -54,7 +54,11 @@ export const BulkCreateEntitiesInputSchema = z
     adAccountUrn: adAccountUrnSchema.describe(
       "The ad account every item is created in (e.g. urn:li:sponsoredAccount:123). Required for creatives; for other types each item's account names it, and adAccountUrn must agree when given."
     ),
-    items: z.array(z.record(z.any())).min(1).max(50).describe("Entity payloads to create (max 50)"),
+    items: z
+      .array(z.record(z.string(), z.any()))
+      .min(1)
+      .max(50)
+      .describe("Entity payloads to create (max 50)"),
     dry_run: z
       .boolean()
       .optional()

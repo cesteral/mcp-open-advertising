@@ -55,7 +55,7 @@ export const CreateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
-    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()
@@ -68,7 +68,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity (returns id at minimum)"),
+    entity: z.record(z.string(), z.any()).describe("Created entity (returns id at minimum)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

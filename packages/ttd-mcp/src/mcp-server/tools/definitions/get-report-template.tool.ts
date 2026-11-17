@@ -40,7 +40,7 @@ export const GetReportTemplateOutputSchema = z
     name: z.string().optional(),
     reportFormatType: z.string().optional(),
     resultSets: z.array(TemplateResultSetOutputSchema).optional(),
-    rawResponse: z.record(z.unknown()).optional(),
+    rawResponse: z.record(z.string(), z.unknown()).optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Report template structure");

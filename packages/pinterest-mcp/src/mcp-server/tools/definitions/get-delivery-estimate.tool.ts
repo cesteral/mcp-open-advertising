@@ -28,7 +28,7 @@ export const GetDeliveryEstimateInputSchema = z
   .object({
     adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Pinterest ad group targeting_spec (e.g. AGE_BUCKET, GENDER, LOCATION, GEO, INTEREST, LOCALE, APPTYPE)"
       ),
@@ -38,7 +38,7 @@ export const GetDeliveryEstimateInputSchema = z
 export const GetDeliveryEstimateOutputSchema = z
   .object({
     estimate: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Pinterest audience sizing response (audience_size_lower_bound / audience_size_upper_bound)"
       ),

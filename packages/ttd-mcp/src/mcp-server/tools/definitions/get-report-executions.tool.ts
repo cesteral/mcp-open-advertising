@@ -46,11 +46,11 @@ export const GetReportExecutionsOutputSchema = z
   .object({
     mode: z.enum(["single", "list"]),
     scheduleId: z.string().optional(),
-    schedule: z.record(z.unknown()).optional(),
-    schedules: z.array(z.record(z.unknown())).optional(),
+    schedule: z.record(z.string(), z.unknown()).optional(),
+    schedules: z.array(z.record(z.string(), z.unknown())).optional(),
     hasNextPage: z.boolean().optional(),
     endCursor: z.string().optional(),
-    rawResponse: z.record(z.unknown()).optional(),
+    rawResponse: z.record(z.string(), z.unknown()).optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Report schedule executions result");

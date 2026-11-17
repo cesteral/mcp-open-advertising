@@ -104,7 +104,7 @@ export const CreateReportScheduleInputSchema = z
         "TTD report template ID — REQUIRED by TTD. Find IDs via ttd_list_report_templates or the TTD UI."
       ),
     additionalConfig: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe(
         "Additional TTD report config fields passed verbatim to the API. " +

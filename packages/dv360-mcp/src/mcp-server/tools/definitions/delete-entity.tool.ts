@@ -62,7 +62,7 @@ export const DeleteEntityOutputSchema = z.object({
   confirmed: z.boolean(),
   declineReason: z.string().optional(),
   success: z.boolean(),
-  deletedEntity: z.record(z.any()),
+  deletedEntity: z.record(z.string(), z.any()),
   timestamp: z.string().datetime(),
   dryRun: DryRunResultSchema.optional().describe(
     "Present only when the request was made with `dry_run: true`. The entity was NOT deleted."

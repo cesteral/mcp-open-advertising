@@ -24,7 +24,7 @@ export const GetAdPreviewInputSchema = z
 
 export const GetAdPreviewOutputSchema = z
   .object({
-    preview: z.record(z.any()).describe("Ad preview data from TikTok"),
+    preview: z.record(z.string(), z.any()).describe("Ad preview data from TikTok"),
     adId: z.string(),
     timestamp: z.string().datetime(),
   })

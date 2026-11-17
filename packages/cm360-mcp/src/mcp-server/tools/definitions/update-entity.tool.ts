@@ -35,7 +35,7 @@ export const UpdateEntityInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
     entityId: cm360EntityIdSchema("The entity ID to update"),
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Fields to change (CM360 PATCH semantics — omitted fields are preserved; nested objects merge, arrays replace)"
       ),
@@ -51,7 +51,7 @@ export const UpdateEntityInputSchema = z
 
 export const UpdateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Updated entity data"),
+    entity: z.record(z.string(), z.any()).describe("Updated entity data"),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. The mutation was NOT applied."

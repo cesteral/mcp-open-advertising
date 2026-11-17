@@ -33,7 +33,7 @@ export const SearchTargetingInputSchema = z
 export const SearchTargetingOutputSchema = z
   .object({
     targetingType: z.string(),
-    results: z.array(z.record(z.any())),
+    results: z.array(z.record(z.string(), z.any())),
     totalResults: z.number(),
     timestamp: z.string().datetime(),
   })

@@ -67,7 +67,7 @@ const writeTool = {
   inputSchema: z.object({
     entityId: z.string(),
     advertiserId: z.string().optional(),
-    bids: z.record(z.number()).optional(),
+    bids: z.record(z.string(), z.number()).optional(),
     dry_run: z.boolean().optional(),
   }),
   annotations: {

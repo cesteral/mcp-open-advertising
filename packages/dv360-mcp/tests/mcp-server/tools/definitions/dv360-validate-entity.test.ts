@@ -32,6 +32,9 @@ vi.mock("../../../../src/mcp-server/tools/utils/schema-introspection.js", () => 
     if (path === "bidStrategy.fixedBid.bidAmountMicros") {
       return z.string();
     }
+    if (path === "entityStatus") {
+      return z.enum(["ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_PAUSED"]);
+    }
     return null;
   }),
 }));
@@ -131,6 +134,24 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(errorMessages(result).some((e) => e.includes("Expected string"))).toBe(true);
+    expect(errorMessages(result).some((e) => /expected string/i.test(e))).toBe(true);
+  });
+
+  it("maps a wrong enum member to invalidValue (Zod 4 reports it as invalid_value)", async () => {
+    const result = await validateEntityLogic(
+      {
+        entityType: "campaign",
+        mode: "update",
+        updateMask: "entityStatus",
+        data: { entityStatus: "ENTITY_STATUS_RUNNING" },
+      },
+      {} as any,
+      undefined
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.issues.filter((i) => i.field === "entityStatus").map((i) => i.code)).toEqual([
+      "invalidValue",
+    ]);
   });
 });

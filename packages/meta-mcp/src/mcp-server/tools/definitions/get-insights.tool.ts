@@ -82,7 +82,7 @@ export const GetInsightsOutputSchema = z
     ...ReportViewOutputSchema.shape,
     nextCursor: z.string().optional().describe("Cursor for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
-    summary: z.record(z.any()).optional().describe("Summary statistics"),
+    summary: z.record(z.string(), z.any()).optional().describe("Summary statistics"),
     totalCount: z.number(),
     timestamp: z.string().datetime(),
   })

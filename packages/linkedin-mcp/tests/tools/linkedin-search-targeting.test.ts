@@ -69,7 +69,7 @@ describe("linkedin_search_targeting tool", () => {
     });
 
     it("has no start parameter, since LinkedIn documents no offset on these finders", () => {
-      expect(Object.keys(SearchTargetingInputSchema._def.schema.shape)).not.toContain("start");
+      expect(Object.keys(SearchTargetingInputSchema.shape)).not.toContain("start");
     });
 
     it("no longer advertises the made-up facet types", () => {

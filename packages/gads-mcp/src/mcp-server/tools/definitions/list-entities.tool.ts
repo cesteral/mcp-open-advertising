@@ -23,7 +23,7 @@ export const ListEntitiesInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to list"),
     customerId: CustomerIdSchema,
     filters: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe(
         "GAQL filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"
@@ -49,7 +49,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

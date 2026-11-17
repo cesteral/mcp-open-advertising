@@ -33,7 +33,7 @@ export const ListEntitiesInputSchema = z
         "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
       ),
     filters: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe(
         "Optional TikTok filtering object (for example { primary_status: 'STATUS_ALL' } or { campaign_ids: ['123'] })"
@@ -58,7 +58,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

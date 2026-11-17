@@ -23,7 +23,7 @@ export const ListAccountsInputSchema = z
 
 export const ListAccountsOutputSchema = z
   .object({
-    accounts: z.array(z.record(z.any())).describe("Accessible accounts"),
+    accounts: z.array(z.record(z.string(), z.any())).describe("Accessible accounts"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

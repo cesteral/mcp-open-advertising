@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { describe, it, expect } from "vitest";
 import { promptRegistry, getAllPrompts } from "../../src/mcp-server/prompts/index.js";
 
@@ -79,9 +80,12 @@ describe("prompt update guidance", () => {
  */
 describe("prompt entityType literals", () => {
   function enumValues(schema: unknown): string[] {
-    let s = schema as { _def?: { typeName?: string; innerType?: unknown; values?: string[] } };
-    while (s?._def && s._def.innerType) s = s._def.innerType as typeof s;
-    return s?._def?.typeName === "ZodEnum" ? (s._def.values ?? []) : [];
+    let s = schema;
+    // Through .optional() / .default() / .nullable() to the enum.
+    while (s instanceof z.ZodOptional || s instanceof z.ZodDefault || s instanceof z.ZodNullable) {
+      s = s.def.innerType;
+    }
+    return s instanceof z.ZodEnum ? s.options.map(String) : [];
   }
 
   it("names only entity types a registered tool accepts", async () => {
