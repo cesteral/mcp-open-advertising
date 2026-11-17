@@ -53,13 +53,14 @@ Read-only; each exits non-zero on a violation.
 
 The sync scripts and `generate-server-json.mjs` take `--check` (or have a `check:` alias) to verify without writing.
 
-| Script                            | Alias                                         | What it writes                                                                                            |
-| --------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `generate-manifests.mjs`          | `generate:manifests`                          | `dist/cesteral-manifest.json` for every package with governed tools (needs a build).                      |
-| `generate-server-json.mjs`        | `generate:registry`, `check:registry`         | Each package's MCP Registry `server.json`, from `registry.json` and `package.json`.                       |
-| `sync-registry-tools.mjs`         | `sync:registry-tools`, `check:registry-tools` | The tool lists in `registry.json`, from the tool definition files.                                        |
-| `sync-registry-data.mjs`          | `sync:registry-data`                          | `packages/shared/src/utils/transport/registry-data.generated.ts`, run by `@cesteral/shared`'s `prebuild`. |
-| `sync-untrusted-declarations.mjs` | `sync:untrusted-declarations`                 | `scripts/lib/untrusted-declarations.snapshot.json`; run after an intended `untrustedContent` change.      |
+| Script                            | Alias                                         | What it writes                                                                                                                            |
+| --------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate-manifests.mjs`          | `generate:manifests`                          | `dist/cesteral-manifest.json` for every package with governed tools (needs a build).                                                      |
+| `generate-server-json.mjs`        | `generate:registry`, `check:registry`         | Each package's MCP Registry `server.json`, from `registry.json` and `package.json`.                                                       |
+| `sync-registry-tools.mjs`         | `sync:registry-tools`, `check:registry-tools` | The tool lists in `registry.json`, from the tool definition files.                                                                        |
+| `sync-registry-data.mjs`          | `sync:registry-data`                          | `packages/shared/src/utils/transport/registry-data.generated.ts`, run by `@cesteral/shared`'s `prebuild`.                                 |
+| `sync-untrusted-declarations.mjs` | `sync:untrusted-declarations`                 | `scripts/lib/untrusted-declarations.snapshot.json`; run after an intended `untrustedContent` change.                                      |
+| `sync-tool-definition-hashes.mjs` | `sync:tool-definition-hashes`                 | `scripts/lib/tool-definition-hashes.snapshot.json`; run after an intended change to any tool's name, description, schemas or annotations. |
 
 ### `lib/` and `__tests__/`
 
