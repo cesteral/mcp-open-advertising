@@ -63,6 +63,7 @@
   },
   "dv360-mcp": {
     "dv360_adjust_line_item_bids": "69a51d058f094e5ab75cd6dd531ad15efaeeaea1a721e8f4896ee36915e94e4f",
+    "dv360_attach_creative": "d58aeeb2d4f61510588a348d204a8fc308e641b2df9e3c5789f0acf57e74e351",
     "dv360_bulk_create_entities": "1d4a395bddb013774c33d7851127be7f0c2a003aaf08d7b0a1312a72ad935745",
     "dv360_bulk_update_entities": "05085c5072ef21f5169c677625f98a0587af432b1ef804b657c7c4da31bc948c",
     "dv360_bulk_update_status": "9bccbc18177830171de40504293a490265dfde7c255505f450b96bd7f9eb1fd9",
@@ -91,6 +92,7 @@
   },
   "gads-mcp": {
     "gads_adjust_bids": "669668295f31710fa11b02bcebe1c4a288cb43e88172da97d2c3ea4a169e8d20",
+    "gads_attach_creative": "d0aa8b92dc1aa23c8fa79ff319022b5020493ae80ee79d49601773b00989b028",
     "gads_bulk_create_entities": "c00a5b6a994adba2676353ea3a8edbfd76711d4cc9a7d2f6d2968c132d0dc673",
     "gads_bulk_mutate": "af37cb8840bee8fbf4a33ad87e92b6c0dd288e645e5cd77dbdaeb8d874dbae6b",
     "gads_bulk_update_status": "24098b1a39a2ba150747d8e25cc6457efa81b60e874d04e972c78910a52a8e65",
@@ -137,6 +139,7 @@
   },
   "meta-mcp": {
     "meta_adjust_bids": "7fc7c9b31dec4b8b35f147a176a880544c420dab6b2075f32e745a0c7d63d652",
+    "meta_attach_creative": "8309389691fb278d766a347b30864726a4950153adc86a85d760fae2442ff42d",
     "meta_bulk_create_entities": "2a9c514b10756ed46fd2a759c8252e8dc44a827902353d027d1fc45441e22322",
     "meta_bulk_update_entities": "4948340049b9d8d634ea074e17f7590b009e64592df9c6ab7bed260168afc2bc",
     "meta_bulk_update_status": "64d68269add0be67ca53de123758d6cdfd52443ff1503dd43bae1e092b6b3874",

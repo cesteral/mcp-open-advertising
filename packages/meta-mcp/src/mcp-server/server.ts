@@ -53,6 +53,7 @@ export const metaWorkflowIdByToolName: Record<string, string> = {
   meta_bulk_update_entities: "mcp.execute.meta_bulk_operations",
   meta_upload_image: "mcp.execute.meta_entity_update",
   meta_upload_video: "mcp.execute.meta_entity_update",
+  meta_attach_creative: "mcp.execute.meta_entity_update",
   meta_manage_budget_schedule: "mcp.execute.meta_entity_update",
 };
 

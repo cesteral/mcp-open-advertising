@@ -264,6 +264,10 @@
       "structuredPaths": ["$.successful", "$.failed"],
       "contentBlocks": [0]
     },
+    "dv360_attach_creative": {
+      "structuredPaths": [],
+      "contentBlocks": []
+    },
     "dv360_bulk_create_entities": {
       "structuredPaths": ["$.results"],
       "contentBlocks": [0]
@@ -369,6 +373,10 @@
     "gads_adjust_bids": {
       "structuredPaths": ["$.results"],
       "contentBlocks": [0]
+    },
+    "gads_attach_creative": {
+      "structuredPaths": [],
+      "contentBlocks": []
     },
     "gads_bulk_create_entities": {
       "structuredPaths": ["$.results"],
@@ -559,6 +567,10 @@
     "meta_adjust_bids": {
       "structuredPaths": ["$.results"],
       "contentBlocks": [0]
+    },
+    "meta_attach_creative": {
+      "structuredPaths": [],
+      "contentBlocks": []
     },
     "meta_bulk_create_entities": {
       "structuredPaths": ["$.results"],

@@ -303,7 +303,20 @@ Download a video from a URL, upload it to `/act_{id}/advideos`, and poll until p
 - `title`, `description` (string, optional): Video metadata
 - `dry_run` (boolean, optional): Validate without uploading
 
-#### 25. `meta_manage_budget_schedule`
+#### 25. `meta_attach_creative`
+
+Attach media uploaded by `meta_upload_image` / `meta_upload_video` to an ad set: one `POST /act_{id}/ads` that creates a **PAUSED** ad with the creative written inline (`object_story_spec` with `link_data` for an image, `video_data` for a video). Effect-class governed write (`meta.attach_creative.v1`).
+
+**Parameters:**
+
+- `adAccountId`, `adSetId`, `name`, `pageId` (string, required)
+- `imageHash` or `videoId` (string, exactly one): the upload's handle
+- `thumbnailImageHash` or `thumbnailUrl` (video only, exactly one)
+- `link` (string, required): destination URL
+- `message`, `headline`, `description`, `callToActionType` (string, optional)
+- `dry_run` (boolean, optional): Validate without creating
+
+#### 26. `meta_manage_budget_schedule`
 
 Create or list budget schedules (high-demand periods) on a campaign via `/{campaignId}/budget_schedules`.
 
@@ -314,7 +327,7 @@ Create or list budget schedules (high-demand periods) on a campaign via `/{campa
 - `data` (object, required for create): `budget_value` (integer), `budget_value_type` (`ABSOLUTE` or `MULTIPLIER`), `time_start` and `time_end` (Unix timestamps in seconds)
 - `dry_run` (boolean, optional): Validate without creating
 
-#### 26. `meta_get_pacing_status`
+#### 27. `meta_get_pacing_status`
 
 Client-side pacing calculator (no Meta API call): actual vs expected spend for a flight.
 
@@ -327,7 +340,7 @@ Client-side pacing calculator (no Meta API call): actual vs expected spend for a
 
 ### Discovery
 
-#### 27. `meta_search_tools`
+#### 28. `meta_search_tools`
 
 Rank this server's tools against a natural-language query.
 

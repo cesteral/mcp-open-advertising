@@ -40,6 +40,7 @@ export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 // Tier 5: Media Upload
 export { uploadImageTool } from "./upload-image.tool.js";
 export { uploadVideoTool } from "./upload-video.tool.js";
+export { attachCreativeTool } from "./attach-creative.tool.js";
 
 // Tier 5: Specialized
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
@@ -69,6 +70,7 @@ import { validateEntityTool } from "./validate-entity.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
+import { attachCreativeTool } from "./attach-creative.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
@@ -108,6 +110,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // Tier 5: Media Upload
   uploadImageTool,
   uploadVideoTool,
+  attachCreativeTool,
   // Tier 5: Specialized
   duplicateEntityTool,
   getDeliveryEstimateTool,

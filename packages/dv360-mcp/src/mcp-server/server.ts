@@ -47,6 +47,7 @@ export const dv360WorkflowIdByToolName: Record<string, string> = {
   // Media uploads
   dv360_upload_image: "mcp.execute.dv360_entity_update",
   dv360_upload_video: "mcp.execute.dv360_entity_update",
+  dv360_attach_creative: "mcp.execute.dv360_entity_update",
   // Specialized
   dv360_duplicate_entity: "mcp.execute.dv360_entity_update",
   dv360_get_delivery_estimate: "mcp.execute.dv360_entity_read",

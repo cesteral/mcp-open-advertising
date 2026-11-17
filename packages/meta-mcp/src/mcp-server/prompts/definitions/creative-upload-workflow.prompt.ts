@@ -34,6 +34,8 @@ export function getCreativeUploadWorkflowMessage(args?: Record<string, string>):
 ## Overview
 Meta Ads creative workflow: Upload media → Create Ad Creative → Attach to Ad
 
+**Shortcut:** \`meta_attach_creative\` does Steps 2 and 4 in one call: it creates one PAUSED ad in the ad set with the creative written inline, from the \`imageHash\` or \`videoId\` of Step 1.
+
 ---
 
 ## Step 1: Upload ${creativeType === "video" ? "Video" : "Image"}

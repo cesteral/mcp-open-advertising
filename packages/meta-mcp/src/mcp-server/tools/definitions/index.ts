@@ -4,14 +4,14 @@
 /**
  * Tool definitions barrel export
  *
- * 27 tools total:
+ * 28 tools total:
  *   6 core: list entities, get entity, create entity, update entity, delete entity, list ad accounts
  *   3 insights: get insights, get insights breakdowns, get available metrics
  *   3 async reporting: submit report, check report status, download report
  *   2 targeting: search targeting, get targeting options
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
- *   6 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video, manage budget schedule
+ *   7 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video, attach creative, manage budget schedule
  *   1 validation: validate entity (client-side)
  *   1 pacing: get pacing status
  *   1 discovery: search tools
@@ -41,6 +41,7 @@ export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { uploadImageTool } from "./upload-image.tool.js";
 export { uploadVideoTool } from "./upload-video.tool.js";
+export { attachCreativeTool } from "./attach-creative.tool.js";
 export { manageBudgetScheduleTool } from "./manage-budget-schedule.tool.js";
 export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 
@@ -68,6 +69,7 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
+import { attachCreativeTool } from "./attach-creative.tool.js";
 import { manageBudgetScheduleTool } from "./manage-budget-schedule.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import {
@@ -107,6 +109,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   adjustBidsTool,
   uploadImageTool,
   uploadVideoTool,
+  attachCreativeTool,
   manageBudgetScheduleTool,
   getPacingStatusTool,
   // ── Validation ──

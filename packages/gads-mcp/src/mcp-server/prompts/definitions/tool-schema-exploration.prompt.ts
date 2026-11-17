@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (19 tools)
+## Available Tools Summary (20 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -120,6 +120,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_get_pacing_status\` | Real-time pacing calc for a campaign | Reads spend + budget |
 | \`gads_upload_image\` | Upload an image asset from a URL | Downloads + base64, creates ImageAsset |
 | \`gads_upload_video\` | Create a video asset from a YouTube video ID | No binary upload; references a YouTube-hosted video |
+| \`gads_attach_creative\` | Attach an uploaded image asset to an ad group as a PAUSED image ad | Display ad groups only |
 
 ### Supported Entity Types (6)
 \`campaign\`, \`adGroup\`, \`ad\`, \`keyword\`, \`campaignBudget\`, \`asset\`

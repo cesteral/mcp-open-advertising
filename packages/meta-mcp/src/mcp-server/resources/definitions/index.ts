@@ -47,7 +47,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "meta_adjust_bids",
     ],
     targeting: ["meta_search_targeting", "meta_get_targeting_options"],
-    media: ["meta_upload_image", "meta_upload_video"],
+    media: ["meta_upload_image", "meta_upload_video", "meta_attach_creative"],
     budgetSchedules: ["meta_manage_budget_schedule"],
     specialized: ["meta_duplicate_entity", "meta_get_delivery_estimate", "meta_get_ad_preview"],
     validation: ["meta_validate_entity"],

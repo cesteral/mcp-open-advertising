@@ -93,7 +93,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (26 tools)
+## Available Tools Summary (27 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -135,11 +135,12 @@ Inspect the output, then iterate with more specific calls.
 |------|---------|-------|
 | \`dv360_get_ad_preview\` | Get preview details for a creative | Third-party tag / VAST URL, dimensions, review status (DV360 has no preview URL) |
 
-### Media Upload (2 tools)
+### Media Upload (3 tools)
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | \`dv360_upload_image\` | Upload image asset from URL | Returns assetId for creatives |
 | \`dv360_upload_video\` | Upload video asset from URL | Returns assetId for video creatives |
+| \`dv360_attach_creative\` | Attach an uploaded asset to a line item | Creates a PAUSED hosted creative, adds it to the line item's creativeIds |
 
 ### Specialized (3 tools)
 | Tool | Purpose | Notes |
