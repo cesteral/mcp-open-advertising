@@ -6,6 +6,9 @@ import { CustomerIdSchema } from "../utils/customer-id.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
+  CreativeAssetRefSchema,
+  resolveCreativeAsset,
+  checkCreativeAssetLimits,
   McpError,
   JsonRpcErrorCode,
   assertGovernedEffectDryRun,
@@ -22,6 +25,8 @@ import type {
   DispatchedCapability,
   DryRunValidationError,
   CesteralWriteToolAnnotations,
+  CreativeAssetRef,
+  CreativeAssetPlatformLimits,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_upload_image";
@@ -41,6 +46,16 @@ Note: video assets reference a YouTube video ID rather than uploaded bytes; crea
 \`gads_upload_video\` (or \`gads_create_entity\`, entityType \`asset\`, \`youtubeVideoAsset\`).`;
 
 const ASSET_TYPE = "image";
+
+/** What Google Ads accepts for this upload; a media-library `asset` is checked against it before anything is fetched. */
+const ASSET_LIMITS: CreativeAssetPlatformLimits = {
+  platform: "Google Ads",
+  allowedContentTypes: ["image/jpeg", "image/png", "image/gif"],
+  maxBytes: 5 * 1024 * 1024,
+};
+
+/** `dry_run` is the only argument outside the write's identity; `asset` stays in the executable args so the decision token binds the exact asset. */
+const EXECUTABLE_ARGS_EXCLUDE = ["dry_run"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 /** Map a downloaded content type to the Google Ads ImageMimeType enum. */
@@ -56,7 +71,16 @@ export const UploadImageInputSchema = z
   .object({
     customerId: CustomerIdSchema,
     name: z.string().min(1).describe("Asset name (unique within the account)"),
-    mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
+    mediaUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Publicly accessible URL of the image to upload. Give exactly one of `mediaUrl` or `asset`."
+      ),
+    asset: CreativeAssetRefSchema.optional().describe(
+      "A media-library asset to upload instead of a URL. The server fetches its bytes at execution only (never on dry_run); the call carries no URL. Give exactly one of `mediaUrl` or `asset`."
+    ),
     dry_run: z
       .boolean()
       .optional()
@@ -64,6 +88,15 @@ export const UploadImageInputSchema = z
       .describe(
         "When true, validates the upload request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be image asset) without downloading or creating anything. No asset is created."
       ),
+  })
+  .superRefine((value, ctx) => {
+    if ((value.mediaUrl === undefined) === (value.asset === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of `mediaUrl` or `asset`",
+        path: [value.asset === undefined ? "mediaUrl" : "asset"],
+      });
+    }
   })
   .describe("Parameters for uploading an image asset to Google Ads");
 
@@ -105,7 +138,7 @@ export async function uploadImageLogic(
   // Symbolic dry-run: validate the request and project the would-be effect.
   // No download, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildUploadEffectDryRun(input.mediaUrl);
+    const dryRun = buildUploadEffectDryRun(input);
     return {
       uploadedAt: new Date().toISOString(),
       dryRun,
@@ -115,7 +148,17 @@ export async function uploadImageLogic(
 
   const { gadsService } = resolveSessionServices(sdkContext);
 
-  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 120_000, context);
+  // A media-library asset is resolved through the control plane with this call's
+  // decision token; a URL is downloaded as before.
+  const { buffer, contentType } = input.asset
+    ? await resolveCreativeAsset({
+        asset: input.asset,
+        executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
+        parsedArgs: input,
+        limits: ASSET_LIMITS,
+        context,
+      })
+    : await downloadFileToBuffer(input.mediaUrl as string, 120_000, context);
   if (buffer.length > MAX_IMAGE_SIZE) {
     throw new McpError(
       JsonRpcErrorCode.InternalError,
@@ -164,19 +207,29 @@ export async function uploadImageLogic(
  * makes no API call (MutateAssetsRequest.validateOnly is not used). Pure (no
  * I/O: no download, no create).
  */
-function buildUploadEffectDryRun(mediaUrl: string): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
-  let protocolOk: boolean;
-  try {
-    const parsed = new URL(mediaUrl);
-    protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    protocolOk = false;
+function buildUploadEffectDryRun(input: {
+  mediaUrl?: string;
+  asset?: CreativeAssetRef;
+}): EffectDryRunResult {
+  const { mediaUrl, asset } = input;
+  // An asset reference is checked against the platform's limits from its own
+  // fields: nothing is resolved or fetched on a dry run.
+  const validationErrors: DryRunValidationError[] = asset
+    ? checkCreativeAssetLimits(asset, ASSET_LIMITS)
+    : [];
+  let protocolOk = true;
+  if (mediaUrl !== undefined) {
+    try {
+      const parsed = new URL(mediaUrl);
+      protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      protocolOk = false;
+    }
   }
   if (!protocolOk) {
     validationErrors.push({
       code: "INVALID_MEDIA_URL",
-      message: `mediaUrl must be an http(s) URL — got "${mediaUrl}"`,
+      message: `mediaUrl must be an http(s) URL — got "${mediaUrl ?? ""}"`,
       field: "mediaUrl",
     });
   }
@@ -237,7 +290,7 @@ export const uploadImageTool = {
     cesteral: {
       kind: "write",
       writeClass: "effect",
-      executableArgsExclude: ["dry_run"],
+      executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
       platform: "google_ads",
       contractPlatformSlug: "google_ads",
       contractToolSlug: "upload_image",

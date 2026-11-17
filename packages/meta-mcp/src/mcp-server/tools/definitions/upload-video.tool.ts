@@ -5,6 +5,9 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
+  CreativeAssetRefSchema,
+  resolveCreativeAsset,
+  checkCreativeAssetLimits,
   createLogger,
   fetchGuardedDownload,
   McpError,
@@ -26,10 +29,22 @@ import type {
   DispatchedCapability,
   DryRunValidationError,
   CesteralWriteToolAnnotations,
+  CreativeAssetRef,
+  CreativeAssetPlatformLimits,
 } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
 
 const ASSET_TYPE = "video";
+
+/** What Meta accepts for this upload; a media-library `asset` is checked against it before anything is fetched. */
+const ASSET_LIMITS: CreativeAssetPlatformLimits = {
+  platform: "Meta",
+  allowedContentTypes: ["video/mp4", "video/quicktime"],
+  maxBytes: mcpConfig.metaVideoUploadMaxBufferedBytes,
+};
+
+/** `dry_run` is the only argument outside the write's identity; `asset` stays in the executable args so the decision token binds the exact asset. */
+const EXECUTABLE_ARGS_EXCLUDE = ["dry_run"];
 
 const logger = createLogger("meta-upload-video");
 
@@ -53,7 +68,16 @@ Polls until processing is complete (up to 5 minutes).
 export const UploadVideoInputSchema = z
   .object({
     adAccountId: z.string().describe("Meta Ad Account ID (e.g., act_1234567890)"),
-    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+    mediaUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Publicly accessible URL of the video to upload. Give exactly one of `mediaUrl` or `asset`."
+      ),
+    asset: CreativeAssetRefSchema.optional().describe(
+      "A media-library asset to upload instead of a URL. The server fetches its bytes at execution only (never on dry_run); the call carries no URL. Give exactly one of `mediaUrl` or `asset`."
+    ),
     title: z.string().optional().describe("Optional video title"),
     description: z.string().optional().describe("Optional video description"),
     dry_run: z
@@ -63,6 +87,15 @@ export const UploadVideoInputSchema = z
       .describe(
         "When true, validates the upload request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be video upload) without downloading or uploading anything. No asset is created."
       ),
+  })
+  .superRefine((value, ctx) => {
+    if ((value.mediaUrl === undefined) === (value.asset === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of `mediaUrl` or `asset`",
+        path: [value.asset === undefined ? "mediaUrl" : "asset"],
+      });
+    }
   })
   .describe("Parameters for uploading a video to Meta");
 
@@ -147,7 +180,7 @@ export async function uploadVideoLogic(
   // Symbolic dry-run: validate the request and project the would-be effect
   // (a video asset upload). No download, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildUploadEffectDryRun(input.mediaUrl);
+    const dryRun = buildUploadEffectDryRun(input);
     return {
       uploadedAt: new Date().toISOString(),
       dryRun,
@@ -157,7 +190,11 @@ export async function uploadVideoLogic(
 
   const { metaService } = resolveSessionServices(sdkContext);
   const maxBufferedBytes = mcpConfig.metaVideoUploadMaxBufferedBytes;
-  const remoteContentLength = await getRemoteContentLength(input.mediaUrl, context);
+  // An asset reference states its own size, checked against the limit in ASSET_LIMITS
+  // before anything is fetched; only a URL needs a HEAD to learn its length.
+  const remoteContentLength = input.mediaUrl
+    ? await getRemoteContentLength(input.mediaUrl, context)
+    : undefined;
 
   if (remoteContentLength !== undefined && remoteContentLength > maxBufferedBytes) {
     throw new McpError(
@@ -166,11 +203,21 @@ export async function uploadVideoLogic(
     );
   }
 
-  const { buffer, contentType, filename } = await downloadFileToBuffer(
-    input.mediaUrl,
-    300_000, // 5 min for large videos
-    context
-  );
+  // A media-library asset is resolved through the control plane with this call's
+  // decision token; a URL is downloaded as before.
+  const { buffer, contentType, filename } = input.asset
+    ? await resolveCreativeAsset({
+        asset: input.asset,
+        executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
+        parsedArgs: input,
+        limits: ASSET_LIMITS,
+        context,
+      })
+    : await downloadFileToBuffer(
+        input.mediaUrl as string,
+        300_000, // 5 min for large videos
+        context
+      );
 
   if (buffer.length > maxBufferedBytes) {
     throw new McpError(
@@ -267,19 +314,29 @@ function buildUploadedEffect(videoId: string): EffectResult {
  * projects the would-be effect (a video asset upload). The upload fetches the
  * URL and streams it upstream — there is no native validate/preview — so both
  * axes are symbolic. Pure (no I/O: no download, no upload). */
-function buildUploadEffectDryRun(mediaUrl: string): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
-  let protocolOk: boolean;
-  try {
-    const parsed = new URL(mediaUrl);
-    protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    protocolOk = false;
+function buildUploadEffectDryRun(input: {
+  mediaUrl?: string;
+  asset?: CreativeAssetRef;
+}): EffectDryRunResult {
+  const { mediaUrl, asset } = input;
+  // An asset reference is checked against the platform's limits from its own
+  // fields: nothing is resolved or fetched on a dry run.
+  const validationErrors: DryRunValidationError[] = asset
+    ? checkCreativeAssetLimits(asset, ASSET_LIMITS)
+    : [];
+  let protocolOk = true;
+  if (mediaUrl !== undefined) {
+    try {
+      const parsed = new URL(mediaUrl);
+      protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      protocolOk = false;
+    }
   }
   if (!protocolOk) {
     validationErrors.push({
       code: "INVALID_MEDIA_URL",
-      message: `mediaUrl must be an http(s) URL — got "${mediaUrl}"`,
+      message: `mediaUrl must be an http(s) URL — got "${mediaUrl ?? ""}"`,
       field: "mediaUrl",
     });
   }
@@ -340,7 +397,7 @@ export const uploadVideoTool = {
     cesteral: {
       kind: "write",
       writeClass: "effect",
-      executableArgsExclude: ["dry_run"],
+      executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
       platform: "meta_ads",
       contractPlatformSlug: "meta",
       contractToolSlug: "upload_video",
