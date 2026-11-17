@@ -16,6 +16,7 @@ API documentation: {{docsUrl}}
 | `{{key}}_list_accounts`      | List the accounts the token can access             |
 | `{{key}}_list_entities`      | List entities of one type in an account            |
 | `{{key}}_get_entity`         | Read one entity                                    |
+| `{{key}}_get_report`         | Report rows for an account and date range          |
 | `{{key}}_validate_entity`    | Check a payload client-side, without an API call   |
 | `{{key}}_get_pacing_status`  | Compute pacing from budget, flight and spend       |
 | `{{key}}_search_tools`       | Find a tool on this server                         |

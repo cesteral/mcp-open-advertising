@@ -18,6 +18,7 @@ describeCrossServerContract({
     "bulk_update_status",
     // {{/writes}}
     "validate_entity",
+    "get_report",
     "get_pacing_status",
   ],
   // {{#writes}}

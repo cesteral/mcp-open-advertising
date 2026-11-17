@@ -42,10 +42,10 @@ export async function listEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
-  const { {{key}}Service, boundAccountId } = resolveSessionServices(sdkContext);
+  const { {{key}}EntityService, boundAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.accountId, boundAccountId, "accountId");
 
-  const result = await {{key}}Service.listEntities(
+  const result = await {{key}}EntityService.listEntities(
     input.entityType as {{Pascal}}EntityType,
     input.accountId,
     input.pageToken,
@@ -53,10 +53,10 @@ export async function listEntitiesLogic(
   );
 
   return {
-    entities: result.entities,
+    entities: result.items,
     pagination: buildPaginationOutput({
       nextCursor: result.nextPageToken,
-      pageSize: result.entities.length,
+      pageSize: result.items.length,
       nextPageInputKey: "pageToken",
     }),
     timestamp: new Date().toISOString(),

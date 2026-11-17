@@ -15,8 +15,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { names } from "./entries.mjs";
-import { TEMPLATE_DIR, WRITE_TOOLS, renderTemplate } from "./render.mjs";
+import { names, terminalOperation } from "./entries.mjs";
+import { TEMPLATE_DIR, TEMPLATE_TOOLS, renderTemplate, templateType } from "./render.mjs";
 import { ScaffoldError, format } from "./scaffold.mjs";
 
 /** The variables the server was scaffolded with, read back from what the scaffold wrote. */
@@ -74,10 +74,11 @@ export async function planAddWrites(root, key) {
   if (!existsSync(join(root, pkgDir))) throw new ScaffoldError(`${pkgDir} does not exist`);
 
   const vars = scaffoldVars(root, entry);
-  const dir = join(TEMPLATE_DIR, entry.type);
   const prefixed = (m) => new Map([...m].map(([p, t]) => [`${pkgDir}/${p}`, t]));
-  const readOnly = await format(prefixed(renderTemplate(dir, vars)));
-  const withWrites = await format(prefixed(renderTemplate(dir, vars, { writes: true })));
+  const readOnly = await format(prefixed(renderTemplate(TEMPLATE_DIR, entry.type, vars)));
+  const withWrites = await format(
+    prefixed(renderTemplate(TEMPLATE_DIR, entry.type, vars, { writes: true }))
+  );
 
   const writes = new Map();
   const created = [];
@@ -107,7 +108,13 @@ export async function planAddWrites(root, key) {
     }
   }
 
-  const added = WRITE_TOOLS(key).filter((t) => !entry.tools.includes(t));
+  // Every tool the write stage adds (reads such as check_report_status too),
+  // not only the governed writes: registry `tools` and the README count must
+  // match what the server registers.
+  const readOnlyTools = TEMPLATE_TOOLS(key, { type: entry.type });
+  const added = TEMPLATE_TOOLS(key, { type: entry.type, writes: true }).filter(
+    (t) => !readOnlyTools.includes(t) && !entry.tools.includes(t)
+  );
   const tools = [...entry.tools, ...added];
   const governedEntry = {
     ...entry,
@@ -117,11 +124,10 @@ export async function planAddWrites(root, key) {
       ...entry.operational,
       terminalOperations: [
         ...(entry.operational?.terminalOperations ?? []),
-        {
-          tool: `${key}_delete_entity`,
-          operations: ["delete"],
-          note: "Scaffold default: treat delete as irreversible until the platform's restore behaviour is checked.",
-        },
+        ...templateType(entry.type)
+          .terminalTools.map((t) => `${key}_${t}`)
+          .filter((t) => !(entry.operational?.terminalOperations ?? []).some((o) => o.tool === t))
+          .map(terminalOperation),
       ],
     },
   };

@@ -40,10 +40,10 @@ export async function getEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetEntityOutput> {
-  const { {{key}}Service, boundAccountId } = resolveSessionServices(sdkContext);
+  const { {{key}}EntityService, boundAccountId } = resolveSessionServices(sdkContext);
   assertAccountScope(input.accountId, boundAccountId, "accountId");
 
-  const entity = await {{key}}Service.getEntity(
+  const entity = await {{key}}EntityService.getEntity(
     input.entityType as {{Pascal}}EntityType,
     input.accountId,
     input.entityId,

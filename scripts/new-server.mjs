@@ -6,7 +6,7 @@
 //
 //   pnpm new:server <key> --display-name "Reddit Ads" \
 //     --base-url https://ads-api.reddit.com --docs-url https://ads-api.reddit.com/docs \
-//     [--type management] [--port N] [--rate-limit 25] [--with-writes] [--dry-run]
+//     [--type management|reporting|reporting_conversions] [--port N] [--rate-limit 25] [--with-writes] [--dry-run]
 //   pnpm new:server <key> --add-write-stubs [--dry-run]
 //
 // A new server is experimental and read-only unless --with-writes; it is not
@@ -26,7 +26,7 @@ const ROOT = join(import.meta.dirname, "..");
 function usage() {
   return (
     "usage: pnpm new:server <key> --display-name <name> --base-url <url> --docs-url <url>\n" +
-    "         [--type management] [--port N] [--rate-limit 25] [--with-writes] [--dry-run]\n" +
+    "         [--type management|reporting|reporting_conversions] [--port N] [--rate-limit 25] [--with-writes] [--dry-run]\n" +
     "       pnpm new:server <key> --add-write-stubs"
   );
 }

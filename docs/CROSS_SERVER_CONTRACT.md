@@ -39,6 +39,8 @@ What a server must ship depends on its `type` in `registry.json` (`management`, 
 | Account discovery (`list_accounts`, `list_ad_accounts`, `list_advertisers` or `list_user_profiles`)       | SHOULD       | —           | —                       |
 | `{prefix}_search_tools`                                                                                   | SHOULD       | SHOULD      | SHOULD                  |
 
+`pnpm new:server --type <type>` scaffolds a server of each type as an experimental, read-only server, held to the read rows only until promotion; `--add-write-stubs` adds the type's write stubs ([the guide](guides/adding-a-new-server.md#add-the-write-tools-and-promote)).
+
 **A MUST has no exceptions.** A SHOULD a server does not ship is recorded with its reason in that server's `contract.exceptions` in `registry.json`, and the check fails for an unrecorded gap or for an exception the server no longer needs. To list the current ones:
 
 ```bash

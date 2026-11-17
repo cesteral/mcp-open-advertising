@@ -40,10 +40,10 @@ export async function listAccountsLogic(
   const { {{key}}Service } = resolveSessionServices(sdkContext);
   const result = await {{key}}Service.listAccounts(input.pageToken, context);
   return {
-    accounts: result.entities,
+    accounts: result.items,
     pagination: buildPaginationOutput({
       nextCursor: result.nextPageToken,
-      pageSize: result.entities.length,
+      pageSize: result.items.length,
       nextPageInputKey: "pageToken",
     }),
     timestamp: new Date().toISOString(),

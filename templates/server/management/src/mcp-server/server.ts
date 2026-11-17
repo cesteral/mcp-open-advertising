@@ -22,6 +22,7 @@ export const {{key}}WorkflowIdByToolName: Record<string, string> = {
   {{key}}_get_entity: "mcp.execute.{{key}}_entity_read",
   {{key}}_validate_entity: "mcp.execute.{{key}}_entity_read",
   {{key}}_get_pacing_status: "mcp.execute.{{key}}_entity_read",
+  {{key}}_get_report: "mcp.execute.{{key}}_reporting",
   // {{#writes}}
   {{key}}_create_entity: "mcp.execute.{{key}}_entity_update",
   {{key}}_update_entity: "mcp.execute.{{key}}_entity_update",

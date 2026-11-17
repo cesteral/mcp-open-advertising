@@ -1,8 +1,16 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 
 import { describe, expect, it } from "vitest";
-import { join } from "node:path";
-import { CONFIG_LINES, TEMPLATE_DIR, TEMPLATE_TOOLS, renderTemplate } from "./render.mjs";
+import {
+  CONFIG_LINES,
+  SHADOWED,
+  TEMPLATE_DIR,
+  TEMPLATE_TOOLS,
+  TEMPLATE_TYPES,
+  layerFiles,
+  renderTemplate,
+} from "./render.mjs";
+import { currentRender, readFixture } from "./render-fixture.mjs";
 
 const vars = {
   key: "foo_bar",
@@ -17,12 +25,63 @@ const vars = {
 };
 
 // The stubbed variant (`--with-writes`); most assertions below hold for it.
-const rendered = renderTemplate(join(TEMPLATE_DIR, "management"), vars, { writes: true });
+const rendered = renderTemplate(TEMPLATE_DIR, "management", vars, { writes: true });
 // The default: an experimental, read-only server.
-const readOnly = renderTemplate(join(TEMPLATE_DIR, "management"), vars);
+const readOnly = renderTemplate(TEMPLATE_DIR, "management", vars);
 const WRITE_TOOLS = ["create_entity", "update_entity", "delete_entity", "bulk_update_status"].map(
   (t) => `foo_bar_${t}`
 );
+
+describe("scaffold: template layers", () => {
+  it("the management render matches the checked-in fixture", () => {
+    // A template change shows as a diff of fixtures/management-render.json:
+    // run `node scripts/scaffold/render-fixture.mjs --update` and review it.
+    expect(currentRender()).toEqual(readFixture());
+  });
+
+  it("no type layer shadows an earlier layer's file unless SHADOWED says why", () => {
+    for (const [type, { layers }] of Object.entries(TEMPLATE_TYPES)) {
+      const seen = new Map();
+      for (const layer of layers) {
+        for (const path of layerFiles(TEMPLATE_DIR, layer)) {
+          if (seen.has(path)) {
+            expect(
+              SHADOWED,
+              `${type}: ${layer} shadows ${seen.get(path)}'s ${path}`
+            ).toHaveProperty(path);
+          }
+          seen.set(path, layer);
+        }
+      }
+    }
+  });
+
+  it("code names only tools its own type registers", () => {
+    // A base file's text (a tool description, say) reaches every type, so
+    // entity wording in base names a tool a reporting server does not have.
+    // Workflow ids (mcp.execute.<key>_...) are not tool names; READMEs may
+    // name a tool the contributor adds later.
+    const strays = [];
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      for (const writes of [false, true]) {
+        const tools = new Set(TEMPLATE_TOOLS("foo_bar", { type, writes }));
+        for (const [path, text] of renderTemplate(TEMPLATE_DIR, type, vars, { writes })) {
+          if (!/^(src|tests)\//.test(path)) continue;
+          for (const [, tok] of text.matchAll(/(?<!mcp\.execute\.)\b(foo_bar_[a-z0-9_]+)/g)) {
+            if (!tools.has(tok)) strays.push(`${type}${writes ? "+writes" : ""} ${path}: ${tok}`);
+          }
+        }
+      }
+    }
+    expect(strays).toEqual([]);
+  });
+
+  it("an unknown type throws", () => {
+    expect(() => renderTemplate(TEMPLATE_DIR, "bogus", vars)).toThrow(
+      /unknown server type "bogus"/
+    );
+  });
+});
 
 describe("scaffold: management template", () => {
   it("renders every file with no placeholder left", () => {
@@ -74,9 +133,9 @@ describe("scaffold: management template", () => {
 
   it("an unknown placeholder is an error, not left in the output", () => {
     const { displayName: _omit, ...partial } = vars;
-    expect(() =>
-      renderTemplate(join(TEMPLATE_DIR, "management"), partial, { writes: true })
-    ).toThrow(/\{\{displayName\}\}/);
+    expect(() => renderTemplate(TEMPLATE_DIR, "management", partial, { writes: true })).toThrow(
+      /\{\{displayName\}\}/
+    );
   });
 
   it("CONFIG_LINES point at the values", () => {

@@ -19,7 +19,7 @@ import {
   names,
   nextFreePort,
 } from "./entries.mjs";
-import { TEMPLATE_DIR, TEMPLATE_TOOLS, renderTemplate } from "./render.mjs";
+import { TEMPLATE_DIR, TEMPLATE_TOOLS, TEMPLATE_TYPES, renderTemplate } from "./render.mjs";
 import { insertIntoSites, insertReadmeRow } from "./sites.mjs";
 
 const REPO_ROOT = join(import.meta.dirname, "../..");
@@ -30,7 +30,7 @@ const PRETTIER_EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|json|md)$/;
 /** Invalid input: the CLI prints the message and exits 2. */
 export class ScaffoldError extends Error {}
 
-const SUPPORTED_TYPES = ["management"];
+const SUPPORTED_TYPES = Object.keys(TEMPLATE_TYPES);
 
 function validate(opts, registry, root) {
   if (!KEY_PATTERN.test(opts.key ?? "")) {
@@ -40,8 +40,7 @@ function validate(opts, registry, root) {
   }
   if (!SUPPORTED_TYPES.includes(opts.type)) {
     throw new ScaffoldError(
-      `--type ${opts.type} is not supported yet; only management servers can be scaffolded. ` +
-        "Reporting templates follow in PR 3 of the new-server work."
+      `--type ${opts.type} is not supported; one of ${SUPPORTED_TYPES.join(", ")}`
     );
   }
   if (!opts.displayName) throw new ScaffoldError("--display-name is required");
@@ -156,7 +155,8 @@ export async function planScaffold(root, opts, today) {
 
   const pkgDir = `packages/${n.package}`;
   const rendered = renderTemplate(
-    join(TEMPLATE_DIR, opts.type),
+    TEMPLATE_DIR,
+    opts.type,
     {
       ...n,
       displayName: opts.displayName,
@@ -179,10 +179,11 @@ export async function planScaffold(root, opts, today) {
     ),
   };
 
-  const tools = TEMPLATE_TOOLS(n.key, { writes: Boolean(opts.writes) });
+  const tools = TEMPLATE_TOOLS(n.key, { type: opts.type, writes: Boolean(opts.writes) });
   const facts = buildPlatformFacts(full, today, configLines);
   const site = {
     ...n,
+    type: opts.type,
     displayName: opts.displayName,
     authMode: `${n.key}-bearer`,
     secretEnvVars: {

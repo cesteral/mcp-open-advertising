@@ -18,6 +18,7 @@
 // }
 
 import { DEPLOY_SITE_FILES } from "../lib/fleet-inventory.mjs";
+import { templateType } from "./render.mjs";
 
 function missing(file, list) {
   return new Error(`${file}: cannot find ${list} to insert into`);
@@ -135,7 +136,33 @@ function hclSecretEntry(s) {
   return [`    "${s.package}" = {`, ...vars, `    }`];
 }
 
+const REPORT_ERRORS = "packages/shared/src/utils/reporting/report-errors.ts";
+const REPORT_SCHEDULE = "packages/shared/src/schemas/report-schedule.ts";
+
+/**
+ * The reporting platform enums (scripts/lib/platform-keys.mjs
+ * checkPlatformNames): every server that ships a reporting tool is listed by
+ * its platform key, and every template ships get_report.
+ */
+function insertReportingPlatform(text, s) {
+  const m = text.match(/export type ReportingPlatform =([^;]+);/);
+  if (!m) throw missing(REPORT_ERRORS, "the ReportingPlatform union");
+  const at = text.indexOf(m[0]) + m[0].length - 1; // the closing ";"
+  return `${text.slice(0, at)}\n  | "${s.key}"${text.slice(at)}`;
+}
+
+function insertSchedulePlatform(text, s) {
+  const m = text.match(/platform: z\.enum\(\[\n([\s\S]*?)\n(\s*)\]\)/);
+  if (!m) throw missing(REPORT_SCHEDULE, "the report-schedule platform enum");
+  const close = text.indexOf(m[0]) + m[0].length - `\n${m[2]}])`.length;
+  const indent = m[1].split("\n").at(-1).match(/^\s*/)[0];
+  return `${text.slice(0, close)}\n${indent}"${s.key}",${text.slice(close)}`;
+}
+
 export const SITE_INSERTERS = {
+  [REPORT_ERRORS]: insertReportingPlatform,
+  [REPORT_SCHEDULE]: insertSchedulePlatform,
+
   "cloudbuild.yaml": insertCloudBuildImages("cloudbuild.yaml"),
   "cloudbuild-manual.yaml": insertCloudBuildImages("cloudbuild-manual.yaml"),
 
@@ -194,7 +221,7 @@ export const SITE_INSERTERS = {
       "the Server Inventory table",
       "## Server Inventory",
       /^\| [a-z0-9-]+-mcp +\|/,
-      `| ${s.package} | \`${s.key}\` | Management | \`accountId\` |`
+      `| ${s.package} | \`${s.key}\` | ${templateType(s.type ?? "management").label} | \`accountId\` |`
     ),
 
   "docs/guides/platform-mapping.md": (text, s) =>
@@ -204,7 +231,7 @@ export const SITE_INSERTERS = {
       "the Current Platforms table",
       "## Current Platforms",
       /^\|[^|\n]+\| `packages\/[a-z0-9-]+-mcp`/,
-      `| ${s.displayName} | \`packages/${s.package}\` | ${s.displayName} campaign management | Experimental |`
+      `| ${s.displayName} | \`packages/${s.package}\` | ${s.displayName} ${templateType(s.type ?? "management").purpose} | Experimental |`
     ),
 };
 
