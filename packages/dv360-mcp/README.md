@@ -132,7 +132,7 @@ The server supports 12 DV360 entity types through the dynamic entity system:
 
 | Mode                       | Header                        | Description                                     |
 | -------------------------- | ----------------------------- | ----------------------------------------------- |
-| `google-headers` (default) | `X-Google-*`                  | Google OAuth2 credentials via request headers   |
+| `google-headers` (default) | `X-Cesteral-Google-*`         | Google OAuth2 credentials via request headers   |
 | `jwt`                      | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
 | `none`                     | —                             | No authentication (development only)            |
 

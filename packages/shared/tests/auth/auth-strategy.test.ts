@@ -92,7 +92,7 @@ describe("GoogleHeadersAuthStrategy", () => {
     mockGetFingerprint.mockReturnValue("fp-abc");
 
     const strategy = new GoogleHeadersAuthStrategy(["scope1"]);
-    await strategy.verify({ "x-google-auth-type": "service_account" });
+    await strategy.verify({ "x-cesteral-google-auth-type": "service_account" });
 
     expect(mockParseCredentials).toHaveBeenCalledOnce();
     expect(mockCreateAdapter).toHaveBeenCalledOnce();
@@ -166,7 +166,9 @@ describe("GoogleHeadersAuthStrategy", () => {
     mockGetFingerprint.mockReturnValue("fp-only");
 
     const strategy = new GoogleHeadersAuthStrategy(["scope1"]);
-    const fp = await strategy.getCredentialFingerprint?.({ "x-google-auth-type": "oauth2" });
+    const fp = await strategy.getCredentialFingerprint?.({
+      "x-cesteral-google-auth-type": "oauth2",
+    });
 
     expect(fp).toBe("fp-only");
     expect(mockCreateAdapter).not.toHaveBeenCalled();
@@ -174,11 +176,11 @@ describe("GoogleHeadersAuthStrategy", () => {
 
   it("throws when headers are invalid (propagates parseCredentialsFromHeaders errors)", async () => {
     mockParseCredentials.mockImplementation(() => {
-      throw new Error("Missing X-Google-Auth-Type header.");
+      throw new Error("Missing X-Cesteral-Google-Auth-Type header.");
     });
 
     const strategy = new GoogleHeadersAuthStrategy(["scope1"]);
-    await expect(strategy.verify({})).rejects.toThrow(/Missing X-Google-Auth-Type header/);
+    await expect(strategy.verify({})).rejects.toThrow(/Missing X-Cesteral-Google-Auth-Type header/);
   });
 });
 

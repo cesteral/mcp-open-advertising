@@ -343,16 +343,18 @@ describe("createGoogleAuthAdapter", () => {
 });
 
 describe("parseCredentialsFromHeaders", () => {
-  it("throws when X-Google-Auth-Type header is missing", () => {
-    expect(() => parseCredentialsFromHeaders({})).toThrow(/Missing X-Google-Auth-Type header/);
+  it("throws when X-Cesteral-Google-Auth-Type header is missing", () => {
+    expect(() => parseCredentialsFromHeaders({})).toThrow(
+      /Missing X-Cesteral-Google-Auth-Type header/
+    );
   });
 
   it("parses service_account credentials from base64-encoded header", () => {
     const encoded = Buffer.from(JSON.stringify(MOCK_SA_CREDENTIALS)).toString("base64");
 
     const result = parseCredentialsFromHeaders({
-      "x-google-auth-type": "service_account",
-      "x-google-credentials": encoded,
+      "x-cesteral-google-auth-type": "service_account",
+      "x-cesteral-google-credentials": encoded,
     });
 
     expect(result.type).toBe("service_account");
@@ -362,21 +364,21 @@ describe("parseCredentialsFromHeaders", () => {
     }
   });
 
-  it("throws when X-Google-Credentials header is missing for service_account", () => {
+  it("throws when X-Cesteral-Google-Credentials header is missing for service_account", () => {
     expect(() =>
       parseCredentialsFromHeaders({
-        "x-google-auth-type": "service_account",
+        "x-cesteral-google-auth-type": "service_account",
       })
-    ).toThrow(/Missing X-Google-Credentials header/);
+    ).toThrow(/Missing X-Cesteral-Google-Credentials header/);
   });
 
-  it("throws when X-Google-Credentials is invalid base64/JSON", () => {
+  it("throws when X-Cesteral-Google-Credentials is invalid base64/JSON", () => {
     expect(() =>
       parseCredentialsFromHeaders({
-        "x-google-auth-type": "service_account",
-        "x-google-credentials": "not-valid-base64!!!",
+        "x-cesteral-google-auth-type": "service_account",
+        "x-cesteral-google-credentials": "not-valid-base64!!!",
       })
-    ).toThrow(/Invalid X-Google-Credentials/);
+    ).toThrow(/Invalid X-Cesteral-Google-Credentials/);
   });
 
   it("throws when service account JSON is missing required fields", () => {
@@ -386,18 +388,18 @@ describe("parseCredentialsFromHeaders", () => {
 
     expect(() =>
       parseCredentialsFromHeaders({
-        "x-google-auth-type": "service_account",
-        "x-google-credentials": incomplete,
+        "x-cesteral-google-auth-type": "service_account",
+        "x-cesteral-google-credentials": incomplete,
       })
     ).toThrow(/missing client_email or private_key/);
   });
 
   it("parses oauth2 credentials from individual headers", () => {
     const result = parseCredentialsFromHeaders({
-      "x-google-auth-type": "oauth2",
-      "x-google-client-id": "client-123",
-      "x-google-client-secret": "secret-456",
-      "x-google-refresh-token": "refresh-789",
+      "x-cesteral-google-auth-type": "oauth2",
+      "x-cesteral-google-client-id": "client-123",
+      "x-cesteral-google-client-secret": "secret-456",
+      "x-cesteral-google-refresh-token": "refresh-789",
     });
 
     expect(result.type).toBe("oauth2");
@@ -411,17 +413,59 @@ describe("parseCredentialsFromHeaders", () => {
   it("throws when OAuth2 headers are missing", () => {
     expect(() =>
       parseCredentialsFromHeaders({
-        "x-google-auth-type": "oauth2",
+        "x-cesteral-google-auth-type": "oauth2",
       })
     ).toThrow(/Missing required OAuth2 headers/);
+  });
+
+  it("names the next missing OAuth2 header, in the X-Cesteral-Google-* form", () => {
+    expect(() => parseCredentialsFromHeaders({ "x-cesteral-google-auth-type": "oauth2" })).toThrow(
+      "Missing required OAuth2 headers: X-Cesteral-Google-Client-Id, " +
+        "X-Cesteral-Google-Client-Secret, X-Cesteral-Google-Refresh-Token"
+    );
+  });
+
+  // Google's front end strips request headers named X-Google-* before they reach
+  // a Cloud Run service, so the connectors read X-Cesteral-Google-* only. The old
+  // names are not read at all: a request that still sends them is unauthenticated.
+  it("rejects the old X-Google-* names (oauth2)", () => {
+    expect(() =>
+      parseCredentialsFromHeaders({
+        "x-google-auth-type": "oauth2",
+        "x-google-client-id": "client-123",
+        "x-google-client-secret": "secret-456",
+        "x-google-refresh-token": "refresh-789",
+      })
+    ).toThrow(/Missing X-Cesteral-Google-Auth-Type header/);
+  });
+
+  it("does not read old X-Google-* credential headers beside a new auth type", () => {
+    expect(() =>
+      parseCredentialsFromHeaders({
+        "x-cesteral-google-auth-type": "oauth2",
+        "x-google-client-id": "client-123",
+        "x-google-client-secret": "secret-456",
+        "x-google-refresh-token": "refresh-789",
+      })
+    ).toThrow(/Missing required OAuth2 headers: X-Cesteral-Google-Client-Id/);
+  });
+
+  it("rejects the old X-Google-* names (service_account)", () => {
+    const encoded = Buffer.from(JSON.stringify(MOCK_SA_CREDENTIALS)).toString("base64");
+    expect(() =>
+      parseCredentialsFromHeaders({
+        "x-cesteral-google-auth-type": "service_account",
+        "x-google-credentials": encoded,
+      })
+    ).toThrow(/Missing X-Cesteral-Google-Credentials header/);
   });
 
   it("throws on invalid auth type", () => {
     expect(() =>
       parseCredentialsFromHeaders({
-        "x-google-auth-type": "magic",
+        "x-cesteral-google-auth-type": "magic",
       })
-    ).toThrow(/Invalid X-Google-Auth-Type: "magic"/);
+    ).toThrow(/Invalid X-Cesteral-Google-Auth-Type: "magic"/);
   });
 });
 

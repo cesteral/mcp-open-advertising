@@ -13,7 +13,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     ...actual,
     createAuthStrategy: vi.fn(() => ({
       verify: vi.fn(async (headers: Record<string, string | string[] | undefined>) => {
-        if (!headers.authorization && !headers["x-google-auth-type"]) {
+        if (!headers.authorization && !headers["x-cesteral-google-auth-type"]) {
           throw new Error("Missing required credentials");
         }
         if (headers.authorization === "Bearer invalid-token") {

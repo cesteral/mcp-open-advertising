@@ -37,15 +37,15 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
       "X-Cesteral-Decision-Token",
-      "X-Google-Auth-Type",
-      "X-Google-Credentials",
-      "X-Google-Client-Id",
-      "X-Google-Client-Secret",
-      "X-Google-Refresh-Token",
+      "X-Cesteral-Google-Auth-Type",
+      "X-Cesteral-Google-Credentials",
+      "X-Cesteral-Google-Client-Id",
+      "X-Cesteral-Google-Client-Secret",
+      "X-Cesteral-Google-Refresh-Token",
     ],
     authErrorHint:
       config.mcpAuthMode === "google-headers"
-        ? "Provide Google credentials via X-Google-Auth-Type and associated headers."
+        ? "Provide Google credentials via X-Cesteral-Google-Auth-Type and associated headers."
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
