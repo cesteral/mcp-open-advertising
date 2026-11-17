@@ -5,6 +5,9 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   downloadFileToBuffer,
+  CreativeAssetRefSchema,
+  resolveCreativeAsset,
+  checkCreativeAssetLimits,
   ensureFilenameExtension,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -21,6 +24,8 @@ import type {
   DispatchedCapability,
   DryRunValidationError,
   CesteralWriteToolAnnotations,
+  CreativeAssetRef,
+  CreativeAssetPlatformLimits,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_upload_image";
@@ -38,10 +43,29 @@ Returns the assetId which can be used when creating creatives.
 
 const ASSET_TYPE = "image";
 
+/** What DV360 accepts for this upload; a media-library `asset` is checked against it before anything is fetched. */
+const ASSET_LIMITS: CreativeAssetPlatformLimits = {
+  platform: "DV360",
+  allowedContentTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+  maxBytes: 10 * 1024 * 1024,
+};
+
+/** `dry_run` is the only argument outside the write's identity; `asset` stays in the executable args so the decision token binds the exact asset. */
+const EXECUTABLE_ARGS_EXCLUDE = ["dry_run"];
+
 export const UploadImageInputSchema = z
   .object({
     advertiserId: z.string().describe("DV360 Advertiser ID"),
-    mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
+    mediaUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Publicly accessible URL of the image to upload. Give exactly one of `mediaUrl` or `asset`."
+      ),
+    asset: CreativeAssetRefSchema.optional().describe(
+      "A media-library asset to upload instead of a URL. The server fetches its bytes at execution only (never on dry_run); the call carries no URL. Give exactly one of `mediaUrl` or `asset`."
+    ),
     name: z.string().optional().describe("Optional name for the uploaded asset"),
     dry_run: z
       .boolean()
@@ -50,6 +74,15 @@ export const UploadImageInputSchema = z
       .describe(
         "When true, validates the upload request and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be image upload) without downloading or uploading anything. No asset is created."
       ),
+  })
+  .superRefine((value, ctx) => {
+    if ((value.mediaUrl === undefined) === (value.asset === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of `mediaUrl` or `asset`",
+        path: [value.asset === undefined ? "mediaUrl" : "asset"],
+      });
+    }
   })
   .describe("Parameters for uploading an image to DV360");
 
@@ -93,7 +126,7 @@ export async function uploadImageLogic(
   // Symbolic dry-run: validate the request and project the would-be effect
   // (an image asset upload). No download, no API call.
   if (input.dry_run === true) {
-    const dryRun = buildUploadEffectDryRun(input.mediaUrl);
+    const dryRun = buildUploadEffectDryRun(input);
     return {
       uploadedAt: new Date().toISOString(),
       dryRun,
@@ -103,11 +136,17 @@ export async function uploadImageLogic(
 
   const { dv360Service } = resolveSessionServices(sdkContext);
 
-  const { buffer, contentType, filename } = await downloadFileToBuffer(
-    input.mediaUrl,
-    120_000,
-    context
-  );
+  // A media-library asset is resolved through the control plane with this call's
+  // decision token; a URL is downloaded as before.
+  const { buffer, contentType, filename } = input.asset
+    ? await resolveCreativeAsset({
+        asset: input.asset,
+        executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
+        parsedArgs: input,
+        limits: ASSET_LIMITS,
+        context,
+      })
+    : await downloadFileToBuffer(input.mediaUrl as string, 120_000, context);
 
   // DV360 rejects uploads when the filename lacks an extension
   // (ASSET_UNKNOWN_FILE_EXTENSION). If the caller supplied a friendly name,
@@ -142,19 +181,29 @@ export async function uploadImageLogic(
  * projects the would-be effect (an image asset upload). The upload fetches the
  * URL and streams it upstream — there is no native validate/preview — so both
  * axes are symbolic. Pure (no I/O: no download, no upload). */
-function buildUploadEffectDryRun(mediaUrl: string): EffectDryRunResult {
-  const validationErrors: DryRunValidationError[] = [];
-  let protocolOk: boolean;
-  try {
-    const parsed = new URL(mediaUrl);
-    protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    protocolOk = false;
+function buildUploadEffectDryRun(input: {
+  mediaUrl?: string;
+  asset?: CreativeAssetRef;
+}): EffectDryRunResult {
+  const { mediaUrl, asset } = input;
+  // An asset reference is checked against the platform's limits from its own
+  // fields: nothing is resolved or fetched on a dry run.
+  const validationErrors: DryRunValidationError[] = asset
+    ? checkCreativeAssetLimits(asset, ASSET_LIMITS)
+    : [];
+  let protocolOk = true;
+  if (mediaUrl !== undefined) {
+    try {
+      const parsed = new URL(mediaUrl);
+      protocolOk = parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      protocolOk = false;
+    }
   }
   if (!protocolOk) {
     validationErrors.push({
       code: "INVALID_MEDIA_URL",
-      message: `mediaUrl must be an http(s) URL — got "${mediaUrl}"`,
+      message: `mediaUrl must be an http(s) URL — got "${mediaUrl ?? ""}"`,
       field: "mediaUrl",
     });
   }
@@ -223,7 +272,7 @@ export const uploadImageTool = {
     cesteral: {
       kind: "write",
       writeClass: "effect",
-      executableArgsExclude: ["dry_run"],
+      executableArgsExclude: EXECUTABLE_ARGS_EXCLUDE,
       platform: "dv360",
       contractPlatformSlug: "dv360",
       contractToolSlug: "upload_image",
