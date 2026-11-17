@@ -111,6 +111,7 @@ function regenerate() {
 const NEXT_STEPS =
   "pnpm install && pnpm run build\n" +
   "  pnpm sync:untrusted-declarations   # records the new tools' untrusted-content declarations\n" +
+  "  pnpm sync:tool-definition-hashes   # records every tool's definitionHash, the new server's included\n" +
   "  pnpm run test";
 
 /** `--add-write-stubs`: governed write stubs for an experimental read-only server. */
