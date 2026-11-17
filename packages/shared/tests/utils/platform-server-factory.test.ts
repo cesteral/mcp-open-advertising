@@ -132,15 +132,13 @@ describe("createPlatformMcpServer", () => {
     });
   });
 
-  it("adds extra capabilities and the task store when given", async () => {
-    const taskStore = { kind: "store" };
+  it("adds extra capabilities when given", async () => {
     const server = (await createPlatformMcpServer(
-      baseOptions({ extraCapabilities: { tasks: { list: {} } }, taskStore })
+      baseOptions({ extraCapabilities: { completions: {} } })
     )) as unknown as FakeMcpServer;
 
     expect(server.options).toEqual({
-      capabilities: { logging: {}, tasks: { list: {} } },
-      taskStore,
+      capabilities: { logging: {}, completions: {} },
       instructions: "Some instructions",
     });
   });

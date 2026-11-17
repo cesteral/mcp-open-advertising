@@ -6,7 +6,7 @@
  *
  * Context-efficient capability discovery for Google Ads MCP server.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const toolSchemaExplorationPrompt: Prompt = {
   name: "gads_tool_schema_exploration",

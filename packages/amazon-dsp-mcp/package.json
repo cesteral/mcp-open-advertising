@@ -53,11 +53,12 @@
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "pino": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "catalog:",
     "@types/node": "^26.6.6",
     "openapi-typescript": "^7.10.1",
     "openapi-zod-client": "^1.18.3",

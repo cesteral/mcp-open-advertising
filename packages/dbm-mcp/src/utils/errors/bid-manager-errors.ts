@@ -278,8 +278,8 @@ export class ReportWallTimeExceededError extends BidManagerError {
     super(
       `Bid Manager report did not finish within the ${seconds}s synchronous wall-time cap` +
         ` (REPORT_SYNC_MAX_WALL_TIME_MS)${queryInfo}${statusInfo}${causeInfo}.` +
-        " Narrow the date range or dimensions, or run the query with" +
-        " dbm_run_custom_query_async, which is not capped.",
+        " Narrow the date range or dimensions; a self-hosted or stdio server whose" +
+        " client waits longer can raise REPORT_SYNC_MAX_WALL_TIME_MS.",
       {
         code: JsonRpcErrorCode.Timeout,
         cause: lastError,

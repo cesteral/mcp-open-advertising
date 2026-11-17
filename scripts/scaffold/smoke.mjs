@@ -83,6 +83,9 @@ async function checks(tree, tmp, stage, { writes, promoted }) {
   run(`${PNPM} run build`, tree);
   // Generated from the built servers; the CLI prints it as a next step.
   run(`${PNPM} run sync:untrusted-declarations`, tree);
+  // Also generated from the built servers: the new server's tools, plus the
+  // registry-derived platform enums (report schedules) that gain its key.
+  run(`${PNPM} run sync:tool-definition-hashes`, tree);
   // Build-and-test runs these against the built servers too.
   run(`${PNPM} run generate:manifests`, tree);
   run(`${PNPM} run check:registry-runtime`, tree);

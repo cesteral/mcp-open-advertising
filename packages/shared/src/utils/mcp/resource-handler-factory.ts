@@ -128,7 +128,7 @@ export interface TemplatedResourceDefinition {
 
 /**
  * Structural type for the SDK's `registerResource` overload that accepts a
- * `ResourceTemplate`. Shared avoids importing `@modelcontextprotocol/sdk`
+ * `ResourceTemplate`. Shared avoids importing `@modelcontextprotocol/server`
  * directly — the consumer supplies a `templateBuilder` callback.
  */
 interface McpServerTemplatedResourceLike {
@@ -176,7 +176,7 @@ export interface RegisterTemplatedResourcesOptions {
  *
  * @example
  * ```ts
- * import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+ * import { ResourceTemplate } from "@modelcontextprotocol/server";
  * registerTemplatedResourcesFromDefinitions({
  *   server,
  *   templateBuilder: (t, o) => new ResourceTemplate(t, o),

@@ -7,7 +7,7 @@
  * Step-by-step guide for creating a complete campaign hierarchy:
  * Advertiser → Campaign → Ad Group → Ad
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "ttd_campaign_setup_workflow",

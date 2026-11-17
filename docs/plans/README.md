@@ -14,9 +14,9 @@ When you add a plan, put a `Status` line under the title and add it here. When i
 
 ## Partly implemented
 
-| Doc                                                                                      | What                                                                                                                                     |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| [2026-04-28-mcp-tasks-primitive-adoption.md](2026-04-28-mcp-tasks-primitive-adoption.md) | Adopting the MCP Tasks primitive (SEP-1686): shipped for `dbm_run_custom_query_async` and the shared helper; other servers not scheduled |
+| Doc                                                                                      | What                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [2026-04-28-mcp-tasks-primitive-adoption.md](2026-04-28-mcp-tasks-primitive-adoption.md) | Adopting the MCP Tasks primitive (SEP-1686): shipped for `dbm_run_custom_query_async` and the shared helper, both removed in the SDK v2 move (#242); superseded by #245 |
 
 ## Implemented
 

@@ -9,9 +9,8 @@
 
 import { describe, it, expect } from "vitest";
 import pino from "pino";
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { McpServer, ResourceTemplate, InMemoryTransport } from "@modelcontextprotocol/server";
 import { registerReportCsvResource } from "../../src/utils/reporting/report-csv-resource.js";
 import { ReportCsvStore } from "../../src/utils/reporting/report-csv-store.js";
 

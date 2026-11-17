@@ -5,10 +5,12 @@
  * Worst-case wall time of one Bid Manager report run, derived from the same
  * config values `BidManagerService` polls and retries with.
  *
- * Anything that has to outlive a run — the MCP task TTL of
- * `dbm_run_custom_query_async` in particular — is sized from this rather than
- * from a hand-picked constant, so raising `REPORT_POLL_MAX_RETRIES` or
- * `REPORT_QUERY_RETRIES` cannot silently leave a TTL shorter than the run.
+ * It is what the synchronous wall-time cap below exists to bound: with the
+ * default poll and retry settings an uncapped run could take about 72 minutes.
+ * Anything that has to outlive a run (a task TTL, if an async path returns
+ * under #245) must be sized from this rather than from a hand-picked
+ * constant, so raising `REPORT_POLL_MAX_RETRIES` or `REPORT_QUERY_RETRIES`
+ * cannot silently leave it shorter than the run.
  */
 
 import type { AppConfig } from "../../config/index.js";
@@ -41,8 +43,10 @@ export type ReportTimingConfig = Pick<
  * download, the saved-query delete and the response, so the caller gets a
  * Timeout error naming the cause instead of a severed connection.
  * `REPORT_SYNC_MAX_WALL_TIME_MS` overrides it (a self-hosted or stdio server
- * whose client waits longer can raise it); `dbm_run_custom_query_async` is the
- * path for runs that need longer.
+ * whose client waits longer can raise it). There is no uncapped path today:
+ * `dbm_run_custom_query_async` was removed with the SDK v2 move (#242), since
+ * v2 has no server-side MCP Tasks; #245 tracks bringing it back on the Tasks
+ * extension.
  */
 export const DEFAULT_REPORT_SYNC_MAX_WALL_TIME_MS = 240_000;
 

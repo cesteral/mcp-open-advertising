@@ -6,7 +6,7 @@
  *
  * Guide for creating and retrieving async reports via TTD MyReports API.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const reportGenerationWorkflowPrompt: Prompt = {
   name: "ttd_report_generation_workflow",

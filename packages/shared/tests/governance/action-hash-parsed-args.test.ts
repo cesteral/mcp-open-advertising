@@ -29,11 +29,11 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { McpServer, InMemoryTransport } from "@modelcontextprotocol/server";
 import { hashActionInput, canonicalizeExecutableArgs } from "@cesteral/contract-hash";
 import { installRawToolArgsCapture, getRawToolArgs } from "../../src/utils/mcp/raw-tool-args.js";
+import { toStandardSchema } from "../../src/utils/mcp/zod-standard-schema.js";
 
 interface Probe {
   /** What the SDK handed the tool handler (post-validation). */
@@ -56,10 +56,16 @@ async function probe(
   let seen: Probe = { parsed: {}, raw: undefined };
 
   const server = new McpServer({ name: "hash-probe", version: "0.0.0" });
-  server.registerTool("probe_tool", { description: "probe", inputSchema }, async (args) => {
-    seen = { parsed: args as Record<string, unknown>, raw: getRawToolArgs() };
-    return { content: [{ type: "text" as const, text: "ok" }] };
-  });
+  // Wrapped exactly as registerToolsFromDefinitions wraps it for SDK v2 (#242).
+  const wrapped = toStandardSchema(inputSchema, "input") as never;
+  server.registerTool(
+    "probe_tool",
+    { description: "probe", inputSchema: wrapped },
+    async (args) => {
+      seen = { parsed: args as Record<string, unknown>, raw: getRawToolArgs() };
+      return { content: [{ type: "text" as const, text: "ok" }] };
+    }
+  );
 
   if (withCapture) {
     // Mirrors the factory: install AFTER registration, since McpServer creates

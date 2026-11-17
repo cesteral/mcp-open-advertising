@@ -43,12 +43,7 @@ vi.hoisted(() => {
   process.env.REPORT_POLL_MAX_DELAY_MS = "1";
 });
 
-import pino from "pino";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { mcpConfig } from "../../src/config/index.js";
-import { createMcpServer } from "../../src/mcp-server/server.js";
 import {
   getCampaignDeliveryLogic,
   GetCampaignDeliveryInputSchema,
@@ -488,49 +483,5 @@ describe("dbm_run_custom_query", () => {
       )
     ).rejects.toMatchObject({ code: -32602 });
     expect(stub.requests).toHaveLength(0);
-  });
-});
-
-describe("dbm_run_custom_query_async (over the MCP SDK, task-augmented)", () => {
-  it("sends the same five-call chain from the background task", async () => {
-    routeReportChain();
-    const server = await createMcpServer(pino({ level: "silent" }), session.sessionId);
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: "wire-client", version: "0.0.0" });
-    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
-    try {
-      const stream = client.experimental.tasks.callToolStream(
-        {
-          name: "dbm_run_custom_query_async",
-          arguments: {
-            reportType: "STANDARD",
-            groupBys: ["FILTER_DATE"],
-            metrics: ["METRIC_IMPRESSIONS"],
-            dateRange: { preset: "LAST_30_DAYS" },
-          },
-        },
-        CallToolResultSchema,
-        { task: { ttl: 60_000 } }
-      );
-      let result: { isError?: boolean } | undefined;
-      for await (const message of stream) {
-        if (message.type === "result") result = message.result as { isError?: boolean };
-        if (message.type === "error") throw message.error;
-      }
-      expect(result?.isError).not.toBe(true);
-    } finally {
-      await client.close();
-      await server.close();
-    }
-    const body = expectChain();
-    // basis: as for dbm_run_custom_query.
-    expect(body.params).toEqual({
-      type: "STANDARD",
-      groupBys: ["FILTER_DATE"],
-      metrics: ["METRIC_IMPRESSIONS"],
-    });
-    expect((body.metadata as { dataRange: unknown }).dataRange).toEqual({
-      range: "LAST_30_DAYS",
-    });
   });
 });

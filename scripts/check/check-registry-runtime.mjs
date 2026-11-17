@@ -12,9 +12,8 @@
  *   5. Diffs the live names against registry.servers[].tools / .prompts
  *
  * This catches drift the static parser in `sync-registry-tools.mjs` cannot:
- * tools registered through helpers (e.g. `registerAsyncTaskTool`,
- * `registerToolTask`) and any registration path that does not match the
- * regex. Tool-name drift is the registry field LLM clients use to decide
+ * tools registered through helpers (e.g. `createToolSearchTool`) and any
+ * registration path that does not match the regex. Tool-name drift is the registry field LLM clients use to decide
  * which server to call, so runtime ground truth matters.
  *
  * Requires `pnpm run build` first (uses dist output of every package).

@@ -44,11 +44,12 @@ It writes `packages/reddit-mcp` from the layers in [`templates/server/`](../../t
 - the README fleet table
 - the hand-maintained lists `scripts/lib/fleet-inventory.mjs` checks that are not about deploying: the issue-form dropdowns, `CROSS_SERVER_CONTRACT.md` and `platform-mapping.md`, and the two reporting platform enums in `@cesteral/shared` (`ReportingPlatform` and the report-schedule `platform`), for every type, since every type ships `get_report` and `scripts/lib/platform-keys.mjs` requires the enums to name every reporting-capable server. The deploy lists (Cloud Build's `images:`, the three Terraform maps, the tfvars examples) wait for promotion.
 
-Then build, record the new tools' untrusted-content declarations (they are read from the built server), and test:
+Then build, record the new tools' untrusted-content declarations and every tool's `definitionHash` (both are read from the built servers), and test. The hash sync also records the existing tools whose schema enumerates the fleet's platforms (the report-schedule tools), which gain the new key:
 
 ```bash
 pnpm install && pnpm run build
 pnpm sync:untrusted-declarations
+pnpm sync:tool-definition-hashes
 pnpm run test
 ```
 
@@ -130,7 +131,7 @@ The `cesteral` block inside a tool's `annotations` is what makes it **governed**
 3. Declare `untrustedContent`, or `NO_UNTRUSTED_CONTENT` when the tool returns no platform text.
 4. Account-scoped tools call `assertAccountScope()` with the session's bound account.
 5. A write tool also needs a `cesteral` block, a wire test, and a terminal-operation entry if it is destructive.
-6. Run `pnpm sync:registry-tools` and `pnpm sync:untrusted-declarations`, and update the tool count in the README fleet table.
+6. Run `pnpm sync:registry-tools`, `pnpm sync:untrusted-declarations` and `pnpm sync:tool-definition-hashes`, and update the tool count in the README fleet table.
 7. If the tool's name, title or description competes with another server's tools, the routing and tool-search evals may move ([evals.md](../architecture/evals.md)).
 
 ## What CI checks

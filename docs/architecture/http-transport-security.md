@@ -8,4 +8,4 @@ Added in #241 (`createDnsRebindingPolicy` in `mcp-transport-helpers.ts`), keyed 
 
 ## Server→client messages
 
-Server→client messages sent while handling a request (elicitation, `notifications/message`) must carry that request's id (`relatedRequestId` / `extra.sendNotification`), so the SDK writes them on the request's POST response stream. Without it they go to the standalone GET stream, which this fleet answers with 405, and a destructive-op confirmation never reaches the client (#241, `tool-handler-factory.ts`; wire test `related-request-wire.test.ts`)
+Server→client messages sent while handling a request (elicitation, `notifications/message`) must carry that request's id (SDK v2: `ctx.mcpReq.log` / `ctx.mcpReq.notify` are request-scoped; `ctx.mcpReq.elicitInput` is not and needs `{ relatedRequestId: ctx.mcpReq.id }`), so the SDK writes them on the request's POST response stream. Without it they go to the standalone GET stream, which this fleet answers with 405, and a destructive-op confirmation never reaches the client (#241, `tool-handler-factory.ts`; wire test `related-request-wire.test.ts`)

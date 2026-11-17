@@ -11,7 +11,7 @@ Every tool call creates a saved Bid Manager query, runs it, downloads the report
 ## Features
 
 - **Per-session Google auth** via `GoogleAuthAdapter` with `X-Google-*` request headers (`X-Google-Auth-Type`, `X-Google-Credentials`, or `X-Google-Client-Id` / `X-Google-Client-Secret` / `X-Google-Refresh-Token`)
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class
 - **Structured logging** via Pino
@@ -78,12 +78,6 @@ Compose and execute a custom Bid Manager report with specified metrics, group-by
 - `dateRange` (object): `{ preset }` (e.g. `LAST_7_DAYS`) or `{ startDate, endDate }`
 - `strictValidation` (boolean, default `true`): reject report types, filters and metrics missing from the bundled catalogue
 - `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `offset` paginates; `maxRows` caps page size (default 10/50; hard cap 200).
-
-### 6. `dbm_run_custom_query_async`
-
-Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses MCP Tasks to return a task handle immediately; clients call it task-augmented (MCP 2025-11-25 tasks), poll via `tasks/get` and retrieve results via `tasks/result`. Tasks live in memory on the instance holding the session, so on a scaled-out HTTP deploy a poll that lands on another instance finds no task.
-
-**Parameters:** Same as `dbm_run_custom_query` (including the bounded report-view params).
 
 ## Authentication Modes
 

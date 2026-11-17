@@ -22,7 +22,7 @@ function reportCsvNotFound(href: string): McpError {
 }
 
 /**
- * Minimal shape we need from `@modelcontextprotocol/sdk`'s `McpServer`
+ * Minimal shape we need from `@modelcontextprotocol/server`'s `McpServer`
  * — declared structurally so the shared package does not take a hard
  * dependency on the SDK.
  */

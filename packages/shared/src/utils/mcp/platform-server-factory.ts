@@ -16,7 +16,7 @@
  * registration order), so it is fixed here: tools, static resources, templated
  * resources, `report-csv://`, conformance fixtures, prompts.
  *
- * The shared package takes no dependency on `@modelcontextprotocol/sdk`, so the
+ * The shared package takes no dependency on `@modelcontextprotocol/server`, so the
  * caller passes the two SDK classes it needs (`McpServer`, `ResourceTemplate`).
  */
 
@@ -98,13 +98,8 @@ export interface PlatformMcpServerOptions<TServer extends PlatformMcpServerLike>
   version: string;
   description: string;
   instructions: string;
-  /**
-   * Capabilities beyond the `logging` capability every server advertises
-   * (dbm-mcp adds `tasks`).
-   */
+  /** Capabilities beyond the `logging` capability every server advertises. */
   extraCapabilities?: Record<string, unknown>;
-  /** Backing store for MCP Tasks (dbm-mcp only). */
-  taskStore?: unknown;
 
   tools: ToolDefinitionForFactory[];
   /** Fixed-URI resources. */
@@ -164,7 +159,6 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
     buildServerInfo(packageName, { version: opts.version, description: opts.description }),
     {
       capabilities: { logging: {}, ...opts.extraCapabilities },
-      ...(opts.taskStore ? { taskStore: opts.taskStore } : {}),
       instructions: opts.instructions,
     }
   );

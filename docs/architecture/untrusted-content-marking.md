@@ -4,12 +4,12 @@ Reference for this subsystem. [CLAUDE.md](../../CLAUDE.md) keeps a short summary
 
 Platform text (entity names, ad copy, upstream error bodies, report cells) is attacker-controllable, so results say where it sits under `_meta["cesteral/untrusted"]` (`v: 1`, additive-only). `_meta` is outside `definitionHash`, so none of this moves an attested hash.
 
-| Where                             | Marker                                                                                   | Set by                                                              |
-| --------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Any factory-built error result    | `reason: "tool-error"`, `contentBlocks: [0]`                                             | `tool-handler-factory.ts` catch path; `async-task-tool.ts` failures |
-| `report-csv://` resource contents | `{ whole: true, reason: "report-csv" }`                                                  | `report-csv-resource.ts`                                            |
-| A declaring tool's success result | `reason: "platform-content"` + its declared `structuredPaths` / `contentBlocks`          | the tool's `untrustedContent` field                                 |
-| The tool's entry in `tools/list`  | the declaration itself, so stdio clients learn it before calling (the card is HTTP-only) | same                                                                |
+| Where                             | Marker                                                                                   | Set by                               |
+| --------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------ |
+| Any factory-built error result    | `reason: "tool-error"`, `contentBlocks: [0]`                                             | `tool-handler-factory.ts` catch path |
+| `report-csv://` resource contents | `{ whole: true, reason: "report-csv" }`                                                  | `report-csv-resource.ts`             |
+| A declaring tool's success result | `reason: "platform-content"` + its declared `structuredPaths` / `contentBlocks`          | the tool's `untrustedContent` field  |
+| The tool's entry in `tools/list`  | the declaration itself, so stdio clients learn it before calling (the card is HTTP-only) | same                                 |
 
 **Three declaration states, never collapsed.** Paths (`{ structuredPaths: ["$.rows"], contentBlocks: [0] }`, whole subtrees, `[*]` allowed) = platform text is there. `NO_UNTRUSTED_CONTENT` = the tool returns none. **No field = "not reported", never "trusted".** A malformed declaration throws at registration.
 

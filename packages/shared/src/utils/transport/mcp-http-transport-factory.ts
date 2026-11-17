@@ -11,7 +11,7 @@
 
 import { readFileSync } from "fs";
 
-import { StreamableHTTPTransport } from "@hono/mcp";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server";
 import { type ServerType, serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
@@ -58,13 +58,46 @@ import { buildDeploymentIdentity } from "./deployment-identity.js";
 // Types
 // ---------------------------------------------------------------------------
 
-class McpSessionTransport extends StreamableHTTPTransport {
-  public sessionId: string;
+/**
+ * The SDK's web-standard Streamable HTTP transport, bound to a session id this
+ * factory minted (#242: replaces `@hono/mcp`'s transport, which pinned SDK v1).
+ */
+class McpSessionTransport extends WebStandardStreamableHTTPServerTransport {
   constructor(sessionId: string) {
-    super();
+    super({ sessionIdGenerator: () => sessionId });
     this.sessionId = sessionId;
   }
 }
+
+/**
+ * Session ownership is decided above the transport: the factory authenticates
+ * every request, checks its credential fingerprint against the session, and
+ * rebuilds services for an id this instance has not seen (scale-out
+ * rehydration, design principle 5). The SDK's own session check would reject
+ * a rebuilt session's first request with 400 "Server not initialized", because
+ * a fresh transport never saw the client's `initialize` (another instance did).
+ * `@hono/mcp`'s transport skipped that check in the mode this factory used, so
+ * it is disabled here too.
+ *
+ * `validateSession` is `private` in the SDK's typings, so it is replaced on the
+ * prototype rather than overridden in the class. That reaches into SDK
+ * internals on purpose, like `raw-tool-args.ts` does: it is feature-checked
+ * here, so an SDK that renames it fails at load, not silently on the first
+ * rehydrated request; and `mcp-http-transport-factory.test.ts` drives a real
+ * rehydrated session through it.
+ */
+const transportProto = McpSessionTransport.prototype as unknown as {
+  validateSession?: unknown;
+};
+if (typeof transportProto.validateSession !== "function") {
+  throw new Error(
+    "WebStandardStreamableHTTPServerTransport no longer has validateSession(); " +
+      "the session-rehydration override in mcp-http-transport-factory.ts needs updating"
+  );
+}
+transportProto.validateSession = function validateSessionSkipped(): undefined {
+  return undefined;
+};
 
 type HonoBindings = {
   incoming: import("http").IncomingMessage;
@@ -219,7 +252,7 @@ export interface TransportFactoryConfig {
 
 /** Minimal MCP server interface required by the factory. */
 interface McpServerLike {
-  connect(transport: StreamableHTTPTransport): Promise<void>;
+  connect(transport: WebStandardStreamableHTTPServerTransport): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -676,13 +709,9 @@ export function createMcpHttpTransport(
           sessionTransports.set(sessionId, transport);
         }
 
-        const response = await transport.handleRequest(c);
-
-        if (response) {
-          response.headers.set("Mcp-Session-Id", sessionId);
-          return response;
-        }
-        return c.body(null, 204);
+        const response = await transport.handleRequest(c.req.raw);
+        response.headers.set("Mcp-Session-Id", sessionId);
+        return response;
       } catch (error) {
         logger.error({ error, sessionId, requestId }, "Error handling MCP request");
         await transport?.close?.().catch(() => {});

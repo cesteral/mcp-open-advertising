@@ -6,7 +6,7 @@
  *
  * Diagnostic workflow for common TTD entity errors.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const troubleshootEntityPrompt: Prompt = {
   name: "ttd_troubleshoot_entity",

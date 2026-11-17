@@ -52,11 +52,9 @@ Stop mechanically wrapping REST APIs as MCP servers. Design for how a human woul
 
 Status legend: ✅ done · 🟡 partial · ⬜ not started.
 
-### 1. Adopt the shared Tasks helper across long-running flows 🟡
+### 1. Adopt Tasks across long-running flows ⬜
 
-The shared abstraction already exists: `@cesteral/shared` exposes `async-task-tool.ts`, which wraps `server.experimental.tasks.registerToolTask()` so servers only supply the tool name, schemas, and work function. The protocol primitive (SEP-1686) is Final; the SDK side remains under the `experimental` namespace, which is the actual gate on broader rollout — not the lack of an abstraction.
-
-Today only `dbm_run_custom_query_async` consumes the helper. Adoption targets, in priority order:
+MCP 2026-07-28 moved Tasks out of the core protocol into the `io.modelcontextprotocol/tasks` extension, and SDK v2 removed the experimental server-side API the fleet used. So the shared `async-task-tool.ts` helper and its one consumer, `dbm_run_custom_query_async`, were removed in the SDK v2 move (#242). No tool uses Tasks today; #245 tracks building on the extension once it has a server side. Adoption targets then, in priority order:
 
 - every `*_submit_report` / `*_check_report_status` / `*_download_report` trio (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS, SA360) — these are the largest concentration of polling boilerplate in the repo
 - TTD GraphQL bulk jobs (`ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job`)
@@ -153,7 +151,7 @@ Public surface now: [docs/guides/observability.md](./observability.md) — a mar
 
 2026 is about full agent connectivity, not tool wrappers. For this repo, the highest-value work is not adding more REST-shaped tools. The four levers, in priority order:
 
-1. **Adopt Tasks across the report and Workflows trios** — the helper exists, only one tool uses it.
+1. **Adopt Tasks across the report and Workflows trios** — on the Tasks extension, once it has a server side (#245).
 2. **Extend elicitations across destructive write paths** — biggest safety win for the smallest investment.
 3. **Ship grouped capability surfaces** — `_search_tools` covers passive search; clients still need a coherent map of 20–50-tool servers.
 4. **Prepare for XAA** — every server's bespoke header strategy is the credibility gap enterprise buyers will name first.

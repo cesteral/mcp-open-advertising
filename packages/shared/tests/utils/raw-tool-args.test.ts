@@ -12,9 +12,8 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { McpServer, InMemoryTransport } from "@modelcontextprotocol/server";
 import {
   installRawToolArgsCapture,
   getRawToolArgs,
@@ -31,9 +30,13 @@ async function connect(server: McpServer): Promise<Client> {
 describe("installRawToolArgsCapture", () => {
   it("installs against a real McpServer that has registered a tool", async () => {
     const server = new McpServer({ name: "s", version: "0.0.0" });
-    server.registerTool("t", { description: "d", inputSchema: { a: z.string() } }, async () => ({
-      content: [{ type: "text" as const, text: "ok" }],
-    }));
+    server.registerTool(
+      "t",
+      { description: "d", inputSchema: z.object({ a: z.string() }) },
+      async () => ({
+        content: [{ type: "text" as const, text: "ok" }],
+      })
+    );
 
     // The load-bearing assertion: the SDK's handler map is still where we think.
     expect(installRawToolArgsCapture(server.server)).toBe(true);
@@ -60,7 +63,11 @@ describe("installRawToolArgsCapture", () => {
       "t",
       {
         description: "d",
-        inputSchema: { a: z.string(), b: z.string().default("filled"), c: z.number().optional() },
+        inputSchema: z.object({
+          a: z.string(),
+          b: z.string().default("filled"),
+          c: z.number().optional(),
+        }),
       },
       async () => {
         raw = getRawToolArgs();
@@ -80,7 +87,10 @@ describe("installRawToolArgsCapture", () => {
     const server = new McpServer({ name: "s", version: "0.0.0" });
     server.registerTool(
       "t",
-      { description: "d", inputSchema: { a: z.string(), b: z.string().default("filled") } },
+      {
+        description: "d",
+        inputSchema: z.object({ a: z.string(), b: z.string().default("filled") }),
+      },
       async () => {
         raw = getRawToolArgs();
         return { content: [{ type: "text" as const, text: "ok" }] };
@@ -101,7 +111,7 @@ describe("installRawToolArgsCapture", () => {
     const server = new McpServer({ name: "s", version: "0.0.0" });
     server.registerTool(
       "t",
-      { description: "d", inputSchema: { id: z.string(), pad: z.string().default("p") } },
+      { description: "d", inputSchema: z.object({ id: z.string(), pad: z.string().default("p") }) },
       async (args) => {
         const id = (args as { id: string }).id;
         // Yield so the two invocations genuinely interleave; AsyncLocalStorage
@@ -125,9 +135,13 @@ describe("installRawToolArgsCapture", () => {
 
   it("still returns the tool result through the wrapper", async () => {
     const server = new McpServer({ name: "s", version: "0.0.0" });
-    server.registerTool("t", { description: "d", inputSchema: { a: z.string() } }, async () => ({
-      content: [{ type: "text" as const, text: "payload" }],
-    }));
+    server.registerTool(
+      "t",
+      { description: "d", inputSchema: z.object({ a: z.string() }) },
+      async () => ({
+        content: [{ type: "text" as const, text: "payload" }],
+      })
+    );
     installRawToolArgsCapture(server.server);
     const client = await connect(server);
 
@@ -138,9 +152,13 @@ describe("installRawToolArgsCapture", () => {
 
   it("propagates tool errors rather than swallowing them in the wrapper", async () => {
     const server = new McpServer({ name: "s", version: "0.0.0" });
-    server.registerTool("t", { description: "d", inputSchema: { a: z.string() } }, async () => {
-      throw new Error("boom");
-    });
+    server.registerTool(
+      "t",
+      { description: "d", inputSchema: z.object({ a: z.string() }) },
+      async () => {
+        throw new Error("boom");
+      }
+    );
     installRawToolArgsCapture(server.server);
     const client = await connect(server);
 

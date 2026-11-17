@@ -7,7 +7,7 @@
  * Prompts provide step-by-step workflow guidance for complex multi-step operations.
  */
 
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 import {
   campaignSetupWorkflowPrompt,
   getCampaignSetupWorkflowMessage,

@@ -6,7 +6,7 @@
  *
  * Guide for querying Google Ads data via GAQL (Google Ads Query Language).
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const gaqlReportingWorkflowPrompt: Prompt = {
   name: "gaql_reporting_workflow",

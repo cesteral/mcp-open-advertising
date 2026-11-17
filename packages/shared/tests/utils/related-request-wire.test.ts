@@ -22,7 +22,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import type { AddressInfo } from "node:net";
 import pino from "pino";
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import {
   startMcpHttpServer,
   type McpHttpServer,

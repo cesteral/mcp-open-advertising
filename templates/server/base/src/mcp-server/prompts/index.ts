@@ -8,7 +8,7 @@
  * registered tools (scripts/lib/prompt-tool-references.test.mjs).
  */
 
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 import {
   crossPlatformCampaignSetupPrompt,
   crossPlatformPerformancePrompt,

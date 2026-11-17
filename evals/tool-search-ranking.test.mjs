@@ -46,21 +46,14 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { withServerClient } from "../scripts/lib/boot-server.mjs";
+// The SDK client's result schema strips `structuredContent` for tools whose
+// output schema it has not been handed, so the identity Standard Schema
+// returns the raw result, as boot-server.mjs does for `tools/list`.
+import { withServerClient, IDENTITY_SCHEMA } from "../scripts/lib/boot-server.mjs";
 import { searchTools } from "../packages/shared/dist/utils/mcp/tool-search.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const corpus = JSON.parse(readFileSync(join(ROOT, "evals", "tool-search-ranking.json"), "utf-8"));
-
-/**
- * The SDK's CallToolResultSchema strips `structuredContent` for tools whose
- * output schema it has not been handed, so an identity schema returns the raw
- * result — the same trick `boot-server.mjs` uses for `tools/list`.
- */
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
-};
 
 /** Run every query for one server against its live search tool, in one boot. */
 async function rankAll(server, platform, queries) {

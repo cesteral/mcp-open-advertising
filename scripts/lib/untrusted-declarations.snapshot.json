@@ -254,16 +254,6 @@
       ],
       "contentBlocks": [0]
     },
-    "dbm_run_custom_query_async": {
-      "structuredPaths": [
-        "$.headers",
-        "$.selectedColumns",
-        "$.rows",
-        "$.previewRows",
-        "$.warnings"
-      ],
-      "contentBlocks": [0]
-    },
     "dbm_search_tools": {
       "structuredPaths": [],
       "contentBlocks": []

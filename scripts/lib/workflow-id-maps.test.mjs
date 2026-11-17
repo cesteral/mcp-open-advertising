@@ -30,12 +30,7 @@ const packages = readdirSync(join(ROOT, "packages"))
  * Registered tools that are deliberately unmapped, with the reason. Each must
  * still be registered (a stale entry fails).
  */
-const UNMAPPED = new Map([
-  [
-    "dbm_run_custom_query_async",
-    "registered by registerAsyncTaskTool, not the factory, so no workflow id reaches it",
-  ],
-]);
+const UNMAPPED = new Map([]);
 
 /** The generated discovery tool (`createToolSearchTool`) is not a workflow. */
 const isSearchTool = (name) => name.endsWith("_search_tools");

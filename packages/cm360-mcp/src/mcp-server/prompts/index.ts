@@ -5,7 +5,7 @@
  * CM360 MCP Prompts Registry
  */
 
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,

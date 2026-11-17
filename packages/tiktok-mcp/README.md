@@ -13,7 +13,7 @@ per-session Bearer token authentication.
 ## Features
 
 - **Per-session Bearer token auth** via `TikTokBearerAuthStrategy` (validates tokens and extracts advertiser ID)
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class (10/min default, per TikTok access token per process; report calls have their own bucket of the same size)
 - **Structured logging** via Pino
@@ -384,7 +384,7 @@ pnpm run typecheck
 
 ### Transport
 
-Streamable HTTP via Hono + `@hono/mcp`. Health check at `/health`.
+Streamable HTTP via Hono + the MCP SDK's web-standard transport. Health check at `/health`.
 
 ## Contributing
 

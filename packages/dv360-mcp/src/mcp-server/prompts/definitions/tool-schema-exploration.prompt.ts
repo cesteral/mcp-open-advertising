@@ -6,7 +6,7 @@
  *
  * Context-efficient capability discovery for DV360 MCP server.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const toolSchemaExplorationPrompt: Prompt = {
   name: "dv360_tool_schema_exploration",
