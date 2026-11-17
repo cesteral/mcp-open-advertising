@@ -149,7 +149,7 @@ export const ValidateEntityInputSchema = z
   .object({
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
     mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
-    data: z.record(z.any()).describe("Entity payload to validate"),
+    data: z.record(z.string(), z.any()).describe("Entity payload to validate"),
     advertiserId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
   })
   .describe("Parameters for validating a TikTok Ads entity payload");

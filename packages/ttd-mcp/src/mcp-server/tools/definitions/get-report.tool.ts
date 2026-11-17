@@ -65,7 +65,7 @@ export const GetReportInputSchema = z
       .optional()
       .describe("(legacy/ignored when ReportTemplateId is set)"),
     additionalConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Additional report configuration fields (merged last)"),
   })
@@ -74,7 +74,7 @@ export const GetReportInputSchema = z
 export const GetReportOutputSchema = z
   .object({
     reportScheduleId: z.string().describe("Report schedule ID"),
-    execution: z.record(z.any()).describe("Report execution details"),
+    execution: z.record(z.string(), z.any()).describe("Report execution details"),
     downloadUrl: z.string().optional().describe("URL to download report results"),
     timestamp: z.string().datetime(),
   })

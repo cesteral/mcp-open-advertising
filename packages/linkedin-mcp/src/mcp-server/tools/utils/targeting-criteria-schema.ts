@@ -6,7 +6,7 @@ import { findTargetingCriteriaProblems } from "../../../services/linkedin/target
 
 const OrClauseSchema = z.object({
   or: z
-    .record(z.array(z.string()))
+    .record(z.string(), z.array(z.string()))
     .describe(
       'Facet URN → value URNs, e.g. { "urn:li:adTargetingFacet:locations": ["urn:li:geo:103644278"] }. Any one value matches.'
     ),

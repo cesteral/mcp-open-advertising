@@ -9,8 +9,7 @@ import {
   type TargetingType,
   TARGETING_TYPE_DESCRIPTIONS,
   getSupportedTargetingParentTypes,
-  validateTargetingInput,
-  getTargetingValidationError,
+  refineTargetingInput,
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
@@ -64,7 +63,7 @@ export const ListAssignedTargetingInputSchema = z
       .default(50)
       .describe("Number of results per page"),
   })
-  .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine(refineTargetingInput)
   .describe("Parameters for listing assigned targeting options");
 
 /**
@@ -73,7 +72,7 @@ export const ListAssignedTargetingInputSchema = z
 export const ListAssignedTargetingOutputSchema = z
   .object({
     assignedTargetingOptions: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .describe("List of assigned targeting options"),
     pagination: PaginationOutputSchema,
     parentType: z.string().describe("Parent entity type"),

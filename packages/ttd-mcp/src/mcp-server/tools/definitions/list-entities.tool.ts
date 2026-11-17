@@ -36,7 +36,7 @@ export const ListEntitiesInputSchema = z
       .describe("Campaign ID (optional — filters adGroup queries to a single campaign)"),
     adGroupId: z.string().optional().describe("Ad Group ID, sent as an AdGroupId query filter"),
     filter: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe("Additional filter fields to pass to the TTD query endpoint"),
     pageToken: z.string().optional().describe("Page token for pagination (start index)"),
@@ -70,7 +70,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

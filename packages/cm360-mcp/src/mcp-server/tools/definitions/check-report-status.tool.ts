@@ -31,7 +31,7 @@ export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   rawStatus: z
     .string()
     .describe("Raw CM360 status string (PROCESSING, REPORT_AVAILABLE, FAILED, CANCELLED)"),
-  file: z.record(z.any()).describe("File details"),
+  file: z.record(z.string(), z.any()).describe("File details"),
   isComplete: z.boolean().describe("True when state is 'complete'"),
   timestamp: z.string().datetime(),
 }).describe("Report status result");

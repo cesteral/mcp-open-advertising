@@ -30,7 +30,7 @@ export const ListEntitiesInputSchema = z
     profileId: Cm360ProfileIdSchema,
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     filters: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe(
         "Filter fields to pass as query parameters (e.g., advertiserId, campaignId, searchString)"
@@ -47,7 +47,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

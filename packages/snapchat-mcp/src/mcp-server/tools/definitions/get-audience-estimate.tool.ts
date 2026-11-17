@@ -36,14 +36,14 @@ export const GetAudienceEstimateInputSchema = z
   .object({
     adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     targetingConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Ad squad spec or targeting spec accepted by Snapchat audience_size_v2"),
   })
   .describe("Parameters for getting a Snapchat audience size estimate");
 
 export const GetAudienceEstimateOutputSchema = z
   .object({
-    estimate: z.record(z.any()).describe("Audience size estimate data from Snapchat"),
+    estimate: z.record(z.string(), z.any()).describe("Audience size estimate data from Snapchat"),
     timestamp: z.string().datetime(),
   })
   .describe("Audience estimate result");

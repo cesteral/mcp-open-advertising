@@ -69,7 +69,7 @@ export const GetChangeHistoryInputSchema = z
 
 export const GetChangeHistoryOutputSchema = z
   .object({
-    changes: z.array(z.record(z.any())).describe("Change event records"),
+    changes: z.array(z.record(z.string(), z.any())).describe("Change event records"),
     totalChanges: z.number().describe("Number of changes returned"),
     timestamp: z.string().datetime(),
   })

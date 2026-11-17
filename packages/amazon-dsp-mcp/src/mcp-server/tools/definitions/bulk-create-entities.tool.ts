@@ -51,7 +51,7 @@ export const BulkCreateEntitiesInputSchema = z
     profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
     accountId: AccountIdSchema,
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),

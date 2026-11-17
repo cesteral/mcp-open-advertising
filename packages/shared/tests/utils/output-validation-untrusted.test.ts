@@ -2,7 +2,9 @@
  * #204: an output-validation failure must come back MARKED.
  *
  * When a handler's result fails its own outputSchema, zod's message can quote
- * the rejected value, and that value came from the ad platform. The SDK used to
+ * platform data. Zod 4 no longer quotes a rejected enum value, but it still
+ * names an unrecognized key ("Unrecognized key: ..."), and that key came from
+ * the ad platform. The SDK used to
  * be the only thing checking, and an error it builds bypasses the factory's
  * catch, so it went out with no untrusted marker. The factory now runs the same
  * check first.
@@ -76,9 +78,11 @@ async function call(outputSchema: z.ZodTypeAny, output: unknown) {
 }
 
 describe("output validation failures", () => {
-  it("come back marked, although zod's message quotes the platform's value", async () => {
-    const result = await call(z.object({ status: z.enum(["ACTIVE", "PAUSED"]) }), {
-      status: INJECTED,
+  it("come back marked, although zod's message quotes the platform's data", async () => {
+    // Nested, because `extractZodShape` publishes the top-level object as a
+    // plain (stripping) z.object; a nested strict object survives.
+    const result = await call(z.object({ settings: z.object({}).strict() }), {
+      settings: { [INJECTED]: true },
     });
 
     expect(result.isError).toBe(true);

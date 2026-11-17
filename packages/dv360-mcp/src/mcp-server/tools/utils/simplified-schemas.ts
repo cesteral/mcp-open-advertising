@@ -15,14 +15,14 @@ function toEntityTypeEnum(types: string[]): [string, ...string[]] {
   return types as [string, ...string[]];
 }
 
-export function createSimplifiedCreateEntityInputSchema(): z.ZodTypeAny {
+export function createSimplifiedCreateEntityInputSchema(): z.ZodType<any> {
   return z.object({
     entityType: z
       .enum(toEntityTypeEnum(getCreatableEntityTypesDynamic()))
       .describe("Entity type. Fetch entity-schema://{entityType} for required fields."),
     ...EntityIdFieldsSchema,
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Entity payload. Use entity-schema://{entityType}, entity-fields://{entityType}, and entity-examples://{entityType} before calling."
       ),
@@ -36,13 +36,15 @@ export function createSimplifiedCreateEntityInputSchema(): z.ZodTypeAny {
   });
 }
 
-export function createSimplifiedUpdateEntityInputSchema(): z.ZodTypeAny {
+export function createSimplifiedUpdateEntityInputSchema(): z.ZodType<any> {
   return z.object({
     entityType: z
       .enum(toEntityTypeEnum(getUpdatableEntityTypesDynamic()))
       .describe("Entity type. Fetch entity-fields://{entityType} for valid updateMask paths."),
     ...EntityIdFieldsSchema,
-    data: z.record(z.any()).describe("Partial payload containing only fields to update."),
+    data: z
+      .record(z.string(), z.any())
+      .describe("Partial payload containing only fields to update."),
     updateMask: z
       .string()
       .describe("Comma-separated field paths to update (e.g. displayName,entityStatus)."),

@@ -50,7 +50,7 @@ export const ReportScheduleSummarySchema = z.object({
   /** Last-update timestamp when the platform reports it. */
   updatedAt: z.string().datetime().optional(),
   /** Any fields that do not map into the canonical shape. */
-  platformSpecific: z.record(z.unknown()).optional(),
+  platformSpecific: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ReportScheduleSummary = z.infer<typeof ReportScheduleSummarySchema>;

@@ -10,8 +10,7 @@ import {
   TARGETING_TYPE_DESCRIPTIONS,
   getTargetingDetailSchemaName,
   getSupportedTargetingParentTypes,
-  validateTargetingInput,
-  getTargetingValidationError,
+  refineTargetingInput,
   addTargetingTypeForParentIssue,
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
@@ -79,7 +78,7 @@ export const CreateAssignedTargetingInputSchema = z
       .enum(ALL_TARGETING_TYPES as unknown as [string, ...string[]])
       .describe("Targeting type to create"),
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Targeting option data payload. Structure depends on targetingType. Fetch targeting-schema://{type} for schema details."
       ),
@@ -91,7 +90,7 @@ export const CreateAssignedTargetingInputSchema = z
         "When true, validates the request and returns an EffectDryRunResult under `dryRun` (expected effect = the targeting option would be created) without calling the DV360 API. Nothing is created."
       ),
   })
-  .refine(validateTargetingInput, getTargetingValidationError)
+  .superRefine(refineTargetingInput)
   .superRefine((input, ctx) => addTargetingTypeForParentIssue("create", input, ctx))
   .describe("Parameters for creating an assigned targeting option");
 
@@ -100,7 +99,9 @@ export const CreateAssignedTargetingInputSchema = z
  */
 export const CreateAssignedTargetingOutputSchema = z
   .object({
-    createdTargetingOption: z.record(z.any()).describe("The created assigned targeting option"),
+    createdTargetingOption: z
+      .record(z.string(), z.any())
+      .describe("The created assigned targeting option"),
     assignedTargetingOptionId: z.string().describe("ID of the newly created targeting option"),
     parentType: z.string().describe("Parent entity type"),
     targetingType: z.string().describe("Targeting type"),

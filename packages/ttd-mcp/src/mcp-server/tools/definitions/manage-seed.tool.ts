@@ -114,7 +114,7 @@ export const ManageSeedInputSchema = z
     advertiserId: z.string().optional().describe("Required for create and set_default_advertiser"),
     campaignId: z.string().optional().describe("Required for attach_to_campaign"),
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Seed payload for create/update (name, description, etc.)"),
     dry_run: z
@@ -172,7 +172,7 @@ export const ManageSeedInputSchema = z
 export const ManageSeedOutputSchema = z.object({
   operation: z.string().describe("The operation that was performed"),
   seedId: z.string().optional().describe("ID of the seed affected"),
-  result: z.record(z.any()).optional().describe("Data returned by the API"),
+  result: z.record(z.string(), z.any()).optional().describe("Data returned by the API"),
   timestamp: z.string().datetime(),
   dryRun: EffectDryRunResultSchema.optional().describe(
     "Present only when the request was made with `dry_run: true`. No seed was changed."

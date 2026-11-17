@@ -42,7 +42,7 @@ export const ValidateEntityInputSchema = z
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),
-    data: z.record(z.any()).describe("Entity data payload to validate"),
+    data: z.record(z.string(), z.any()).describe("Entity data payload to validate"),
     advertiserId: z
       .string()
       .optional()
@@ -102,7 +102,8 @@ type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
 
 function mapZodIssueCode(zodCode: string): ValidationIssue["code"] {
   if (zodCode === "invalid_type") return "wrongType";
-  if (zodCode === "invalid_enum_value" || zodCode === "invalid_literal") return "invalidValue";
+  // Zod 4 reports both a wrong enum member and a wrong literal as `invalid_value`.
+  if (zodCode === "invalid_value") return "invalidValue";
   return "custom";
 }
 

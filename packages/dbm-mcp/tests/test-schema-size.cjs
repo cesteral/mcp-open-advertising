@@ -18,7 +18,7 @@ async function runTest() {
   await import("reflect-metadata");
 
   // Dynamic import for ESM compatibility
-  const { zodToJsonSchema } = await import("zod-to-json-schema");
+  const { z } = await import("zod");
 
   // Import all tool definitions
   // Note: This uses dynamic import since the source is ESM
@@ -32,9 +32,11 @@ async function runTest() {
   console.log("\nTool Schema Sizes:\n");
 
   for (const tool of allTools) {
-    const jsonSchema = zodToJsonSchema(tool.inputSchema, {
-      target: "jsonSchema7",
-      markdownDescription: true,
+    // The conversion MCP SDK v2 publishes (#242).
+    const jsonSchema = z.toJSONSchema(tool.inputSchema, {
+      target: "draft-2020-12",
+      io: "input",
+      unrepresentable: "any",
     });
 
     const schemaJson = JSON.stringify(jsonSchema);

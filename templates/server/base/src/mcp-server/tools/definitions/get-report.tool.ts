@@ -30,7 +30,7 @@ export const GetReportInputSchema = z
 
 export const GetReportOutputSchema = z
   .object({
-    rows: z.array(z.record(z.any())).describe("Report rows"),
+    rows: z.array(z.record(z.string(), z.any())).describe("Report rows"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

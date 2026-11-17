@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { z, type ZodRawShape } from "zod";
+import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
@@ -75,7 +75,7 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
     requiredPreview.join(", ") || "See schema"
   }${previewSuffix}.\n${relationshipDescription}`;
 
-  const shape: ZodRawShape = {
+  const shape: Record<string, z.ZodTypeAny> = {
     entityType: z.literal(entityType).describe("Type of entity to create"),
   };
 
@@ -93,7 +93,7 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
   return z.object(shape).passthrough();
 }
 
-function createInputSchema(): z.ZodTypeAny {
+function createInputSchema(): z.ZodType<any> {
   const variants = getSupportedEntityTypesDynamic().map((entityType) =>
     buildEntitySpecificInputSchema(entityType)
   );
@@ -114,7 +114,9 @@ function createInputSchema(): z.ZodTypeAny {
       "entityType",
       variants as [EntityVariantSchema, EntityVariantSchema, ...EntityVariantSchema[]]
     )
-    .superRefine((input, ctx) => {
+    .superRefine((parsed, ctx) => {
+      // Zod 4 infers the variants (ZodObject<any>) as unknown-valued records.
+      const input = parsed as { entityType: string; data?: unknown } & Record<string, unknown>;
       const mergedData = mergeIdsIntoData(
         input.entityType,
         input.data as Record<string, unknown>,
@@ -171,7 +173,7 @@ export const CreateEntityInputSchema = createSimplifiedCreateEntityInputSchema()
  */
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity data"),
+    entity: z.record(z.string(), z.any()).describe("Created entity data"),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entity was created."

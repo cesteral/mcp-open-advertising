@@ -48,7 +48,7 @@ export const GetAvailableMetricsOutputSchema = z
       .nullable()
       .describe("Level the response was scoped to (null when not provided)"),
     metrics: z
-      .record(z.array(z.string()))
+      .record(z.string(), z.array(z.string()))
       .describe("Metric field names grouped by semantic category"),
     breakdowns: z.array(z.string()).describe("Valid `breakdowns` values"),
     actionBreakdowns: z.array(z.string()).describe("Valid `action_breakdowns` values"),

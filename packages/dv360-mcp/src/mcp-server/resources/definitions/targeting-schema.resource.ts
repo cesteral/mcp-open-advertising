@@ -6,8 +6,8 @@
  * Provides JSON Schema for specific targeting option detail types
  */
 
+import { z } from "zod";
 import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   ALL_TARGETING_TYPES,
   TARGETING_TYPE_DESCRIPTIONS,
@@ -123,10 +123,12 @@ async function readTargetingSchema(params: Record<string, string>): Promise<stri
 
   if (zodSchema) {
     try {
-      jsonSchema = zodToJsonSchema(zodSchema, {
-        target: "jsonSchema7",
-        markdownDescription: true,
-        errorMessages: true,
+      jsonSchema = z.toJSONSchema(zodSchema, {
+        // Draft-07, as these resources always served; a type JSON Schema cannot
+        // express is rendered as `{}` rather than failing the whole document.
+        target: "draft-7",
+        io: "input",
+        unrepresentable: "any",
       });
     } catch (e) {
       schemaError = e instanceof Error ? e.message : "Failed to convert schema";

@@ -45,7 +45,7 @@ export const BulkCreateEntitiesInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     adAccountId: z.string().min(1).describe("Pinterest ad account ID"),
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe("Array of entity data objects to create (max 50)"),

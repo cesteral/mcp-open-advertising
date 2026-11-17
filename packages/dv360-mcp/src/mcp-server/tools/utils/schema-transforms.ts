@@ -31,7 +31,7 @@ const transformedSchemaCache = new Map<string, z.ZodTypeAny>();
  *
  * Fix: Make these arrays optional with empty array defaults.
  */
-export function getTransformedCreativeSchema(): z.ZodTypeAny {
+export function getTransformedCreativeSchema(): z.ZodType<any> {
   const cacheKey = "creative";
   const cached = transformedSchemaCache.get(cacheKey);
   if (cached) {
@@ -92,7 +92,7 @@ export function hasSchemaTransform(entityType: string): boolean {
  * Get transformed schema for an entity type (if available)
  * Returns undefined if no transform exists
  */
-export function getTransformedSchema(entityType: string): z.ZodTypeAny | undefined {
+export function getTransformedSchema(entityType: string): z.ZodType<any> | undefined {
   const transformFn = SCHEMA_TRANSFORMS[entityType];
   if (transformFn) {
     return transformFn();

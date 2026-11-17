@@ -112,7 +112,7 @@ export const InsertConversionsOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.any()).describe("API response with inserted conversion details"),
+    result: z.record(z.string(), z.any()).describe("API response with inserted conversion details"),
     requestedCount: z.number().describe("Number of conversion rows submitted"),
     insertedCount: z
       .number()

@@ -506,7 +506,7 @@ export function getEntityConfigDynamic(entityType: string): EntityConfig {
 export function getEntitySchemaForOperation(
   entityType: string,
   operation: "list" | "get" | "create" | "update"
-): z.ZodTypeAny {
+): z.ZodType<any> {
   const schema = getEntitySchemaByType(entityType);
 
   // For list operations, wrap in array response

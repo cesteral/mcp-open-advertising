@@ -48,7 +48,7 @@ export const GetReportInputSchema = z
       .optional()
       .describe("Criteria for CROSS_MEDIA_REACH reports"),
     additionalConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe(
         "Additional report configuration fields. schedule and delivery are refused: use cm360_create_report_schedule for recurring or emailed reports"
@@ -61,7 +61,7 @@ export const GetReportOutputSchema = z
   .object({
     reportId: z.string().describe("Report ID"),
     fileId: z.string().describe("Report file ID"),
-    file: z.record(z.any()).describe("Report file details"),
+    file: z.record(z.string(), z.any()).describe("Report file details"),
     downloadUrl: z.string().optional().describe("URL to download report results"),
     timestamp: z.string().datetime(),
   })

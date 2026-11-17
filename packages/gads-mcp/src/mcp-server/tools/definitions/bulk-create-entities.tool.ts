@@ -47,7 +47,7 @@ export const BulkCreateEntitiesInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     customerId: CustomerIdSchema,
     items: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(50)
       .describe(

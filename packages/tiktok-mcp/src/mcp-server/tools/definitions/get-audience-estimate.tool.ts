@@ -28,14 +28,14 @@ export const GetAudienceEstimateInputSchema = z
   .object({
     advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     targetingConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Targeting specification object with demographic and interest criteria"),
   })
   .describe("Parameters for getting a TikTok audience size estimate");
 
 export const GetAudienceEstimateOutputSchema = z
   .object({
-    estimate: z.record(z.any()).describe("Audience size estimate data from TikTok"),
+    estimate: z.record(z.string(), z.any()).describe("Audience size estimate data from TikTok"),
     timestamp: z.string().datetime(),
   })
   .describe("Audience estimate result");

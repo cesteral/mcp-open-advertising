@@ -6,8 +6,8 @@
  * Provides full JSON Schema for DV360 entity types with metadata
  */
 
+import { z } from "zod";
 import type { TemplatedResourceDefinition, TemplatedResourceListing } from "@cesteral/shared";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
@@ -53,10 +53,12 @@ async function readEntitySchema(params: Record<string, string>): Promise<string>
   const zodSchema = getEntitySchemaForOperation(entityType, "update");
 
   // Convert to JSON Schema with rich descriptions
-  const jsonSchema = zodToJsonSchema(zodSchema, {
-    target: "jsonSchema7",
-    markdownDescription: true,
-    errorMessages: true,
+  const jsonSchema = z.toJSONSchema(zodSchema, {
+    // Draft-07, as these resources always served; a type JSON Schema cannot
+    // express is rendered as `{}` rather than failing the whole document.
+    target: "draft-7",
+    io: "input",
+    unrepresentable: "any",
   });
 
   // Extract required fields for different operations

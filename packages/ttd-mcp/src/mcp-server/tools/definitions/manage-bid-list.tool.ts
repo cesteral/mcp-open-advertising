@@ -46,7 +46,7 @@ export const BidListInputSchema = z
     operation: z.enum(["create", "get", "update", "set", "delete"]).describe("GraphQL operation"),
     bidListId: z.string().optional().describe("Required for get"),
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe(
         "GraphQL input object — required for create/update/set/delete. Must match TTD's BidList{Create,Update,Set,Delete}Input shape."
@@ -88,7 +88,7 @@ export const BidListOutputSchema = z
   .object({
     operation: z.string().describe("The operation that was performed"),
     bidListId: z.string().optional().describe("The bid list ID if applicable"),
-    result: z.record(z.any()).optional().describe("Raw GraphQL response"),
+    result: z.record(z.string(), z.any()).optional().describe("Raw GraphQL response"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No bid list was changed."

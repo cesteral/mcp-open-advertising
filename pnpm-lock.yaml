@@ -16,8 +16,8 @@ catalogs:
       specifier: ^10.4.0
       version: 10.4.0
     zod:
-      specifier: 3.25.76
-      version: 3.25.76
+      specifier: 4.6.7
+      version: 4.6.7
 
 importers:
 
@@ -76,7 +76,7 @@ importers:
         version: 5.1.0(@opentelemetry/api@1.9.1)(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@7.3.8(@types/node@26.6.6)(tsx@4.23.15)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
 
   packages/amazon-dsp-mcp:
     dependencies:
@@ -91,7 +91,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
@@ -128,7 +128,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -171,7 +171,7 @@ importers:
         version: 5.1.0(@opentelemetry/api@1.9.1)(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@7.3.8(@types/node@26.6.6)(tsx@4.23.15)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
 
   packages/dbm-mcp:
     dependencies:
@@ -189,7 +189,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -217,10 +217,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
-      zod-to-json-schema:
-        specifier: ^3.24.6
-        version: 3.25.2(zod@3.25.76)
+        version: 4.6.7
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.9
@@ -263,7 +260,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -291,7 +288,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -319,7 +316,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
@@ -350,7 +347,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -378,7 +375,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -409,7 +406,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -494,10 +491,7 @@ importers:
         version: 13.2.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
-      zod-to-json-schema:
-        specifier: ^3.24.6
-        version: 3.25.2(zod@3.25.76)
+        version: 4.6.7
     devDependencies:
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
@@ -525,7 +519,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -553,7 +547,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -581,7 +575,7 @@ importers:
         version: 10.4.0
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -3717,8 +3711,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
 
@@ -4224,11 +4218,11 @@ snapshots:
       eventsource-parser: 3.1.0
       jose: 6.2.17
       pkce-challenge: 5.0.1
-      zod: 4.4.3
+      zod: 4.6.7
 
   '@modelcontextprotocol/conformance@0.1.16':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.32.2(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.32.2(zod@4.6.7)
       '@octokit/rest': 22.0.1
       commander: 14.0.3
       eventsource-parser: 3.1.0
@@ -4236,16 +4230,16 @@ snapshots:
       jose: 6.2.3
       undici: 7.27.2
       yaml: 2.9.0
-      zod: 4.4.3
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
   '@modelcontextprotocol/core@2.4.0':
     dependencies:
-      zod: 4.4.3
+      zod: 4.6.7
 
-  '@modelcontextprotocol/sdk@1.32.2(zod@4.4.3)':
+  '@modelcontextprotocol/sdk@1.32.2(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 2.1.8(hono@4.12.25)
       ajv: 8.20.0
@@ -4262,15 +4256,15 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.4.3
-      zod-to-json-schema: 3.25.2(zod@4.4.3)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.2(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
   '@modelcontextprotocol/server@2.4.0':
     dependencies:
       '@modelcontextprotocol/core': 2.4.0
-      zod: 4.4.3
+      zod: 4.6.7
 
   '@nodable/entities@3.1.0': {}
 
@@ -7021,14 +7015,10 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-to-json-schema@3.25.2(zod@3.25.76):
+  zod-to-json-schema@3.25.2(zod@4.6.7):
     dependencies:
-      zod: 3.25.76
-
-  zod-to-json-schema@3.25.2(zod@4.4.3):
-    dependencies:
-      zod: 4.4.3
+      zod: 4.6.7
 
   zod@3.25.76: {}
 
-  zod@4.4.3: {}
+  zod@4.6.7: {}

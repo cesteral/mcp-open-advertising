@@ -35,7 +35,7 @@ export const ValidateEntityInputSchema = z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),
     data: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe(
         "Entity data payload to validate (fields vary by entity type — see entity-schema resources)"
       ),

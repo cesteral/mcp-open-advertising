@@ -41,7 +41,7 @@ export const SearchFieldsInputSchema = z
 
 export const SearchFieldsOutputSchema = z
   .object({
-    fields: z.array(z.record(z.any())).describe("Field metadata results"),
+    fields: z.array(z.record(z.string(), z.any())).describe("Field metadata results"),
     totalResultsCount: z
       .number()
       .optional()

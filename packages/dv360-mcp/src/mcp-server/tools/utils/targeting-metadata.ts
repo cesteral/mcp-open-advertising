@@ -8,6 +8,8 @@
  * assignedTargetingOptions endpoints.
  */
 
+import type { z } from "zod";
+
 /**
  * All 50 targeting types in DV360 API v4's `targetingType` enum (Discovery rev
  * 20260928, without TARGETING_TYPE_UNSPECIFIED). Which ones a parent accepts on
@@ -459,6 +461,17 @@ export function validateTargetingInput(data: TargetingInputData): boolean {
   }
 
   return true;
+}
+
+/**
+ * Zod 4 `superRefine` for targeting inputs: the refinement plus its
+ * data-dependent message and path. Zod 4's `.refine(fn, params)` no longer
+ * takes a function of the data as `params`, so the pair is combined here.
+ */
+export function refineTargetingInput(data: TargetingInputData, ctx: z.RefinementCtx): void {
+  if (validateTargetingInput(data)) return;
+  const { message, path } = getTargetingValidationError(data);
+  ctx.addIssue({ code: "custom", message, path });
 }
 
 /**

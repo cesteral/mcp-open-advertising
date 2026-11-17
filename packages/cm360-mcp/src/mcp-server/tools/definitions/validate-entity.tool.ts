@@ -135,7 +135,7 @@ export const ValidateEntityInputSchema = z
       .describe(
         "Validation mode — create checks for required fields, update checks for id presence"
       ),
-    data: z.record(z.any()).describe("Entity data to validate"),
+    data: z.record(z.string(), z.any()).describe("Entity data to validate"),
   })
   .describe("Parameters for validating a CM360 entity");
 

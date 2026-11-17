@@ -118,7 +118,7 @@ describe("linkedin_get_delivery_forecast tool", () => {
     });
 
     it("calls the optimization field optimizationTarget, as LinkedIn does", () => {
-      const shape = GetDeliveryForecastInputSchema._def.schema.shape;
+      const shape = GetDeliveryForecastInputSchema.shape;
       expect(shape).toHaveProperty("optimizationTarget");
       expect(shape).not.toHaveProperty("optimizationTargetType");
     });

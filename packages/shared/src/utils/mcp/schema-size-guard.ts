@@ -13,8 +13,7 @@
  * `@cesteral/shared/testkit`, which runs `assertSchemaSizesUnderLimit`.
  */
 
-import { zodToJsonSchema } from "zod-to-json-schema";
-import type { ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 
 export interface SchemaSizeGuardTool {
   name: string;
@@ -48,7 +47,8 @@ const DEFAULT_TOTAL_LIMIT = 1_000_000;
 // larger half of it fleet-wide, but nothing bounded it: a generated vendor
 // response schema (e.g. a full forecast or report envelope) can add tens of KB
 // to a single tool and every client pays that on every `tools/list`. Limits
-// are set from measured sizes of the real tools (zod-to-json-schema, as below):
+// are set from measured sizes of the real tools (then zod-to-json-schema; now
+// `z.toJSONSchema` at the SDK's draft-2020-12 target, as below):
 // the largest single outputSchema in the fleet is 4.9 KB (amazon_dsp_update_
 // commitment) and the largest per-server total is 88 KB (ttd, 46 tools; the
 // fleet totals 617 KB), so 16 KB / 128 KB leave ~3x / ~1.5x headroom. The
@@ -57,8 +57,11 @@ const DEFAULT_TOTAL_LIMIT = 1_000_000;
 const DEFAULT_PER_TOOL_OUTPUT_LIMIT = 16 * 1024;
 const DEFAULT_TOTAL_OUTPUT_LIMIT = 128 * 1024;
 
-function serializedBytes(schema: ZodTypeAny): number {
-  return Buffer.byteLength(JSON.stringify(zodToJsonSchema(schema)), "utf-8");
+function serializedBytes(schema: ZodTypeAny, io: "input" | "output"): number {
+  // The conversion SDK v2 publishes (#242); `unrepresentable: "any"` so a
+  // type JSON Schema cannot express is measured as `{}` instead of throwing.
+  const json = z.toJSONSchema(schema, { target: "draft-2020-12", io, unrepresentable: "any" });
+  return Buffer.byteLength(JSON.stringify(json), "utf-8");
 }
 
 /**
@@ -72,12 +75,12 @@ export function measureSchemaSizes(tools: SchemaSizeGuardTool[]): SchemaSizeRepo
   let totalOutputBytes = 0;
 
   for (const tool of tools) {
-    const sizeBytes = serializedBytes(tool.inputSchema);
+    const sizeBytes = serializedBytes(tool.inputSchema, "input");
     perTool.push({ name: tool.name, sizeBytes });
     totalBytes += sizeBytes;
 
     if (tool.outputSchema) {
-      const outputBytes = serializedBytes(tool.outputSchema);
+      const outputBytes = serializedBytes(tool.outputSchema, "output");
       perToolOutput.push({ name: tool.name, sizeBytes: outputBytes });
       totalOutputBytes += outputBytes;
     }

@@ -74,7 +74,7 @@ export const GetAnalyticsBreakdownsOutputSchema = z
       .array(
         z.object({
           pivot: z.string(),
-          elements: z.array(z.record(z.any())),
+          elements: z.array(z.record(z.string(), z.any())),
           count: z.number(),
         })
       )

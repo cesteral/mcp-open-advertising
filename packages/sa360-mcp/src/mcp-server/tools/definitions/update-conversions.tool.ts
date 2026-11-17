@@ -111,7 +111,7 @@ export const UpdateConversionsOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.any()).describe("API response with updated conversion details"),
+    result: z.record(z.string(), z.any()).describe("API response with updated conversion details"),
     requestedCount: z.number().describe("Number of conversion rows submitted for update"),
     updatedCount: z
       .number()

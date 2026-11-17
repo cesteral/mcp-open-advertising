@@ -46,7 +46,7 @@ export const UpdateEntityInputSchema = z
       .min(1)
       .describe("The entity URN to update (e.g., urn:li:sponsoredCampaign:123)"),
     adAccountUrn: adAccountUrnSchema,
-    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Fields to update as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()

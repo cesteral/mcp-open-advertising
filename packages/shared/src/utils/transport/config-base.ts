@@ -124,7 +124,7 @@ export function parseConfigWithSchema<T extends z.ZodTypeAny>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       process.stderr.write("[config] Configuration validation failed:\n");
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         process.stderr.write(`[config]   - ${err.path.join(".")}: ${err.message}\n`);
       });
       throw new Error("Invalid configuration", { cause: error });

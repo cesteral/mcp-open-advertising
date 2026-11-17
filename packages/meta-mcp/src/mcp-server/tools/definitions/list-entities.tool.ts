@@ -25,7 +25,7 @@ export const ListEntitiesInputSchema = z
       .optional()
       .describe("Fields to return (defaults to common fields for the entity type)"),
     filtering: z
-      .array(z.record(z.unknown()))
+      .array(z.record(z.string(), z.unknown()))
       .optional()
       .describe("Meta filtering array, e.g. [{field:'status',operator:'IN',value:['ACTIVE']}]"),
     limit: z
@@ -40,7 +40,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })

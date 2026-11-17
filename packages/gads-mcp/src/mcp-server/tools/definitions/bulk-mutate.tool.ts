@@ -47,7 +47,7 @@ export const BulkMutateInputSchema = z
     entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to mutate"),
     customerId: CustomerIdSchema,
     operations: z
-      .array(z.record(z.any()))
+      .array(z.record(z.string(), z.any()))
       .min(1)
       .max(5000)
       .describe("Array of mutate operation objects (create/update/remove)"),
@@ -75,7 +75,7 @@ export const BulkMutateInputSchema = z
 
 export const BulkMutateOutputSchema = z
   .object({
-    mutateResult: z.record(z.any()).describe("Full mutate response"),
+    mutateResult: z.record(z.string(), z.any()).describe("Full mutate response"),
     operationCount: z.number(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(

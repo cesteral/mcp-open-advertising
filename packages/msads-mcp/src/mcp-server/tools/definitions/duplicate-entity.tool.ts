@@ -50,7 +50,10 @@ export const DuplicateEntityInputSchema = z
     entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
     accountId: z.string().min(1).describe("Microsoft Ads Account ID that owns the entity"),
     entityId: z.string().min(1).describe("ID of the entity to duplicate"),
-    options: z.record(z.any()).optional().describe("Optional copy overrides (e.g., a new Name)"),
+    options: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("Optional copy overrides (e.g., a new Name)"),
     dry_run: z
       .boolean()
       .optional()
@@ -63,7 +66,9 @@ export const DuplicateEntityInputSchema = z
 
 export const DuplicateEntityOutputSchema = z
   .object({
-    result: z.record(z.any()).describe("Add-operation response with the new entity ID(s)"),
+    result: z
+      .record(z.string(), z.any())
+      .describe("Add-operation response with the new entity ID(s)"),
     sourceEntityId: z.string(),
     entityType: z.string(),
     timestamp: z.string().datetime(),

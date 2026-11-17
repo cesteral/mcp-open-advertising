@@ -40,7 +40,7 @@ export const ManageCriterionsInputSchema = z
     entityLevel: z
       .enum(["campaign", "adGroup"])
       .describe("Whether targeting is at campaign or ad group level"),
-    data: z.record(z.unknown()).describe("Operation data (varies by operation)"),
+    data: z.record(z.string(), z.unknown()).describe("Operation data (varies by operation)"),
     dry_run: z
       .boolean()
       .optional()
@@ -53,7 +53,7 @@ export const ManageCriterionsInputSchema = z
 
 export const ManageCriterionsOutputSchema = z
   .object({
-    result: z.record(z.any()).optional(),
+    result: z.record(z.string(), z.any()).optional(),
     operation: z.string(),
     entityLevel: z.string(),
     timestamp: z.string().datetime(),

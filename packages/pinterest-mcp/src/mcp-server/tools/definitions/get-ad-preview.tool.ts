@@ -38,7 +38,7 @@ export const GetAdPreviewInputSchema = z
 export const GetAdPreviewOutputSchema = z
   .object({
     preview: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .describe("Pinterest ad preview response: { url } — preview page, expires in 7 days"),
     adId: z.string(),
     pinId: z.string().describe("The ad's pin_id the preview was created from"),

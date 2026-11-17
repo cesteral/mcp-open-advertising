@@ -364,8 +364,8 @@ describe("ttd_create_entity → POST /v3/{entity}", () => {
   it("takes no adGroupId: no entity type has an ad-group parent (ttd REST #25)", async () => {
     // The schemas offered "Ad Group ID (required for ad)" for an `ad` type that
     // does not exist, and merged it into the body as AdGroupId for any type.
-    expect(CreateEntityInputSchema.innerType().shape).not.toHaveProperty("adGroupId");
-    expect(UpdateEntityInputSchema.innerType().shape).not.toHaveProperty("adGroupId");
+    expect(CreateEntityInputSchema.shape).not.toHaveProperty("adGroupId");
+    expect(UpdateEntityInputSchema.shape).not.toHaveProperty("adGroupId");
 
     stub.route({ method: "POST", path: `${V}/campaign`, response: { CampaignId: "camp002" } });
     const data = { CampaignName: "Winter", Version: "Kokai" };

@@ -71,11 +71,11 @@ export const CreateReportScheduleInputSchema = z
       .optional()
       .describe("Criteria for CROSS_MEDIA_REACH reports"),
     delivery: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Delivery configuration (emailOwner, recipients, etc.)"),
     additionalConfig: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("Additional report configuration fields"),
     dry_run: z
@@ -99,7 +99,7 @@ export const CreateReportScheduleOutputSchema = z
       .optional()
       .describe("Report ID (use as schedule handle). Absent on a dry_run (nothing was created)."),
     reportName: z.string().optional(),
-    schedule: z.record(z.any()).optional().describe("Schedule as returned by CM360"),
+    schedule: z.record(z.string(), z.any()).optional().describe("Schedule as returned by CM360"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No schedule was created."

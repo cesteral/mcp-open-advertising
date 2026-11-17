@@ -45,7 +45,7 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity ID to update (campaignId / adGroupId / adId / adAssociationId)"),
-    data: z.record(z.any()).describe("Fields to update (Unified API field names)"),
+    data: z.record(z.string(), z.any()).describe("Fields to update (Unified API field names)"),
     dry_run: z
       .boolean()
       .optional()

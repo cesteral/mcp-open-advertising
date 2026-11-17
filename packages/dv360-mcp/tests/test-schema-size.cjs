@@ -14,7 +14,7 @@
  */
 
 const path = require("path");
-const { zodToJsonSchema } = require("zod-to-json-schema");
+const { z } = require("zod");
 
 // Size limits (in bytes)
 const STDIO_SAFE_LIMIT = 100_000; // 100KB - safe for stdio
@@ -37,9 +37,13 @@ async function testSchemaSize(schemaName, schemaGetter) {
 
     // Convert Zod schema to JSON Schema (this is what gets transmitted)
     let jsonSchema;
-    if (schema._def) {
-      // It's a Zod schema
-      jsonSchema = zodToJsonSchema(schema);
+    if (schema instanceof z.ZodType) {
+      // It's a Zod schema: the conversion MCP SDK v2 publishes (#242)
+      jsonSchema = z.toJSONSchema(schema, {
+        target: "draft-2020-12",
+        io: "input",
+        unrepresentable: "any",
+      });
     } else {
       // Already JSON Schema
       jsonSchema = schema;

@@ -50,7 +50,7 @@ export const CreateEntityInputSchema = z
     adAccountUrn: adAccountUrnSchema.describe(
       "The ad account to create the entity in (e.g. urn:li:sponsoredAccount:123). Required for a creative, whose body has no writable account; for a campaign, campaign group or conversion rule data.account names it, and adAccountUrn must agree when both are given."
     ),
-    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
+    data: z.record(z.string(), z.any()).describe("Entity fields as key-value pairs"),
     dry_run: z
       .boolean()
       .optional()
@@ -64,7 +64,7 @@ export const CreateEntityInputSchema = z
 
 export const CreateEntityOutputSchema = z
   .object({
-    entity: z.record(z.any()).describe("Created entity (returns id/URN at minimum)"),
+    entity: z.record(z.string(), z.any()).describe("Created entity (returns id/URN at minimum)"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
     dryRun: DryRunResultSchema.optional().describe(

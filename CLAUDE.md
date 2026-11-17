@@ -104,6 +104,8 @@ const logger = createLogger("component-name");
 const params = schema.parse(rawInput);
 ```
 
+The fleet is on **Zod 4**, which SDK v2 converts to JSON Schema draft 2020-12 itself (#242). Zod 3 habits that break: `z.record(V)` needs a key schema (`z.record(z.string(), V)`); `.refine(fn, params)` takes a static `params`, so a message or path that depends on the data goes in `.superRefine`; `ZodError.errors` is `.issues`; `ZodEffects` is gone (`.refine` keeps the `ZodObject`, `.transform` makes a `ZodPipe`); a wrong enum member or literal is one issue code, `invalid_value`; and `z.ZodTypeAny` parses to `unknown`, not `any`. Code that reads schema internals across packages uses `schema._zod.def`, never `instanceof` (each package can resolve its own zod).
+
 ## Entity Snapshots and `parents`
 
 The governance layer parses a governed write's read partner (`*_get_entity`) `structuredContent` as a `NormalizedEntitySnapshot`, so on the four hierarchical platforms (TTD, Google Ads, Meta, DV360) `*_get_entity` returns the snapshot at the top level beside `entity` / `timestamp` (`readPartnerSnapshotShape` in `@cesteral/shared`; an ungoverned entity kind returns neither). The same `build*Snapshot` builder feeds dry-run `expectedPostState` and the before/after of a real write.

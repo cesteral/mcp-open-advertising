@@ -30,7 +30,7 @@ export const GetAdPreviewOutputSchema = z
       .describe(
         "The ad's computed click-through (landing page) URL, not a rendered preview. dfareporting v5 sets Ad.clickThroughUrl only for AD_SERVING_CLICK_TRACKER ads, so it is usually absent"
       ),
-    ad: z.record(z.any()).describe("Full ad entity data"),
+    ad: z.record(z.string(), z.any()).describe("Full ad entity data"),
     timestamp: z.string().datetime(),
   })
   .describe("Ad preview result");

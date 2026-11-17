@@ -37,7 +37,7 @@ export const ListEntitiesInputSchema = z
     profileId: z.string().min(1).describe("Amazon Ads profile ID bound to this session"),
     accountId: AccountIdSchema,
     filters: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe(
         "Optional filters, mapped to Unified `{ include: [...] }` query filters (e.g. { campaignId: '581234567890123', state: 'ENABLED,PAUSED' })"
@@ -59,7 +59,7 @@ export const ListEntitiesInputSchema = z
 
 export const ListEntitiesOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())).describe("List of entities"),
+    entities: z.array(z.record(z.string(), z.any())).describe("List of entities"),
     pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
