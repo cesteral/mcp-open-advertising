@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "pino": "catalog:",
     "zod": "catalog:"
   },
