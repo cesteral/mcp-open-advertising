@@ -44,6 +44,7 @@ export * from "./transport/session-store.js";
 export * from "./http/delay.js";
 export * from "./http/download-file-stream.js";
 export * from "./http/download-file.js";
+export * from "./http/creative-asset.js";
 export * from "./http/download-url-guard.js";
 export * from "./http/fetch-with-timeout.js";
 export * from "./http/multipart-form.js";

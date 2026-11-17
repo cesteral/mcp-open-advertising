@@ -10,7 +10,9 @@
 // refuses, writing nothing, unless the server meets its type's whole contract.
 // Promotion proves the contract is complete, not that the writes work: CI's
 // wire-request coverage still blocks the merge until each write has a wire
-// test. Exit codes: 0 ok, 2 refused or invalid input.
+// test. It prints the lines of the package (and its registry description)
+// that still call it experimental, without editing them. Exit codes: 0 ok, 2
+// refused or invalid input.
 
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -48,7 +50,14 @@ async function main() {
     throw err;
   }
   for (const p of plan.modified) console.log(`${dryRun ? "would modify" : "modified"}  ${p}`);
-  if (dryRun) return 0;
+  const stale = plan.stale.map(
+    ({ path, line, text }) => `  ${line ? `${path}:${line}` : path}: ${text}`
+  );
+  if (dryRun) {
+    if (stale.length)
+      console.log(`\nStill calls it experimental (not edited):\n${stale.join("\n")}`);
+    return 0;
+  }
 
   applyPlan(ROOT, plan);
   for (const script of ["generate-server-json.mjs", "sync-registry-data.mjs"]) {
@@ -60,6 +69,12 @@ async function main() {
       "Manager (only MCP_AUTH_SECRET_KEY was added). CI's wire-request coverage still\n" +
       "blocks the merge until every write tool has a wire test."
   );
+  if (stale.length) {
+    console.log(
+      "\nThese lines still call the server experimental; promotion does not edit\n" +
+        `them, so update them by hand:\n${stale.join("\n")}`
+    );
+  }
   return 0;
 }
 

@@ -1,6 +1,9 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 
 import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   CONFIG_LINES,
   SHADOWED,
@@ -76,6 +79,86 @@ describe("scaffold: template layers", () => {
     expect(strays).toEqual([]);
   });
 
+  it("TEMPLATE_TOOLS matches the rendered tool barrel, for every type with and without writes", () => {
+    // A Set: write tools also name their read partner with `toolName:`.
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      for (const writes of [false, true]) {
+        const names = new Set(["foo_bar_search_tools"]);
+        for (const [path, text] of renderTemplate(TEMPLATE_DIR, type, vars, { writes })) {
+          if (!path.startsWith("src/mcp-server/tools/definitions/")) continue;
+          for (const m of text.matchAll(/(?:TOOL_NAME =|toolName:) "([a-z0-9_]+)"/g)) {
+            names.add(m[1]);
+          }
+        }
+        expect([...names].sort(), `${type}${writes ? "+writes" : ""}`).toEqual(
+          [...TEMPLATE_TOOLS("foo_bar", { type, writes })].sort()
+        );
+      }
+    }
+  });
+
+  it("a governed read renders only where a write names it as its readPartner", () => {
+    // reporting_conversions once shipped get_entity as a governed read (and
+    // a manifest entry) although both its writes are effect writes.
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      for (const writes of [false, true]) {
+        const reads = [];
+        const partners = new Set();
+        for (const [path, text] of renderTemplate(TEMPLATE_DIR, type, vars, { writes })) {
+          if (!path.startsWith("src/mcp-server/tools/definitions/")) continue;
+          if (/kind: "read"/.test(text)) reads.push(text.match(/TOOL_NAME = "([a-z0-9_]+)"/)[1]);
+          for (const m of text.matchAll(/readPartner: \{\s*toolName: "([a-z0-9_]+)"/g)) {
+            partners.add(m[1]);
+          }
+        }
+        expect(reads.sort(), `${type}${writes ? "+writes" : ""}`).toEqual([...partners].sort());
+      }
+    }
+  });
+
+  it("each CLAUDE.md says once how the server was scaffolded", () => {
+    // Each type's CLAUDE.md has a read-only and a with-writes paragraph; a
+    // lost section marker would ship both.
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      for (const writes of [false, true]) {
+        const text = renderTemplate(TEMPLATE_DIR, type, vars, { writes }).get("CLAUDE.md");
+        expect(text.match(/^Scaffolded by /gm), `${type}${writes ? "+writes" : ""}`).toHaveLength(
+          1
+        );
+        expect(/read-only/.test(text), `${type}${writes ? "+writes" : ""}`).toBe(!writes);
+      }
+    }
+  });
+
+  it("package.json describes the type it was scaffolded as", () => {
+    // base/package.json once said "campaign entity management" for every type.
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      const { description } = JSON.parse(
+        renderTemplate(TEMPLATE_DIR, type, vars).get("package.json")
+      );
+      expect(description, type).toBe(
+        `Foo Bar Ads MCP Server - ${TEMPLATE_TYPES[type].purpose} via the Foo Bar Ads API (scaffolded; experimental)`
+      );
+    }
+  });
+
+  it("a section marker must close the section it opened, and name a known flag", () => {
+    const dir = mkdtempSync(join(tmpdir(), "scaffold-sections-"));
+    try {
+      const put = (text) => {
+        mkdirSync(join(dir, "base"), { recursive: true });
+        writeFileSync(join(dir, "base", "f.txt"), text);
+      };
+      const render = () => renderTemplate(dir, "management", vars, { writes: true });
+      put("// {{#writes}}\na\n// {{/entityWrites}}\n");
+      expect(render).toThrow(/\{\{\/entityWrites\}\} without an opening marker/);
+      put("// {{#bogus}}\na\n// {{/bogus}}\n");
+      expect(render).toThrow(/unknown section \{\{#bogus\}\}/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("an unknown type throws", () => {
     expect(() => renderTemplate(TEMPLATE_DIR, "bogus", vars)).toThrow(
       /unknown server type "bogus"/
@@ -115,15 +198,6 @@ describe("scaffold: management template", () => {
     expect(rendered.get("src/mcp-server/server.ts")).toMatch(/manifestUrl: new URL/);
     const all = [...rendered.values()].join("\n");
     for (const tool of WRITE_TOOLS) expect(all).toContain(tool);
-  });
-
-  it("TEMPLATE_TOOLS without writes matches the read-only barrel", () => {
-    const names = new Set(["foo_bar_search_tools"]);
-    for (const [path, text] of readOnly) {
-      if (!path.startsWith("src/mcp-server/tools/definitions/")) continue;
-      for (const m of text.matchAll(/(?:TOOL_NAME =|toolName:) "([a-z0-9_]+)"/g)) names.add(m[1]);
-    }
-    expect([...names].sort()).toEqual([...TEMPLATE_TOOLS("foo_bar")].sort());
   });
 
   it("paths use the key", () => {
@@ -182,16 +256,5 @@ describe("scaffold: management template", () => {
     ]) {
       expect(rendered.get(file) ?? "", file).toContain(suite);
     }
-  });
-
-  it("TEMPLATE_TOOLS matches the rendered tool barrel", () => {
-    // A Set: write tools also name their read partner with `toolName:`.
-    const names = new Set();
-    for (const [path, text] of rendered) {
-      if (!path.startsWith("src/mcp-server/tools/definitions/")) continue;
-      for (const m of text.matchAll(/(?:TOOL_NAME =|toolName:) "([a-z0-9_]+)"/g)) names.add(m[1]);
-    }
-    names.add("foo_bar_search_tools");
-    expect([...names].sort()).toEqual([...TEMPLATE_TOOLS("foo_bar", { writes: true })].sort());
   });
 });

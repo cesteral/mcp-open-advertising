@@ -2,7 +2,7 @@
   "name": "@cesteral/{{package}}",
   "mcpName": "io.github.cesteral/{{package}}",
   "version": "0.1.0",
-  "description": "{{displayName}} MCP Server - campaign entity management via the {{displayName}} API (scaffolded; experimental)",
+  "description": "{{displayName}} MCP Server - {{purpose}} via the {{displayName}} API (scaffolded; experimental)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

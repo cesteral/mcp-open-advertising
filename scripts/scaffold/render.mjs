@@ -11,8 +11,11 @@
 // with no value throws, so a template edit cannot ship `{{...}}` into a
 // package. Sections: the lines between a line containing `{{#writes}}` and
 // one containing `{{/writes}}` are kept only with writes; `{{^writes}}` …
-// `{{/writes}}` only without. The marker lines themselves are dropped, so a
-// marker can sit in a comment of any syntax.
+// `{{/writes}}` only without. `{{#entityWrites}}` … `{{/entityWrites}}` is
+// kept only with writes on a type whose writes include entity writes (the
+// `entityWrites` flag on TEMPLATE_TYPES), for text such as the governed read
+// partner that only those writes use. The marker lines themselves are
+// dropped, so a marker can sit in a comment of any syntax.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -26,7 +29,10 @@ const WRITES_DIR = "+writes";
 
 /**
  * Each type's layers, the tools its template registers (barrel order, without
- * the key prefix) and the subset that are governed writes.
+ * the key prefix) and the subset that are governed writes. `entityWrites`:
+ * some of those writes change entities and name `get_entity` as their
+ * `readPartner`, so `get_entity` is a governed read; effect writes (a report
+ * job, a conversion upload) have no read partner.
  */
 export const TEMPLATE_TYPES = {
   management: {
@@ -47,6 +53,7 @@ export const TEMPLATE_TYPES = {
     writeTools: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
     addedWithWrites: ["create_entity", "update_entity", "delete_entity", "bulk_update_status"],
     terminalTools: ["delete_entity"],
+    entityWrites: true,
     pacingGuidance:
       "To populate budget and flight dates, first call `{{key}}_get_entity` for the campaign.",
     label: "Management",
@@ -68,6 +75,7 @@ export const TEMPLATE_TYPES = {
     writeTools: ["submit_report"],
     addedWithWrites: ["submit_report", "check_report_status", "download_report"],
     terminalTools: [],
+    entityWrites: false,
     pacingGuidance:
       "To populate spend-to-date, first call `{{key}}_get_report` for the campaign; budget and flight dates come from the caller.",
     label: "Reporting only",
@@ -98,6 +106,7 @@ export const TEMPLATE_TYPES = {
       "insert_conversions",
     ],
     terminalTools: [],
+    entityWrites: false,
     pacingGuidance:
       "To populate budget and flight dates, first call `{{key}}_get_entity` for the campaign.",
     label: "Reporting + conversions",
@@ -165,24 +174,27 @@ export function layerFiles(root, layer) {
   return [...layerMap(root, layer, true).keys()];
 }
 
-/** Apply `{{#writes}}` / `{{^writes}}` sections (see the header). */
-function sections(text, writes, where) {
+/** Apply the `{{#flag}}` / `{{^flag}}` sections (see the header). */
+function sections(text, flags, where) {
   const out = [];
-  let keep = null; // null outside a section
+  let open = null; // { name, keep } inside a section
   for (const line of text.split("\n")) {
-    if (line.includes("{{#writes}}") || line.includes("{{^writes}}")) {
-      if (keep !== null) throw new Error(`${where}: nested writes section`);
-      keep = line.includes("{{#writes}}") ? writes : !writes;
+    const m = line.match(/\{\{([#^/])([A-Za-z]+)\}\}/);
+    if (!m) {
+      if (open?.keep !== false) out.push(line);
       continue;
     }
-    if (line.includes("{{/writes}}")) {
-      if (keep === null) throw new Error(`${where}: {{/writes}} without an opening marker`);
-      keep = null;
-      continue;
+    const [, op, name] = m;
+    if (!(name in flags)) throw new Error(`${where}: unknown section {{${op}${name}}}`);
+    if (op === "/") {
+      if (open?.name !== name) throw new Error(`${where}: {{/${name}}} without an opening marker`);
+      open = null;
+    } else {
+      if (open !== null) throw new Error(`${where}: nested ${name} section`);
+      open = { name, keep: op === "#" ? flags[name] : !flags[name] };
     }
-    if (keep !== false) out.push(line);
   }
-  if (keep !== null) throw new Error(`${where}: unclosed writes section`);
+  if (open !== null) throw new Error(`${where}: unclosed ${open.name} section`);
   return out.join("\n");
 }
 
@@ -196,11 +208,14 @@ function fill(text, vars, where) {
 /** Path (relative to the package) → rendered text, for `type`. */
 export function renderTemplate(root, type, vars, { writes = false } = {}) {
   // Per-type text a base file needs (the pacing tool names the type's own
-  // budget source), itself filled from the caller's vars.
+  // budget source; package.json says what the server is for), itself filled
+  // from the caller's vars.
   vars = {
     ...vars,
     pacingGuidance: fill(typeOf(type).pacingGuidance, vars, `${type} pacingGuidance`),
+    purpose: typeOf(type).purpose,
   };
+  const flags = { writes, entityWrites: writes && typeOf(type).entityWrites };
   const files = new Map();
   for (const layer of typeOf(type).layers) {
     for (const [rel, abs] of layerMap(root, layer, writes)) files.set(rel, { layer, abs });
@@ -210,7 +225,7 @@ export function renderTemplate(root, type, vars, { writes = false } = {}) {
     const where = `${layer}/${rel}`;
     out.set(
       fill(rel, vars, where),
-      fill(sections(readFileSync(abs, "utf8"), writes, where), vars, where)
+      fill(sections(readFileSync(abs, "utf8"), flags, where), vars, where)
     );
   }
   return out;

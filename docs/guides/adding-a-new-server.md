@@ -42,7 +42,7 @@ It writes `packages/reddit-mcp` from the layers in [`templates/server/`](../../t
 - `packages/reddit-mcp/server.json`
 - `platform-facts.json` (the API base and the rate-limit default, `unverified`, due in 180 days) and the fact counts in its doc
 - the README fleet table
-- the hand-maintained lists `scripts/lib/fleet-inventory.mjs` checks that are not about deploying: the issue-form dropdowns, `CROSS_SERVER_CONTRACT.md` and `platform-mapping.md`, and for the reporting types the two reporting platform enums in `@cesteral/shared` (`ReportingPlatform` and the report-schedule `platform`; `scripts/lib/platform-keys.mjs` requires them to name every reporting-capable server). The deploy lists (Cloud Build's `images:`, the three Terraform maps, the tfvars examples) wait for promotion.
+- the hand-maintained lists `scripts/lib/fleet-inventory.mjs` checks that are not about deploying: the issue-form dropdowns, `CROSS_SERVER_CONTRACT.md` and `platform-mapping.md`, and the two reporting platform enums in `@cesteral/shared` (`ReportingPlatform` and the report-schedule `platform`), for every type, since every type ships `get_report` and `scripts/lib/platform-keys.mjs` requires the enums to name every reporting-capable server. The deploy lists (Cloud Build's `images:`, the three Terraform maps, the tfvars examples) wait for promotion.
 
 Then build, record the new tools' untrusted-content declarations and every tool's `definitionHash` (both are read from the built servers), and test. The hash sync also records the existing tools whose schema enumerates the fleet's platforms (the report-schedule tools), which gain the new key:
 

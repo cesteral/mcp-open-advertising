@@ -52,8 +52,7 @@ The scaffold passes CI except for the wire-request coverage of `{{key}}_submit_r
 
 `pnpm promote:server {{key}}` makes the server stable (published and deployed). A reporting server has no write requirement, so it can be promoted read-only. For async reports, `pnpm new:server {{key}} --add-write-stubs` adds the governed `submit_report` stub and the status and download tools, and sets `"governed": true`.
 
-- [ ] Replace the scaffold's `contract.exceptions` reasons in `registry.json` with real ones, or ship the tools.
-
 ## After promotion, before it deploys
 
+- [ ] Drop the "experimental" wording that promotion leaves behind: the `description` in `src/mcp-server/server.ts` (clients see it in serverInfo), the opening of this README, `CLAUDE.md`, the `package.json` description and the server's `description` in `registry.json`. `promote:server` prints each line; it does not edit them.
 - [ ] Add the platform's credential secrets to the server's `mcp_secret_env_vars` entry in `terraform/variables.tf` (promotion creates it with only `MCP_AUTH_SECRET_KEY`), once they exist in Secret Manager. Do not add the entry before promotion: `promote:server` refuses while a deploy list already names the server.
