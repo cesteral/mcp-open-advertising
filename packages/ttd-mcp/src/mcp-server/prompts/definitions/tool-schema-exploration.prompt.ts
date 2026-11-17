@@ -6,7 +6,7 @@
  *
  * Context-efficient capability discovery for TTD MCP server.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const toolSchemaExplorationPrompt: Prompt = {
   name: "ttd_tool_schema_exploration",

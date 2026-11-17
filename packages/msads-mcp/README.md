@@ -14,7 +14,7 @@ through the Model Context Protocol.
 ## Features
 
 - **Per-session Bearer token auth** via `MsAdsBearerAuthStrategy`
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class
 - **Structured logging** via Pino
@@ -169,7 +169,7 @@ When running in stdio transport mode (e.g., Claude Desktop), set these environme
 
 ### Transport
 
-- **Streamable HTTP**: MCP protocol via Hono + `@hono/mcp`
+- **Streamable HTTP**: MCP protocol via Hono + the MCP SDK's web-standard transport
 - **Health check**: `/health` endpoint
 
 ## Contributing

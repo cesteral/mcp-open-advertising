@@ -8,7 +8,7 @@
  * Google Ads uses updateMask to specify which fields to update — omitting updateMask
  * can cause unexpected field resets or API errors.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const entityUpdateWorkflowPrompt: Prompt = {
   name: "gads_entity_update_workflow",

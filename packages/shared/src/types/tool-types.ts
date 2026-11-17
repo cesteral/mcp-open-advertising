@@ -4,7 +4,7 @@
 /**
  * Canonical MCP tool/resource/context types — single source of truth across all servers.
  *
- * Uses structural types (no @modelcontextprotocol/sdk import) so this file
+ * Uses structural types (no @modelcontextprotocol/server import) so this file
  * compiles cleanly in the shared package without adding the SDK as a dependency.
  */
 

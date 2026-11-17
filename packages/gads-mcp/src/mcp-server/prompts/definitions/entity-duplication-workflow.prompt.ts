@@ -8,7 +8,7 @@
  * pattern. Google Ads has no native "duplicate" API, so duplication requires reading
  * the source entity, stripping immutable/ID fields, and creating a new entity.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const entityDuplicationWorkflowPrompt: Prompt = {
   name: "gads_entity_duplication_workflow",

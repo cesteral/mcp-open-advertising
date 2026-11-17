@@ -26,9 +26,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import pino from "pino";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { mcpConfig } from "../../src/config/index.js";
 import { META_READ_TOKENS } from "../../src/services/meta/meta-service.js";
 import { createMcpServer } from "../../src/mcp-server/server.js";

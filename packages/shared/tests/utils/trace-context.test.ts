@@ -16,9 +16,8 @@ import {
   type SpanOptions,
   type Tracer,
 } from "@opentelemetry/api";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { McpServer, InMemoryTransport } from "@modelcontextprotocol/server";
 import { remoteParentFromMeta } from "../../src/utils/observability/trace-context.js";
 import { withSpan } from "../../src/utils/observability/telemetry.js";
 import { registerToolsFromDefinitions } from "../../src/utils/mcp/tool-handler-factory.js";

@@ -16,11 +16,12 @@
 //
 //   - An error the factory builds (the handler ran and threw, including "no
 //     session" and every upstream failure) MUST carry the marker.
-//   - An error the SDK builds before the handler runs does NOT: "MCP error
-//     -32602: Input validation error" for bad arguments, and "MCP error -32601:
-//     ... requires task augmentation" for a task-only tool called without task
-//     mode. The factory never sees these, and their text describes only the
-//     caller's own request. Asserted below so the boundary is written down.
+//   - An error the SDK builds before the handler runs does NOT: "Input
+//     validation error: Invalid arguments for tool ..." for bad arguments
+//     (SDK v2 returns it as an isError result with no "MCP error -N:" prefix;
+//     v1 had "MCP error -32602: Input validation error", #242). The factory
+//     never sees these, and their text describes only the caller's own
+//     request. Asserted below so the boundary is written down.
 //   - The SDK's OUTPUT validation is no longer SDK-built: zod's message can
 //     quote a rejected value that came from the platform, so the factory now
 //     runs the same check first and the failure is a marked factory error
@@ -36,17 +37,15 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { withServerClient, listRawTools, ROOT } from "./boot-server.mjs";
+import { withServerClient, listRawTools, ROOT, IDENTITY_SCHEMA } from "./boot-server.mjs";
 
 const KEY = "cesteral/untrusted";
-/** Errors the SDK builds itself; the tool factory never produces this prefix. */
-const SDK_BUILT_ERROR = /^MCP error -\d+: /;
-
-/** The SDK strips unknown result fields unless handed a pass-through schema. */
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
-};
+/**
+ * Errors the SDK builds itself; the tool factory never produces these
+ * prefixes. SDK v2 dropped the "MCP error -N:" prefix from input validation
+ * failures (#242); the old form is kept for any SDK-built JSON-RPC error.
+ */
+const SDK_BUILT_ERROR = /^(MCP error -\d+: |Input validation error: )/;
 
 /** Extra calls for servers where `{}` never reaches the factory. */
 const PROBES = {

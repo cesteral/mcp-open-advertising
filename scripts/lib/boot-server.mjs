@@ -7,8 +7,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -58,17 +57,20 @@ export async function withServerClient(packageDir, fn) {
   }
 }
 
-// The stock SDK ListToolsResultSchema parses each tool through a non-
-// passthrough ToolAnnotationsSchema, which silently strips the `cesteral`
-// governance namespace. The SDK validates a request's result by calling
-// `.safeParse()` on the supplied result schema (see the SDK's zod-compat
-// shim), so an identity schema implementing `safeParse` returns the raw
-// `tools/list` result untouched — the exact representation governance
-// ingests and hashes. `parse` is kept too, defensively, for SDK lines
-// that call it instead.
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
+// The SDK client's own result schemas parse each tool's annotations through a
+// non-passthrough schema, which silently strips the `cesteral` governance
+// namespace: a `client.request()` with no result schema returns tools without
+// it. SDK v2 validates a request's result with the Standard Schema passed as
+// its second argument instead (https://standardschema.dev), so an identity
+// Standard Schema returns the raw `tools/list` result untouched — the exact
+// representation governance ingests and hashes (#242: SDK v1 called
+// `.safeParse()` on this argument; v2 calls `~standard.validate`).
+export const IDENTITY_SCHEMA = {
+  "~standard": {
+    version: 1,
+    vendor: "cesteral-identity",
+    validate: (value) => ({ value }),
+  },
 };
 
 /**

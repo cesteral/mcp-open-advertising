@@ -1,8 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { allTools } from "./tools/index.js";
 import { allResources, allTemplatedResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";

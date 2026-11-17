@@ -39,7 +39,7 @@ packages/{server-name}/src/
 ├── mcp-server/
 │   ├── tools/definitions/{tool}.tool.ts  # Individual tool files
 │   ├── tools/definitions/index.ts        # Exports allTools array
-│   └── transports/streamable-http-transport.ts  # Hono + @hono/mcp
+│   └── transports/streamable-http-transport.ts  # Hono + SDK WebStandardStreamableHTTPServerTransport
 ├── services/                             # Business logic + session services
 └── utils/
 ```
@@ -82,7 +82,7 @@ Each server has its own `MCP_AUTH_MODE` enum; the canonical list is in each pack
 - Every 401 from `/mcp` goes through the factory's `unauthorized()` helper, which adds `WWW-Authenticate` where the mode has a Bearer credential: `jwt` (with `resource_metadata`) and the `*-bearer` platform modes. The `*-headers` and `ttd-token` modes get no challenge, because their credentials travel in custom headers
 - SEP-2127 endpoint at `/.well-known/mcp/server-card.json` returns server discovery metadata (name, version, transports, auth modes, capabilities, the `untrusted_content` boundary, and the `operational` envelope — see [docs/architecture/server-card-operational-envelope.md](docs/architecture/server-card-operational-envelope.md)) on every server in every auth mode
 - **DNS-rebinding protection on `/mcp`** (#241): the Host header (and Origin) are checked, keyed on the bind address; `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS` configure it. A loopback bind is guarded by default; a hosted non-loopback bind is not checked on Host unless `MCP_ALLOWED_HOSTS` is set. `/health` and the `.well-known` documents are never guarded. The full rules are in [docs/architecture/http-transport-security.md](docs/architecture/http-transport-security.md).
-- Server→client messages sent while handling a request (elicitation, `notifications/message`) must carry that request's id (`relatedRequestId` / `extra.sendNotification`); otherwise they go to the standalone GET stream, which this fleet answers with 405, and a destructive-op confirmation never reaches the client. See [docs/architecture/http-transport-security.md](docs/architecture/http-transport-security.md).
+- Server→client messages sent while handling a request (elicitation, `notifications/message`) must carry that request's id (SDK v2: `ctx.mcpReq.log` / `ctx.mcpReq.notify` are request-scoped; `ctx.mcpReq.elicitInput` is not and needs `{ relatedRequestId: ctx.mcpReq.id }`); otherwise they go to the standalone GET stream, which this fleet answers with 405, and a destructive-op confirmation never reaches the client. See [docs/architecture/http-transport-security.md](docs/architecture/http-transport-security.md).
 - All platform auth adapters' `validate()` hit a cheap upstream endpoint (e.g. TTD's `{ __typename }` GraphQL ping, Meta's `/me`, MSAds' `User/Query`) on first session creation and memoize the result, so invalid tokens fail fast at session establishment rather than on first tool call. Auth failures throw `McpError(JsonRpcErrorCode.Unauthorized)` so the transport factory maps them to HTTP 401 with the right `authErrorHint`.
 
 Platform-specific auth adapters live **inside each server package** (not in shared) so adding a new platform never requires touching `@cesteral/shared`.

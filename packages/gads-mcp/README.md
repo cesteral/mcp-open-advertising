@@ -237,7 +237,7 @@ pnpm run test
 
 ### Transport
 
-- **Streamable HTTP**: MCP protocol via Hono + `@hono/mcp`
+- **Streamable HTTP**: MCP protocol via Hono + the MCP SDK's web-standard transport
 - **Health check**: `/health` endpoint
 
 ## Contributing

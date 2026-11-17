@@ -27,6 +27,7 @@ import {
 } from "../observability/interaction-logger.js";
 import { getRecordedUpstreamRequests } from "../observability/http-request-recorder.js";
 import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
+import { toStandardSchema } from "./zod-standard-schema.js";
 import {
   TOOL_ERROR_UNTRUSTED_MARKER,
   untrustedResultMeta,
@@ -413,85 +414,61 @@ interface ToolRegistrationConfig {
   _meta?: Record<string, unknown>;
 }
 
-/** The part of the SDK's per-request `extra` the tool wrapper reads. */
-interface ToolCallExtra {
-  /** The request's `params._meta` (trace context lives here, #247). */
-  _meta?: unknown;
-  /** JSON-RPC id of the `tools/call` being handled. */
-  requestId?: string | number;
-  /** Transport session id (undefined on stdio, and on the Hono transport after initialize). */
+/**
+ * The part of the SDK v2 handler context (`ServerContext`) the tool wrapper
+ * reads. Structural, so `@cesteral/shared` keeps no import of the SDK.
+ */
+interface ToolCallContext {
+  /** Transport session id (undefined on stdio). */
   sessionId?: string;
-  /** Request headers, where the SDK's `logging/setLevel` handler reads the session id from. */
-  requestInfo?: { headers?: Record<string, string | string[] | undefined> };
-  /**
-   * Sends a notification tied to this request (the SDK sets
-   * `relatedRequestId: request.id`), so the streamable-HTTP transport writes it
-   * on this request's POST response stream (#241).
-   */
-  sendNotification?: (notification: {
-    method: "notifications/message";
-    params: { level: string; logger?: string; data?: unknown };
-  }) => Promise<void>;
+  mcpReq?: {
+    /** JSON-RPC id of the `tools/call` being handled. */
+    id?: string | number;
+    /** The request's `params._meta` (trace context lives here, #247). */
+    _meta?: unknown;
+    /**
+     * Sends a `notifications/message` tied to this request, honouring the
+     * client's `logging/setLevel` filter. Being request-scoped, the
+     * streamable-HTTP transport writes it on this request's POST response
+     * stream (#241).
+     */
+    log?: (level: string, data: unknown, logger?: string) => Promise<void>;
+    /**
+     * `elicitation/create`. NOT request-scoped on its own: SDK v2 forwards it
+     * to `Server.elicitInput` with only the options it is given, so the
+     * caller must pass `relatedRequestId` (#241).
+     */
+    elicitInput?: (params: any, options?: { relatedRequestId?: string | number }) => Promise<any>;
+  };
 }
 
 type LoggingMessageParams = { level: string; logger?: string; data?: unknown };
 
 /**
- * Whether the SDK's per-session `logging/setLevel` filter drops `level`.
- *
- * `Server.isMessageIgnored` is a runtime property the SDK's own
- * `sendLoggingMessage` consults; it is `private` in the typings, so it is
- * feature-detected rather than declared on `McpServerLike` (which would make
- * every concrete `McpServer` fail assignability). Absent → nothing is filtered.
- * `tool-handler-factory-related-request.test.ts` pins that it still works.
- */
-function isLogLevelIgnored(
-  server: McpServerLike,
-  level: string,
-  sessionId: string | undefined
-): boolean {
-  const probe = (server.server as unknown as { isMessageIgnored?: unknown }).isMessageIgnored;
-  if (typeof probe !== "function") return false;
-  return Boolean(
-    (probe as (l: string, s?: string) => boolean).call(server.server, level, sessionId)
-  );
-}
-
-/**
  * Send a `notifications/message` tied to the `tools/call` being handled (#241).
  *
- * `McpServer.sendLoggingMessage` takes no `relatedRequestId`, so the SDK routes
- * it to the standalone GET SSE stream. This fleet answers GET /mcp with 405, and
- * a client that never opens that optional stream receives nothing at all. The
- * request's own `extra.sendNotification` carries the request id, so the
- * transport writes the notification on the POST response stream the client is
- * already reading. The SDK's level filter is re-applied here (with the real
- * session id, which `sendLoggingMessage` was never given over HTTP), and the
- * capability check still runs inside `Protocol.notification`.
+ * `McpServer.sendLoggingMessage` is not request-scoped, so the SDK routes it to
+ * the standalone GET SSE stream, which this fleet answers with 405: a client
+ * that never opens that optional stream receives nothing. The handler
+ * context's `mcpReq.log` is request-scoped (the transport writes it on the POST
+ * response stream the client is already reading) and applies the client's
+ * `logging/setLevel` filter itself.
  *
- * Without `extra` (unit-test fakes that invoke the handler directly) it falls
+ * Without a context (unit-test fakes that invoke the handler directly) it falls
  * back to `server.sendLoggingMessage`.
  */
 async function sendRelatedLoggingMessage(
   server: McpServerLike,
-  extra: ToolCallExtra | undefined,
+  ctx: ToolCallContext | undefined,
   params: LoggingMessageParams
 ): Promise<void> {
-  if (typeof extra?.sendNotification !== "function") {
-    return server.sendLoggingMessage(params);
-  }
-  // Same key the SDK's `logging/setLevel` handler stores the level under
-  // (server/index.js: `extra.sessionId || requestInfo.headers['mcp-session-id']`).
-  // `@hono/mcp` clears `transport.sessionId` on initialize, so over HTTP the
-  // header is what actually matches.
-  const header = extra.requestInfo?.headers?.["mcp-session-id"];
-  const levelKey = extra.sessionId || (Array.isArray(header) ? header[0] : header) || undefined;
-  if (isLogLevelIgnored(server, params.level, levelKey)) return;
-  return extra.sendNotification({ method: "notifications/message", params });
+  const log = ctx?.mcpReq?.log;
+  if (typeof log !== "function") return server.sendLoggingMessage(params);
+  return log(params.level, params.data, params.logger);
 }
 
 /**
- * Structural type for McpServer — avoids direct dependency on @modelcontextprotocol/sdk.
+ * Structural type for McpServer — avoids direct dependency on @modelcontextprotocol/server.
  * Uses `any` for the elicitInput param to accommodate SDK's specific union type.
  */
 interface McpServerLike {
@@ -507,7 +484,7 @@ interface McpServerLike {
   registerTool(
     name: string,
     config: ToolRegistrationConfig,
-    handler: (args: any, extra?: ToolCallExtra) => Promise<any>
+    handler: (args: any, ctx?: ToolCallContext) => Promise<any>
   ): void;
 }
 
@@ -520,8 +497,9 @@ export interface RegisterToolsOptions {
   logger: Logger;
   sessionId?: string;
   /**
-   * Transform a Zod schema into the format expected by server.registerTool().
-   * dbm-mcp converts to JSON Schema; dv360-mcp extracts the raw Zod shape.
+   * Transform a tool's Zod schema before registration: every server extracts
+   * the raw shape (`extractZodShape`). The factory then wraps the result for
+   * SDK v2 with `toStandardSchema`, so it must return a Zod 3 schema or shape.
    */
   transformSchema: (schema: z.ZodTypeAny) => unknown;
   /**
@@ -772,9 +750,14 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     // Build registration config with all MCP 2025-11-25 fields
     const transformedInputSchema = transformSchema(tool.inputSchema);
 
+    // SDK v2 takes Standard Schema; the adapter publishes the JSON Schema SDK
+    // v1 published for the same Zod 3 schema, so no definitionHash moves (#242).
     const toolConfig: ToolRegistrationConfig = {
       description: tool.description,
-      inputSchema: transformedInputSchema,
+      inputSchema: toStandardSchema(
+        transformedInputSchema as z.ZodTypeAny | z.ZodRawShape,
+        "input"
+      ),
     };
 
     // Forward optional title (human-readable display name)
@@ -791,7 +774,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     let transformedOutputSchema: unknown;
     if (tool.outputSchema) {
       transformedOutputSchema = transformSchema(tool.outputSchema);
-      toolConfig.outputSchema = transformedOutputSchema;
+      const publishedOutput = toStandardSchema(
+        transformedOutputSchema as z.ZodTypeAny | z.ZodRawShape,
+        "output"
+      );
+      if (publishedOutput) toolConfig.outputSchema = publishedOutput;
     }
     const outputValidator = sdkEquivalentOutputValidator(transformedOutputSchema);
 
@@ -814,11 +801,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
     logger.debug(schemaSizeLog, "Tool schema sizes");
 
-    server.registerTool(tool.name, toolConfig, async (args: unknown, extra?: ToolCallExtra) => {
+    server.registerTool(tool.name, toolConfig, async (args: unknown, ctx?: ToolCallContext) => {
       logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
       // Send MCP logging notification for tool invocation
-      sendRelatedLoggingMessage(server, extra, {
+      sendRelatedLoggingMessage(server, ctx, {
         level: "info",
         logger: tool.name,
         data: `Invoking tool: ${tool.name}`,
@@ -830,7 +817,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
       // A client-supplied `traceparent` in the request's `_meta` parents the
       // tool span, so the agent host's trace continues into ours (#247).
-      const spanOptions = { parent: remoteParentFromMeta(extra?._meta) };
+      const spanOptions = { parent: remoteParentFromMeta(ctx?.mcpReq?._meta) };
       const inToolSpan = <T>(fn: () => Promise<T>): Promise<T> =>
         withToolSpan(tool.name, (args as Record<string, unknown>) || {}, fn, spanOptions);
 
@@ -1078,16 +1065,20 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               // client and the elicitation timed out.
               elicitInput: clientSupportsElicitation
                 ? async (params) => {
-                    return server.server.elicitInput(
-                      params,
-                      extra?.requestId !== undefined
-                        ? { relatedRequestId: extra.requestId }
-                        : undefined
-                    );
+                    // SDK v2's ctx.mcpReq.elicitInput does not add the request
+                    // id itself (unlike mcpReq.log), so it is passed here.
+                    const elicit = ctx?.mcpReq?.elicitInput;
+                    const related =
+                      ctx?.mcpReq?.id !== undefined
+                        ? { relatedRequestId: ctx.mcpReq.id }
+                        : undefined;
+                    return typeof elicit === "function"
+                      ? elicit(params, related)
+                      : server.server.elicitInput(params, related);
                   }
                 : undefined,
               sendLoggingMessage: async (params) => {
-                return sendRelatedLoggingMessage(server, extra, params);
+                return sendRelatedLoggingMessage(server, ctx, params);
               },
               idempotencyKey,
             };
@@ -1193,7 +1184,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             );
 
             // Send MCP logging notification for successful completion
-            sendRelatedLoggingMessage(server, extra, {
+            sendRelatedLoggingMessage(server, ctx, {
               level: "info",
               logger: tool.name,
               data: `Tool ${tool.name} completed successfully`,
@@ -1301,7 +1292,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             // Send MCP logging notification for tool failure
-            sendRelatedLoggingMessage(server, extra, {
+            sendRelatedLoggingMessage(server, ctx, {
               level: "error",
               logger: tool.name,
               // `mcpError.message`, not `(error as Error).message` (#741 H-2).

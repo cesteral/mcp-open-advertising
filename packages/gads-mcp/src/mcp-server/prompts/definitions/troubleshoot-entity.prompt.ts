@@ -6,7 +6,7 @@
  *
  * Diagnostic workflow for common Google Ads entity issues.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const troubleshootEntityPrompt: Prompt = {
   name: "gads_troubleshoot_entity",

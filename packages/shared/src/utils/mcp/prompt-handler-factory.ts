@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { toStandardSchema } from "./zod-standard-schema.js";
 import type { Logger } from "pino";
 
 /**
@@ -39,7 +40,7 @@ export interface McpServerPromptLike {
     config: {
       title?: string;
       description: string;
-      argsSchema?: Record<string, z.ZodType<string> | z.ZodOptional<z.ZodType<string>>>;
+      argsSchema?: unknown;
     },
     handler: (
       args: Record<string, string | undefined> | undefined,
@@ -90,7 +91,12 @@ export function registerPromptsFromDefinitions(opts: RegisterPromptsOptions): vo
       {
         title: prompt.name,
         description: prompt.description,
-        ...(argsSchema && Object.keys(argsSchema).length > 0 && { argsSchema }),
+        // SDK v2 takes Standard Schema (#242); the adapter keeps v1's argument
+        // list (name, description, required) for the same Zod 3 shape.
+        ...(argsSchema &&
+          Object.keys(argsSchema).length > 0 && {
+            argsSchema: toStandardSchema(argsSchema, "input"),
+          }),
       },
       async (args: Record<string, string | undefined> | undefined, _extra: unknown) => {
         logger.info({ promptName: prompt.name, arguments: args }, "Handling prompt request");

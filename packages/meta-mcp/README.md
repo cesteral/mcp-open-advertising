@@ -22,7 +22,7 @@ per-session Bearer token authentication.
 ## Features
 
 - **Per-session Bearer token auth** via `MetaBearerAuthStrategy` (validates tokens against `GET /me`)
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class (20/min default per process, override with `META_RATE_LIMIT_PER_MINUTE`; writes cost 3x). Buckets are per Graph user (the token's `/me` id): one for calls on a named ad account per account, one for everything else, so one tenant's traffic never queues another's
 - **Structured logging** via Pino
@@ -410,7 +410,7 @@ pnpm run typecheck
 
 ### Transport
 
-Streamable HTTP via Hono + `@hono/mcp`. Health check at `/health`.
+Streamable HTTP via Hono + the MCP SDK's web-standard transport. Health check at `/health`.
 
 ## Contributing
 

@@ -11,7 +11,7 @@ Every tool call creates a saved Bid Manager query, runs it, downloads the report
 ## Features
 
 - **Per-session Google auth** via `GoogleAuthAdapter` with `X-Google-*` request headers (`X-Google-Auth-Type`, `X-Google-Credentials`, or `X-Google-Client-Id` / `X-Google-Client-Secret` / `X-Google-Refresh-Token`)
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class
 - **Structured logging** via Pino

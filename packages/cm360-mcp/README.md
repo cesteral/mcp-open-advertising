@@ -327,7 +327,7 @@ packages/cm360-mcp/
 │   ├── mcp-server/
 │   │   ├── server.ts                     # McpServer setup + tool registration
 │   │   ├── transports/
-│   │   │   └── streamable-http-transport.ts  # Hono + @hono/mcp transport
+│   │   │   └── streamable-http-transport.ts  # Hono + MCP SDK web-standard transport
 │   │   ├── tools/
 │   │   │   ├── index.ts                  # Barrel export
 │   │   │   ├── utils/

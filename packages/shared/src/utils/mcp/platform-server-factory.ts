@@ -16,7 +16,7 @@
  * registration order), so it is fixed here: tools, static resources, templated
  * resources, `report-csv://`, conformance fixtures, prompts.
  *
- * The shared package takes no dependency on `@modelcontextprotocol/sdk`, so the
+ * The shared package takes no dependency on `@modelcontextprotocol/server`, so the
  * caller passes the two SDK classes it needs (`McpServer`, `ResourceTemplate`).
  */
 

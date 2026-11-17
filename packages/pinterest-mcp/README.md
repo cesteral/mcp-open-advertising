@@ -15,7 +15,7 @@ against a live account, so every governed tool is at `declared` verification.
 ## Features
 
 - **Per-session auth** via `PinterestBearerAuthStrategy`: a Bearer access token, or app credentials plus a refresh token (`X-Pinterest-App-Id` / `X-Pinterest-App-Secret` / `X-Pinterest-Refresh-Token`), always with `X-Pinterest-Advertiser-Id` naming the ad account
-- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **Streamable HTTP + stdio transports** via Hono + the MCP SDK's web-standard transport
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via the shared `RateLimiter` (default 10/min per process; writes draw more than reads). Buckets are per Pinterest user (the token's `/v5/user_account` id): one for the ad account's calls (Pins and media included), one for reporting and one for the rest, so one tenant's traffic never queues another's
 - **Structured logging** via Pino
@@ -145,7 +145,7 @@ pnpm run generate
 
 ### Transport
 
-Streamable HTTP via Hono + `@hono/mcp`. Health check at `/health`.
+Streamable HTTP via Hono + the MCP SDK's web-standard transport. Health check at `/health`.
 
 ## Contributing
 

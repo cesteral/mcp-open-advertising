@@ -17,14 +17,7 @@
 
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, withServerClient, listRawTools } from "./boot-server.mjs";
-
-// The stock SDK result schemas strip fields a governance consumer reads (see
-// listRawTools), so every request below is parsed by an identity schema.
-const IDENTITY_SCHEMA = {
-  parse: (value) => value,
-  safeParse: (value) => ({ success: true, data: value }),
-};
+import { ROOT, withServerClient, listRawTools, IDENTITY_SCHEMA } from "./boot-server.mjs";
 
 /**
  * Argument sets a prompt is rendered with, besides "every required argument is

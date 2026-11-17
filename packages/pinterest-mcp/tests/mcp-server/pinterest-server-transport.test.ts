@@ -7,7 +7,10 @@ const hoisted = vi.hoisted(() => ({
   startHttpServer: vi.fn(),
 }));
 
-vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
+// The real module stays underneath: @cesteral/shared's HTTP transport imports
+// WebStandardStreamableHTTPServerTransport from it (#242).
+vi.mock("@modelcontextprotocol/server", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   McpServer: vi.fn().mockImplementation(function () {
     return {
       connect: hoisted.connect,
@@ -19,7 +22,7 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
   }),
 }));
 
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
+vi.mock("@modelcontextprotocol/server/stdio", () => ({
   StdioServerTransport: vi.fn().mockImplementation(function () {
     return { kind: "stdio" };
   }),

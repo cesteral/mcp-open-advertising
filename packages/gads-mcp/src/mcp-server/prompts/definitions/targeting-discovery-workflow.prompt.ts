@@ -8,7 +8,7 @@
  * Covers audience segments, keyword targeting, geographic targeting, device targeting,
  * and how to use gads_get_insights for performance data by segment.
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const targetingDiscoveryWorkflowPrompt: Prompt = {
   name: "gads_targeting_discovery_workflow",

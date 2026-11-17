@@ -103,10 +103,15 @@ describe("registerPromptsFromDefinitions", () => {
 
     registerPromptsFromDefinitions({ server, prompts, logger });
 
+    // SDK v2 takes Standard Schema (#242): it derives the prompt's argument
+    // list (name, description, required) from the published JSON Schema.
     const config = server.registerPrompt.mock.calls[0][1];
-    expect(config.argsSchema).toBeDefined();
-    expect(config.argsSchema.required_arg).toBeDefined();
-    expect(config.argsSchema.optional_arg).toBeDefined();
+    const json = config.argsSchema["~standard"].jsonSchema.input();
+    expect(json.properties).toMatchObject({
+      required_arg: { type: "string", description: "Required" },
+      optional_arg: { type: "string", description: "Optional" },
+    });
+    expect(json.required).toEqual(["required_arg"]);
   });
 
   it("should log prompt count after registration", () => {

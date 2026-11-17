@@ -6,9 +6,12 @@ settings:
 
 catalogs:
   default:
-    '@modelcontextprotocol/sdk':
-      specifier: 1.32.2
-      version: 1.32.2
+    '@modelcontextprotocol/client':
+      specifier: 2.4.0
+      version: 2.4.0
+    '@modelcontextprotocol/server':
+      specifier: 2.4.0
+      version: 2.4.0
     pino:
       specifier: ^10.4.0
       version: 10.4.0
@@ -29,12 +32,12 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.14.0)
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@modelcontextprotocol/conformance':
         specifier: ^0.1.15
         version: 0.1.16
-      '@modelcontextprotocol/sdk':
-        specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -80,9 +83,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -90,6 +93,9 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -114,9 +120,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -172,9 +178,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       googleapis:
         specifier: ^190.0.0
         version: 190.0.0
@@ -203,9 +209,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -249,9 +255,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -277,9 +283,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -305,9 +311,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -315,6 +321,9 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -333,9 +342,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -361,9 +370,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -392,9 +401,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -438,12 +447,12 @@ importers:
       '@google-cloud/storage':
         specifier: ^8.4.0
         version: 8.4.0
-      '@hono/mcp':
-        specifier: ^0.2.3
-        version: 0.2.5(@modelcontextprotocol/sdk@1.32.2(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.13.18))(hono@4.13.18)(zod@3.25.76)
       '@hono/node-server':
         specifier: ^2.1.8
         version: 2.1.8(hono@4.13.18)
+      '@modelcontextprotocol/server':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@opentelemetry/api':
         specifier: ~1.9.1
         version: 1.9.1
@@ -490,6 +499,9 @@ importers:
         specifier: ^3.24.6
         version: 3.25.2(zod@3.25.76)
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -505,9 +517,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -533,9 +545,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -561,9 +573,9 @@ importers:
       '@cesteral/shared':
         specifier: workspace:*
         version: link:../shared
-      '@modelcontextprotocol/sdk':
+      '@modelcontextprotocol/server':
         specifier: 'catalog:'
-        version: 1.32.2(zod@3.25.76)
+        version: 2.4.0
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -1090,14 +1102,6 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  '@hono/mcp@0.2.5':
-    resolution: {integrity: sha512-JsaJes7VlNvUrUQ9j2b9C13xjFLvyKQY515aWtsdJ9cwhBmWz5od2yUCbDu7cX38GeADmlLmpu4BKNNAV6G27w==}
-    peerDependencies:
-      '@modelcontextprotocol/sdk': ^1.25.1
-      hono: '*'
-      hono-rate-limiter: ^0.4.2
-      zod: ^3.25.0 || ^4.0.0
-
   '@hono/node-server@2.1.8':
     resolution: {integrity: sha512-jdf7FHh6A1lzjpHHQUgxsg2GeER2vMetnAOfeActzcoli6jamlK+NAwL6Dsr5Fl3BS3tYUQzCdtZjU8Qxv7bEA==}
     engines: {node: '>=20'}
@@ -1165,9 +1169,17 @@ packages:
   '@liuli-util/fs-extra@0.1.0':
     resolution: {integrity: sha512-eaAyDyMGT23QuRGbITVY3SOJff3G9ekAAyGqB9joAnTBmqvFN+9a1FazOdO70G6IUqgpKV451eBHYSRcOJ/FNQ==}
 
+  '@modelcontextprotocol/client@2.4.0':
+    resolution: {integrity: sha512-LgrD2OphHuG12vfKFKz6SOnq7bKHQmhGJIAYdD+MZBn2npHEyry6uD8zvktodtl5CQM85MO0anUyD9JwmUmxww==}
+    engines: {node: '>=20'}
+
   '@modelcontextprotocol/conformance@0.1.16':
     resolution: {integrity: sha512-GI7qiN0r39/MH2srVUR3AXaEN0YLCro20lIBbnvc1frBhszenxvUifBuTzxeVQVagILfBzCIcnungUOma8OrgA==}
     hasBin: true
+
+  '@modelcontextprotocol/core@2.4.0':
+    resolution: {integrity: sha512-z8QBKqdfXLPzkLQuG4xp8hrVEMm1PZ1IgxMN2sMbJiFiAKOWXnAzogXn2W4aqIBlP1ea6U5yiqVquvUNM1Cj6Q==}
+    engines: {node: '>=20'}
 
   '@modelcontextprotocol/sdk@1.32.2':
     resolution: {integrity: sha512-SWsVtH/0vULSQStoZ6xxH2K09Li8fXYTMC64ZeogCdpZ3XSi1eCPOByV1OpuJxuI3OcmHhosDWYyii07tpPsLw==}
@@ -1178,6 +1190,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@modelcontextprotocol/server@2.4.0':
+    resolution: {integrity: sha512-rgR9yxSaAJ+bcsi/XroT/S2AfPiIWloXAnrdfYSCms9ivVju0ishu/wW0J21Ho6+ZOR1r7RyeRbjiRuF87ix5Q==}
+    engines: {node: '>=20'}
 
   '@nodable/entities@3.1.0':
     resolution: {integrity: sha512-LsS/DjHr+uDM647Gru/cA8+J3a3HfhttwCKLyuoyN7yXTFCxKBtSgMQBvrW9yNPa2/zDRUNuGPaH5QUFoa4arQ==}
@@ -2714,11 +2730,6 @@ packages:
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
 
-  hono-rate-limiter@0.4.2:
-    resolution: {integrity: sha512-AAtFqgADyrmbDijcRTT/HJfwqfvhalya2Zo+MgfdrMPas3zSMD8SU03cv+ZsYwRU1swv7zgVt0shwN059yzhjw==}
-    peerDependencies:
-      hono: ^4.1.1
-
   hono@4.12.25:
     resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
     engines: {node: '>=16.9.0'}
@@ -4134,14 +4145,6 @@ snapshots:
       protobufjs: 7.6.3
       yargs: 17.7.2
 
-  '@hono/mcp@0.2.5(@modelcontextprotocol/sdk@1.32.2(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.13.18))(hono@4.13.18)(zod@3.25.76)':
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.32.2(zod@3.25.76)
-      hono: 4.13.18
-      hono-rate-limiter: 0.4.2(hono@4.13.18)
-      pkce-challenge: 5.0.1
-      zod: 3.25.76
-
   '@hono/node-server@2.1.8(hono@4.12.25)':
     dependencies:
       hono: 4.12.25
@@ -4213,6 +4216,16 @@ snapshots:
       '@types/fs-extra': 9.0.13
       fs-extra: 10.1.0
 
+  '@modelcontextprotocol/client@2.4.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.4.0
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.1.0
+      jose: 6.2.17
+      pkce-challenge: 5.0.1
+      zod: 4.4.3
+
   '@modelcontextprotocol/conformance@0.1.16':
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.2(zod@4.4.3)
@@ -4228,27 +4241,9 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.32.2(zod@3.25.76)':
+  '@modelcontextprotocol/core@2.4.0':
     dependencies:
-      '@hono/node-server': 2.1.8(hono@4.12.25)
-      ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
-      content-type: 1.0.5
-      cors: 2.8.6
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.1.0
-      express: 5.2.1
-      express-rate-limit: 8.5.2(express@5.2.1)
-      hono: 4.12.25
-      jose: 6.2.3
-      json-schema-typed: 8.0.2
-      pkce-challenge: 5.0.1
-      raw-body: 3.0.2
-      zod: 3.25.76
-      zod-to-json-schema: 3.25.2(zod@3.25.76)
-    transitivePeerDependencies:
-      - supports-color
+      zod: 4.4.3
 
   '@modelcontextprotocol/sdk@1.32.2(zod@4.4.3)':
     dependencies:
@@ -4271,6 +4266,11 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.4.3)
     transitivePeerDependencies:
       - supports-color
+
+  '@modelcontextprotocol/server@2.4.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.4.0
+      zod: 4.4.3
 
   '@nodable/entities@3.1.0': {}
 
@@ -6112,10 +6112,6 @@ snapshots:
       function-bind: 1.1.2
 
   help-me@5.0.0: {}
-
-  hono-rate-limiter@0.4.2(hono@4.13.18):
-    dependencies:
-      hono: 4.13.18
 
   hono@4.12.25: {}
 

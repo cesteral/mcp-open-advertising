@@ -7,7 +7,7 @@
  * Step-by-step guide for creating a complete campaign hierarchy:
  * Budget → Campaign → Ad Group → Ads → Keywords
  */
-import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import type { Prompt } from "@modelcontextprotocol/server";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "gads_campaign_setup_workflow",

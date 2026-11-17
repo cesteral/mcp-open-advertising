@@ -41,7 +41,7 @@ import type { CesteralToolAnnotations } from "../types/cesteral-annotations.js";
  * `annotations` is `unknown` rather than a structural literal so this accepts
  * the MCP SDK's `ToolAnnotations` (which each server's `allTools` carries)
  * without shared having to import the SDK — shared deliberately cannot depend on
- * `@modelcontextprotocol/sdk`. The narrowing happens at the read below.
+ * `@modelcontextprotocol/server`. The narrowing happens at the read below.
  */
 interface ToolLike {
   annotations?: unknown;

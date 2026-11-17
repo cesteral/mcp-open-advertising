@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "googleapis": "^190.0.0",
     "pino": "catalog:",
     "zod": "catalog:"

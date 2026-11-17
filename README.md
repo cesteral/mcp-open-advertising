@@ -106,8 +106,8 @@ server, including the `*_search_tools` discovery tool where present.
 ### What Every Server Ships
 
 Every server speaks MCP protocol revisions `2025-03-26`, `2025-06-18` and
-`2025-11-25`, the ones `@modelcontextprotocol/sdk` 1.31.0 implements; the
-Streamable HTTP transport rejects any other `MCP-Protocol-Version`. The current
+`2025-11-25` (`@modelcontextprotocol/server` 2.4.0 also implements no later
+one); the Streamable HTTP transport rejects any other `MCP-Protocol-Version`. The current
 revision, `2026-07-28`, is not supported yet
 ([#242](https://github.com/cesteral/mcp-open-advertising/issues/242)).
 
