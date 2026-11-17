@@ -116,7 +116,7 @@ describe("synchronous report run wall-time cap", () => {
     expect(outcome!.error.code).toBe(JsonRpcErrorCode.Timeout);
     expect(outcome!.error.message).toContain("1s synchronous wall-time cap");
     expect(outcome!.error.message).toContain("q-1");
-    expect(outcome!.error.message).toContain("dbm_run_custom_query_async");
+    expect(outcome!.error.message).toContain("Narrow the date range");
     // No new request after the cap: one create, one run, and polling stopped.
     expect(c.queries.create).toHaveBeenCalledOnce();
     expect(c.queries.run).toHaveBeenCalledOnce();

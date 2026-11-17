@@ -28,7 +28,7 @@ scripts/generate-types.ts         # data/ → src/generated/
 
 ## Tools
 
-Six tools, all read-only: `dbm_get_campaign_delivery`, `dbm_get_performance_metrics`, `dbm_get_historical_metrics`, `dbm_get_pacing_status` (prebuilt reports), and `dbm_run_custom_query` / `dbm_run_custom_query_async` (any valid Bid Manager query).
+Six tools, all read-only: `dbm_get_campaign_delivery`, `dbm_get_performance_metrics`, `dbm_get_historical_metrics`, `dbm_get_pacing_status` (prebuilt reports), and `dbm_run_custom_query` (any valid Bid Manager query).
 
 ## How a report runs
 
@@ -38,7 +38,7 @@ Bid Manager reports are asynchronous, so `BidManagerService` drives the whole se
 - **Retries.** `retry-policy.ts` decides which failures are worth another attempt and keeps a retry from re-sending a write the platform may already have committed (a report still running resumes polling the same report; it does not POST `queries.run` again). The table is in that file's header.
 - **Polling and limits.** `REPORT_POLL_INITIAL_DELAY_MS`, `REPORT_POLL_MAX_DELAY_MS`, `REPORT_POLL_MAX_RETRIES`, `REPORT_QUERY_RETRIES` and `REPORT_RETRY_COOLDOWN_MS` shape the loop.
 - **Synchronous cap.** `dbm_run_custom_query` stops after `REPORT_SYNC_MAX_WALL_TIME_MS`. Without the cap, the default poll and retry settings could hold one call for about 72 minutes, longer than the hosted service's request timeout allows.
-- **Async variant.** `dbm_run_custom_query_async` uses the shared `registerAsyncTaskTool` helper, so a client gets an MCP task (SEP-1686) handle and the report runs in the background. The task's time-to-live is computed in `report-timing.ts` from the same settings the loop uses, so raising a retry or poll limit cannot leave a TTL shorter than the run.
+- **No async variant.** `dbm_run_custom_query_async` (an MCP 2025-11-25 task tool) was removed in the SDK v2 move (#242): v2 has no server-side Tasks API. A run longer than the synchronous wall-time cap has no path today; #245 tracks bringing it back on the `io.modelcontextprotocol/tasks` extension. `report-timing.ts` keeps the worst-case duration any future task TTL must be sized from.
 - **Rate limit.** One process-wide `bidmanager` limiter from `utils/platform.ts`.
 
 ## Generated metadata and validation

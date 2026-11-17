@@ -25,9 +25,6 @@
 //     quote a rejected value that came from the platform, so the factory now
 //     runs the same check first and the failure is a marked factory error
 //     (packages/shared/tests/utils/output-validation-untrusted.test.ts).
-//   - A failed async TASK is marked in async-task-tool.ts, not here: reaching
-//     it needs task mode and a live upstream failure, so it is covered by
-//     packages/shared/tests/utils/async-task-tool.test.ts instead.
 //   - A successful result must not carry the `tool-error` reason.
 //
 // Every tool except `*_search_tools` is called with `{}`: most fail SDK

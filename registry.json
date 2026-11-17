@@ -25,7 +25,6 @@
         "dbm_get_historical_metrics",
         "dbm_get_pacing_status",
         "dbm_run_custom_query",
-        "dbm_run_custom_query_async",
         "dbm_search_tools"
       ],
       "resources": [

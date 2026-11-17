@@ -6,7 +6,6 @@ export * from "./mcp-errors.js";
 
 // MCP tools, prompts and resources
 export * from "./mcp/assert-account-scope.js";
-export * from "./mcp/async-task-tool.js";
 export * from "./mcp/bulk-capacity.js";
 export * from "./mcp/bulk-executor.js";
 export * from "./mcp/bulk-operation-schemas.js";

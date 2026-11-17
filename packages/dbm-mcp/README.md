@@ -79,12 +79,6 @@ Compose and execute a custom Bid Manager report with specified metrics, group-by
 - `strictValidation` (boolean, default `true`): reject report types, filters and metrics missing from the bundled catalogue
 - `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `offset` paginates; `maxRows` caps page size (default 10/50; hard cap 200).
 
-### 6. `dbm_run_custom_query_async`
-
-Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses MCP Tasks to return a task handle immediately; clients call it task-augmented (MCP 2025-11-25 tasks), poll via `tasks/get` and retrieve results via `tasks/result`. Tasks live in memory on the instance holding the session, so on a scaled-out HTTP deploy a poll that lands on another instance finds no task.
-
-**Parameters:** Same as `dbm_run_custom_query` (including the bounded report-view params).
-
 ## Authentication Modes
 
 | Mode                       | Header                        | Description                                     |

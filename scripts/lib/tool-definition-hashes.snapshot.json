@@ -59,7 +59,6 @@
     "dbm_get_pacing_status": "f7dc6d499351c1c4d421dd72dedd7a973dbef99899221969ed98b8914d9c1616",
     "dbm_get_performance_metrics": "4e81fc48478509198f3cec89b4ef59ba6e6c765cde61cd2b3bc1dc595aac1e5b",
     "dbm_run_custom_query": "897a79b2d0fe141b261d71d0ba0bed98e888adb3b17df685bc2ea7fc617720c0",
-    "dbm_run_custom_query_async": "10ac733b6660cfdae1b28ebf24cd736a9b7842f3c681a548741fc568611a23f5",
     "dbm_search_tools": "3d3cb8788c3b400db1496dc45e11d653dadf58f69ee7f2d05a29153da7f1e334"
   },
   "dv360-mcp": {

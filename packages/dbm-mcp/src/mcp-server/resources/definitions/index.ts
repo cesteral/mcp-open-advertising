@@ -23,18 +23,17 @@ import type { Resource } from "../types.js";
 const toolExamplesResource = createToolExamplesResource(allTools, "dbm-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "dbm-mcp",
-  allToolNames: [...allTools.map((tool) => tool.name), "dbm_run_custom_query_async"],
+  allToolNames: allTools.map((tool) => tool.name),
   toolGroups: {
     delivery: ["dbm_get_campaign_delivery", "dbm_get_pacing_status"],
     performance: ["dbm_get_performance_metrics", "dbm_get_historical_metrics"],
-    custom: ["dbm_run_custom_query", "dbm_run_custom_query_async"],
+    custom: ["dbm_run_custom_query"],
     discovery: ["dbm_search_tools"],
   },
-  commonWorkflows: ["delivery_troubleshooting", "custom_query", "large_report_task"],
+  commonWorkflows: ["delivery_troubleshooting", "custom_query"],
   discoveryFlow: [
     "Use dbm_get_campaign_delivery or dbm_get_pacing_status for quick campaign health checks.",
     "Read metric-types://all, filter-types://all, and compatibility-rules://all before custom reports.",
-    "Use dbm_run_custom_query_async for large reports when the client supports MCP Tasks.",
   ],
   relatedResources: [
     "metric-types://all",

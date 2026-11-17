@@ -98,7 +98,7 @@ Intelligence layers governance and orchestration on top:
 | [snapchat-mcp](packages/snapchat-mcp)     | Snapchat Ads API v1               | 25    | Bearer token                    |
 | [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon Ads Unified API (DSP)      | 28    | Bearer token                    |
 | [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 28    | Access token + developer token  |
-| [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 7     | Google OAuth2                   |
+| [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 
 Thirteen servers, 290+ tools. Tool counts are the live registered total per
 server, including the `*_search_tools` discovery tool where present.

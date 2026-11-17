@@ -98,13 +98,8 @@ export interface PlatformMcpServerOptions<TServer extends PlatformMcpServerLike>
   version: string;
   description: string;
   instructions: string;
-  /**
-   * Capabilities beyond the `logging` capability every server advertises
-   * (dbm-mcp adds `tasks`).
-   */
+  /** Capabilities beyond the `logging` capability every server advertises. */
   extraCapabilities?: Record<string, unknown>;
-  /** Backing store for MCP Tasks (dbm-mcp only). */
-  taskStore?: unknown;
 
   tools: ToolDefinitionForFactory[];
   /** Fixed-URI resources. */
@@ -164,7 +159,6 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
     buildServerInfo(packageName, { version: opts.version, description: opts.description }),
     {
       capabilities: { logging: {}, ...opts.extraCapabilities },
-      ...(opts.taskStore ? { taskStore: opts.taskStore } : {}),
       instructions: opts.instructions,
     }
   );

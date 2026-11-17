@@ -3,9 +3,7 @@ import { allResources } from "../src/mcp-server/resources/definitions/index.js";
 import { allTools } from "../src/mcp-server/tools/index.js";
 
 describe("DBM capabilities overview", () => {
-  const standardToolNames = allTools.map((tool) => tool.name);
-  const taskToolNames = ["dbm_run_custom_query_async"];
-  const expectedToolNames = [...standardToolNames, ...taskToolNames];
+  const expectedToolNames = allTools.map((tool) => tool.name);
   const capabilitiesResource = allResources.find(
     (resource) => resource.uri === "server-capabilities://dbm-mcp/overview"
   );
@@ -14,7 +12,7 @@ describe("DBM capabilities overview", () => {
     expect(capabilitiesResource).toBeDefined();
   });
 
-  it("includes all standard and task-based DBM tools", () => {
+  it("includes every DBM tool", () => {
     const content = JSON.parse(capabilitiesResource!.getContent() as string);
     const groupedNames = Object.values(content.toolGroups).flat() as string[];
     const uniqueGroupedNames = [...new Set(groupedNames)].sort();
