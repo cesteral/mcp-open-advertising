@@ -105,9 +105,21 @@ describe("scaffold: the reporting type", () => {
 
   it("promotes while still read-only: the reporting type has no write requirement", async () => {
     applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
-    applyPlan(tmp, await planPromotion(tmp, "foo_bar"));
+    const plan = await planPromotion(tmp, "foo_bar");
+    applyPlan(tmp, plan);
     expect(registryOf(tmp).servers.at(-1).status).toBe("stable");
     expect(fleetChecks(tmp)).toEqual([]);
+    // The wording clients see in serverInfo still says experimental; promotion
+    // lists it for the contributor instead of rewriting their files.
+    const server = `${PKG}/src/mcp-server/server.ts`;
+    const serverLines = read(tmp, server).split("\n");
+    const stale = plan.stale.find((s) => s.path === server);
+    expect(stale?.text).toContain("(experimental, read-only)");
+    expect(serverLines[stale.line - 1].trim()).toBe(stale.text);
+    expect(plan.stale.map((s) => s.path)).toEqual(
+      expect.arrayContaining([`${PKG}/README.md`, `${PKG}/CLAUDE.md`, "registry.json"])
+    );
+    expect(read(tmp, server)).toContain("(experimental, read-only)");
   });
 });
 

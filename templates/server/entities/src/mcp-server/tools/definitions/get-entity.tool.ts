@@ -7,9 +7,9 @@ import { getEntityTypeEnum, type {{Pascal}}EntityType } from "../utils/entity-ma
 import { assertAccountScope } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-// {{#writes}}
+// {{#entityWrites}}
 import type { CesteralReadToolAnnotations } from "@cesteral/shared";
-// {{/writes}}
+// {{/entityWrites}}
 
 const TOOL_NAME = "{{key}}_get_entity";
 const TOOL_TITLE = "Get {{displayName}} Entity";
@@ -72,7 +72,7 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
-    // {{#writes}}
+    // {{#entityWrites}}
     cesteral: {
       kind: "read",
       platform: "{{key}}",
@@ -85,7 +85,7 @@ export const getEntityTool = {
       schemaVersion: 1,
       contractId: "{{key}}.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,
-    // {{/writes}}
+    // {{/entityWrites}}
   },
   inputExamples: [
     {

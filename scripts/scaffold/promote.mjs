@@ -10,8 +10,13 @@
 // complete, not that the writes work: wire-request coverage still blocks the
 // merge until each write has a wire test. Pure: it writes nothing; applyPlan
 // does.
+//
+// The scaffold's own wording still calls the server experimental after the
+// flip (the server.ts description clients see in serverInfo, README,
+// CLAUDE.md, package.json). Those files are the contributor's, so promotion
+// lists the lines (`stale`) for the CLI to print and never rewrites them.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkContractTiers } from "../lib/contract-tiers.mjs";
 import { DEPLOY_SITE_FILES, serverTokens } from "../lib/fleet-inventory.mjs";
@@ -20,7 +25,37 @@ import { replaceRegistryEntry } from "./add-writes.mjs";
 import { ScaffoldError, format } from "./scaffold.mjs";
 import { insertIntoSites } from "./sites.mjs";
 
-/** Returns `{ writes, created: [], modified }`. */
+/** The package files whose scaffold wording names the server's status. */
+export const STATUS_WORDING_FILES = [
+  "src/mcp-server/server.ts",
+  "README.md",
+  "CLAUDE.md",
+  "package.json",
+];
+
+/**
+ * `{ path, line, text }` for each line that still calls the server
+ * experimental: in its package's STATUS_WORDING_FILES and its registry
+ * description (`line` 0: the field, not a line of registry.json).
+ */
+export function staleStatusWording(root, entry) {
+  const out = [];
+  for (const file of STATUS_WORDING_FILES) {
+    const path = join("packages", entry.package, file);
+    if (!existsSync(join(root, path))) continue;
+    readFileSync(join(root, path), "utf8")
+      .split("\n")
+      .forEach((text, i) => {
+        if (/experimental/i.test(text)) out.push({ path, line: i + 1, text: text.trim() });
+      });
+  }
+  if (/experimental/i.test(entry.description ?? "")) {
+    out.push({ path: "registry.json", line: 0, text: `description: ${entry.description}` });
+  }
+  return out;
+}
+
+/** Returns `{ writes, created: [], modified, stale }` (see staleStatusWording). */
 export async function planPromotion(root, key) {
   const read = (p) => readFileSync(join(root, p), "utf8");
   const registryText = read("registry.json");
@@ -62,5 +97,10 @@ export async function planPromotion(root, key) {
     )),
     ...insertIntoSites(read, site, { listing: false }),
   ]);
-  return { writes, created: [], modified: [...writes.keys()] };
+  return {
+    writes,
+    created: [],
+    modified: [...writes.keys()],
+    stale: staleStatusWording(root, entry),
+  };
 }
