@@ -130,6 +130,18 @@ describe("scaffold: template layers", () => {
     }
   });
 
+  it("package.json describes the type it was scaffolded as", () => {
+    // base/package.json once said "campaign entity management" for every type.
+    for (const type of Object.keys(TEMPLATE_TYPES)) {
+      const { description } = JSON.parse(
+        renderTemplate(TEMPLATE_DIR, type, vars).get("package.json")
+      );
+      expect(description, type).toBe(
+        `Foo Bar Ads MCP Server - ${TEMPLATE_TYPES[type].purpose} via the Foo Bar Ads API (scaffolded; experimental)`
+      );
+    }
+  });
+
   it("a section marker must close the section it opened, and name a known flag", () => {
     const dir = mkdtempSync(join(tmpdir(), "scaffold-sections-"));
     try {

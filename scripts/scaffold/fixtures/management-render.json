@@ -2,7 +2,7 @@
   "readOnly": {
     "CLAUDE.md": "eb8543b71a976d272480eb0c2094bcd5b43bba92bc0f11a1a10dcc88bc0c59e5",
     "README.md": "d4165c33a3485941070049afceeb3abfc5c24f15186fc644374ba818dc7d9233",
-    "package.json": "77e16725d10123d61b4ecdbfceefdf685375b9bc504da483340e1eac832a06a7",
+    "package.json": "1a40cc87eb72ab8ddc52f97c60cf78b4b9a577593681c747502deea06d032091",
     "src/auth/foo_bar-auth-adapter.ts": "fb270676e4f6a89547897c45f12b45d9255d3ca6e9c7fe6dc293fab07384a5a6",
     "src/auth/foo_bar-auth-strategy.ts": "c22f718247502ad4052e10d2b0d85e6488cdefbc2a06488192be9a712bc20e84",
     "src/config/index.ts": "4c8e86a29aeb48c04c6cb87ff889e5e213161619b50530b522e30497623a1463",
@@ -41,7 +41,7 @@
   "writes": {
     "CLAUDE.md": "97f163385ff90c05413007599e98b7a88be3fd12d627bb99b8191257a8e117e6",
     "README.md": "9b64b4b57e920ba7220c3bf38a1ecb17d1cf5569c576201f16c0b650c9ff9e29",
-    "package.json": "77e16725d10123d61b4ecdbfceefdf685375b9bc504da483340e1eac832a06a7",
+    "package.json": "1a40cc87eb72ab8ddc52f97c60cf78b4b9a577593681c747502deea06d032091",
     "src/auth/foo_bar-auth-adapter.ts": "fb270676e4f6a89547897c45f12b45d9255d3ca6e9c7fe6dc293fab07384a5a6",
     "src/auth/foo_bar-auth-strategy.ts": "c22f718247502ad4052e10d2b0d85e6488cdefbc2a06488192be9a712bc20e84",
     "src/config/index.ts": "4c8e86a29aeb48c04c6cb87ff889e5e213161619b50530b522e30497623a1463",
