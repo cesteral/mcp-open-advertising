@@ -84,8 +84,8 @@
     "dv360_manage_custom_bidding_script": "fc55fc78a7732195acaf7059a810344c8956baef057456ebc41576f5874b115d",
     "dv360_search_tools": "2d1792817cbec31a85f41fab019831227242cc5bfeedcc6fde4c5c8a32638969",
     "dv360_update_entity": "b3d3603cc7fc2e719b455d7668cfe75f91155f750792da3acd4bda535bd12001",
-    "dv360_upload_image": "2017f5aa15980e41ddb4de274570c3c2ee55f563e1d79abca565fe193ae2f3f4",
-    "dv360_upload_video": "cdbd71b69a538c0c4d4bcb97817c91fd9d346c5bcef6c10c596bd82123ba6632",
+    "dv360_upload_image": "05c22cb7090b0a4f21a55767650fbb9661645a890df4c9c73c49e3fffa0aee8f",
+    "dv360_upload_video": "f78b9e847931a99872fd33a6ad379121e962e9fa8190538f1af1dcb037b194c8",
     "dv360_validate_entity": "861267c353c7aacff7ee1991afe0f2aff3b7eb7732a2dfa724600ecb9bccd9e8",
     "dv360_validate_targeting_config": "d2826d8fe4ff31cf71e4cfa2ca4e3ed53f8c541fa3d4c48c8fd2cdb8469faa52"
   },
@@ -106,7 +106,7 @@
     "gads_remove_entity": "87bb1574c2183e47c917ffaf886df7470efa5508ea3714b9910d952fa6bd77c2",
     "gads_search_tools": "a909b7d2511d92b357881c87095b0121231a4bf92e660e1a2bbcf0179ead656a",
     "gads_update_entity": "1cd7c114304d801aad832c54a9ccf2dc4b0ec9433a5344564e7800869cc227ae",
-    "gads_upload_image": "a402edd533d9cc8778adbf74ad6dd3bdc41e9639afb7c5a0799ce4132e2a1674",
+    "gads_upload_image": "5aa62635f8b16392fa12c7c719a9c5d9086790dadbf566a903f73cca61464782",
     "gads_upload_video": "ea0ce64786e61cfd5d80368c2f3f93a73f13628416011bfd53a8f94cfcd3a9d4",
     "gads_validate_entity": "d4fbd8fa5b6fc8b73438e24be5fac60b18cc98dbdead4435f5ae8e3bcb8b54b5"
   },
@@ -160,8 +160,8 @@
     "meta_search_tools": "de0d49abe6bfbc74bf22ea03e4e4bdba42af875a9a5c9f292fd1dce606572b13",
     "meta_submit_report": "daa4650f928e1ac56892e1f9e94b648b35fb03c4507f2ebc3a0fd62409dc3d61",
     "meta_update_entity": "c77f04ce4e311befb5b9ceb1145cae81c313afa33fc0fa6aa9ba41086a7ed29c",
-    "meta_upload_image": "58e4f92514d3d778109b3bb846869db21597813e10c37e653cb7f19c9ce55e02",
-    "meta_upload_video": "07590abff8374c152709df6fccaa5fdbf49ad37b88de64f5fe12a5a11b8c23c6",
+    "meta_upload_image": "52f4ee4cb4f7247f6591ac91aea4c50cc7b22f8e55625cadc6951592e1ff0b36",
+    "meta_upload_video": "f40260fe09a0c6064b0a26da42a4a7b029df8ea323929ed6da040f41f9d33091",
     "meta_validate_entity": "e560a1c217146dd2596b1a7a8cfa891311a5bf1f1bee225ceae3e59b39deb482"
   },
   "msads-mcp": {
