@@ -208,10 +208,12 @@ function fill(text, vars, where) {
 /** Path (relative to the package) → rendered text, for `type`. */
 export function renderTemplate(root, type, vars, { writes = false } = {}) {
   // Per-type text a base file needs (the pacing tool names the type's own
-  // budget source), itself filled from the caller's vars.
+  // budget source; package.json says what the server is for), itself filled
+  // from the caller's vars.
   vars = {
     ...vars,
     pacingGuidance: fill(typeOf(type).pacingGuidance, vars, `${type} pacingGuidance`),
+    purpose: typeOf(type).purpose,
   };
   const flags = { writes, entityWrites: writes && typeOf(type).entityWrites };
   const files = new Map();
