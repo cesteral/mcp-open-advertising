@@ -95,17 +95,17 @@ curl -X POST http://localhost:3008/mcp \
 
 Three auth modes, configured via `MCP_AUTH_MODE`:
 
-| Mode             | Header                                    | Use Case                              |
-| ---------------- | ----------------------------------------- | ------------------------------------- |
-| `google-headers` | `X-Google-Auth-Type` + credential headers | Production (per-session Google creds) |
-| `jwt`            | `Authorization: Bearer <jwt>`             | Centralized or governed deployments   |
-| `none`           | _(no auth)_                               | Local development                     |
+| Mode             | Header                                             | Use Case                              |
+| ---------------- | -------------------------------------------------- | ------------------------------------- |
+| `google-headers` | `X-Cesteral-Google-Auth-Type` + credential headers | Production (per-session Google creds) |
+| `jwt`            | `Authorization: Bearer <jwt>`                      | Centralized or governed deployments   |
+| `none`           | _(no auth)_                                        | Local development                     |
 
 **Google Headers mode** -- clients pass Google OAuth2 credentials via HTTP headers on each session:
 
-- `X-Google-Auth-Type`: `service_account` or `oauth2`
-- `X-Google-Credentials`: base64-encoded service account JSON (for SA)
-- `X-Google-Client-Id` / `X-Google-Client-Secret` / `X-Google-Refresh-Token` (for OAuth2)
+- `X-Cesteral-Google-Auth-Type`: `service_account` or `oauth2`
+- `X-Cesteral-Google-Credentials`: base64-encoded service account JSON (for SA)
+- `X-Cesteral-Google-Client-Id` / `X-Cesteral-Google-Client-Secret` / `X-Cesteral-Google-Refresh-Token` (for OAuth2)
 
 ### Stdio Mode (Claude Desktop)
 

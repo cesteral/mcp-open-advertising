@@ -257,15 +257,15 @@ export function createGoogleAuthAdapter(
  * Parse Google credentials from HTTP headers.
  *
  * Expected headers:
- *   X-Google-Auth-Type: service_account | oauth2
+ *   X-Cesteral-Google-Auth-Type: service_account | oauth2
  *
  * For service_account:
- *   X-Google-Credentials: <base64-encoded-service-account-json>
+ *   X-Cesteral-Google-Credentials: <base64-encoded-service-account-json>
  *
  * For oauth2:
- *   X-Google-Client-Id: <client_id>
- *   X-Google-Client-Secret: <client_secret>
- *   X-Google-Refresh-Token: <refresh_token>
+ *   X-Cesteral-Google-Client-Id: <client_id>
+ *   X-Cesteral-Google-Client-Secret: <client_secret>
+ *   X-Cesteral-Google-Refresh-Token: <refresh_token>
  */
 export function parseCredentialsFromHeaders(
   headers: Record<string, string | string[] | undefined>
@@ -276,20 +276,21 @@ export function parseCredentialsFromHeaders(
     return value;
   };
 
-  const authType = getHeader("x-google-auth-type");
+  const authType = getHeader("x-cesteral-google-auth-type");
 
   if (!authType) {
     throw new Error(
-      "Missing X-Google-Auth-Type header. " +
+      "Missing X-Cesteral-Google-Auth-Type header. " +
         'Set to "service_account" or "oauth2" to authenticate.'
     );
   }
 
   if (authType === "service_account") {
-    const encoded = getHeader("x-google-credentials");
+    const encoded = getHeader("x-cesteral-google-credentials");
     if (!encoded) {
       throw new Error(
-        "Missing X-Google-Credentials header. " + "Provide base64-encoded service account JSON."
+        "Missing X-Cesteral-Google-Credentials header. " +
+          "Provide base64-encoded service account JSON."
       );
     }
 
@@ -298,7 +299,7 @@ export function parseCredentialsFromHeaders(
       const decoded = Buffer.from(encoded, "base64").toString("utf-8");
       parsed = JSON.parse(decoded);
     } catch {
-      throw new Error("Invalid X-Google-Credentials: must be valid base64-encoded JSON.");
+      throw new Error("Invalid X-Cesteral-Google-Credentials: must be valid base64-encoded JSON.");
     }
 
     if (!parsed.client_email || !parsed.private_key) {
@@ -313,15 +314,15 @@ export function parseCredentialsFromHeaders(
   }
 
   if (authType === "oauth2") {
-    const clientId = getHeader("x-google-client-id");
-    const clientSecret = getHeader("x-google-client-secret");
-    const refreshToken = getHeader("x-google-refresh-token");
+    const clientId = getHeader("x-cesteral-google-client-id");
+    const clientSecret = getHeader("x-cesteral-google-client-secret");
+    const refreshToken = getHeader("x-cesteral-google-refresh-token");
 
     if (!clientId || !clientSecret || !refreshToken) {
       const missing: string[] = [];
-      if (!clientId) missing.push("X-Google-Client-Id");
-      if (!clientSecret) missing.push("X-Google-Client-Secret");
-      if (!refreshToken) missing.push("X-Google-Refresh-Token");
+      if (!clientId) missing.push("X-Cesteral-Google-Client-Id");
+      if (!clientSecret) missing.push("X-Cesteral-Google-Client-Secret");
+      if (!refreshToken) missing.push("X-Cesteral-Google-Refresh-Token");
       throw new Error(`Missing required OAuth2 headers: ${missing.join(", ")}`);
     }
 
@@ -334,7 +335,7 @@ export function parseCredentialsFromHeaders(
   }
 
   throw new Error(
-    `Invalid X-Google-Auth-Type: "${authType}". Must be "service_account" or "oauth2".`
+    `Invalid X-Cesteral-Google-Auth-Type: "${authType}". Must be "service_account" or "oauth2".`
   );
 }
 
