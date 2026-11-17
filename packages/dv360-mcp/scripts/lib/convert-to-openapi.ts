@@ -416,6 +416,11 @@ const REQUIRED_FIELDS_OVERRIDES: Record<
     remove: ["enableOptimizedTargeting"],
     reason: "DV360 API may omit enableOptimizedTargeting when optimized targeting is disabled",
   },
+  SdfConfig: {
+    remove: ["version"],
+    reason:
+      "An advertiser that inherits its partner's SDF settings (overridePartnerSdfConfig unset) comes back from advertisers.get / list with dataAccessConfig.sdfConfig.sdfConfig but no version, and a required version rejected every such advertiser (#341). 'Required' in Discovery is the input rule for an overriding config.",
+  },
 };
 
 /**

@@ -2454,7 +2454,7 @@ export const SdfConfig = z.object({
   /** An administrator email address to which the SDF processing status reports will b */
   adminEmail: z.string().optional(),
   /** Required. The version of SDF being used. */
-  version: z.enum(["SDF_VERSION_UNSPECIFIED", "SDF_VERSION_3_1", "SDF_VERSION_4", "SDF_VERSION_4_1", "SDF_VERSION_4_2", "SDF_VERSION_5", "SDF_VERSION_5_1", "SDF_VERSION_5_2", "SDF_VERSION_5_3", "SDF_VERSION_5_4", "SDF_VERSION_5_5", "SDF_VERSION_6", "SDF_VERSION_7", "SDF_VERSION_7_1", "SDF_VERSION_8", "SDF_VERSION_8_1", "SDF_VERSION_9", "SDF_VERSION_9_1", "SDF_VERSION_9_2", "SDF_VERSION_10", "SDF_VERSION_10_1"]),
+  version: z.enum(["SDF_VERSION_UNSPECIFIED", "SDF_VERSION_3_1", "SDF_VERSION_4", "SDF_VERSION_4_1", "SDF_VERSION_4_2", "SDF_VERSION_5", "SDF_VERSION_5_1", "SDF_VERSION_5_2", "SDF_VERSION_5_3", "SDF_VERSION_5_4", "SDF_VERSION_5_5", "SDF_VERSION_6", "SDF_VERSION_7", "SDF_VERSION_7_1", "SDF_VERSION_8", "SDF_VERSION_8_1", "SDF_VERSION_9", "SDF_VERSION_9_1", "SDF_VERSION_9_2", "SDF_VERSION_10", "SDF_VERSION_10_1"]).optional(),
 });
 
 /**

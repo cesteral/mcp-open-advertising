@@ -58,7 +58,9 @@ function mockEntityConfig(overrides?: Partial<Record<string, unknown>>) {
   const config = {
     apiPath: "/advertisers/123/lineItems",
     parentIds: ["advertiserId"],
+    itemParentIds: ["advertiserId"],
     queryParamIds: [] as string[],
+    getQueryParamIds: [] as string[],
     filterParamIds: [] as string[],
     supportsFilter: true,
     supportsCreate: true,
@@ -274,6 +276,40 @@ describe("DV360Service", () => {
       await service.getEntity("partner", { partnerId: "p-1" });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:partner:p-1", 1);
+    });
+
+    // advertisers.get takes no partnerId: list's scope id sent on get was
+    // rejected with "Cannot bind query parameter" (#341).
+    it("sends getQueryParamIds, not the list's queryParamIds", async () => {
+      mockEntityConfig({
+        apiPath: "/advertisers",
+        parentIds: ["partnerId"],
+        itemParentIds: [],
+        queryParamIds: ["partnerId"],
+        getQueryParamIds: [],
+      });
+      mockEntitySchema();
+      httpClient.fetch.mockResolvedValue({ advertiserId: "a-1" });
+
+      await service.getEntity("advertiser", { partnerId: "p-1", advertiserId: "a-1" });
+
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/advertisers/a-1");
+    });
+
+    it("sends getQueryParamIds when the get method takes them", async () => {
+      mockEntityConfig({
+        apiPath: "/inventorySources",
+        parentIds: [],
+        itemParentIds: [],
+        queryParamIds: ["partnerId", "advertiserId"],
+        getQueryParamIds: ["partnerId", "advertiserId"],
+      });
+      mockEntitySchema();
+      httpClient.fetch.mockResolvedValue({ inventorySourceId: "is-1" });
+
+      await service.getEntity("inventorySource", { partnerId: "p-1", inventorySourceId: "is-1" });
+
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/inventorySources/is-1?partnerId=p-1");
     });
   });
 

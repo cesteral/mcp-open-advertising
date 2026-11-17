@@ -1,0 +1,194 @@
+{
+  "_provenance": {
+    "source": "https://displayvideo.googleapis.com/$discovery/rest?version=v4",
+    "revision": "20261117",
+    "extractedAt": "2026-11-17",
+    "note": "For each entity type dv360-mcp maps, the path and query parameter names of its resource's get / patch / delete methods (paging, filter and updateMask/readMask query params dropped). Used by tests/utils/dv360-item-method-params.test.ts (#341)."
+  },
+  "entities": {
+    "partner": {
+      "resource": "partners",
+      "methods": {
+        "get": {
+          "path": ["partnerId"],
+          "query": []
+        }
+      }
+    },
+    "advertiser": {
+      "resource": "advertisers",
+      "methods": {
+        "get": {
+          "path": ["advertiserId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["advertiserId"],
+          "query": []
+        }
+      }
+    },
+    "campaign": {
+      "resource": "advertisers.campaigns",
+      "methods": {
+        "get": {
+          "path": ["advertiserId", "campaignId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId", "campaignId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["advertiserId", "campaignId"],
+          "query": []
+        }
+      }
+    },
+    "insertionOrder": {
+      "resource": "advertisers.insertionOrders",
+      "methods": {
+        "get": {
+          "path": ["advertiserId", "insertionOrderId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId", "insertionOrderId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["advertiserId", "insertionOrderId"],
+          "query": []
+        }
+      }
+    },
+    "lineItem": {
+      "resource": "advertisers.lineItems",
+      "methods": {
+        "get": {
+          "path": ["advertiserId", "lineItemId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId", "lineItemId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["advertiserId", "lineItemId"],
+          "query": []
+        }
+      }
+    },
+    "adGroup": {
+      "resource": "advertisers.adGroups",
+      "methods": {
+        "get": {
+          "path": ["adGroupId", "advertiserId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["adGroupId", "advertiserId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["adGroupId", "advertiserId"],
+          "query": []
+        }
+      }
+    },
+    "adGroupAd": {
+      "resource": "advertisers.adGroupAds",
+      "methods": {
+        "get": {
+          "path": ["adGroupAdId", "advertiserId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["adGroupAdId", "advertiserId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["adGroupAdId", "advertiserId"],
+          "query": []
+        }
+      }
+    },
+    "creative": {
+      "resource": "advertisers.creatives",
+      "methods": {
+        "get": {
+          "path": ["advertiserId", "creativeId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId", "creativeId"],
+          "query": []
+        },
+        "delete": {
+          "path": ["advertiserId", "creativeId"],
+          "query": []
+        }
+      }
+    },
+    "customBiddingAlgorithm": {
+      "resource": "customBiddingAlgorithms",
+      "methods": {
+        "get": {
+          "path": ["customBiddingAlgorithmId"],
+          "query": ["advertiserId", "partnerId"]
+        },
+        "patch": {
+          "path": ["customBiddingAlgorithmId"],
+          "query": []
+        }
+      }
+    },
+    "inventorySource": {
+      "resource": "inventorySources",
+      "methods": {
+        "get": {
+          "path": ["inventorySourceId"],
+          "query": ["advertiserId", "partnerId"]
+        },
+        "patch": {
+          "path": ["inventorySourceId"],
+          "query": ["advertiserId", "partnerId"]
+        }
+      }
+    },
+    "inventorySourceGroup": {
+      "resource": "inventorySourceGroups",
+      "methods": {
+        "get": {
+          "path": ["inventorySourceGroupId"],
+          "query": ["advertiserId", "partnerId"]
+        },
+        "patch": {
+          "path": ["inventorySourceGroupId"],
+          "query": ["advertiserId", "partnerId"]
+        },
+        "delete": {
+          "path": ["inventorySourceGroupId"],
+          "query": ["advertiserId", "partnerId"]
+        }
+      }
+    },
+    "locationList": {
+      "resource": "advertisers.locationLists",
+      "methods": {
+        "get": {
+          "path": ["advertiserId", "locationListId"],
+          "query": []
+        },
+        "patch": {
+          "path": ["advertiserId", "locationListId"],
+          "query": []
+        }
+      }
+    }
+  }
+}

@@ -27,6 +27,14 @@ export interface EntityConfig {
   parentIds: string[]; // IDs required for validation (for API path construction)
   queryParamIds: string[]; // IDs that should be passed as query parameters (not in path)
   /**
+   * Parent ids that get / update / delete need besides the entity's own id.
+   * Usually `parentIds`; empty when the item methods address the resource by
+   * its own id alone. See {@link EntityApiMetadata.itemMethodsTakeOwnIdOnly}.
+   */
+  itemParentIds: string[];
+  /** `queryParamIds` that get also sends. Usually all of them. */
+  getQueryParamIds: string[];
+  /**
    * `queryParamIds` also scope create / patch / delete, and are not fields of
    * the resource body. See {@link EntityApiMetadata.writeScopeInQuery}.
    */
@@ -84,6 +92,16 @@ interface EntityApiMetadata {
    * create / patch take no scope query.)
    */
   writeScopeInQuery?: boolean;
+  /**
+   * The parent / scope ids are needed to LIST this resource, and to create it,
+   * but its item methods take only its own id. v4 Discovery: `advertisers.get`,
+   * `advertisers.patch` and `advertisers.delete` are
+   * `v4/advertisers/{advertisersId}` with no `partnerId` parameter, and
+   * `advertisers.get` rejects one ("Unknown name \"partnerId\": Cannot bind query
+   * parameter", #341). When set, get / update / delete neither require nor send
+   * the parent ids.
+   */
+  itemMethodsTakeOwnIdOnly?: boolean;
 }
 
 /**
@@ -103,6 +121,9 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     parentResourceIds: ["partnerId"],
     queryParamIds: ["partnerId"], // partnerId goes in query params, not path
     supportsFilter: true,
+    // advertisers.list takes partnerId and advertisers.create takes it as a
+    // body field; advertisers.get / patch / delete take only the advertiser id.
+    itemMethodsTakeOwnIdOnly: true,
   },
   campaign: {
     apiPathTemplate: "/advertisers/{advertiserId}/campaigns",
@@ -349,6 +370,8 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
     apiPath,
     parentIds: apiMetadata.parentResourceIds,
     queryParamIds: apiMetadata.queryParamIds || [],
+    itemParentIds: apiMetadata.itemMethodsTakeOwnIdOnly ? [] : apiMetadata.parentResourceIds,
+    getQueryParamIds: apiMetadata.itemMethodsTakeOwnIdOnly ? [] : apiMetadata.queryParamIds || [],
     writeScopeInQuery: apiMetadata.writeScopeInQuery ?? false,
     filterParamIds: apiMetadata.filterParamIds || [],
     supportsCreate: !apiMetadata.isReadOnly,
