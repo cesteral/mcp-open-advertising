@@ -53,6 +53,22 @@ data "google_secret_manager_secret" "governance_token_secret_previous" {
   secret_id = var.governance_token_secret_previous_name
 }
 
+# Shared MRTR requestState sealing key. Same shape as the decision-token
+# secret above: one operator-provisioned secret for the whole fleet.
+data "google_secret_manager_secret" "request_state_secret" {
+  count     = var.request_state_secret_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = var.request_state_secret_name
+}
+
+resource "google_secret_manager_secret_iam_member" "request_state_secret_accessor" {
+  count     = var.request_state_secret_name != "" ? 1 : 0
+  project   = var.project_id
+  secret_id = data.google_secret_manager_secret.request_state_secret[0].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 resource "google_secret_manager_secret_iam_member" "governance_token_secret_accessor" {
   count     = var.governance_token_secret_name != "" ? 1 : 0
   project   = var.project_id
@@ -320,6 +336,20 @@ resource "google_cloud_run_v2_service" "mcp_server" {
         }
       }
 
+      # Shared MRTR requestState sealing key (same value on every instance).
+      dynamic "env" {
+        for_each = var.request_state_secret_name != "" ? [1] : []
+        content {
+          name = "MCP_REQUEST_STATE_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = data.google_secret_manager_secret.request_state_secret[0].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
       # Previous signing secret, set only during rotation.
       dynamic "env" {
         for_each = var.governance_token_secret_previous_name != "" ? [1] : []
@@ -347,7 +377,8 @@ resource "google_cloud_run_v2_service" "mcp_server" {
     # Revision creation validates secret access, so the accessor grants on the
     # shared decision-token secret(s) must exist before the service deploys.
     google_secret_manager_secret_iam_member.governance_token_secret_accessor,
-    google_secret_manager_secret_iam_member.governance_token_secret_previous_accessor
+    google_secret_manager_secret_iam_member.governance_token_secret_previous_accessor,
+    google_secret_manager_secret_iam_member.request_state_secret_accessor
   ]
 }
 

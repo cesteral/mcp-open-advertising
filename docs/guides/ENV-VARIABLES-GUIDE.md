@@ -491,6 +491,7 @@ NODE_ENV=development
 # MCP Authentication
 MCP_AUTH_MODE=none                           # none | jwt | google-headers | ttd-token
 MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32+ chars)
+MCP_REQUEST_STATE_SECRET=                    # Optional, 32+ chars: seals the destructive-op confirmation requestState. Hosted fleet: one shared value on every instance (else derived from MCP_AUTH_SECRET_KEY, else random per process)
 
 # MCP Session Management
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000     # 1 hour
