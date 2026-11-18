@@ -47,7 +47,7 @@
         "cross_platform_campaign_setup"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": ["google-headers", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -134,7 +134,7 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": ["google-headers", "jwt", "oauth", "none"]
       },
       "tags": [
         "advertising",
@@ -270,7 +270,7 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["ttd-token", "jwt", "none"]
+        "modes": ["ttd-token", "jwt", "oauth", "none"]
       },
       "tags": [
         "advertising",
@@ -387,7 +387,7 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["gads-headers", "jwt", "none"]
+        "modes": ["gads-headers", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -485,7 +485,7 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["meta-bearer", "jwt", "none"]
+        "modes": ["meta-bearer", "jwt", "oauth", "none"]
       },
       "tags": [
         "advertising",
@@ -581,7 +581,7 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["linkedin-bearer", "jwt", "none"]
+        "modes": ["linkedin-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -675,7 +675,7 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["tiktok-bearer", "jwt", "none"]
+        "modes": ["tiktok-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "tiktok", "campaign-management", "social", "video"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -778,7 +778,7 @@
         "cm360_floodlight_workflow"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": ["google-headers", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -876,7 +876,7 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["snapchat-bearer", "jwt", "none"]
+        "modes": ["snapchat-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "snapchat", "campaign-management", "social", "video"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -946,7 +946,7 @@
         "sa360_conversion_upload_workflow"
       ],
       "auth": {
-        "modes": ["sa360-headers", "jwt", "none"]
+        "modes": ["sa360-headers", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -1018,7 +1018,7 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["pinterest-bearer", "jwt", "none"]
+        "modes": ["pinterest-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -1109,7 +1109,7 @@
         "amazon_dsp_creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["amazon-dsp-bearer", "jwt", "none"]
+        "modes": ["amazon-dsp-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"],
       "untrustedContent": { "pathReporting": "per-response" },
@@ -1186,7 +1186,7 @@
         "cross_platform_campaign_setup"
       ],
       "auth": {
-        "modes": ["msads-bearer", "jwt", "none"]
+        "modes": ["msads-bearer", "jwt", "oauth", "none"]
       },
       "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"],
       "untrustedContent": { "pathReporting": "per-response" },

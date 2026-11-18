@@ -7,11 +7,15 @@
  * Provides a pluggable authentication interface for MCP servers.
  * Supports multiple auth modes:
  * - google-headers: Google credentials via HTTP headers (SA or OAuth2 refresh)
- * - jwt: Bearer JWT validated with a shared secret (HS256)
+ * - jwt: Bearer JWT validated with a shared secret (HS256), service-to-service
+ * - oauth: Bearer access token verified against an authorization server's JWKS
+ *   (asymmetric only; see oauth-jwks.ts). Never falls back to or from `jwt`.
  * - none: No authentication (dev/testing only)
  */
 
 import type { Logger } from "pino";
+import * as oauthJwks from "./oauth-jwks.js";
+import type { OAuthJwksConfig } from "./oauth-jwks.js";
 
 /**
  * Authentication information extracted from a validated credential.
@@ -61,7 +65,7 @@ export interface SessionAuthContext {
   allowedAdvertisers?: string[];
 }
 
-export type AuthMode = "google-headers" | "jwt" | "none";
+export type AuthMode = "google-headers" | "jwt" | "oauth" | "none";
 
 /**
  * Contract for all authentication strategies.
@@ -214,6 +218,8 @@ export function createAuthStrategy(
   options: {
     scopes?: string[];
     jwtSecret?: string;
+    /** `oauth` mode settings; defaults to MCP_OAUTH_ISSUER / MCP_JWKS_URI / MCP_RESOURCE_URI. */
+    oauth?: OAuthJwksConfig;
     logger?: Logger;
   } = {}
 ): AuthStrategy {
@@ -226,6 +232,11 @@ export function createAuthStrategy(
         throw new Error("MCP_AUTH_SECRET_KEY is required for jwt auth mode");
       }
       return new JwtBearerAuthStrategy(options.jwtSecret, options.logger);
+
+    case "oauth": {
+      const { loadOAuthJwksConfig, OAuthJwksAuthStrategy } = oauthJwks;
+      return new OAuthJwksAuthStrategy(options.oauth ?? loadOAuthJwksConfig(), options.logger);
+    }
 
     case "none":
       return new NoAuthStrategy();

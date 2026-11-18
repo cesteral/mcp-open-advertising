@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("pinterest-mcp"),
 
   // Auth — Pinterest-specific modes
-  mcpAuthMode: z.enum(["pinterest-bearer", "jwt", "none"]).default("pinterest-bearer"),
+  mcpAuthMode: z.enum(["pinterest-bearer", "jwt", "oauth", "none"]).default("pinterest-bearer"),
 
   // Pinterest API Configuration
   pinterestApiBaseUrl: z.string().url().default("https://api.pinterest.com"),

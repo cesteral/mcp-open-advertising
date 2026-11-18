@@ -46,6 +46,7 @@ body:
         - google-headers
         - gads-headers
         - jwt
+        - oauth
         - none
         - ttd-token
         - meta-bearer

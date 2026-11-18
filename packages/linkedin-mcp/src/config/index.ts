@@ -21,7 +21,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("linkedin-mcp"),
 
   // Auth — LinkedIn-specific modes
-  mcpAuthMode: z.enum(["linkedin-bearer", "jwt", "none"]).default("linkedin-bearer"),
+  mcpAuthMode: z.enum(["linkedin-bearer", "jwt", "oauth", "none"]).default("linkedin-bearer"),
 
   // LinkedIn API Configuration
   linkedinApiBaseUrl: z.string().url().default("https://api.linkedin.com"),

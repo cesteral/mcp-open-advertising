@@ -27,7 +27,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("dv360-mcp"),
 
   // Auth — Google-specific modes
-  mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
+  mcpAuthMode: z.enum(["google-headers", "jwt", "oauth", "none"]).default("google-headers"),
 
   // DV360 API Configuration
   dv360ApiBaseUrl: z.string().url().default("https://displayvideo.googleapis.com/v4"),

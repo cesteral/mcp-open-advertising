@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("tiktok-mcp"),
 
   // Auth — TikTok-specific modes
-  mcpAuthMode: z.enum(["tiktok-bearer", "jwt", "none"]).default("tiktok-bearer"),
+  mcpAuthMode: z.enum(["tiktok-bearer", "jwt", "oauth", "none"]).default("tiktok-bearer"),
 
   // TikTok API Configuration
   tiktokApiBaseUrl: z.string().url().default("https://business-api.tiktok.com"),
