@@ -424,7 +424,7 @@ const REQUIRED_FIELDS_OVERRIDES: Record<
   InsertionOrder: {
     remove: ["optimizationObjective"],
     reason:
-      "v4 Discovery (revision 20261117) changed the description from 'Optional. Required. ...' to 'Required. The optimization objective of the insertion order.' That is the input rule for insertionOrders.create / patch, not a guarantee that insertionOrders.get / list return the field: an insertion order created before the field existed can come back without it, and the same generated schema parses those responses, so a required enum would reject every such IO in dv360_list_entities / dv360_get_entity, as SdfConfig.version did for advertisers (#341).",
+      "Discovery (revision 20261117) describes InsertionOrder.optimizationObjective as 'Required.', which is the rule for creating an insertion order. Insertion orders created before the field existed, and ones created in the UI without an objective, can come back from get / list without it, and a required enum would reject the whole response, as SdfConfig.version did for advertisers (#341).",
   },
 };
 

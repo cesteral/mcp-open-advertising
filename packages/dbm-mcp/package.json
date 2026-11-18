@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/dbm-mcp",
   "mcpName": "io.github.cesteral/dbm-mcp",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "DBM MCP Server - DV360 reporting through the Bid Manager API v2",
   "license": "Apache-2.0",
   "repository": {

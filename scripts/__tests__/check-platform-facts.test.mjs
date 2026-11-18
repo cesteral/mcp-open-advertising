@@ -123,6 +123,7 @@ describe("the shipped ledger", () => {
     ["snapchat.api_base", "2026-11-17"],
     ["pinterest.api_base", "2026-11-18"],
     ["tiktok.api_base", "2026-11-18"],
+    ["amazon_dsp.api_base", "2026-11-18"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
