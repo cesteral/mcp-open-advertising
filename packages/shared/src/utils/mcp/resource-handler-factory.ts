@@ -14,6 +14,15 @@
 import type { Logger } from "pino";
 
 /**
+ * Cache hint for a resource's `resources/read` results (MCP 2026-07-28,
+ * `ttlMs` / `cacheScope`). Structurally the SDK's `CacheHint`.
+ */
+export interface ResourceCacheHint {
+  ttlMs?: number;
+  cacheScope?: "public" | "private";
+}
+
+/**
  * Static resource definition — resources with a fixed URI and content.
  */
 export interface StaticResourceDefinition {
@@ -33,7 +42,12 @@ interface McpServerResourceLike {
   registerResource(
     id: string,
     uri: string,
-    metadata: { description: string; mimeType: string; title?: string },
+    metadata: {
+      description: string;
+      mimeType: string;
+      title?: string;
+      cacheHint?: ResourceCacheHint;
+    },
     handler: (uri: URL) => Promise<{
       contents: Array<{ uri: string; mimeType: string; text: string }>;
     }>
@@ -44,13 +58,15 @@ export interface RegisterStaticResourcesOptions {
   server: McpServerResourceLike;
   resources: StaticResourceDefinition[];
   logger: Logger;
+  /** Applied to every resource registered by this call. Absent: SDK default (`0` / `private`). */
+  cacheHint?: ResourceCacheHint;
 }
 
 /**
  * Register all static resources on an McpServer with standardized handling.
  */
 export function registerStaticResourcesFromDefinitions(opts: RegisterStaticResourcesOptions): void {
-  const { server, resources, logger } = opts;
+  const { server, resources, logger, cacheHint } = opts;
 
   for (const resource of resources) {
     const resourceId = resource.uri.replace(/[^a-zA-Z0-9]/g, "_");
@@ -62,6 +78,7 @@ export function registerStaticResourcesFromDefinitions(opts: RegisterStaticResou
         description: resource.description,
         mimeType: resource.mimeType,
         ...(resource.title !== undefined && { title: resource.title }),
+        ...(cacheHint && { cacheHint }),
       },
       async (uri: URL) => {
         logger.info({ resourceUri: resource.uri }, "Handling resource read");
@@ -135,7 +152,12 @@ interface McpServerTemplatedResourceLike {
   registerResource(
     id: string,
     template: unknown,
-    metadata: { description: string; mimeType: string; title?: string },
+    metadata: {
+      description: string;
+      mimeType: string;
+      title?: string;
+      cacheHint?: ResourceCacheHint;
+    },
     handler: (
       uri: URL,
       variables: Record<string, string | string[]>
@@ -169,6 +191,8 @@ export interface RegisterTemplatedResourcesOptions {
   templateBuilder: TemplateBuilder;
   resources: TemplatedResourceDefinition[];
   logger: Logger;
+  /** Applied to every template registered by this call. Absent: SDK default (`0` / `private`). */
+  cacheHint?: ResourceCacheHint;
 }
 
 /**
@@ -197,7 +221,7 @@ export interface RegisterTemplatedResourcesOptions {
 export function registerTemplatedResourcesFromDefinitions(
   opts: RegisterTemplatedResourcesOptions
 ): void {
-  const { server, templateBuilder, resources, logger } = opts;
+  const { server, templateBuilder, resources, logger, cacheHint } = opts;
 
   for (const resource of resources) {
     const resourceId = resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_");
@@ -227,6 +251,7 @@ export function registerTemplatedResourcesFromDefinitions(
         description: resource.description,
         mimeType: resource.mimeType,
         title: resource.name,
+        ...(cacheHint && { cacheHint }),
       },
       async (uri, variables) => {
         logger.info(
