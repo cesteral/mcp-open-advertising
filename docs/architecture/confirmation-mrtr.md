@@ -37,6 +37,11 @@ The handler re-runs from the top, so the confirmation must not be a second way t
 
 2026-07-28 clients get `input_required` from a destructive tool and must retry with `inputResponses`; 2025-era clients see the same `elicitation/create` as before, now sent by the SDK's shim. The legacy shim's per-leg timeout is the SDK default (10 minutes). Tool definitions and `definitionHash`es did not move.
 
-## Not covered here
+## Field elicitation (`ensureRequiredFieldValue`) and the conformance tools
 
-`ensureRequiredFieldValue` (dv360 missing-id elicitation) and the three conformance `test_elicitation*` tools call `elicitInput` too, so they use the same path; they are not destructive confirmations and were not re-reviewed for idempotency.
+These ask for a missing value, not a confirmation, but go through the same `elicitInput`, so the same re-run rules apply. Reviewed in the #244 follow-up:
+
+- **A question must precede every write, and must not sit inside a `try/catch` that records failures.** `dv360_adjust_line_item_bids` asked for missing ids inside its per-item `try/catch`: the question would have been recorded as that item's failure, and a question for item 2 would have come after item 1's PATCH (the retry repeats it, and the factory fails the call). It now resolves every missing id for the whole batch first, and rethrows `ConfirmationRequired` (exported from `@cesteral/shared` for exactly this). Any new code that wraps an `elicitInput` in a catch must do the same.
+- **An answer is keyed by the exact prompt text, so two prompts that read alike share one answer.** The per-item prompts name the item (`batch bid adjustment 2 of 3`); without that, one answer would fill the same field of every item.
+- The custom-bidding tools (`create_custom_bidding_algorithm`, `manage_custom_bidding_script`, `manage_custom_bidding_rules`) ask only before their first write and with a distinct field per question, so several questions in one call work.
+- The `test_elicitation*` conformance tools ask once and are read-only, so a re-run is harmless. `--full` conformance (dbm-mcp, 2026-11-18): all four elicitation scenarios pass.

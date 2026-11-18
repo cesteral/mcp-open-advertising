@@ -18,6 +18,7 @@ import type {
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 import {
   buildNextAction,
+  ConfirmationRequired,
   elicitBidChangeConfirmation,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -237,33 +238,56 @@ export async function adjustLineItemBidsLogic(
     nextAction?: string;
   }> = [];
 
+  // Resolve every missing id BEFORE the first write. A question ends the call
+  // with `input_required` and the handler re-runs from the top on the retry
+  // (#244), so a question asked after item 1's PATCH would repeat that PATCH.
+  // `operation` names the item: the answer is keyed by the exact prompt text,
+  // so two items missing the same field must not share one prompt (and one
+  // answer). A declined or empty answer fails that item only; a question
+  // (`ConfirmationRequired`) is never an item failure and always propagates.
+  const resolved: Array<{ advertiserId?: string; lineItemId?: string; error?: unknown }> = [];
+  for (const [index, adjustment] of input.adjustments.entries()) {
+    const operation = `batch bid adjustment ${index + 1} of ${input.adjustments.length}`;
+    const ids: { advertiserId?: string; lineItemId?: string; error?: unknown } = {
+      advertiserId: adjustment.advertiserId ?? undefined,
+      lineItemId: adjustment.lineItemId ?? undefined,
+    };
+    try {
+      ids.advertiserId = await ensureRequiredFieldValue({
+        fieldName: "advertiserId",
+        fieldLabel: "Advertiser ID",
+        entityType: "line item",
+        operation,
+        sdkContext,
+        currentValue: ids.advertiserId,
+      });
+      ids.lineItemId = await ensureRequiredFieldValue({
+        fieldName: "lineItemId",
+        fieldLabel: "Line Item ID",
+        entityType: "line item",
+        operation,
+        sdkContext,
+        currentValue: ids.lineItemId,
+      });
+    } catch (error) {
+      if (error instanceof ConfirmationRequired) throw error;
+      ids.error = error;
+    }
+    resolved.push(ids);
+  }
+
   // Process each adjustment
-  for (const adjustment of input.adjustments) {
-    let advertiserId: string | undefined = adjustment.advertiserId ?? undefined;
-    let lineItemId: string | undefined = adjustment.lineItemId ?? undefined;
+  for (const [index, adjustment] of input.adjustments.entries()) {
+    const ids = resolved[index];
+    let advertiserId: string | undefined = ids.advertiserId;
+    let lineItemId: string | undefined = ids.lineItemId;
     let lineItemName: string | undefined;
     let campaignId: string | undefined;
     let insertionOrderId: string | undefined;
     try {
-      const resolvedAdvertiserId = await ensureRequiredFieldValue({
-        fieldName: "advertiserId",
-        fieldLabel: "Advertiser ID",
-        entityType: "line item",
-        operation: "batch bid adjustment",
-        sdkContext,
-        currentValue: advertiserId,
-      });
-      advertiserId = resolvedAdvertiserId;
-
-      const resolvedLineItemId = await ensureRequiredFieldValue({
-        fieldName: "lineItemId",
-        fieldLabel: "Line Item ID",
-        entityType: "line item",
-        operation: "batch bid adjustment",
-        sdkContext,
-        currentValue: lineItemId,
-      });
-      lineItemId = resolvedLineItemId;
+      if (ids.error) throw ids.error;
+      const resolvedAdvertiserId = ids.advertiserId as string;
+      const resolvedLineItemId = ids.lineItemId as string;
 
       const entityIds = {
         advertiserId: resolvedAdvertiserId,
