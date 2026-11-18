@@ -10,8 +10,14 @@
  */
 
 import { readFileSync } from "fs";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server";
+import {
+  WebStandardStreamableHTTPServerTransport,
+  createMcpHandler,
+  isLegacyRequest,
+  type McpServer,
+} from "@modelcontextprotocol/server";
 import { type ServerType, serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
@@ -46,7 +52,9 @@ import {
   wwwAuthenticateChallenge,
   insufficientScopeChallenge,
   SessionManager,
+  principalSessionKey,
 } from "./mcp-transport-helpers.js";
+import { JsonRpcErrorCode } from "../mcp-errors.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../../auth/auth-strategy.js";
 import type { SessionServiceStoreLike } from "./mcp-transport-helpers.js";
 import {
@@ -94,6 +102,17 @@ if (typeof transportProto.validateSession !== "function") {
 transportProto.validateSession = function validateSessionSkipped(): undefined {
   return undefined;
 };
+
+/** Request body cap, shared by Hono's limit and the SDK handler's own reader. */
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+/** A transport-level rejection to send on the modern path. */
+interface ModernRejection {
+  status: 400 | 401 | 403 | 503;
+  code: number;
+  message: string;
+  data?: Record<string, unknown>;
+}
 
 type HonoBindings = {
   incoming: import("http").IncomingMessage;
@@ -354,6 +373,210 @@ export function createMcpHttpTransport(
     return missing;
   };
 
+  // ---------------------------------------------------------------------
+  // 2026-07-28 (stateless) serving (#243)
+  // ---------------------------------------------------------------------
+  // A request carrying the per-request `_meta` envelope is served by the SDK's
+  // `createMcpHandler`, one MCP server instance per request, with no
+  // `Mcp-Session-Id`. Everything else (initialize, 2025-era POSTs, session
+  // GET/DELETE) stays on the sessionful path below. The split is
+  // `isLegacyRequest`, the predicate the SDK itself routes on.
+  //
+  // The handler's factory takes the server this transport pre-built for the
+  // request (authentication, services and the scope check all need it first).
+  const modernSlot = new AsyncLocalStorage<{ server: McpServerLike }>();
+  const modernHandler = createMcpHandler(
+    () => {
+      const slot = modernSlot.getStore();
+      if (!slot) throw new Error("modern request reached the handler without a prepared server");
+      return slot.server as unknown as McpServer;
+    },
+    { legacy: "reject", maxRequestBodySize: MAX_BODY_BYTES }
+  );
+  // Single-flight creation of a principal's services: two first requests from
+  // one caller must not both build (and both authenticate) an upstream client.
+  const principalCreations = new Map<string, Promise<ModernRejection | undefined>>();
+
+  /** JSON-RPC id of the request body, for an error that answers it. Best effort. */
+  const rpcIdOf = async (c: Context): Promise<string | number | null> => {
+    try {
+      const body = JSON.parse(await c.req.raw.clone().text());
+      const id = (Array.isArray(body) ? body[0] : body)?.id;
+      return typeof id === "string" || typeof id === "number" ? id : null;
+    } catch {
+      return null;
+    }
+  };
+
+  /** Transport-level rejection on the modern path: a JSON-RPC error body, not ad-hoc JSON. */
+  const modernRejection = async (
+    c: Context,
+    status: 400 | 401 | 403 | 503,
+    code: number,
+    message: string,
+    data?: Record<string, unknown>
+  ): Promise<Response> => {
+    if (status === 401) {
+      const challenge = wwwAuthenticateChallenge(config.mcpAuthMode, c.req.url);
+      if (challenge) c.header("WWW-Authenticate", challenge);
+    }
+    return c.json(
+      { jsonrpc: "2.0", id: await rpcIdOf(c), error: { code, message, ...(data ? { data } : {}) } },
+      status
+    );
+  };
+
+  /**
+   * Resolve the calling principal's services (creating them on first sight) and
+   * report a rejection to send, or undefined when the principal is ready.
+   * `key` is the principal-derived store key, never a wire value.
+   */
+  const ensurePrincipal = async (
+    headers: Record<string, string>,
+    key: string,
+    verified: AuthResult | undefined
+  ): Promise<ModernRejection | undefined> => {
+    if (sessionServiceStore.get(key) !== undefined) {
+      // A fresh `verify` already proved this request; otherwise honour the
+      // shared non-sliding revalidation age (#374) exactly as session reuse does.
+      if (!verified) {
+        const reuse = await validateSessionReuse(authStrategy, sessionServiceStore, headers, key);
+        if (!reuse.valid) {
+          logger
+            .child({ component: "audit" })
+            .warn(
+              { event: "principal_revalidation_failed", principal: key },
+              reuse.reason ?? "Principal revalidation failed"
+            );
+          return {
+            status: 401,
+            code: JsonRpcErrorCode.Unauthorized,
+            message: "Credential validation failed",
+          };
+        }
+      }
+      sessions.touchSession(key);
+      return undefined;
+    }
+
+    const pending = principalCreations.get(key);
+    if (pending) return pending;
+    const creation = (async (): Promise<ModernRejection | undefined> => {
+      if (sessionServiceStore.isFull()) {
+        logger.warn({ activeSessions: sessionServiceStore.size }, "Max principal capacity reached");
+        return {
+          status: 503,
+          code: JsonRpcErrorCode.ServiceUnavailable,
+          message: "Server at capacity. Please try again later.",
+        };
+      }
+      let authResult = verified;
+      if (!authResult) {
+        try {
+          authResult = await authStrategy.verify(headers);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Authentication failed";
+          recordAuthValidation(config.mcpAuthMode, "failure");
+          return {
+            status: 401,
+            code: JsonRpcErrorCode.Unauthorized,
+            message,
+            data: { hint: platformConfig.authErrorHint },
+          };
+        }
+      }
+      recordAuthValidation(authResult.authInfo.authType, "success");
+      const result = await platformConfig.createSessionForAuth(authResult, key, config, logger);
+      if (result.error) {
+        return {
+          status: result.error.status,
+          code:
+            result.error.status === 401
+              ? JsonRpcErrorCode.Unauthorized
+              : JsonRpcErrorCode.InvalidRequest,
+          message: result.error.message,
+        };
+      }
+      sessionServiceStore.setAuthContext(key, {
+        authInfo: authResult.authInfo,
+        credentialFingerprint: authResult.credentialFingerprint,
+        allowedAdvertisers: authResult.allowedAdvertisers,
+      });
+      sessions.trackSession(key);
+      logger.info(
+        { principal: key, outcome: "created", activePrincipals: sessionServiceStore.size },
+        "New MCP principal services created"
+      );
+      return undefined;
+    })().finally(() => principalCreations.delete(key));
+    principalCreations.set(key, creation);
+    return creation;
+  };
+
+  const serveModern = async (c: Context, requestId: string): Promise<Response> => {
+    const headers = extractHeadersMap(c.req.raw.headers);
+
+    // Authenticate before anything else, as on the 2025 path, so an
+    // unauthenticated caller learns nothing (not even a version error).
+    let verified: AuthResult | undefined;
+    let fingerprint: string | undefined;
+    try {
+      if (authStrategy.getCredentialFingerprint) {
+        fingerprint = await authStrategy.getCredentialFingerprint(headers);
+      }
+      if (!fingerprint) {
+        verified = await authStrategy.verify(headers);
+        fingerprint = verified.credentialFingerprint;
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Authentication failed";
+      recordAuthValidation(config.mcpAuthMode, "failure");
+      return modernRejection(c, 401, JsonRpcErrorCode.Unauthorized, message, {
+        hint: platformConfig.authErrorHint,
+      });
+    }
+
+    const key = principalSessionKey(fingerprint);
+    const rejected = await ensurePrincipal(headers, key, verified);
+    if (rejected) {
+      return modernRejection(c, rejected.status, rejected.code, rejected.message, rejected.data);
+    }
+
+    // One server per request; it closes with the exchange.
+    const server = await platformConfig.createMcpServer(logger, key, config.gcsBucketName);
+
+    // Scope check runs once the server's tools are registered (see 2025 path).
+    const missingScope = await missingScopeFor(c);
+    if (missingScope) {
+      await server.close().catch(() => {});
+      logger.warn(
+        { principal: key, requiredScope: missingScope, event: "insufficient_scope" },
+        "tools/call rejected: token lacks required scope"
+      );
+      c.header("WWW-Authenticate", insufficientScopeChallenge(missingScope, c.req.url));
+      return c.json(
+        {
+          jsonrpc: "2.0",
+          id: await rpcIdOf(c),
+          error: {
+            code: JsonRpcErrorCode.Forbidden,
+            message: "insufficient_scope",
+            data: { scope: missingScope },
+          },
+        },
+        403
+      );
+    }
+
+    try {
+      return await modernSlot.run({ server }, () => modernHandler.fetch(c.req.raw));
+    } catch (error) {
+      logger.error({ error, principal: key, requestId }, "Error handling modern MCP request");
+      await server.close().catch(() => {});
+      throw error;
+    }
+  };
+
   let pkg: { version: string };
   try {
     pkg = JSON.parse(readFileSync(platformConfig.packageJsonPath, "utf-8"));
@@ -587,7 +810,7 @@ export function createMcpHttpTransport(
   });
 
   // Request body size limit (10 MB)
-  app.post("*", bodyLimit({ maxSize: 10 * 1024 * 1024 }));
+  app.post("*", bodyLimit({ maxSize: MAX_BODY_BYTES }));
 
   // POST /mcp — JSON-RPC over Streamable HTTP
   app.post("/mcp", async (c) => {
@@ -600,6 +823,11 @@ export function createMcpHttpTransport(
     reqCtx.decisionToken = c.req.header("x-cesteral-decision-token");
 
     return runWithRequestContext(reqCtx, async () => {
+      // 2026-07-28 requests carry their own envelope and have no session.
+      if (!(await isLegacyRequest(c.req.raw, undefined, { maxRequestBodySize: MAX_BODY_BYTES }))) {
+        return serveModern(c, requestId);
+      }
+
       // Validate MCP-Protocol-Version header
       const protocolVersion = c.req.header("mcp-protocol-version") ?? "2025-03-26";
       if (!validateProtocolVersion(protocolVersion)) {

@@ -10,7 +10,7 @@
  */
 
 import { SUPPORTED_SCOPES } from "../../auth/tool-scopes.js";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import type { Logger } from "pino";
 import type { AuthResult, AuthStrategy } from "../../auth/auth-strategy.js";
 
@@ -38,10 +38,43 @@ export function generateSessionId(): string {
 // MCP Protocol version validation
 // ---------------------------------------------------------------------------
 
-export const SUPPORTED_PROTOCOL_VERSIONS = ["2025-03-26", "2025-06-18", "2025-11-25"] as const;
+/** Sessionful (initialize + Mcp-Session-Id) era, served by the legacy path. */
+export const LEGACY_PROTOCOL_VERSIONS = ["2025-03-26", "2025-06-18", "2025-11-25"] as const;
 
+/** Stateless era (SEP-2567/2575), served per request by the SDK's `createMcpHandler`. */
+export const MODERN_PROTOCOL_VERSION = "2026-07-28";
+
+/** Every revision the endpoint serves; this is what the server card advertises. */
+export const SUPPORTED_PROTOCOL_VERSIONS = [
+  ...LEGACY_PROTOCOL_VERSIONS,
+  MODERN_PROTOCOL_VERSION,
+] as const;
+
+/**
+ * Validates the `MCP-Protocol-Version` header of a 2025-era request. A request
+ * that names the modern revision never reaches this check: it is routed to the
+ * stateless handler, which answers a version problem itself (#243).
+ */
 export function validateProtocolVersion(version: string): boolean {
-  return (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(version);
+  return (LEGACY_PROTOCOL_VERSIONS as readonly string[]).includes(version);
+}
+
+/**
+ * Store key for a stateless (2026-07-28) request's per-principal services.
+ *
+ * The modern era has no `Mcp-Session-Id`, so the services that hold an
+ * authenticated API client are keyed on who the caller is: a domain-separated
+ * hash of the credential fingerprint. The key never travels on the wire, and
+ * it cannot collide with a legacy session id, which is exactly 64 hex chars
+ * (`isValidSessionId` rejects this shape). `undefined` (`none` mode, no
+ * credential to fingerprint) maps to one shared anonymous principal.
+ */
+export function principalSessionKey(credentialFingerprint: string | undefined): string {
+  if (!credentialFingerprint) return "principal-anonymous";
+  const digest = createHash("sha256")
+    .update(`cesteral-principal-v1:${credentialFingerprint}`)
+    .digest("hex");
+  return `principal-${digest.slice(0, 32)}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -148,10 +148,18 @@ describe("createMcpHttpTransport — auth & session binding", () => {
     active = makeHarness();
     const res = await active.app.request("/mcp", {
       method: "POST",
-      headers: { "content-type": "application/json", "mcp-protocol-version": "1999-01-01" },
+      headers: {
+        "content-type": "application/json",
+        "mcp-protocol-version": "1999-01-01",
+        "x-fake-cred": "alice",
+      },
       body: "{}",
     });
+    // A version no 2025 revision names is routed to the stateless handler, which
+    // answers with a JSON-RPC error body (here -32600: the body is `{}`) after
+    // authentication (#243). The -32022 case is in modern-stateless-transport.test.ts.
     expect(res.status).toBe(400);
+    expect(typeof (await res.json()).error?.code).toBe("number");
   });
 
   it("rejects a malformed session id with 400", async () => {
