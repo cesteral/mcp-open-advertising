@@ -259,6 +259,34 @@ describe("2026-07-28 stateless serving (#243)", () => {
     expect((await res.json()).error.code).toBe(-32020);
   });
 
+  it("refuses a header/body mismatch before building any services (#248)", async () => {
+    active = makeHarness();
+    const res = await modernPost(
+      active.app,
+      "tools/call",
+      { name: "probe_whoami", arguments: {} },
+      { "x-fake-cred": "alice", "mcp-name": "some_other_tool" }
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe(-32020);
+    expect(body.id).toBe(7);
+    expect(active.createSessionForAuth).not.toHaveBeenCalled();
+  });
+
+  it("still answers 401 before any header check", async () => {
+    active = makeHarness();
+    const res = await modernPost(
+      active.app,
+      "tools/call",
+      { name: "probe_whoami" },
+      {
+        "mcp-method": "tools/list",
+      }
+    );
+    expect(res.status).toBe(401);
+  });
+
   it("returns a JSON-RPC 403 for a scoped token calling a write tool", async () => {
     registerToolScopes([{ name: "probe_whoami", annotations: { readOnlyHint: false } }]);
     active = makeHarness({ authMode: "jwt" });

@@ -59,6 +59,11 @@ import { JsonRpcErrorCode } from "../mcp-errors.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../../auth/auth-strategy.js";
 import type { SessionServiceStoreLike } from "./mcp-transport-helpers.js";
 import {
+  HEADER_MISMATCH_CODE,
+  findStandardHeaderMismatch,
+  readStandardHeaders,
+} from "./standard-headers.js";
+import {
   SUPPORTED_SCOPES,
   scopeEnforcementApplies,
   scopeRequiredForToolName,
@@ -538,6 +543,26 @@ export function createMcpHttpTransport(
     }
 
     const key = principalSessionKey(fingerprint);
+
+    // Standard headers (#248): refuse a header/body contradiction before any
+    // upstream client or server is built. The SDK handler validates the rest.
+    const declared = readStandardHeaders(c.req.raw.headers);
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(await c.req.raw.clone().text());
+    } catch {
+      parsedBody = undefined; // malformed JSON: the SDK answers with a parse error
+    }
+    const mismatch = findStandardHeaderMismatch(c.req.raw.headers, parsedBody);
+    if (mismatch) {
+      logger.warn(
+        { ...declared, principal: key, requestId, event: "header_mismatch" },
+        "Modern request rejected: standard header contradicts body"
+      );
+      return modernRejection(c, 400, HEADER_MISMATCH_CODE, mismatch.message, mismatch.data);
+    }
+    logger.debug({ ...declared, principal: key, requestId }, "Modern MCP request");
+
     const rejected = await ensurePrincipal(headers, key, verified);
     if (rejected) {
       return modernRejection(c, rejected.status, rejected.code, rejected.message, rejected.data);

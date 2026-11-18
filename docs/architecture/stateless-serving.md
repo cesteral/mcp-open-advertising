@@ -56,4 +56,8 @@ No tool takes a session-scoped argument today, so no new handle had to be minted
 - `serveStdio` for stdio (13 `server.ts` files), `subscriptions/listen`.
 - Modern-path rejections made before routing (DNS-rebinding 403, body-size 413 from Hono) are still plain JSON.
 - `registry.json` `protocol_version` stays `2025-11-25` (the card's `mcp_protocol_versions` now lists the modern revision too).
-- Mcp-Method/Mcp-Name header routing (#248). Elicitation reads `ctx.mcpReq.envelope` and runs as a Multi Round-Trip Request (#244, [confirmation-mrtr.md](confirmation-mrtr.md)).
+- Elicitation reads `ctx.mcpReq.envelope` and runs as a Multi Round-Trip Request (#244, [confirmation-mrtr.md](confirmation-mrtr.md)).
+
+## Standard headers before work (#248)
+
+On the modern path the transport reads `Mcp-Method` / `Mcp-Name` after authenticating and before building any upstream client or server (`utils/transport/standard-headers.ts`). A present header that contradicts the body is answered `-32020` (JSON-RPC body, HTTP 400) at once, and its method/name go into the request log fields. Missing headers, Base64 sentinels and batches are left to the SDK handler, which owns the full SEP-2243 rules, so this check is only ever earlier, never looser. An unauthenticated caller still gets 401 first. Per-method rate limiting on these headers is not done: the limiter guards upstream platform quotas keyed by the platform call, not by MCP method.
