@@ -5,7 +5,7 @@ import {
   verifyJwt,
   getJwtCredentialFingerprint,
 } from "../../src/auth/jwt.js";
-import { McpError } from "../../src/utils/mcp-errors.js";
+import { McpError, JsonRpcErrorCode } from "../../src/utils/mcp-errors.js";
 
 // ---------------------------------------------------------------------------
 // Environment setup
@@ -133,6 +133,26 @@ describe("verifyJwt", () => {
     expect(payload).toHaveProperty("aud");
     expect(payload).toHaveProperty("exp");
     expect(payload).toHaveProperty("iat");
+  });
+
+  it.each(["sub", "exp", "iat"])("rejects a correctly signed token without %s", async (claim) => {
+    const { SignJWT } = await import("jose");
+    const now = Math.floor(Date.now() / 1000);
+    const claims: Record<string, string | number> = {
+      sub: "user-1",
+      exp: now + 3600,
+      iat: now,
+      iss: "test-issuer",
+      aud: "test-audience",
+    };
+    delete claims[claim];
+    const token = await new SignJWT(claims)
+      .setProtectedHeader({ alg: "HS256" })
+      .sign(new TextEncoder().encode(SECRET));
+    await expect(verifyJwt(token, SECRET)).rejects.toThrow(McpError);
+    await expect(verifyJwt(token, SECRET)).rejects.toMatchObject({
+      code: JsonRpcErrorCode.Unauthorized,
+    });
   });
 
   it("preserves optional allowed_advertisers claim", async () => {
