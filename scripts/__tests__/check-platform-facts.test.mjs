@@ -121,6 +121,8 @@ describe("the shipped ledger", () => {
     ["msads.reporting_api_version", "2026-11-17"],
     ["msads.customermanagement_api_version", "2026-11-17"],
     ["snapchat.api_base", "2026-11-17"],
+    ["pinterest.api_base", "2026-11-18"],
+    ["tiktok.api_base", "2026-11-18"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
