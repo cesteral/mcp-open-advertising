@@ -1,11 +1,11 @@
 import { deflateRawSync } from "node:zlib";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   MsAdsReportingService,
   type ReportConfig,
 } from "../../src/services/msads/msads-reporting-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import pino from "pino";
 
 vi.mock("@cesteral/shared", async () => {
@@ -40,9 +40,20 @@ function createMockHttpClient(): MsAdsHttpClient {
   } as unknown as MsAdsHttpClient;
 }
 
+// Real limiter (same factory the server uses), spied so call assertions keep
+// working. Capacity is high so these tests exercise service logic; enforcement
+// is covered in msads-rate-limit-enforcement.test.ts.
+const limiters: RateLimiter[] = [];
 function createMockRateLimiter(): RateLimiter {
-  return { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+  const limiter = createPlatformRateLimiter("msads", 1000);
+  limiters.push(limiter);
+  vi.spyOn(limiter, "consume");
+  return limiter;
 }
+
+afterEach(() => {
+  for (const l of limiters.splice(0)) l.destroy();
+});
 
 const sampleConfig: ReportConfig = {
   reportType: "CampaignPerformanceReportRequest",

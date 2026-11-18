@@ -31,7 +31,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import type { RateLimiter } from "@cesteral/shared";
+import { createPlatformRateLimiter } from "@cesteral/shared";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
 import { updateEntityLogic } from "../../src/mcp-server/tools/definitions/update-entity.tool.js";
@@ -69,7 +69,7 @@ beforeEach(() => {
     return http[verb](path, data);
   });
   customer = { post: vi.fn().mockResolvedValue({ Account: { CurrencyCode: "EUR" } }) };
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+  const rateLimiter = createPlatformRateLimiter("msads", 1000); // real limiter; unref'd timer, ample capacity
   const msadsService = new MsAdsService(
     rateLimiter,
     http as unknown as MsAdsHttpClient,
