@@ -52,11 +52,11 @@ Pick one immediate action:
 
 | Task | Start Here |
 |------|-----------|
-| Create a full campaign structure | Prompt: \`full_campaign_setup_workflow\` |
-| Troubleshoot underdelivery | Prompt: \`troubleshoot_underdelivery\` |
-| Reallocate budgets | Prompt: \`budget_reallocation_workflow\` |
-| Update entities safely | Prompt: \`entity_update_execution_workflow\` |
-| Set up custom bidding | Prompt: \`custom_bidding_workflow\` |
+| Create a full campaign structure | Prompt: \`dv360_full_campaign_setup_workflow\` |
+| Troubleshoot underdelivery | Prompt: \`dv360_troubleshoot_underdelivery\` |
+| Reallocate budgets | Prompt: \`dv360_budget_reallocation_workflow\` |
+| Update entities safely | Prompt: \`dv360_entity_update_execution_workflow\` |
+| Set up custom bidding | Prompt: \`dv360_custom_bidding_workflow\` |
 | Understand entity fields | Resource: \`entity-schema://{entityType}\` |
 | See CRUD examples | Resource: \`entity-examples://{entityType}\` |
 | List updateMask field paths | Resource: \`entity-fields://{entityType}\` |
@@ -164,11 +164,11 @@ Inspect the output, then iterate with more specific calls.
 - Avoid requesting \`://all\` resources unless you need a complete overview
 
 ## Suggested Next Steps
-- For campaign setup: invoke \`full_campaign_setup_workflow\` prompt
-- For troubleshooting: invoke \`troubleshoot_underdelivery\` prompt
-- For budget work: invoke \`budget_reallocation_workflow\` prompt
-- For entity updates: invoke \`entity_update_execution_workflow\` prompt
-- For targeting: invoke \`targeting_management_workflow\` prompt
-- For custom bidding: invoke \`custom_bidding_workflow\` prompt
+- For campaign setup: invoke \`dv360_full_campaign_setup_workflow\` prompt
+- For troubleshooting: invoke \`dv360_troubleshoot_underdelivery\` prompt
+- For budget work: invoke \`dv360_budget_reallocation_workflow\` prompt
+- For entity updates: invoke \`dv360_entity_update_execution_workflow\` prompt
+- For targeting: invoke \`dv360_targeting_management_workflow\` prompt
+- For custom bidding: invoke \`dv360_custom_bidding_workflow\` prompt
 `;
 }

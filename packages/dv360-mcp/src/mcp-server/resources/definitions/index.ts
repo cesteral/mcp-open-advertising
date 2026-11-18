@@ -64,7 +64,11 @@ const sharedCapabilities = createServerCapabilitiesResource({
     validation: ["dv360_validate_entity"],
     discovery: ["dv360_search_tools"],
   },
-  commonWorkflows: ["full_campaign_setup_workflow", "targeting_assignment", "custom_bidding_setup"],
+  commonWorkflows: [
+    "dv360_full_campaign_setup_workflow",
+    "targeting_assignment",
+    "custom_bidding_setup",
+  ],
   discoveryFlow: [
     "Read server-capabilities://dv360-mcp/overview to choose a capability group.",
     "Read entity-schema://{entityType} and entity-fields://{entityType} before entity writes.",

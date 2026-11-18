@@ -9,7 +9,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const gaqlReportingWorkflowPrompt: Prompt = {
-  name: "gaql_reporting_workflow",
+  name: "gads_gaql_reporting_workflow",
   description:
     "Step-by-step workflow for querying Google Ads performance data via GAQL, including common query patterns, field selection, and filtering",
   arguments: [

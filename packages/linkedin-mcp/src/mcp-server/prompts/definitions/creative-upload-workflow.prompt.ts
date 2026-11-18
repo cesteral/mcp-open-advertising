@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const linkedInCreativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "linkedin_creative_upload_workflow",
   description:
     "Step-by-step guide for uploading images and creating LinkedIn Sponsored Content creatives",
   arguments: [

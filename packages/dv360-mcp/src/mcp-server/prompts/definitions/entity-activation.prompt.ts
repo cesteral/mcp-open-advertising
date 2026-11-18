@@ -10,7 +10,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * Critical ordering: IO → Line Items → Campaign.
  */
 export const entityActivationPrompt: Prompt = {
-  name: "entity_activation_workflow",
+  name: "dv360_entity_activation_workflow",
   description:
     "Safe step-by-step guide for activating DV360 entities in the correct order: validate budgets, activate Insertion Orders first, then Line Items, then Campaign. Includes pre-flight checks and rollback guidance.",
   arguments: [
@@ -241,7 +241,7 @@ After activation, monitor delivery:
 2. Check pacing via **dbm-mcp**: \`dbm_get_pacing_status\`
 3. Check performance via **dbm-mcp**: \`dbm_get_performance_metrics\`
 
-If delivery is not starting after 4 hours, invoke the \`troubleshoot_underdelivery\` prompt.
+If delivery is not starting after 4 hours, invoke the \`dv360_troubleshoot_underdelivery\` prompt.
 
 ---
 

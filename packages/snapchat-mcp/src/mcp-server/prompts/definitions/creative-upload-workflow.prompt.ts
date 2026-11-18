@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const snapchatCreativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "snapchat_creative_upload_workflow",
   description:
     "Step-by-step guide for uploading creative assets and creating Snapchat Ads creatives",
   arguments: [

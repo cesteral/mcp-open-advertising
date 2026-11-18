@@ -54,7 +54,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 - Added `prompts/list` handler
 - Added `prompts/get` handler with argument substitution
 
-### First Prompt: `full_campaign_setup_workflow`
+### First Prompt: `dv360_full_campaign_setup_workflow`
 
 **Purpose:** Guide AI agents through creating a complete DV360 campaign structure
 
@@ -109,7 +109,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. PROMPTS (On-Demand Workflow Guidance)                    │
-│    - full_campaign_setup_workflow → Step-by-step guide      │
+│    - dv360_full_campaign_setup_workflow → Step-by-step guide      │
 │    Cost: 0KB unless invoked                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -120,7 +120,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 
 **AI Agent Actions:**
 
-1. Invoke prompt: `full_campaign_setup_workflow` with `advertiserId=12345`
+1. Invoke prompt: `dv360_full_campaign_setup_workflow` with `advertiserId=12345`
 2. Receive workflow guide with 6 steps
 3. Fetch Resources: `entity-schema://campaign`, `entity-schema://insertionOrder`, etc.
 4. Follow workflow steps:
@@ -171,11 +171,11 @@ npx tsx tests/test-prompt.ts
 
 Based on legacy code patterns and coverage gap analysis:
 
-1. ~~**`bulk_update_workflow`**~~ → ✅ **Delivered** as `bulk_operations_workflow` (dv360-mcp, meta-mcp)
+1. ~~**`bulk_update_workflow`**~~ → ✅ **Delivered** as `dv360_bulk_operations_workflow` (dv360-mcp, meta-mcp)
 
-2. ~~**`troubleshoot_api_errors`**~~ → Partially covered by `troubleshoot_underdelivery` (dv360-mcp) and `troubleshoot_entity` (ttd/gads/meta). Consider a dedicated DV360 API error-code prompt if troubleshooting gaps emerge in production.
+2. ~~**`troubleshoot_api_errors`**~~ → Partially covered by `dv360_troubleshoot_underdelivery` (dv360-mcp) and `troubleshoot_entity` (ttd/gads/meta). Consider a dedicated DV360 API error-code prompt if troubleshooting gaps emerge in production.
 
-3. ~~**`entity_activation_workflow`**~~ → Covered within `full_campaign_setup_workflow` (dv360-mcp) which includes an activation sequence section (IO → Line Items → Campaign).
+3. ~~**`dv360_entity_activation_workflow`**~~ → Covered within `dv360_full_campaign_setup_workflow` (dv360-mcp) which includes an activation sequence section (IO → Line Items → Campaign).
 
 ## Key Learnings from Legacy Code
 
@@ -214,7 +214,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 
 ## Next Steps
 
-1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt (dv360-mcp)
+1. ✅ **Implemented:** `dv360_full_campaign_setup_workflow` prompt (dv360-mcp)
 2. ✅ **Expanded:** Prompts implemented across the original seven prompt-enabled servers (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
 3. **Monitor Usage:** Track which prompts AI agents invoke most
 4. **Iterate:** Add prompts based on common user workflows

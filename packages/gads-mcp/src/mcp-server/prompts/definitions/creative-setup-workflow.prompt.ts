@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const gadsCreativeSetupWorkflowPrompt: Prompt = {
-  name: "creative_setup_workflow",
+  name: "gads_creative_upload_workflow",
   description:
     "Step-by-step guide for creating Google Ads responsive display ads and video creatives",
   arguments: [
