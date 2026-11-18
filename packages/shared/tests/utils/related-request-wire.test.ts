@@ -78,6 +78,34 @@ const tools: ToolDefinitionForFactory[] = [
       { type: "text" as const, text: `confirmed=${r.confirmed}` },
     ],
   },
+  {
+    // Two questions in one call. The handler re-runs from the top for each
+    // answer on the SDK's 2025-era shim, so the first answer must still be
+    // there when the second question is asked (same flow as the 2026 test in
+    // confirmation-rounds.test.ts).
+    name: "wire_confirm_two",
+    title: "Wire Confirm Two",
+    description: "Asks two irreversible-delete confirmations in one call.",
+    untrustedContent: NO_UNTRUSTED_CONTENT,
+    inputSchema: z.object({}),
+    annotations: { destructiveHint: true },
+    logic: async (_input: unknown, _context: unknown, sdkContext?: ToolSdkContext) => {
+      const first = await elicitDeleteConfirmation({
+        entityLabel: "campaign",
+        entityId: "111",
+        sdkContext,
+      });
+      const second = await elicitDeleteConfirmation({
+        entityLabel: "campaign",
+        entityId: "222",
+        sdkContext,
+      });
+      return { first, second };
+    },
+    responseFormatter: (r: { first: boolean; second: boolean }) => [
+      { type: "text" as const, text: `first=${r.first} second=${r.second}` },
+    ],
+  },
 ];
 
 async function startServer(): Promise<{ http: McpHttpServer; baseUrl: string }> {
@@ -325,6 +353,59 @@ describe("server→client messages ride the tools/call POST stream (#241)", () =
     const elicit = await stream.until((m) => m.method === "elicitation/create", "elicitation");
     await post({ jsonrpc: "2.0", id: elicit.id, result: { action: "decline" } }, sessionId);
     const result = await stream.until((m) => m.id === 3, "tools/call result");
+    expect(JSON.stringify(result.result)).toContain("confirmed=false");
+    await stream.cancel();
+  });
+
+  it("two questions in one call: each is asked in order and answered on its own", async () => {
+    const sessionId = await openSession({ elicitation: { form: {} } });
+    const call = await post(
+      {
+        jsonrpc: "2.0",
+        id: 7,
+        method: "tools/call",
+        params: { name: "wire_confirm_two", arguments: {} },
+      },
+      sessionId
+    );
+    const stream = new SseReader(call);
+
+    const q1 = await stream.until((m) => m.method === "elicitation/create", "first question");
+    expect(String(q1.params?.message)).toContain("campaign 111");
+    await post(
+      { jsonrpc: "2.0", id: q1.id, result: { action: "accept", content: { confirm: true } } },
+      sessionId
+    );
+
+    const q2 = await stream.until(
+      (m) => m.method === "elicitation/create" && String(m.params?.message).includes("222"),
+      "second question"
+    );
+    await post({ jsonrpc: "2.0", id: q2.id, result: { action: "decline" } }, sessionId);
+
+    const result = await stream.until((m) => m.id === 7, "tools/call result");
+    expect(result.error).toBeUndefined();
+    expect(JSON.stringify(result.result)).toContain("first=true second=false");
+    // Exactly two questions: the first was not asked again when the handler re-ran.
+    expect(stream.received.filter((m) => m.method === "elicitation/create")).toHaveLength(2);
+    await stream.cancel();
+  });
+
+  it("a cancelled confirmation is a refusal, like a decline", async () => {
+    const sessionId = await openSession({ elicitation: { form: {} } });
+    const call = await post(
+      {
+        jsonrpc: "2.0",
+        id: 8,
+        method: "tools/call",
+        params: { name: "wire_confirm_delete", arguments: {} },
+      },
+      sessionId
+    );
+    const stream = new SseReader(call);
+    const elicit = await stream.until((m) => m.method === "elicitation/create", "elicitation");
+    await post({ jsonrpc: "2.0", id: elicit.id, result: { action: "cancel" } }, sessionId);
+    const result = await stream.until((m) => m.id === 8, "tools/call result");
     expect(JSON.stringify(result.result)).toContain("confirmed=false");
     await stream.cancel();
   });

@@ -5,7 +5,7 @@
 # server started with MCP_AUTH_MODE=none, MCP_INCLUDE_CONFORMANCE_TOOLS=true and
 # MCP_CONFORMANCE_FIXTURES=true. Re-baselined 2026-09-30 (#241): all 13
 # servers produce the same result — 18 of the 30 active scenarios pass and the
-# first 12 entries below fail; the last 2 are pending scenarios that fail under
+# first 12 entries below fail (13 since tools-call-error, see below); the last 2 are pending scenarios that fail under
 # `--suite all`. tools-call-with-logging, tools-call-elicitation,
 # elicitation-sep1034-defaults and elicitation-sep1330-enums were removed once
 # tool-handler-factory.ts started sending log notifications and elicitation
@@ -22,11 +22,16 @@
 # listed scenario that now passes, so every entry is a scenario that fails
 # today.
 #
-# Two of the passes are hollow. tools-call-simple-text sends no `arguments`,
-# which the servers reject as invalid input for test_simple_text's empty
-# object schema (`arguments` is optional in the spec); tools-call-error calls
-# test_error_handling, which is not registered. Both checks accept any
-# isError text result, so neither proves a successful tool call.
+# One pass is hollow. tools-call-simple-text sends no `arguments`, which the
+# servers reject as invalid input for test_simple_text's empty object schema
+# (`arguments` is optional in the spec); the check accepts any isError text
+# result, so it does not prove a successful tool call. tools-call-error used to
+# pass the same way (test_error_handling is not registered, and SDK v1 answered
+# an unknown tool as an isError result); SDK v2 (#242) answers it with a
+# protocol error (-32602 "Tool test_error_handling not found"), which that
+# check does not accept, so it is listed below. Re-checked 2026-11-18 (#244)
+# on dbm-mcp: the four elicitation scenarios still pass, now through the
+# MRTR path / the SDK's 2025-era shim.
 #
 # Most scenarios call fixed fixture names from the reference test server
 # (`test_image_content`, `test://static-binary`, `test_prompt_with_image`, ...).
@@ -51,6 +56,11 @@ server:
   - tools-call-audio
   - tools-call-embedded-resource
   - tools-call-mixed-content
+
+  # Error content — no fixture for test_error_handling. SDK v2 answers a call
+  # to an unregistered tool with a -32602 protocol error, not an isError
+  # result (the correct behaviour), and the scenario expects the latter.
+  - tools-call-error
 
   # Progress — no fixture for test_tool_with_progress, and no tool emits
   # notifications/progress for a request's progressToken.
