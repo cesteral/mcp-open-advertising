@@ -92,6 +92,8 @@ gads_create_entity({
 
 ⚠️ **GOTCHA**: Google Ads API requires images as base64-encoded data or via asset resource name. For URL-based uploads, use the Asset API with imageAsset.data as base64.
 
+**Shortcut for a single image ad:** \`gads_attach_creative\` creates one PAUSED image ad in a Display ad group from the asset resource name \`gads_upload_image\` returns.
+
 ## Step 4: Create Responsive Search Ad
 
 \`\`\`json

@@ -107,7 +107,8 @@
         "dv360_duplicate_entity",
         "dv360_get_delivery_estimate",
         "dv360_get_pacing_status",
-        "dv360_search_tools"
+        "dv360_search_tools",
+        "dv360_attach_creative"
       ],
       "resources": [
         "entity-schema://{type}",
@@ -358,7 +359,8 @@
         "gads_duplicate_entity",
         "gads_upload_image",
         "gads_upload_video",
-        "gads_search_tools"
+        "gads_search_tools",
+        "gads_attach_creative"
       ],
       "resources": [
         "entity-hierarchy://gads",
@@ -455,7 +457,8 @@
         "meta_get_available_metrics",
         "meta_get_pacing_status",
         "meta_submit_report",
-        "meta_search_tools"
+        "meta_search_tools",
+        "meta_attach_creative"
       ],
       "resources": [
         "entity-hierarchy://all",

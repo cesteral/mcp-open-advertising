@@ -41,6 +41,7 @@ export const gadsWorkflowIdByToolName: Record<string, string> = {
   gads_duplicate_entity: "mcp.execute.gads_entity_management",
   gads_upload_image: "mcp.execute.gads_entity_management",
   gads_upload_video: "mcp.execute.gads_entity_management",
+  gads_attach_creative: "mcp.execute.gads_entity_management",
 };
 
 /**

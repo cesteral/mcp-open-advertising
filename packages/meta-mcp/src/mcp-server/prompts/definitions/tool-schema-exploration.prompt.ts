@@ -46,7 +46,7 @@ Fetch these resources for detailed schema information:
 | \`insights-reference://all\` | Metrics, breakdowns, date presets |
 | \`targeting-reference://all\` | Targeting spec structure |
 
-## Tool Categories (27 tools)
+## Tool Categories (28 tools)
 
 ### Read Operations
 - \`meta_list_ad_accounts\` — Discover accessible accounts
@@ -86,6 +86,7 @@ Fetch these resources for detailed schema information:
 ### Media Uploads
 - \`meta_upload_image\` — Upload image from URL to ad images library (returns imageHash)
 - \`meta_upload_video\` — Upload video from URL to ad videos library (polls until ready)
+- \`meta_attach_creative\` — Attach an uploaded image or video to an ad set as one PAUSED ad (creative inline)
 
 ### Validation
 - \`meta_validate_entity\` — Client-side entity validation

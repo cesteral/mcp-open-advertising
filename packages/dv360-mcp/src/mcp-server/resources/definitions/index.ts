@@ -57,7 +57,7 @@ const sharedCapabilities = createServerCapabilitiesResource({
       "dv360_delete_assigned_targeting",
       "dv360_validate_targeting_config",
     ],
-    media: ["dv360_upload_image", "dv360_upload_video"],
+    media: ["dv360_upload_image", "dv360_upload_video", "dv360_attach_creative"],
     delivery: ["dv360_get_delivery_estimate", "dv360_get_pacing_status"],
     preview: ["dv360_get_ad_preview"],
     specialized: ["dv360_duplicate_entity"],
