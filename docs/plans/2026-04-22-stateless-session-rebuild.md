@@ -1,6 +1,6 @@
 # Stateless Session Rebuild Implementation Plan
 
-> **Status (checked 2026-10-12):** Implemented (the transport factory rebuilds session services on a cache miss). One post-merge production check, on `mcp_session_rehydrated_total`, was never ticked.
+> **Status:** Superseded. Unknown session ids receive 404 after authentication; clients initialize a new session. The rebuild path and its metric have been removed. The plan below is historical.
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

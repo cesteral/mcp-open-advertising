@@ -22,14 +22,7 @@ import type { AuthResult, AuthStrategy } from "../../auth/auth-strategy.js";
 // MCP Streamable HTTP spec the client only ever echoes back the server-assigned
 // `Mcp-Session-Id` — it never invents one — so a stricter pattern rejects no
 // conformant client while keeping arbitrary attacker-chosen identifiers out of
-// the session-create / rebuild path.
-//
-// Residual (accepted, availability-only): a caller who learns a victim's real
-// (leaked) session ID can still present it to a cold instance, where the rebuild
-// binds it to the caller's OWN credentials — locking the victim out of that one
-// instance until their client re-initializes and is issued a fresh ID. Closing
-// that fully needs a distributed session→fingerprint store, which this fleet
-// deliberately avoids (sessions are per-instance and rebuilt from credentials).
+// session lookup path. Unknown ids require a new initialize request.
 const SESSION_ID_PATTERN = /^[a-f0-9]{64}$/i;
 
 export function isValidSessionId(id: string): boolean {
@@ -357,8 +350,7 @@ interface SessionFingerprintStore {
   getFingerprint(sessionId: string): string | undefined;
   /**
    * Presence check for the session's services. Lets reuse validation tell a
-   * live in-store session apart from one that has not been rebuilt yet on this
-   * instance (cold-instance rehydration), so the fail-closed guard below only
+   * live in-store session apart from an absent session, so the fail-closed guard below only
    * fires for sessions that actually hold credentials.
    */
   get(sessionId: string): unknown;
@@ -428,8 +420,8 @@ export async function validateSessionReuse(
   // set) while the session already holds services yet has no stored fingerprint,
   // that session was created without credential binding. Allowing reuse would let
   // any credentialed caller ride another holder's session (defeating the binding
-  // the fingerprint exists to enforce). Reject. Rebuilds (session absent, no
-  // services yet) and genuine `none` mode (no request fingerprint) are unaffected.
+  // the fingerprint exists to enforce). Reject. Absent sessions and genuine `none` mode (no request
+  // fingerprint) are unaffected by this binding check.
   if (
     requestFingerprint &&
     sessionServiceStore.get(sessionId) !== undefined &&
@@ -535,8 +527,7 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
    * store-initiated delete needs: when something deletes a session directly
    * from the SessionServiceStore (e.g. a tool handler dropping a session whose
    * refresh token was rejected upstream), the transport must forget the id too
-   * — `needsRebuild` requires the id to be unknown to BOTH the store and this
-   * manager before the next request re-authenticates. Idempotent.
+   * so the next request gets 404 and the client re-initializes. Idempotent.
    */
   async detachSession(sessionId: string): Promise<void> {
     const cachedServer = this.sessionServers.get(sessionId);

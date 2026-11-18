@@ -335,7 +335,7 @@ describe("meta-mcp transport session lifecycle", () => {
     const body = await deleteResponse.json();
     expect(body.status).toBe("terminated");
 
-    // Post-termination: reuse rebuilds transparently (stateless-session-rebuild).
+    // A terminated id is no longer held by this instance.
     const postTerminateResponse = await postMcp(
       app,
       "tools/call",
@@ -343,6 +343,6 @@ describe("meta-mcp transport session lifecycle", () => {
       sessionId as string,
       "fp-delete-ok"
     );
-    expect(postTerminateResponse.status).toBe(200);
+    expect(postTerminateResponse.status).toBe(404);
   });
 });

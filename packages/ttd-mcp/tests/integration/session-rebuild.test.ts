@@ -152,8 +152,8 @@ const config: any = {
   ttdApiToken: "direct-token",
 };
 
-describe("session rebuild after in-memory eviction (Cloud Run scale-out simulation)", () => {
-  it("rebuilds services when a follow-up request arrives with a sessionId absent from this instance's store", async () => {
+describe("session lookup after in-memory eviction", () => {
+  it("returns 404 when a follow-up request reaches an instance that does not hold the id", async () => {
     // Instance A: receives the initialize request.
     const { app: appA } = createMcpHttpServer(config, logger);
     // Instance B: a second Cloud Run instance with its own per-process
@@ -212,13 +212,11 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
       }),
     });
 
-    // EXPECTED AFTER FIX: 200 and store is repopulated.
-    // TODAY: 404 "Session not found or expired"
-    expect(toolRes.status).toBe(200);
-    expect(sessionServiceStore.get(sessionId!)).toBeTruthy();
+    expect(toolRes.status).toBe(404);
+    expect(sessionServiceStore.get(sessionId!)).toBeUndefined();
   });
 
-  it("rebuilt session still rejects mismatched credentials on next call", async () => {
+  it("leaves an absent id unbound and lets its owner initialize a new session", async () => {
     const { app: appA } = createMcpHttpServer(config, logger);
     const { app: appB } = createMcpHttpServer(config, logger);
 
@@ -261,16 +259,10 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
       body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
     });
 
-    // Rebuild path: attacker rebuilds "their" fingerprint onto the sessionId.
-    // This is acceptable — the sessionId is an opaque token the attacker
-    // already has to possess, and they do not gain access to the original
-    // client's data (services are rebuilt from *their* credentials).
-    // Follow-up calls from the ORIGINAL client would then fingerprint-
-    // mismatch and be rejected. Assert that:
-    expect(hijackRes.status).toBe(200);
+    expect(hijackRes.status).toBe(404);
+    expect(sessionServiceStore.get(sessionId)).toBeUndefined();
+    expect(sessionServiceStore.getFingerprint(sessionId)).toBeUndefined();
 
-    // Now the legit client comes back — hits appB which now has the
-    // attacker's fingerprint stored. Must 401 on fingerprint mismatch.
     const legitRes = await appB.request("http://localhost/mcp", {
       method: "POST",
       headers: {
@@ -283,6 +275,30 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
       },
       body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
     });
-    expect(legitRes.status).toBe(401);
+    expect(legitRes.status).toBe(404);
+
+    const fresh = await appB.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "ttd-auth": "token-client-1",
+        "x-test-fingerprint": "fp-client-1",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "t", version: "1" },
+        },
+      }),
+    });
+    expect(fresh.status).toBe(200);
+    const freshId = fresh.headers.get("mcp-session-id")!;
+    expect(freshId).not.toBe(sessionId);
+    expect(sessionServiceStore.getFingerprint(freshId)).toBe("fp-client-1");
   });
 });

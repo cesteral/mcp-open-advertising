@@ -216,11 +216,7 @@ describe("dbm transport session lifecycle", () => {
     await shutdown();
   });
 
-  it("terminates session and transparently rebuilds it on reuse", async () => {
-    // After the stateless-session-rebuild change, DELETE only clears
-    // this instance's state. A follow-up call with the same sessionId
-    // and valid credentials is rebuilt on demand (same path Cloud Run
-    // scale-out takes). Fingerprint binding still guards against hijack.
+  it("terminates session and requires re-initialization on reuse", async () => {
     const initResponse = await postMcp(app, "initialize", 1, undefined, "fp-test");
     const initText = await initResponse.clone().text();
     const sessionId = extractSessionId(initResponse, initText);
@@ -233,7 +229,7 @@ describe("dbm transport session lifecycle", () => {
     expect(terminateResponse.status).toBe(200);
 
     const reusedResponse = await postMcp(app, "tools/call", 2, sessionId as string, "fp-test");
-    expect(reusedResponse.status).toBe(200);
+    expect(reusedResponse.status).toBe(404);
   });
 
   it("rejects reused session when fingerprint mismatches", async () => {

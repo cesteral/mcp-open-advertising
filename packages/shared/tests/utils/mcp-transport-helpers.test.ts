@@ -50,7 +50,7 @@ describe("isValidSessionId", () => {
   it("rejects hyphenated / client-invented ids (server never mints these)", () => {
     // Regression for security review Finding 3: only the server-minted shape is
     // accepted, so arbitrary attacker-chosen identifiers can't enter the
-    // session-create / rebuild path.
+    // session lookup path.
     expect(isValidSessionId("abcdef01-2345-6789-abcd-ef0123456789")).toBe(false);
   });
 });
@@ -429,9 +429,9 @@ describe("validateSessionReuse", () => {
     expect(result.requestFingerprint).toBeUndefined();
   });
 
-  it("allows rebuild when the session is not yet in the store (cold instance)", async () => {
+  it("does not apply live-session binding checks to an absent session", async () => {
     const store = new SessionServiceStore<MockServices>();
-    // No store.set — session absent, as on a scaled-out instance before rehydration.
+    // The transport handles absent-session 404s before this binding helper.
     const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-any" });
 
     const result = await validateSessionReuse(strategy, store, {}, "s1");

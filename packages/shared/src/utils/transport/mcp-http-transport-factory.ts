@@ -30,11 +30,7 @@ import {
   runWithRequestContext,
   extractRequestId,
 } from "../observability/request-context.js";
-import {
-  registerActiveSessionsGauge,
-  recordAuthValidation,
-  recordSessionRehydration,
-} from "../observability/metrics.js";
+import { registerActiveSessionsGauge, recordAuthValidation } from "../observability/metrics.js";
 import {
   isValidSessionId,
   generateSessionId,
@@ -71,20 +67,12 @@ class McpSessionTransport extends WebStandardStreamableHTTPServerTransport {
 
 /**
  * Session ownership is decided above the transport: the factory authenticates
- * every request, checks its credential fingerprint against the session, and
- * rebuilds services for an id this instance has not seen (scale-out
- * rehydration, design principle 5). The SDK's own session check would reject
- * a rebuilt session's first request with 400 "Server not initialized", because
- * a fresh transport never saw the client's `initialize` (another instance did).
- * `@hono/mcp`'s transport skipped that check in the mode this factory used, so
- * it is disabled here too.
+ * requests, checks credential fingerprints, and rejects unknown session ids.
+ * A held session can need a fresh transport after a request error. That new
+ * transport did not see initialize, so its SDK session check must be skipped.
  *
- * `validateSession` is `private` in the SDK's typings, so it is replaced on the
- * prototype rather than overridden in the class. That reaches into SDK
- * internals on purpose, like `raw-tool-args.ts` does: it is feature-checked
- * here, so an SDK that renames it fails at load, not silently on the first
- * rehydrated request; and `mcp-http-transport-factory.test.ts` drives a real
- * rehydrated session through it.
+ * `validateSession` is private in the SDK typings, so replace it on the
+ * prototype and fail at load if the SDK changes this internal method.
  */
 const transportProto = McpSessionTransport.prototype as unknown as {
   validateSession?: unknown;
@@ -92,7 +80,7 @@ const transportProto = McpSessionTransport.prototype as unknown as {
 if (typeof transportProto.validateSession !== "function") {
   throw new Error(
     "WebStandardStreamableHTTPServerTransport no longer has validateSession(); " +
-      "the session-rehydration override in mcp-http-transport-factory.ts needs updating"
+      "the held-session validation override in mcp-http-transport-factory.ts needs updating"
   );
 }
 transportProto.validateSession = function validateSessionSkipped(): undefined {
@@ -326,11 +314,8 @@ export function createMcpHttpTransport(
 
   registerActiveSessionsGauge(() => sessionServiceStore.size);
 
-  // A store-initiated delete (e.g. registerToolsFromDefinitions' onAuthError
-  // dropping a session after an upstream credential rejection) must also
-  // detach the transport-side state. Without this, `needsRebuild` below stays
-  // false — the id is still in the SessionManager — and the dead session keeps
-  // serving in-band Unauthorized tool errors instead of forcing re-auth.
+  // Store-initiated deletion must also forget transport state so the next
+  // request receives 404 and the client initializes a new session.
   // Idempotent against cleanupSession(), which drives store.delete itself.
   sessionServiceStore.onDelete?.((sessionId) => {
     const transport = sessionTransports.get(sessionId);
@@ -566,17 +551,23 @@ export function createMcpHttpTransport(
         return c.json({ error: "Invalid session ID format" }, 400);
       }
 
-      // Determine whether this request is:
-      // (a) a brand-new session (no Mcp-Session-Id header),
-      // (b) a known session on this instance (hot path),
-      // (c) an unknown session ID on this instance — which after Cloud Run
-      //     scale-out is the common case. We rebuild from the auth headers
-      //     using the client-provided session ID. The fingerprint check
-      //     below prevents hijacking of a rebuilt session.
-      const needsRebuild =
-        !!providedSessionId &&
-        !sessionServiceStore.get(providedSessionId) &&
-        !sessions.sessionCreatedAt.has(providedSessionId);
+      // Authenticate before reporting an unknown id. Invalid credentials get
+      // 401 regardless of whether this instance holds the supplied session.
+      if (
+        providedSessionId &&
+        sessionServiceStore.get(providedSessionId) === undefined &&
+        !sessions.sessionCreatedAt.has(providedSessionId)
+      ) {
+        try {
+          const auth = await authStrategy.verify(extractHeadersMap(c.req.raw.headers));
+          recordAuthValidation(auth.authInfo.authType, "success");
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Authentication failed";
+          recordAuthValidation(config.mcpAuthMode, "failure");
+          return unauthorized(c, { error: message, hint: platformConfig.authErrorHint });
+        }
+        return c.json({ error: "Session not found or expired" }, 404);
+      }
 
       if (providedSessionId) {
         const headers = extractHeadersMap(c.req.raw.headers);
@@ -609,28 +600,15 @@ export function createMcpHttpTransport(
         sessions.touchSession(providedSessionId);
       }
 
-      // Check session capacity for anything that ALLOCATES a session — a brand
-      // new one, or a rebuild of an id this instance does not hold.
-      //
-      // The check used to be `!providedSessionId`, which skipped it in exactly
-      // the case that allocates: the rebuild path (sweep 2026-07-25, 02-F3).
-      // One valid credential plus a stream of fresh random 64-hex ids therefore
-      // allocated sessions without bound, each holding an authenticated client
-      // for the full idle timeout and costing an upstream `validate()` call on
-      // the way in. A request that resolves to an already-held session is not an
-      // allocation and is still admitted at capacity, so an at-capacity instance
-      // keeps serving its existing clients.
-      if ((!providedSessionId || needsRebuild) && sessionServiceStore.isFull()) {
-        logger.warn(
-          { activeSessions: sessionServiceStore.size, rebuild: needsRebuild },
-          "Max session capacity reached"
-        );
+      // Only requests without a session id allocate a new session.
+      if (!providedSessionId && sessionServiceStore.isFull()) {
+        logger.warn({ activeSessions: sessionServiceStore.size }, "Max session capacity reached");
         return c.json({ error: "Server at capacity. Please try again later." }, 503);
       }
 
-      // For new sessions or rebuilds, authenticate via configured strategy
+      // Authenticate new sessions via the configured strategy
       let sessionId = providedSessionId;
-      if (!sessionId || needsRebuild) {
+      if (!sessionId) {
         const headers = extractHeadersMap(c.req.raw.headers);
 
         let authResult: AuthResult;
@@ -647,9 +625,7 @@ export function createMcpHttpTransport(
           });
         }
 
-        if (!sessionId) {
-          sessionId = generateSessionId();
-        }
+        sessionId = generateSessionId();
 
         // Platform-specific session creation
         const result = await platformConfig.createSessionForAuth(
@@ -672,23 +648,17 @@ export function createMcpHttpTransport(
           allowedAdvertisers: authResult.allowedAdvertisers,
         });
 
-        const outcome = needsRebuild ? "rehydrated" : "created";
-        if (outcome === "rehydrated") {
-          recordSessionRehydration(authResult.authInfo.authType);
-        }
         sessions.trackSession(sessionId);
 
         logger.info(
           {
             sessionId,
-            outcome,
+            outcome: "created",
             activeSessions: sessionServiceStore.size,
             authType: authResult.authInfo.authType,
             clientId: authResult.authInfo.clientId,
           },
-          outcome === "rehydrated"
-            ? "MCP session rehydrated on this instance"
-            : "New MCP session created"
+          "New MCP session created"
         );
       }
 
