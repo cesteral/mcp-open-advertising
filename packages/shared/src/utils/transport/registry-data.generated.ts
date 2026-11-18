@@ -42,6 +42,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "google-headers",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -62,6 +63,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "google-headers",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -118,6 +120,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "ttd-token",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -195,6 +198,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "gads-headers",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -244,6 +248,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "meta-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -286,6 +291,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "linkedin-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -328,6 +334,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "tiktok-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -377,6 +384,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "google-headers",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -433,6 +441,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "snapchat-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -461,6 +470,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "sa360-headers",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -481,6 +491,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "pinterest-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -523,6 +534,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "amazon-dsp-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },
@@ -551,6 +563,7 @@ export const REGISTRY_DATA: RegistryData = {
         "modes": [
           "msads-bearer",
           "jwt",
+          "oauth",
           "none"
         ]
       },

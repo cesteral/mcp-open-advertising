@@ -18,7 +18,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("msads-mcp"),
 
   // Auth — Microsoft Ads-specific modes
-  mcpAuthMode: z.enum(["msads-bearer", "jwt", "none"]).default("msads-bearer"),
+  mcpAuthMode: z.enum(["msads-bearer", "jwt", "oauth", "none"]).default("msads-bearer"),
 
   // Microsoft Ads API Configuration
   msadsCampaignApiBaseUrl: z

@@ -25,7 +25,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("dbm-mcp"),
 
   // Auth — Google-specific modes
-  mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
+  mcpAuthMode: z.enum(["google-headers", "jwt", "oauth", "none"]).default("google-headers"),
 
   // Google Cloud
   gcpProjectId: z.string().optional(),
