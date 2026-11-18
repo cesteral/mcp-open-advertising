@@ -491,6 +491,7 @@ NODE_ENV=development
 # MCP Authentication
 MCP_AUTH_MODE=none                           # none | jwt | oauth | google-headers | ttd-token
 MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32+ chars)
+MCP_REQUEST_STATE_SECRET=                    # Optional, 32+ chars: seals the destructive-op confirmation requestState. Hosted fleet: one shared value on every instance (else derived from MCP_AUTH_SECRET_KEY, else random per process)
 MCP_OAUTH_ISSUER=                            # Required if MCP_AUTH_MODE=oauth: authorization server issuer (https)
 MCP_JWKS_URI=                                # Required if MCP_AUTH_MODE=oauth: the issuer's JWKS endpoint (https)
 MCP_RESOURCE_URI=                            # Required if MCP_AUTH_MODE=oauth: this server's https resource URI (token audience)

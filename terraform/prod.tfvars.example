@@ -58,6 +58,10 @@ governance_token_mode = "warn" # off | warn | enforce — verify+log decision to
 # governance_token_secret_name = "governance-decision-token-secret"
 # Set only while a key rotation is in flight (referenced secret must have a version):
 # governance_token_secret_previous_name = "governance-decision-token-secret-previous"
+# Shared MRTR requestState sealing key (MCP_REQUEST_STATE_SECRET, >= 32 chars).
+# UNCOMMENT ONLY AFTER the prod secret holds a version. Provisioned out-of-band like the decision-token secret; it must already hold a
+# version before apply. Every instance needs the same value.
+# request_state_secret_name = "mcp-request-state-secret"
 # Stage proven contracts into enforce while the fleet mode stays warn, e.g.:
 # governance_token_enforce_contracts = ["meta.update_budget.v1", "google_ads.pause_entity.v1"]
 enable_gcs_persistence = false
