@@ -17,8 +17,18 @@ import {
   type Tracer,
 } from "@opentelemetry/api";
 import { Client } from "@modelcontextprotocol/client";
-import { McpServer, InMemoryTransport } from "@modelcontextprotocol/server";
-import { remoteParentFromMeta } from "../../src/utils/observability/trace-context.js";
+import {
+  McpServer,
+  InMemoryTransport,
+  createMcpHandler,
+  PROTOCOL_VERSION_META_KEY,
+  CLIENT_INFO_META_KEY,
+  CLIENT_CAPABILITIES_META_KEY,
+} from "@modelcontextprotocol/server";
+import {
+  remoteParentFromMeta,
+  remoteParentFromRequest,
+} from "../../src/utils/observability/trace-context.js";
 import { withSpan } from "../../src/utils/observability/telemetry.js";
 import { registerToolsFromDefinitions } from "../../src/utils/mcp/tool-handler-factory.js";
 import { extractZodShape } from "../../src/utils/mcp/zod-helpers.js";
@@ -170,5 +180,142 @@ describe("tools/call _meta trace context over the SDK", () => {
     const span = started.find((s) => s.name === "tool.linked")!;
     expect(span.parent?.traceId).toBe(TRACE_ID);
     expect(span.links).toEqual([httpSpan]);
+  });
+});
+
+describe("remoteParentFromRequest (#247)", () => {
+  const OTHER_TRACE_ID = "0af7651916cd43dd8448eb211c80319c";
+  const OTHER_SPAN_ID = "b7ad6b7169203331";
+  const headerOf = (h: Record<string, string>) => ({
+    get: (n: string) => h[n.toLowerCase()] ?? null,
+  });
+
+  it("falls back to the HTTP traceparent header when _meta has none", () => {
+    const parent = remoteParentFromRequest(
+      undefined,
+      headerOf({ traceparent: TRACEPARENT, tracestate: "v=1" })
+    );
+    expect(parent).toMatchObject({ traceId: TRACE_ID, spanId: SPAN_ID, isRemote: true });
+    expect(parent?.traceState?.get("v")).toBe("1");
+  });
+
+  it("prefers _meta over the header", () => {
+    const parent = remoteParentFromRequest(
+      { traceparent: `00-${OTHER_TRACE_ID}-${OTHER_SPAN_ID}-01` },
+      headerOf({ traceparent: TRACEPARENT })
+    );
+    expect(parent?.traceId).toBe(OTHER_TRACE_ID);
+  });
+
+  it("uses the header when the _meta traceparent is invalid", () => {
+    const parent = remoteParentFromRequest(
+      { traceparent: "garbage" },
+      headerOf({ traceparent: TRACEPARENT })
+    );
+    expect(parent?.traceId).toBe(TRACE_ID);
+  });
+
+  it("does not pair a header tracestate with a _meta traceparent", () => {
+    const parent = remoteParentFromRequest(
+      { traceparent: TRACEPARENT },
+      headerOf({ tracestate: "v=1" })
+    );
+    expect(parent?.traceState).toBeUndefined();
+  });
+
+  it("ignores an invalid header, missing headers, and never reads baggage", () => {
+    expect(remoteParentFromRequest(undefined, headerOf({ traceparent: "nope" }))).toBeUndefined();
+    expect(remoteParentFromRequest(undefined, undefined)).toBeUndefined();
+    const get = vi.fn(() => null);
+    remoteParentFromRequest(undefined, { get });
+    expect(get.mock.calls.map((c) => c[0])).not.toContain("baggage");
+  });
+});
+
+describe("HTTP traceparent header over the SDK handler (#247)", () => {
+  const OTHER = `00-${"c".repeat(32)}-${"d".repeat(16)}-01`;
+  let started: { name: string; parent: SpanContext | undefined }[];
+
+  beforeEach(() => {
+    started = [];
+    vi.spyOn(trace, "getTracer").mockReturnValue({
+      startSpan: (name: string, _o?: SpanOptions, ctx?: Context) => {
+        started.push({ name, parent: ctx ? trace.getSpanContext(ctx) : undefined });
+        return trace.wrapSpanContext(INVALID_SPAN_CONTEXT);
+      },
+    } as unknown as Tracer);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  async function call(headerTp?: string, metaTp?: string) {
+    const handler = createMcpHandler(() => {
+      const server = new McpServer({ name: "trace-probe", version: "0.0.0" });
+      registerToolsFromDefinitions({
+        server: server as never,
+        tools: [
+          {
+            name: "probe_trace",
+            description: "probe",
+            inputSchema: z.object({}),
+            untrustedContent: NO_UNTRUSTED_CONTENT,
+            logic: async () => ({ ok: true }),
+          },
+        ],
+        logger: pino({ level: "silent" }),
+        transformSchema: (s) => extractZodShape(s),
+        createRequestContext: ({ operation }) => ({
+          requestId: "req-1",
+          timestamp: new Date().toISOString(),
+          operation,
+        }),
+      });
+      return server;
+    });
+    const res = await handler.fetch(
+      new Request("http://localhost/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "mcp-method": "tools/call",
+          "mcp-name": "probe_trace",
+          "mcp-protocol-version": "2026-07-28",
+          ...(headerTp && { traceparent: headerTp }),
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "probe_trace",
+            arguments: {},
+            _meta: {
+              [PROTOCOL_VERSION_META_KEY]: "2026-07-28",
+              [CLIENT_INFO_META_KEY]: { name: "c", version: "0.0.0" },
+              [CLIENT_CAPABILITIES_META_KEY]: {},
+              ...(metaTp && { traceparent: metaTp }),
+            },
+          },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    await res.text();
+    return started.filter((s) => s.name === "tool.probe_trace");
+  }
+
+  it("parents the tool span on the header traceparent", async () => {
+    const spans = await call(TRACEPARENT);
+    expect(spans).toHaveLength(1);
+    expect(spans[0]!.parent).toMatchObject({ traceId: TRACE_ID, spanId: SPAN_ID, isRemote: true });
+  });
+
+  it("lets _meta win over the header", async () => {
+    const spans = await call(OTHER, TRACEPARENT);
+    expect(spans[0]!.parent?.traceId).toBe(TRACE_ID);
+  });
+
+  it("starts no remote parent when neither carries one", async () => {
+    expect((await call())[0]!.parent).toBeUndefined();
   });
 });

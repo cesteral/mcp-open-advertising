@@ -17,7 +17,7 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "../observability/telemetry.js";
-import { remoteParentFromMeta } from "../observability/trace-context.js";
+import { remoteParentFromRequest } from "../observability/trace-context.js";
 import { ErrorHandler, McpError } from "../mcp-errors.js";
 import { recordToolExecution } from "../observability/metrics.js";
 import {
@@ -421,6 +421,8 @@ interface ToolRegistrationConfig {
 interface ToolCallContext {
   /** Transport session id (undefined on stdio). */
   sessionId?: string;
+  /** HTTP request info; absent on stdio. Read for the `traceparent` header (#247). */
+  http?: { req?: { headers?: { get(name: string): string | null } } };
   mcpReq?: {
     /** JSON-RPC id of the `tools/call` being handled. */
     id?: string | number;
@@ -816,8 +818,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       const startTime = Date.now();
 
       // A client-supplied `traceparent` in the request's `_meta` parents the
-      // tool span, so the agent host's trace continues into ours (#247).
-      const spanOptions = { parent: remoteParentFromMeta(ctx?.mcpReq?._meta) };
+      // tool span, so the agent host's trace continues into ours; the HTTP
+      // `traceparent` header is the fallback, then a new root (#247).
+      const spanOptions = {
+        parent: remoteParentFromRequest(ctx?.mcpReq?._meta, ctx?.http?.req?.headers),
+      };
       const inToolSpan = <T>(fn: () => Promise<T>): Promise<T> =>
         withToolSpan(tool.name, (args as Record<string, unknown>) || {}, fn, spanOptions);
 
