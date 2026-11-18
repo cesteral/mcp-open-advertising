@@ -216,15 +216,17 @@
       "id": "amazon_dsp.api_base",
       "package": "amazon-dsp-mcp",
       "class": "unversioned-base-url",
-      "claim": "advertising-api.amazon.com is the current unversioned API base for this platform",
+      "claim": "advertising-api.amazon.com is the current unversioned API base for this platform. The Amazon Ads API overview, read 2026-11-18, lists https://advertising-api.amazon.com as the North America (NA) regional host, alongside advertising-api-eu.amazon.com (Europe) and advertising-api-fe.amazon.com (Far East); amazon-dsp-mcp defaults to the NA host and takes another region through AMAZON_DSP_API_BASE_URL.",
       "value": "https://advertising-api.amazon.com",
-      "sourceUrl": "https://advertising-api.amazon.com",
-      "status": "unverified",
-      "verifiedAt": null,
-      "verifyBy": "2026-12-15",
+      "sourceUrl": "https://advertising.amazon.com/API/docs/en-us/reference/api-overview",
+      "status": "verified",
+      "verifiedAt": "2026-11-18",
+      "verifyBy": "2027-05-17",
       "refreshDue": null,
       "loadBearing": false,
-      "codeRefs": ["packages/amazon-dsp-mcp/src/config/index.ts:26"]
+      "codeRefs": ["packages/amazon-dsp-mcp/src/config/index.ts:26"],
+      "note": "Read 2026-11-18 in a browser: the docs shell loads from m.media-amazon.com and fetches its page content (toc2.json, contracts.json) from d3a0d0y2hgofx6.cloudfront.net. The 'API endpoints' section of the overview page carries the regional host table.",
+      "verificationBasis": "vendor-docs"
     },
     {
       "id": "pinterest.api_base",
