@@ -169,10 +169,14 @@ service_resource_overrides = {
   "dbm-mcp" = {
     cpu_limit     = "2"
     memory_limit  = "1Gi"
-    max_instances = 10
+    max_instances = 1
   }
 }
 ```
+
+## Instance cap (max 1 per service)
+
+Every fleet service runs with `max_instances = 1` (`local.fleet_max_instances_cap` in `main.tf`, applied with `min()` so no tfvars value or override raises it). MCP session state is per instance, and a client that loses its session recovers by re-initializing, which could land on another instance, so scale-out breaks sessions. There is deliberately no Cloud Run `session_affinity` and no shared store. Remove the cap when stateless MCP ([#243](https://github.com/cesteral/cesteral-mcp-servers/issues/243)) ships. Rate limiting is per process, so this also keeps the per-process limits equal to the fleet limits.
 
 ## Important Notes
 

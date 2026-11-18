@@ -251,6 +251,15 @@ locals {
   # quietly drop (and so destroy) a live service.
   fleet_service_names = [for s in jsondecode(file("${path.module}/../registry.json")).servers : s.package if(contains(["experimental", "stable"], s.status) ? s.status == "stable" : tobool("registry.json: ${s.package} has unknown status \"${s.status}\"; use experimental or stable"))]
 
+  # Fleet-wide instance cap: max 1 per MCP service. Session state is held
+  # per instance and a client that loses its session recovers only by
+  # re-initializing, which can land on a different instance, so scale-out breaks
+  # sessions. Applied with min() so no tfvars value or per-service override can
+  # raise it. No Cloud Run session_affinity and no shared store, by decision.
+  # Exit condition: stateless MCP (cesteral/cesteral-mcp-servers#243) ships;
+  # then delete this cap and restore the former max of 10.
+  fleet_max_instances_cap = 1
+
   service_defaults = {
     min_instances = var.min_instances
     max_instances = var.max_instances
@@ -288,7 +297,7 @@ locals {
       image           = var.mcp_images[name]
       secret_env_vars = var.mcp_secret_env_vars[name]
       secret_names    = distinct(values({ for k, v in var.mcp_secret_env_vars[name] : k => v.secret_name }))
-      resources       = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, name, local.empty_service_override) : k => v if v != null })
+      resources       = merge(merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, name, local.empty_service_override) : k => v if v != null }), { max_instances = min(local.fleet_max_instances_cap, coalesce(try(lookup(var.service_resource_overrides, name, local.empty_service_override).max_instances, null), var.max_instances)) })
       auth_mode       = lookup(var.service_auth_mode_overrides, name, local.service_auth_defaults[name])
     }
   }

@@ -51,9 +51,9 @@ variable "min_instances" {
 }
 
 variable "max_instances" {
-  description = "Maximum number of Cloud Run instances"
+  description = "Maximum number of Cloud Run instances. Keep at 1: sessions are per instance until stateless MCP (#243) ships."
   type        = number
-  default     = 10
+  default     = 1
 }
 
 variable "request_timeout_seconds" {
