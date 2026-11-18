@@ -14,6 +14,7 @@
  * - Uses structural typing to avoid coupling the shared package to the MCP SDK
  */
 
+import { registerToolScopes } from "../../auth/tool-scopes.js";
 import type { Logger } from "pino";
 import { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "../observability/telemetry.js";
@@ -665,6 +666,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       `responseCharacterLimit must be a positive finite number, got ${responseCharacterLimit}`
     );
   }
+
+  // The transport enforces `mcp:read` / `mcp:write` per tool name (#246).
+  registerToolScopes(tools);
 
   const auditLogger = logger.child({ component: "audit" });
   const governanceEnv = opts.governanceEnv ?? process.env;

@@ -44,10 +44,18 @@ import {
   oauthProtectedResourceBody,
   warnIfProtectedResourceMetadataIncomplete,
   wwwAuthenticateChallenge,
+  insufficientScopeChallenge,
   SessionManager,
 } from "./mcp-transport-helpers.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../../auth/auth-strategy.js";
 import type { SessionServiceStoreLike } from "./mcp-transport-helpers.js";
+import {
+  SUPPORTED_SCOPES,
+  scopeEnforcementApplies,
+  scopeRequiredForToolName,
+  scopeSatisfies,
+  SCOPE_READ,
+} from "../../auth/tool-scopes.js";
 import { buildDeploymentIdentity } from "./deployment-identity.js";
 
 // ---------------------------------------------------------------------------
@@ -287,6 +295,53 @@ export function createMcpHttpTransport(
     return c.json(body, 401);
   };
 
+  // Scope step-up (#246, SEP-2350): a scoped jwt token calling a tool its
+  // scopes do not cover gets HTTP 403 + WWW-Authenticate, not an in-band tool
+  // error, so a client can re-authorize for the named scope.
+  const forbiddenScope = (c: Context, requiredScope: string): Response => {
+    c.header("WWW-Authenticate", insufficientScopeChallenge(requiredScope, c.req.url));
+    return c.json({ error: "insufficient_scope", scope: requiredScope }, 403);
+  };
+
+  /**
+   * The scope a request is missing, or undefined. Looks only at `tools/call`
+   * messages (single or batched); everything else needs no scope.
+   */
+  const missingScopeFor = async (c: Context): Promise<string | undefined> => {
+    let messages: unknown;
+    try {
+      messages = JSON.parse(await c.req.raw.clone().text());
+    } catch {
+      return undefined; // malformed JSON: the transport answers with a parse error
+    }
+    const calls = (Array.isArray(messages) ? messages : [messages]).filter(
+      (m): m is { method: string; params?: { name?: unknown } } =>
+        typeof m === "object" && m !== null && (m as { method?: unknown }).method === "tools/call"
+    );
+    if (calls.length === 0) return undefined;
+
+    // Re-verify this request's own token: a held session may predate a
+    // narrower token, and scopes ride the token, not the session.
+    let authInfo: AuthResult["authInfo"];
+    try {
+      authInfo = (await authStrategy.verify(extractHeadersMap(c.req.raw.headers))).authInfo;
+    } catch {
+      return undefined; // authentication failures are answered by the 401 paths
+    }
+    if (!scopeEnforcementApplies(authInfo)) return undefined;
+
+    const granted = authInfo.scopes ?? [];
+    let missing: string | undefined;
+    for (const call of calls) {
+      const name = typeof call.params?.name === "string" ? call.params.name : "";
+      const required = scopeRequiredForToolName(name);
+      if (scopeSatisfies(granted, required)) continue;
+      // Report the strongest missing scope so one step-up covers the batch.
+      if (missing === undefined || required !== SCOPE_READ) missing = required;
+    }
+    return missing;
+  };
+
   let pkg: { version: string };
   try {
     pkg = JSON.parse(readFileSync(platformConfig.packageJsonPath, "utf-8"));
@@ -423,7 +478,10 @@ export function createMcpHttpTransport(
         current_mode: config.mcpAuthMode,
         ...(extras?.supportedAuthModes ? { supported_modes: extras.supportedAuthModes } : {}),
         ...(config.mcpAuthMode === "jwt"
-          ? { oauth_protected_resource: "/.well-known/oauth-protected-resource" }
+          ? {
+              oauth_protected_resource: "/.well-known/oauth-protected-resource",
+              scopes_supported: [...SUPPORTED_SCOPES],
+            }
           : {}),
       },
       capabilities: {
@@ -670,6 +728,17 @@ export function createMcpHttpTransport(
         mcpServer = await platformConfig.createMcpServer(logger, sessionId, config.gcsBucketName);
         sessions.setServer(sessionId, mcpServer);
         logger.debug({ sessionId }, "Created new MCP server instance for session");
+      }
+
+      // Scope check runs here, after the session's MCP server (and so its tool
+      // registrations) exists, so a write tool is never mistaken for a read.
+      const missingScope = await missingScopeFor(c);
+      if (missingScope) {
+        logger.warn(
+          { sessionId, requiredScope: missingScope, event: "insufficient_scope" },
+          "tools/call rejected: token lacks required scope"
+        );
+        return forbiddenScope(c, missingScope);
       }
 
       // Use one connected transport per session

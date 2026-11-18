@@ -78,6 +78,7 @@ On-demand workflow guidance for complex multi-step operations. Located in `src/m
 
 Each server has its own `MCP_AUTH_MODE` enum; the canonical list is in each package's `src/config/index.ts`. Common rules:
 
+- `jwt` scopes `mcp:read` / `mcp:write` are enforced per `tools/call` with HTTP 403 `insufficient_scope`, only for a token that carries a `scope` claim (no claim = unrestricted); see [http-transport-security.md](docs/architecture/http-transport-security.md)
 - `jwt` mode requires `MCP_AUTH_SECRET_KEY` and exposes the RFC 9728 endpoint at `/.well-known/oauth-protected-resource`. The document lists `authorization_servers` only when `MCP_AUTHORIZATION_SERVERS` is set; without it the server logs `oauth_prm_incomplete` at startup, because an MCP OAuth client then has no way to find a token issuer (#246)
 - Every 401 from `/mcp` goes through the factory's `unauthorized()` helper, which adds `WWW-Authenticate` where the mode has a Bearer credential: `jwt` (with `resource_metadata`) and the `*-bearer` platform modes. The `*-headers` and `ttd-token` modes get no challenge, because their credentials travel in custom headers
 - SEP-2127 endpoint at `/.well-known/mcp/server-card.json` returns server discovery metadata (name, version, transports, auth modes, capabilities, the `untrusted_content` boundary, and the `operational` envelope — see [docs/architecture/server-card-operational-envelope.md](docs/architecture/server-card-operational-envelope.md)) on every server in every auth mode

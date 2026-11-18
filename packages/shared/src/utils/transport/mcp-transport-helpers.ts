@@ -9,6 +9,7 @@
  * in @cesteral/shared while each server keeps its Hono wiring.
  */
 
+import { SUPPORTED_SCOPES } from "../../auth/tool-scopes.js";
 import { randomBytes } from "crypto";
 import type { Logger } from "pino";
 import type { AuthResult, AuthStrategy } from "../../auth/auth-strategy.js";
@@ -278,7 +279,7 @@ export function oauthProtectedResourceBody(
     const body: Record<string, unknown> = {
       resource: resourceUri,
       bearer_methods_supported: ["header"],
-      scopes_supported: [],
+      scopes_supported: [...SUPPORTED_SCOPES],
     };
 
     // MCP authorization (2025-06-18 onward) requires `authorization_servers`
@@ -339,6 +340,19 @@ export function wwwAuthenticateChallenge(authMode: string, requestUrl: string): 
     return `Bearer realm="mcp"`;
   }
   return undefined;
+}
+
+/**
+ * RFC 6750 §3.1 challenge for a 403 `insufficient_scope` (SEP-2350 step-up):
+ * names the scope the call needs so a client can re-authorize for it. Carries
+ * `resource_metadata` (RFC 9728 §5.1) when the metadata URL is known.
+ */
+export function insufficientScopeChallenge(requiredScope: string, requestUrl: string): string {
+  const metadataUrl = protectedResourceMetadataUrl(requestUrl);
+  return (
+    `Bearer error="insufficient_scope", scope="${requiredScope}"` +
+    (metadataUrl ? `, resource_metadata="${metadataUrl}"` : "")
+  );
 }
 
 // ---------------------------------------------------------------------------
