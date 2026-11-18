@@ -28,6 +28,7 @@ import {
   type TransportFactoryAppConfig,
 } from "../../src/utils/transport/mcp-http-transport-factory.js";
 import { SessionServiceStore } from "../../src/utils/transport/session-store.js";
+import { registerToolScopes } from "../../src/auth/tool-scopes.js";
 import type { AuthStrategy, AuthResult } from "../../src/auth/auth-strategy.js";
 
 // 64 hex chars — matches the isValidSessionId pattern /^[a-f0-9-]{20,100}$/i.
@@ -36,8 +37,11 @@ const NEW_SID = "f0e1d2c3".repeat(8);
 
 const PROTO = "2025-06-18";
 
-/** Fake strategy: fingerprint is `fp-<x-fake-cred>`; absent cred → auth fails. */
-function fakeAuthStrategy(): AuthStrategy {
+/**
+ * Fake strategy: fingerprint is `fp-<x-fake-cred>`; absent cred → auth fails.
+ * `x-fake-scope` (space-delimited) becomes `authInfo.scopes`, like a jwt `scope` claim.
+ */
+function fakeAuthStrategy(authType = "fake"): AuthStrategy {
   const fp = (headers: Record<string, string | string[] | undefined>) => {
     const v = headers["x-fake-cred"];
     const cred = Array.isArray(v) ? v[0] : v;
@@ -48,7 +52,11 @@ function fakeAuthStrategy(): AuthStrategy {
       const f = fp(headers);
       if (!f) throw new Error("no credentials");
       return {
-        authInfo: { clientId: f.slice(3), authType: "fake" },
+        authInfo: {
+          clientId: f.slice(3),
+          authType,
+          scopes: headers["x-fake-scope"] ? String(headers["x-fake-scope"]).split(" ") : [],
+        },
         credentialFingerprint: f,
       };
     },
@@ -69,6 +77,7 @@ function makeHarness(
   opts: {
     maxSessions?: number;
     authMode?: string;
+    authType?: string;
     host?: string;
     nodeEnv?: string;
     mcpAllowedHosts?: string;
@@ -86,13 +95,22 @@ function makeHarness(
   });
 
   const platformConfig: TransportFactoryConfig = {
-    authStrategy: fakeAuthStrategy(),
-    corsAllowHeaders: ["Content-Type", "Mcp-Session-Id", "X-Fake-Cred"],
+    authStrategy: fakeAuthStrategy(opts.authType),
+    corsAllowHeaders: ["Content-Type", "Mcp-Session-Id", "X-Fake-Cred", "X-Fake-Scope"],
     authErrorHint: "provide X-Fake-Cred",
     sessionServiceStore: store as unknown as TransportFactoryConfig["sessionServiceStore"],
     createSessionForAuth:
       createSessionForAuth as unknown as TransportFactoryConfig["createSessionForAuth"],
-    createMcpServer: async () => ({ connect: async () => {}, close: async () => {} }),
+    createMcpServer: async () => ({
+      // Answers every request with an empty result, like a server with no handlers.
+      connect: async (transport) => {
+        transport.onmessage = (message) => {
+          const id = (message as { id?: number | string }).id;
+          if (id !== undefined) void transport.send({ jsonrpc: "2.0", id, result: {} });
+        };
+      },
+      close: async () => {},
+    }),
     packageJsonPath: "nonexistent-package.json", // read fails → version "unknown" (harmless)
   };
 
@@ -357,6 +375,126 @@ describe("createMcpHttpTransport — auth & session binding", () => {
 
       expect(res.status).not.toBe(503);
     });
+  });
+});
+
+describe("createMcpHttpTransport — scope enforcement (#246)", () => {
+  let active: Harness | undefined;
+  afterEach(async () => {
+    await active?.shutdown();
+    active = undefined;
+  });
+
+  const callTool = (
+    app: Harness["app"],
+    name: string,
+    headers: Record<string, string>
+  ): Promise<Response> =>
+    app.request("/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": PROTO,
+        ...headers,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name, arguments: {} },
+      }),
+    });
+
+  const setup = () => {
+    registerToolScopes([
+      { name: "scopetest_get_entity", annotations: { readOnlyHint: true } },
+      { name: "scopetest_update_entity", annotations: { readOnlyHint: false } },
+      { name: "scopetest_unannotated" },
+    ]);
+    active = makeHarness({ authMode: "jwt", authType: "jwt" });
+    return active.app;
+  };
+
+  it("returns 403 insufficient_scope with the exact challenge when a read token calls a write tool", async () => {
+    const app = setup();
+    const res = await callTool(app, "scopetest_update_entity", {
+      "x-fake-cred": "alice",
+      "x-fake-scope": "mcp:read",
+    });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("www-authenticate")).toBe(
+      'Bearer error="insufficient_scope", scope="mcp:write", resource_metadata="http://localhost/.well-known/oauth-protected-resource"'
+    );
+    expect(await res.json()).toEqual({ error: "insufficient_scope", scope: "mcp:write" });
+  });
+
+  it("treats a tool with no readOnlyHint as a write (fail closed)", async () => {
+    const app = setup();
+    const res = await callTool(app, "scopetest_unannotated", {
+      "x-fake-cred": "alice",
+      "x-fake-scope": "mcp:read",
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("lets a read-scoped token call a read tool", async () => {
+    const app = setup();
+    const res = await callTool(app, "scopetest_get_entity", {
+      "x-fake-cred": "alice",
+      "x-fake-scope": "mcp:read",
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("lets a write-scoped token call both read and write tools", async () => {
+    const app = setup();
+    const headers = { "x-fake-cred": "alice", "x-fake-scope": "mcp:write" };
+    expect((await callTool(app, "scopetest_update_entity", headers)).status).toBe(200);
+    expect((await callTool(app, "scopetest_get_entity", headers)).status).toBe(200);
+  });
+
+  it("403s a held session too: scopes ride the request's token, not the session", async () => {
+    const app = setup();
+    // Session created by a full-access token, then reused with a read-only one.
+    await post(app, { "x-fake-cred": "alice" });
+    const sid = active!.createSessionForAuth.mock.calls[0]![1] as string;
+    const res = await callTool(app, "scopetest_update_entity", {
+      "x-fake-cred": "alice",
+      "x-fake-scope": "mcp:read",
+      "mcp-session-id": sid,
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("leaves a token with no scope claim unrestricted", async () => {
+    const app = setup();
+    const res = await callTool(app, "scopetest_update_entity", { "x-fake-cred": "alice" });
+    expect(res.status).toBe(200);
+  });
+
+  it("does not interpret scopes outside jwt mode (e.g. Google API scopes)", async () => {
+    registerToolScopes([{ name: "scopetest_update_entity", annotations: { readOnlyHint: false } }]);
+    active = makeHarness({ authMode: "google-headers", authType: "google-service_account" });
+    const res = await callTool(active.app, "scopetest_update_entity", {
+      "x-fake-cred": "alice",
+      "x-fake-scope": "https://www.googleapis.com/auth/display-video",
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("only checks tools/call: initialize and tools/list need no scope", async () => {
+    const app = setup();
+    const res = await post(app, { "x-fake-cred": "alice", "x-fake-scope": "mcp:read" });
+    expect(res.status).not.toBe(403);
+  });
+
+  it("publishes the real scope names in the protected resource metadata and server card", async () => {
+    const app = setup();
+    const prm = await app.request("/.well-known/oauth-protected-resource");
+    expect((await prm.json()).scopes_supported).toEqual(["mcp:read", "mcp:write"]);
+    const card = await app.request("/.well-known/mcp/server-card.json");
+    expect((await card.json()).auth.scopes_supported).toEqual(["mcp:read", "mcp:write"]);
   });
 });
 

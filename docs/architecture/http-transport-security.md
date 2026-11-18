@@ -1,4 +1,4 @@
-# HTTP Transport: DNS-Rebinding Protection and Message Routing
+# HTTP Transport: DNS-Rebinding Protection, Message Routing and OAuth Scopes
 
 Reference for this subsystem. [CLAUDE.md](../../CLAUDE.md) keeps a short summary and links here.
 
@@ -9,3 +9,15 @@ Added in #241 (`createDnsRebindingPolicy` in `mcp-transport-helpers.ts`), keyed 
 ## Server→client messages
 
 Server→client messages sent while handling a request (elicitation, `notifications/message`) must carry that request's id (SDK v2: `ctx.mcpReq.log` / `ctx.mcpReq.notify` are request-scoped; `ctx.mcpReq.elicitInput` is not and needs `{ relatedRequestId: ctx.mcpReq.id }`), so the SDK writes them on the request's POST response stream. Without it they go to the standalone GET stream, which this fleet answers with 405, and a destructive-op confirmation never reaches the client (#241, `tool-handler-factory.ts`; wire test `related-request-wire.test.ts`)
+
+## OAuth scopes and step-up (#246)
+
+Two scopes, published as `scopes_supported` in `/.well-known/oauth-protected-resource` and in the server card's `auth` block (jwt mode): `mcp:read` (tools annotated `readOnlyHint: true`) and `mcp:write` (every other tool; implies `mcp:read`). Defined in `packages/shared/src/auth/tool-scopes.ts`. A tool with no `readOnlyHint` counts as a write (fail closed).
+
+**Enforcement** is in the transport factory, on `POST /mcp` `tools/call` (single or batched), after the session's MCP server exists so its tools are registered (`registerToolsFromDefinitions` records each tool's required scope). A scoped token missing the scope gets **HTTP 403** with `WWW-Authenticate: Bearer error="insufficient_scope", scope="mcp:write", resource_metadata="<PRM URL>"` (RFC 6750 §3.1, SEP-2350), not an in-band `isError` result, so a client can step up. The token is re-verified per request: scopes ride the token, not the session. `initialize`, `tools/list`, prompts and resources need no scope.
+
+**When it applies:** only to a `jwt`-mode token that carries a non-empty `scope` claim. A token with no `scope` claim is an unrestricted pre-shared token and keeps full access (it was never narrowed, so there is nothing to step up to). Platform bearer / header modes and `none` never trigger it: they carry no scopes of ours, and `google-headers` fills `authInfo.scopes` with Google API scopes. A scoped token holding neither `mcp:` scope (e.g. only `openid`) is refused on every `tools/call`.
+
+**Decision: A (real OAuth AS) vs B (jwt as pre-shared token).** Recorded as it stands, not changed here. `jwt` remains HS256 shared-secret tokens issued out of band, so today it is mode B in substance. Setting `MCP_AUTHORIZATION_SERVERS` publishes `authorization_servers` in the PRM document and moves it towards A, but the server still verifies HS256 tokens, not an authorization server's JWKS tokens with `aud` = `MCP_RESOURCE_URI`. Option A proper (verify JWKS-signed tokens, keep HS256 as service-to-service) is not done. Until then the PRM document and `scopes_supported` are honest only when `MCP_AUTHORIZATION_SERVERS` names an AS that mints HS256-compatible tokens with these scopes; without it the server logs `oauth_prm_incomplete` at startup.
+
+**Why `allowed_advertisers` violations stay in-band.** They are data-scoped, not capability-scoped: the token is valid and the tool is permitted, but this particular `advertiserId` argument is outside the token's allow-list (`tool-handler-factory.ts`). Re-authorizing for a broader OAuth scope cannot fix that, so a step-up challenge would invite a pointless loop; the same tool with a different argument succeeds. The failure belongs in the tool result where the agent can read it and retry with a permitted advertiser. Scope failures are about which tools a token may call at all, which a client can fix by re-authorizing, hence 403.
