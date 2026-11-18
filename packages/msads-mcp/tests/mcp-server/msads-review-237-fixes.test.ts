@@ -1,8 +1,8 @@
 // Fleet review 2026-09 (#237), msads-mcp findings fixed in the triage pass.
 // Every expectation cites the MicrosoftDocs/Advertising v13 page it rests on.
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterAll } from "vitest";
 import pino from "pino";
-import type { RateLimiter } from "@cesteral/shared";
+import { createPlatformRateLimiter } from "@cesteral/shared";
 import { createSessionServices } from "../../src/services/session-services.js";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
@@ -13,7 +13,8 @@ import { createEntityTool } from "../../src/mcp-server/tools/definitions/create-
 import { entityExampleAllResource } from "../../src/mcp-server/resources/definitions/entity-examples.resource.js";
 
 const logger = pino({ level: "silent" });
-const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+const rateLimiter = createPlatformRateLimiter("msads", 1000);
+afterAll(() => rateLimiter.destroy());
 
 function mockClient(response: unknown = {}): MsAdsHttpClient {
   return {

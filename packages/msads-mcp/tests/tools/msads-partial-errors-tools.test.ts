@@ -30,7 +30,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 import { McpError, EffectResultSchema } from "@cesteral/shared";
-import type { RateLimiter } from "@cesteral/shared";
+import { createPlatformRateLimiter } from "@cesteral/shared";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
 import { createEntityLogic } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
@@ -81,7 +81,7 @@ beforeEach(() => {
     put: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue({}),
   };
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+  const rateLimiter = createPlatformRateLimiter("msads", 1000); // real limiter; unref'd timer, ample capacity
   const msadsService = new MsAdsService(
     rateLimiter,
     http as unknown as MsAdsHttpClient,

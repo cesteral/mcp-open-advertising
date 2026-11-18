@@ -21,7 +21,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
-import { extractZodShape, type RateLimiter } from "@cesteral/shared";
+import { extractZodShape, createPlatformRateLimiter } from "@cesteral/shared";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
 import {
@@ -58,7 +58,7 @@ beforeEach(() => {
   );
   const customer = { post: vi.fn().mockResolvedValue({ Account: { CurrencyCode: "EUR" } }) };
   const msadsService = new MsAdsService(
-    { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter,
+    createPlatformRateLimiter("msads", 1000),
     http as unknown as MsAdsHttpClient,
     pino({ level: "silent" }),
     { userId: "u1", customerId: "c1" },
