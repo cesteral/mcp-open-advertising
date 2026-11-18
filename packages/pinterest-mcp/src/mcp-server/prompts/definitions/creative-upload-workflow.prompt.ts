@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const pinterestCreativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "pinterest_creative_upload_workflow",
   description:
     "Step-by-step guide for turning a video or image into a Pinterest ad: upload the video, create the Pin, then create the ad that promotes it by pin_id. Image Pins reference a hosted image URL and need no upload.",
   arguments: [

@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const dv360CreativeSetupWorkflowPrompt: Prompt = {
-  name: "creative_setup_workflow",
+  name: "dv360_creative_upload_workflow",
   description: "Step-by-step guide for creating DV360 display and video creatives",
   arguments: [
     {

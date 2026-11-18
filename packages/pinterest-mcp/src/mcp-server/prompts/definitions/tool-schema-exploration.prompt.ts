@@ -90,7 +90,7 @@ Fetch these resources for detailed schema information:
 | Research audiences & build targeting | \`pinterest_targeting_discovery_workflow\` |
 | Update entities safely | \`pinterest_entity_update_workflow\` |
 | Duplicate a campaign | \`pinterest_entity_duplication_workflow\` |
-| Upload a video, create a Pin, create the ad | \`creative_upload_workflow\` |
+| Upload a video, create a Pin, create the ad | \`pinterest_creative_upload_workflow\` |
 | Bulk create/update/status/bids | \`pinterest_bulk_operations_workflow\` |
 | Async reporting & breakdowns | \`pinterest_reporting_workflow\` |
 | Troubleshoot entity issues | \`pinterest_troubleshoot_entity\` |

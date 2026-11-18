@@ -9,7 +9,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * Portable execution workflow for safe DV360 updates.
  */
 export const entityUpdateExecutionPrompt: Prompt = {
-  name: "entity_update_execution_workflow",
+  name: "dv360_entity_update_execution_workflow",
   description:
     "Step-by-step execution workflow for safe DV360 entity updates using schema-first validation and updateMask discipline.",
   arguments: [
