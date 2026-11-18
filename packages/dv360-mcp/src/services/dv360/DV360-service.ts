@@ -478,7 +478,7 @@ export class DV360Service {
         );
       }
 
-      const scopeQs = entityScopeQueryParams(ids, config.queryParamIds);
+      const scopeQs = entityScopeQueryParams(ids, config.getQueryParamIds);
       const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
 
       // Rate limit by owner: the advertiser, else the partner (rate-limit-keys.ts)

@@ -77,7 +77,10 @@ export function addIdValidationIssues(
   const { entityType, input, data, operation, requireEntityId, path = [] } = params;
   const config = getEntityConfigDynamic(entityType);
   const entityIdField = `${entityType}Id`;
-  const requiredIds = [...config.parentIds, ...(requireEntityId ? [entityIdField] : [])];
+  // Create needs the parents (a path segment or a body field); the item
+  // methods may not (advertisers.get / patch / delete take only the id, #341).
+  const parentIds = operation === "create" ? config.parentIds : config.itemParentIds;
+  const requiredIds = [...parentIds, ...(requireEntityId ? [entityIdField] : [])];
   const missing = requiredIds.filter((idField) => !resolveIdValue(idField, input, data));
 
   if (missing.length === 0) {
