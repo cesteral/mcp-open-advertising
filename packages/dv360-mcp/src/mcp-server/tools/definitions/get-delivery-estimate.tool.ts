@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { buildSnapshotParents } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_get_delivery_estimate";
 const TOOL_TITLE = "Get DV360 Delivery Estimate";
@@ -30,6 +31,18 @@ export const GetDeliveryEstimateOutputSchema = z
     estimate: z
       .record(z.string(), z.any())
       .describe("Delivery estimate data including targeting and configuration"),
+    parents: z
+      .array(
+        z.object({
+          kind: z.enum(["campaign", "insertion_order"]),
+          id: z.string(),
+          name: z.string().optional(),
+        })
+      )
+      .optional()
+      .describe(
+        "The line item's campaign and insertion order, from its campaignId / insertionOrderId. Absent when the line item names neither (unknown, not none)."
+      ),
     timestamp: z.string().datetime(),
   })
   .describe("Delivery estimate result");
@@ -50,8 +63,15 @@ export async function getDeliveryEstimateLogic(
     context
   );
 
+  const lineItem = (estimate.lineItem ?? {}) as Record<string, unknown>;
+  const parents = buildSnapshotParents([
+    { kind: "campaign", id: lineItem.campaignId },
+    { kind: "insertion_order", id: lineItem.insertionOrderId },
+  ]);
+
   return {
     estimate,
+    ...(parents ? { parents } : {}),
     timestamp: new Date().toISOString(),
   };
 }
