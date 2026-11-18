@@ -82,14 +82,14 @@ describe("TtdDirectTokenAuthAdapter", () => {
     expect(a2.quotaClient).toBe(a.quotaClient);
   });
 
-  it("validates by issuing a GraphQL query and memoizes the result", async () => {
-    fetchWithTimeoutMock.mockResolvedValueOnce(okResponse());
+  it("rechecks credentials on each explicit validate call", async () => {
+    fetchWithTimeoutMock.mockResolvedValue(okResponse());
     const adapter = new TtdDirectTokenAuthAdapter("direct-token-123", TEST_GRAPHQL_URL);
 
     await adapter.validate();
     await adapter.validate();
 
-    expect(fetchWithTimeoutMock).toHaveBeenCalledTimes(1);
+    expect(fetchWithTimeoutMock).toHaveBeenCalledTimes(2);
     const [url, , , init] = fetchWithTimeoutMock.mock.calls[0];
     expect(url).toBe(TEST_GRAPHQL_URL);
     const headers = (init as RequestInit).headers as Record<string, string>;

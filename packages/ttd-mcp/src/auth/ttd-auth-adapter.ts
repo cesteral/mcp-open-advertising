@@ -55,12 +55,11 @@ export function ttdQuotaClient(token: string): string {
  * Direct token adapter — accepts a pre-existing TTD API token and returns it
  * as-is without performing any token exchange.
  *
- * Validates the token on first use by issuing a minimal GraphQL query
+ * Validates the token when requested by issuing a minimal GraphQL query
  * (`{ __typename }`) so invalid tokens fail fast at session creation rather
- * than on first tool call. Result is memoized.
+ * than on first tool call. The shared transport bounds revalidation age.
  */
 export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
-  private validated = false;
   readonly quotaClient: string;
 
   constructor(
@@ -75,10 +74,6 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
     // Fast-path structural checks before the network call.
     if (!this.token || this.token.length === 0) {
       throw new McpError(
@@ -146,8 +141,6 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
       }
       throw new McpError(JsonRpcErrorCode.InternalError, `TTD token validation failed: ${message}`);
     }
-
-    this.validated = true;
   }
 }
 

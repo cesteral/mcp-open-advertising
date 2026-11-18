@@ -43,6 +43,7 @@ export type SessionDeleteHook = (sessionId: string) => void | Promise<void>;
 export class SessionServiceStore<T> {
   private store = new Map<string, T>();
   private fingerprints = new Map<string, string>();
+  private validatedAt = new Map<string, number>();
   private authContexts = new Map<string, SessionAuthContext>();
   private readonly maxSessions: number;
   private readonly deleteHooks: Set<SessionDeleteHook> = new Set();
@@ -68,6 +69,7 @@ export class SessionServiceStore<T> {
 
   set(sessionId: string, services: T, credentialFingerprint?: string): void {
     this.store.set(sessionId, services);
+    this.validatedAt.set(sessionId, Date.now());
     if (credentialFingerprint) {
       this.fingerprints.set(sessionId, credentialFingerprint);
     }
@@ -83,6 +85,15 @@ export class SessionServiceStore<T> {
 
   getAuthContext(sessionId: string): SessionAuthContext | undefined {
     return this.authContexts.get(sessionId);
+  }
+
+  /** Absolute time of the last full credential verification; activity never changes it. */
+  getValidatedAt(sessionId: string): number | undefined {
+    return this.validatedAt.get(sessionId);
+  }
+
+  setValidatedAt(sessionId: string, timestamp: number): void {
+    if (this.store.has(sessionId)) this.validatedAt.set(sessionId, timestamp);
   }
 
   getFingerprint(sessionId: string): string | undefined {
@@ -125,6 +136,7 @@ export class SessionServiceStore<T> {
     this.store.delete(sessionId);
     this.fingerprints.delete(sessionId);
     this.authContexts.delete(sessionId);
+    this.validatedAt.delete(sessionId);
 
     if (!wasHeld) return;
 

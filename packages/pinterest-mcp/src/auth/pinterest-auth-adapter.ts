@@ -106,10 +106,9 @@ async function fetchPinterestUser(token: string, baseUrl: string): Promise<Pinte
 
 /**
  * Simple access token adapter — holds a pre-generated Pinterest access token.
- * Validates the token on first use by calling GET /v5/user_account.
+ * Validates the token when requested by calling GET /v5/user_account.
  */
 export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
-  private validated = false;
   private _userId = "";
   private _userAccountId = "";
 
@@ -136,11 +135,9 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     const user = await fetchPinterestUser(this.accessToken, this.baseUrl);
     this._userId = user.username;
     this._userAccountId = user.id;
-    this.validated = true;
   }
 }
 

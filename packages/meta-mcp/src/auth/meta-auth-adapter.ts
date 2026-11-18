@@ -78,10 +78,9 @@ async function fetchMetaUserId(token: string, baseUrl: string): Promise<string> 
 
 /**
  * Simple access token adapter — holds a pre-generated Meta access token.
- * Validates the token on first use by calling GET /me.
+ * Validates the token when requested by calling GET /me.
  */
 export class MetaAccessTokenAdapter implements MetaAuthAdapter {
-  private validated = false;
   private _userId = "";
 
   constructor(
@@ -103,9 +102,7 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     this._userId = await fetchMetaUserId(this.accessToken, this.baseUrl);
-    this.validated = true;
   }
 }
 

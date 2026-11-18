@@ -345,7 +345,13 @@ export function wwwAuthenticateChallenge(authMode: string, requestUrl: string): 
 // Session reuse validation
 // ---------------------------------------------------------------------------
 
+/** Maximum age of full credential verification, independent of idle timeout. */
+export const SESSION_REVALIDATION_MAX_AGE_MS = 5 * 60 * 1000;
+
 interface SessionFingerprintStore {
+  // A custom store without timestamps is revalidated on every reuse.
+  getValidatedAt?(sessionId: string): number | undefined;
+  setValidatedAt?(sessionId: string, timestamp: number): void;
   validateFingerprint(sessionId: string, fingerprint: string): boolean;
   getFingerprint(sessionId: string): string | undefined;
   /**
@@ -366,7 +372,7 @@ export interface SessionReuseResult {
 
 /**
  * Validate that a reused session belongs to the same credential holder.
- * Prefers lightweight fingerprint extraction to avoid expensive network auth calls.
+ * Uses fingerprints between full verifications, with a non-sliding five-minute age.
  */
 export async function validateSessionReuse(
   authStrategy: AuthStrategy,
@@ -433,6 +439,35 @@ export async function validateSessionReuse(
       requestFingerprint,
     };
   }
+
+  const now = Date.now();
+  const validatedAt = sessionServiceStore.getValidatedAt?.(sessionId);
+  if (
+    !authResult &&
+    sessionServiceStore.get(sessionId) !== undefined &&
+    (validatedAt === undefined ||
+      now < validatedAt ||
+      now - validatedAt >= SESSION_REVALIDATION_MAX_AGE_MS)
+  ) {
+    try {
+      authResult = await authStrategy.verify(headers);
+      // Recheck the verified fingerprint as well as the lightweight extraction.
+      // A credentialed session cannot accept a verification that drops its binding.
+      if (authResult.credentialFingerprint !== requestFingerprint) {
+        return {
+          valid: false,
+          reason: "Verified credential fingerprint mismatch",
+          requestFingerprint,
+        };
+      }
+    } catch (error: unknown) {
+      return {
+        valid: false,
+        reason: `Authentication failed on session revalidation: ${error instanceof Error ? error.message : "unknown error"}`,
+      };
+    }
+  }
+  if (authResult) sessionServiceStore.setValidatedAt?.(sessionId, now);
 
   return {
     valid: true,

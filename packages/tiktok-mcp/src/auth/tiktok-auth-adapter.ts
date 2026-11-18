@@ -117,10 +117,9 @@ async function fetchTikTokUserId(
 
 /**
  * Simple access token adapter — holds a pre-generated TikTok access token.
- * Validates the token on first use by calling GET /open_api/{version}/user/info/.
+ * Validates the token when requested by calling GET /open_api/{version}/user/info/.
  */
 export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
-  private validated = false;
   private _userId = "";
   readonly quotaClient: string;
 
@@ -146,9 +145,7 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     this._userId = await fetchTikTokUserId(this.accessToken, this.baseUrl, this.apiVersion);
-    this.validated = true;
   }
 }
 
