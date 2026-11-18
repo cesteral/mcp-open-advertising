@@ -11,21 +11,43 @@ describe("executeBulkConcurrent", () => {
     expect(results.every((r) => r.success)).toBe(true);
   });
 
-  it("preserves input order when batches resolve out-of-order", async () => {
-    const order: number[] = [];
-    const results = await executeBulkConcurrent(
-      [50, 10, 30, 0, 20],
-      async (delay) => {
-        await new Promise((r) => setTimeout(r, delay));
-        order.push(delay);
-        return delay;
+  it("preserves input order when items settle out of order", async () => {
+    // Each item's completion is driven by an explicit resolver, not a timer, so
+    // the settle order below is exact and cannot depend on scheduler timing (#353).
+    const items = ["a", "b", "c", "d", "e"];
+    const resolvers = new Map<string, (value: string) => void>();
+    const started: string[] = [];
+    const settled: string[] = [];
+
+    const run = executeBulkConcurrent(
+      items,
+      (item) => {
+        started.push(item);
+        return new Promise<string>((resolve) => {
+          resolvers.set(item, resolve);
+        }).then((value) => {
+          settled.push(item);
+          return value;
+        });
       },
       { concurrency: 5 }
     );
-    // Items resolve in delay-order (0 first, 50 last) but results stay in input order
-    expect(order[0]).toBe(0);
-    expect(order[order.length - 1]).toBe(50);
-    expect(results.map((r) => r.entity)).toEqual([50, 10, 30, 0, 20]);
+
+    // All five start together (one batch), before any of them settles.
+    expect(started).toEqual(items);
+
+    // Settle in an order that differs from the input order, last input first.
+    const settleOrder = ["e", "b", "d", "a", "c"];
+    for (const item of settleOrder) {
+      resolvers.get(item)!(item.toUpperCase());
+      // Let the item's continuation run before the next one settles.
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+
+    const results = await run;
+    expect(settled).toEqual(settleOrder);
+    expect(results.map((r) => r.entity)).toEqual(["A", "B", "C", "D", "E"]);
   });
 
   it("records per-item failure without aborting the batch", async () => {
