@@ -138,13 +138,18 @@ function convertObjectToZod(
   depth: number
 ): string {
   if (!schema.properties || Object.keys(schema.properties).length === 0) {
-    // Empty object or object with additionalProperties
+    // Empty object or object with additionalProperties.
+    //
+    // Zod 4's z.record takes a key schema: the Zod 3 one-argument z.record(V)
+    // fails typecheck (TS2554), so emitting it reverted #368's hand edits on
+    // every regeneration and broke the build (#377). JSON object keys are
+    // strings, so the key schema is always z.string().
     if (schema.additionalProperties) {
       if (typeof schema.additionalProperties === "boolean") {
-        return schema.additionalProperties ? "z.record(z.unknown())" : "z.object({})";
+        return schema.additionalProperties ? "z.record(z.string(), z.unknown())" : "z.object({})";
       } else {
         const valueSchema = convertSchemaToZod(schema.additionalProperties, allSchemas, depth + 1);
-        return `z.record(${valueSchema})`;
+        return `z.record(z.string(), ${valueSchema})`;
       }
     }
     return "z.object({})";
