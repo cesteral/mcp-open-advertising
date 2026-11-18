@@ -56,4 +56,4 @@ No tool takes a session-scoped argument today, so no new handle had to be minted
 - `serveStdio` for stdio (13 `server.ts` files), `subscriptions/listen`.
 - Modern-path rejections made before routing (DNS-rebinding 403, body-size 413 from Hono) are still plain JSON.
 - `registry.json` `protocol_version` stays `2025-11-25` (the card's `mcp_protocol_versions` now lists the modern revision too).
-- Elicitation reading `ctx.mcpReq.envelope` (#244), Mcp-Method/Mcp-Name header routing (#248).
+- Mcp-Method/Mcp-Name header routing (#248). Elicitation reads `ctx.mcpReq.envelope` and runs as a Multi Round-Trip Request (#244, [confirmation-mrtr.md](confirmation-mrtr.md)).

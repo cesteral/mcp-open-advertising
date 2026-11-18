@@ -43,7 +43,9 @@ const READ_TOOL = {
 
 function fakeFirestore(): () => Promise<FirestoreLike> {
   return async () => ({
-    collection: () => ({ doc: () => ({ create: async () => undefined }) }),
+    collection: () => ({
+      doc: () => ({ create: async () => undefined, delete: async () => undefined }),
+    }),
   });
 }
 
