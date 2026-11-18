@@ -268,11 +268,16 @@ function protectedResourceMetadataUrl(requestUrl: string): string | undefined {
   return undefined;
 }
 
+/** Modes whose credential is an `Authorization: Bearer` JWT and that serve RFC 9728 metadata. */
+export function servesProtectedResourceMetadata(authMode: string): boolean {
+  return authMode === "jwt" || authMode === "oauth";
+}
+
 export function oauthProtectedResourceBody(
   authMode: string,
   requestUrl: string
 ): { body: Record<string, unknown>; status: number } {
-  if (authMode === "jwt") {
+  if (servesProtectedResourceMetadata(authMode)) {
     const resourceUri =
       process.env.MCP_RESOURCE_URI || requestUrl.replace(PROTECTED_RESOURCE_METADATA_PATH, "");
 
@@ -288,6 +293,11 @@ export function oauthProtectedResourceBody(
     // and `warnIfProtectedResourceMetadataIncomplete` flags it at startup
     // (#246).
     const authorizationServers = parseAuthorizationServers(process.env.MCP_AUTHORIZATION_SERVERS);
+    // In oauth mode the verified issuer is itself the authorization server
+    // clients must use, so it is the default when none is listed explicitly.
+    if (authMode === "oauth" && authorizationServers.length === 0) {
+      authorizationServers.push(...parseAuthorizationServers(process.env.MCP_OAUTH_ISSUER));
+    }
     if (authorizationServers.length > 0) {
       body.authorization_servers = authorizationServers;
     }
@@ -330,7 +340,7 @@ export function warnIfProtectedResourceMetadataIncomplete(authMode: string, logg
  * MCP clients use in preference to probing the well-known URL.
  */
 export function wwwAuthenticateChallenge(authMode: string, requestUrl: string): string | undefined {
-  if (authMode === "jwt") {
+  if (servesProtectedResourceMetadata(authMode)) {
     const metadataUrl = protectedResourceMetadataUrl(requestUrl);
     return metadataUrl
       ? `Bearer realm="mcp", resource_metadata="${metadataUrl}"`

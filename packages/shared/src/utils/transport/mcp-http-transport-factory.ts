@@ -45,6 +45,7 @@ import {
   warnIfProtectedResourceMetadataIncomplete,
   wwwAuthenticateChallenge,
   insufficientScopeChallenge,
+  servesProtectedResourceMetadata,
   SessionManager,
 } from "./mcp-transport-helpers.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../../auth/auth-strategy.js";
@@ -489,7 +490,7 @@ export function createMcpHttpTransport(
       auth: {
         current_mode: config.mcpAuthMode,
         ...(extras?.supportedAuthModes ? { supported_modes: extras.supportedAuthModes } : {}),
-        ...(config.mcpAuthMode === "jwt"
+        ...(servesProtectedResourceMetadata(config.mcpAuthMode)
           ? {
               oauth_protected_resource: "/.well-known/oauth-protected-resource",
               scopes_supported: [...SUPPORTED_SCOPES],

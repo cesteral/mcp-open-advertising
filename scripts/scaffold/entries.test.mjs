@@ -63,7 +63,7 @@ describe("scaffold: names, registry entry, platform facts", () => {
       platform_key: "foo_bar",
       type: "management",
       governed: true,
-      auth: { modes: ["foo_bar-bearer", "jwt", "none"] },
+      auth: { modes: ["foo_bar-bearer", "jwt", "oauth", "none"] },
       untrustedContent: { pathReporting: "per-response" },
     });
     expect(entry.operational.terminalOperations.map((o) => o.tool)).toEqual([

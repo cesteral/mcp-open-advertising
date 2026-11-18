@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("sa360-mcp"),
 
   // Auth — SA360-specific modes
-  mcpAuthMode: z.enum(["sa360-headers", "jwt", "none"]).default("sa360-headers"),
+  mcpAuthMode: z.enum(["sa360-headers", "jwt", "oauth", "none"]).default("sa360-headers"),
 
   // SA360 API Configuration
   sa360ApiBaseUrl: z.string().url().default("https://searchads360.googleapis.com/v0"),

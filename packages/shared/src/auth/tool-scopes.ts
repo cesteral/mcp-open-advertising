@@ -51,7 +51,8 @@ export function scopeRequiredForToolName(name: string): string {
 /**
  * Whether scope checks apply to this caller. The rule, in one place:
  *
- * - only a `jwt`-mode bearer token — the one credential whose `scope` claim
+ * - an `oauth`-mode token, always (no scope claim = no scopes = no access);
+ * - a `jwt`-mode bearer token — the one credential whose `scope` claim
  *   this server issues or interprets. Platform bearer / header modes and
  *   `none` carry no scopes of ours (`google-headers` fills `authInfo.scopes`
  *   with Google API scopes, which mean nothing here);
@@ -63,6 +64,9 @@ export function scopeEnforcementApplies(authInfo: {
   authType: string;
   scopes?: string[];
 }): boolean {
+  // `oauth` is fail-closed: a token with no scope claim holds no scopes and
+  // cannot call anything, because an authorization server narrows by scope.
+  if (authInfo.authType === "oauth") return true;
   return authInfo.authType === "jwt" && (authInfo.scopes?.length ?? 0) > 0;
 }
 

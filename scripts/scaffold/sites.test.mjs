@@ -64,7 +64,7 @@ describe("scaffold: fleet-list inserters", () => {
         tool_prefix: s.key,
         platform_key: s.key,
         tools: [`${s.key}_list_entities`, `${s.key}_search_tools`],
-        auth: { modes: [s.authMode, "jwt", "none"] },
+        auth: { modes: [s.authMode, "jwt", "oauth", "none"] },
       };
       const violations = checkFleetInventory(tmp, {
         ...registry,

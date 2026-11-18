@@ -141,7 +141,7 @@ export function createSessionForAuthWithEnvFallback<
     }
 
     const mode = config.mcpAuthMode;
-    if (opts.buildEnvAdapter && (mode === "none" || mode === "jwt")) {
+    if (opts.buildEnvAdapter && (mode === "none" || mode === "jwt" || mode === "oauth")) {
       const envAdapter = await opts.buildEnvAdapter(config);
       if (envAdapter) {
         await envAdapter.validate();
@@ -155,7 +155,7 @@ export function createSessionForAuthWithEnvFallback<
       services: null,
       error: {
         message:
-          mode === "jwt"
+          mode === "jwt" || mode === "oauth"
             ? opts.credentialsRequiredMessage
             : (opts.unsupportedModeMessage ?? opts.credentialsRequiredMessage),
         status: 400,
