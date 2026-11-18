@@ -64,4 +64,33 @@ describe("report-csv:// over the SDK", () => {
     await expect(read).rejects.toThrow(/not found or expired/);
     await client.close();
   });
+
+  it("scopes a read to the server's owner key when the transport has no session (#243)", async () => {
+    const store = new ReportCsvStore();
+    const aliceEntry = store.store({ csv: "a\n1\n", sessionId: "principal-alice" });
+
+    const readAs = async (ownerKey: string) => {
+      const server = new McpServer({ name: "csv-probe", version: "0.0.0" });
+      registerReportCsvResource({
+        server: server as never,
+        ResourceTemplate: ResourceTemplate as never,
+        store,
+        platform: "TTD",
+        downloadToolName: "ttd_download_report",
+        logger: pino({ level: "silent" }),
+        ownerKey,
+      });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      const client = new Client({ name: "csv-client", version: "0.0.0" });
+      await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+      try {
+        return await client.readResource({ uri: `report-csv://${aliceEntry.resourceId}` });
+      } finally {
+        await client.close();
+      }
+    };
+
+    expect((await readAs("principal-alice")).contents[0]).toMatchObject({ text: "a\n1\n" });
+    await expect(readAs("principal-bob")).rejects.toMatchObject({ code: -32602 });
+  });
 });

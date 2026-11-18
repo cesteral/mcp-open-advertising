@@ -101,6 +101,14 @@ export interface RegisterReportCsvResourceOptions {
   downloadToolName: string;
   /** The server logger used for "reading resource" info lines. */
   logger: Logger;
+  /**
+   * The store key this server instance was built for. On the 2025 path it is
+   * the session id the transport also reports in `extra.sessionId`; on the
+   * 2026-07-28 path there is no transport session, so this principal-derived
+   * key is the only caller identity, and an entry another principal produced
+   * stays "not found" (#243).
+   */
+  ownerKey?: string;
 }
 
 /**
@@ -110,11 +118,11 @@ export interface RegisterReportCsvResourceOptions {
  * read handler, not-found error) is identical across platforms.
  */
 export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions): void {
-  const { server, ResourceTemplate, store, platform, downloadToolName, logger } = opts;
+  const { server, ResourceTemplate, store, platform, downloadToolName, logger, ownerKey } = opts;
 
   const template = new ResourceTemplate(`${REPORT_CSV_RESOURCE_SCHEME}://{id}`, {
     list: async (extra?: { sessionId?: string }) => {
-      const callerSessionId = extra?.sessionId;
+      const callerSessionId = extra?.sessionId ?? ownerKey;
       return {
         // Tenant isolation — the same rule the read handler enforces. The store
         // is per-process and shared across every session on this instance, so an
@@ -152,7 +160,7 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
       cacheHint: REPORT_CSV_CACHE_HINT,
     },
     async (uri, _variables, extra) => {
-      const callerSessionId = extra?.sessionId;
+      const callerSessionId = extra?.sessionId ?? ownerKey;
       logger.info({ uri: uri.href }, "Reading report CSV resource");
       // getRemoteByUri falls back to the GCS mirror when the local store has
       // no entry — handles Cloud Run scale-out, where a follow-up read can

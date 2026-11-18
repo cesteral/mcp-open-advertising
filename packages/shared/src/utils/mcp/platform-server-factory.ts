@@ -247,6 +247,7 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
       platform: reportCsv.platformLabel,
       downloadToolName: reportCsv.downloadToolName,
       logger,
+      ownerKey: sessionId,
     });
   }
 

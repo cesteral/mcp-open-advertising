@@ -4,6 +4,8 @@ import {
   generateSessionId,
   validateProtocolVersion,
   SUPPORTED_PROTOCOL_VERSIONS,
+  LEGACY_PROTOCOL_VERSIONS,
+  MODERN_PROTOCOL_VERSION,
   buildAllowedOrigins,
   createDnsRebindingPolicy,
   isLoopbackBindHost,
@@ -70,9 +72,12 @@ describe("generateSessionId", () => {
 
 describe("validateProtocolVersion", () => {
   it("should accept supported versions", () => {
-    for (const v of SUPPORTED_PROTOCOL_VERSIONS) {
+    for (const v of LEGACY_PROTOCOL_VERSIONS) {
       expect(validateProtocolVersion(v)).toBe(true);
     }
+    // The modern revision is served by the stateless handler, never this check (#243).
+    expect(validateProtocolVersion(MODERN_PROTOCOL_VERSION)).toBe(false);
+    expect(SUPPORTED_PROTOCOL_VERSIONS).toContain(MODERN_PROTOCOL_VERSION);
   });
 
   it("should reject unsupported versions", () => {
