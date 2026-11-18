@@ -40,8 +40,8 @@ for arg in "$@"; do
       echo "                    Used by the 'contract-v*' release lane so a"
       echo "                    canonicalization or schema fix can ship without"
       echo "                    waiting on a full fleet release. In this mode an"
-      echo "                    already-published version is a hard FAILURE, not a"
-      echo "                    tolerated no-op."
+      echo "                    already-published version is tolerated, but a run that"
+      echo "                    publishes neither library fails (a no-op release)."
       exit 0
       ;;
     *)
@@ -249,6 +249,7 @@ log "  OK — all tarballs have resolved deps and LICENSE.md."
 # Older npm versions returned the code EPUBLISHCONFLICT for the same case.
 # Matching either string is the safe positive-identification.
 NPM_PUBLISH_FAILURES=()
+NPM_NEWLY_PUBLISHED=0
 
 publish_to_npm() {
   local pkg_dir="$1"
@@ -271,26 +272,30 @@ publish_to_npm() {
   echo "$out"
 
   if [ "$exit_code" -eq 0 ]; then
+    NPM_NEWLY_PUBLISHED=$((NPM_NEWLY_PUBLISHED + 1))
     return 0
   fi
 
   # Here-string (not a pipe) so a fast grep cannot SIGPIPE the upstream echo.
   if grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT' <<<"$out"; then
-    # Tolerable on a FLEET release: most servers are unchanged and have nothing
-    # to publish, so a re-run must stay idempotent.
+    # Tolerable on every lane, but for different reasons.
     #
-    # NOT tolerable on a contracts-only release (issue #171). Publishing the two
-    # contract libraries is the entire purpose of a `contract-v*` tag, so "this
-    # version already exists" means the source changed without a version bump and
-    # the release is a no-op that LOOKS successful. That exact tolerance is how
-    # contract-hash's __proto__ fix (#165) and contract-schema's annotation
-    # tightening (#171) both appeared to ship while the published bytes never
-    # moved. Fail loudly instead.
-    if [ "$CONTRACTS_ONLY" = true ]; then
-      echo "  FAIL $pkg_label: version already published — bump the version before tagging." >&2
-      NPM_PUBLISH_FAILURES+=("$pkg_label (version already published)")
-      return 0
-    fi
+    # FLEET release: most servers are unchanged and have nothing to publish, so
+    # a re-run must stay idempotent.
+    #
+    # CONTRACTS-ONLY release: the two libraries version independently, so a tag
+    # that fixes one routinely finds the other already on npm (contract-v2.3.0
+    # and contract-v2.3.1 both went red this way while the changed library had
+    # in fact published). That is not a failure by itself.
+    #
+    # What must stay a failure (issue #171) is a `contract-v*` tag that
+    # publishes NOTHING: the source changed without a version bump and the
+    # release is a no-op that LOOKS successful (contract-hash's __proto__ fix
+    # #165 and contract-schema's annotation tightening #171 both appeared to
+    # ship while the published bytes never moved). That case is caught after
+    # the loop by the NPM_NEWLY_PUBLISHED check below, and an already-published
+    # version whose bytes differ from the workspace is caught before publish by
+    # the two *-published-parity guards.
     log "  Note: $pkg_label already published at this version — continuing."
     return 0
   fi
@@ -329,6 +334,12 @@ if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
     echo "Refusing to publish @cesteral/shared (and the servers that depend on it) against a missing dependency version." >&2
   fi
   err "Fix the contract-library publish failure(s) above and re-run."
+fi
+
+# A contract-v* tag exists to publish a contract library. If both were already
+# on npm, nothing shipped: fail rather than report a no-op as a release (#171).
+if [ "$CONTRACTS_ONLY" = true ] && [ "$DRY_RUN" = false ] && [ "$NPM_NEWLY_PUBLISHED" -eq 0 ]; then
+  err "Neither contract library was newly published — both versions already exist on npm. Bump the version of the library you changed before tagging."
 fi
 
 # --- Contracts-only lane stops here ---
