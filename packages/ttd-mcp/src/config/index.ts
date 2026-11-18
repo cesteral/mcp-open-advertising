@@ -21,7 +21,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("ttd-mcp"),
 
   // Auth — TTD-specific modes
-  mcpAuthMode: z.enum(["ttd-token", "jwt", "none"]).default("ttd-token"),
+  mcpAuthMode: z.enum(["ttd-token", "jwt", "oauth", "none"]).default("ttd-token"),
 
   // TTD API Configuration
   // When `TTD_USE_SANDBOX=true`, the API/GraphQL base URLs default to TTD's

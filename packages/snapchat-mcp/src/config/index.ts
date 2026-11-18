@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("snapchat-mcp"),
 
   // Auth — Snapchat-specific modes
-  mcpAuthMode: z.enum(["snapchat-bearer", "jwt", "none"]).default("snapchat-bearer"),
+  mcpAuthMode: z.enum(["snapchat-bearer", "jwt", "oauth", "none"]).default("snapchat-bearer"),
 
   // Snapchat API Configuration
   snapchatApiBaseUrl: z.string().url().default("https://adsapi.snapchat.com"),

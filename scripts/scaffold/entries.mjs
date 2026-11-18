@@ -79,7 +79,7 @@ export function buildRegistryEntry(opts, registry, tools) {
     // What the template registers (check:registry-runtime compares them live).
     resources: [`tool-examples://${n.package}/all`, `server-capabilities://${n.package}/overview`],
     prompts: ["cross_platform_performance_comparison", "cross_platform_campaign_setup"],
-    auth: { modes: [`${n.key}-bearer`, "jwt", "none"] },
+    auth: { modes: [`${n.key}-bearer`, "jwt", "oauth", "none"] },
     tags: ["advertising", n.key, "campaign-management"],
     untrustedContent: { pathReporting: "per-response" },
     operational: {
