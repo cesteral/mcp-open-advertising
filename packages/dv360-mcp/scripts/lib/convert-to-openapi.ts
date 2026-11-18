@@ -421,6 +421,11 @@ const REQUIRED_FIELDS_OVERRIDES: Record<
     reason:
       "An advertiser that inherits its partner's SDF settings (overridePartnerSdfConfig unset) comes back from advertisers.get / list with dataAccessConfig.sdfConfig.sdfConfig but no version, and a required version rejected every such advertiser (#341). 'Required' in Discovery is the input rule for an overriding config.",
   },
+  InsertionOrder: {
+    remove: ["optimizationObjective"],
+    reason:
+      "Discovery (revision 20261117) describes InsertionOrder.optimizationObjective as 'Required.', which is the rule for creating an insertion order. Insertion orders created before the field existed, and ones created in the UI without an objective, can come back from get / list without it, and a required enum would reject the whole response, as SdfConfig.version did for advertisers (#341).",
+  },
 };
 
 /**
