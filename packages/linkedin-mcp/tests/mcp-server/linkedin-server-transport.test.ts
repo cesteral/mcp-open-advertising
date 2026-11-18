@@ -17,12 +17,6 @@ vi.mock("@modelcontextprotocol/server", async (importOriginal) => ({
   ResourceTemplate: vi.fn(),
 }));
 
-vi.mock("@modelcontextprotocol/server/stdio", () => ({
-  StdioServerTransport: vi.fn().mockImplementation(function () {
-    return { kind: "stdio" };
-  }),
-}));
-
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
   return {
@@ -36,7 +30,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { createMcpServer, runStdioServer } from "../../src/mcp-server/server.js";
+import { createMcpServer } from "../../src/mcp-server/server.js";
 import {
   createMcpHttpServer,
   startHttpServer,
@@ -44,7 +38,7 @@ import {
 import { TEST_LINKEDIN_API_VERSION } from "../testkit/api-version.js";
 
 describe("LinkedIn server + transport", () => {
-  it("builds the server through the shared factory and connects stdio", async () => {
+  it("builds the server through the shared factory", async () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
     hoisted.createPlatformMcpServer.mockImplementationOnce(
       async (opts: { sdk: { McpServer: new (...args: unknown[]) => unknown } }) =>
@@ -62,9 +56,6 @@ describe("LinkedIn server + transport", () => {
         gcsBucket: "test-bucket",
       })
     );
-
-    await runStdioServer(server, logger);
-    expect(hoisted.connect).toHaveBeenCalledOnce();
   });
 
   it("builds HTTP transport via shared factory", async () => {

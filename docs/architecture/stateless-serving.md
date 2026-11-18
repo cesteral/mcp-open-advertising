@@ -51,9 +51,13 @@ Tools that depend on state surviving between calls:
 
 No tool takes a session-scoped argument today, so no new handle had to be minted for this slice.
 
+## Stdio
+
+Stdio is served by `serveStdioServer` (`@cesteral/shared`, `utils/transport/stdio-server.ts`), called by `bootstrapMcpServer`: the SDK's `serveStdio` picks the era from the opening message (`server/discover` → 2026-07-28, `initialize` → 2025) and pins one instance for the connection. No server has its own stdio code. The env-credential session (`setupStdioSession`, session id `stdio`) is built once before serving; every instance the factory makes (a `server/discover` probe is discarded on fallback) resolves it from the session store. Test: `packages/shared/tests/utils/stdio-server.test.ts` (linked in-memory transport, raw JSON-RPC).
+
 ## Not done here (see the PR)
 
-- `serveStdio` for stdio (13 `server.ts` files), `subscriptions/listen`.
+- `subscriptions/listen` over HTTP (stdio gets it from `serveStdio`, which routes it at the entry).
 - Modern-path rejections made before routing (DNS-rebinding 403, body-size 413 from Hono) are still plain JSON.
 - `registry.json` `protocol_version` stays `2025-11-25` (the card's `mcp_protocol_versions` now lists the modern revision too).
 - Elicitation reading `ctx.mcpReq.envelope` (#244), Mcp-Method/Mcp-Name header routing (#248).
