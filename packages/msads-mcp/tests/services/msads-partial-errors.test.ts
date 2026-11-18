@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import pino from "pino";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RateLimiter } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  createPlatformRateLimiter,
+  type RateLimiter,
+} from "@cesteral/shared";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
 import {
@@ -123,12 +127,13 @@ describe("partial-errors helpers", () => {
 describe("MsAdsService — PartialErrors on HTTP 200", () => {
   let http: ReturnType<typeof createMockHttpClient>;
   let service: MsAdsService;
+  let rateLimiter: RateLimiter;
+
+  afterEach(() => rateLimiter.destroy());
 
   beforeEach(() => {
     http = createMockHttpClient();
-    const rateLimiter = {
-      consume: vi.fn().mockResolvedValue(undefined),
-    } as unknown as RateLimiter;
+    rateLimiter = createPlatformRateLimiter("msads", 1000);
     service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger, {
       userId: "u1",
       customerId: "c1",
@@ -263,12 +268,13 @@ describe("MsAdsService — PartialErrors on HTTP 200", () => {
 describe("MsAdsService.duplicateEntity — copy lands non-running", () => {
   let http: ReturnType<typeof createMockHttpClient>;
   let service: MsAdsService;
+  let rateLimiter: RateLimiter;
+
+  afterEach(() => rateLimiter.destroy());
 
   beforeEach(() => {
     http = createMockHttpClient();
-    const rateLimiter = {
-      consume: vi.fn().mockResolvedValue(undefined),
-    } as unknown as RateLimiter;
+    rateLimiter = createPlatformRateLimiter("msads", 1000);
     service = new MsAdsService(rateLimiter, http as unknown as MsAdsHttpClient, logger, {
       userId: "u1",
       customerId: "c1",

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import { MSADS_ALL_CAMPAIGN_TYPES } from "../../src/mcp-server/tools/utils/entity-mapping.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import pino from "pino";
 
 const logger = pino({ level: "silent" });
@@ -23,9 +23,20 @@ function createMockHttpClient(): MsAdsHttpClient {
   return client;
 }
 
+// Real limiter (same factory the server uses), spied so call assertions keep
+// working. Capacity is high so these tests exercise service logic; enforcement
+// is covered in msads-rate-limit-enforcement.test.ts.
+const limiters: RateLimiter[] = [];
 function createMockRateLimiter(): RateLimiter {
-  return { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+  const limiter = createPlatformRateLimiter("msads", 1000);
+  limiters.push(limiter);
+  vi.spyOn(limiter, "consume");
+  return limiter;
 }
+
+afterEach(() => {
+  for (const l of limiters.splice(0)) l.destroy();
+});
 
 describe("MsAdsService", () => {
   let service: MsAdsService;

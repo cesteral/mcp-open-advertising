@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import { CM360ReportingService } from "../../src/services/cm360/cm360-reporting-service.js";
 
 // ---------------------------------------------------------------------------
@@ -21,11 +22,20 @@ function createMockHttpClient() {
   } as any;
 }
 
+// Real limiter (same factory the server uses), spied so call assertions keep
+// working. Capacity is high so these tests exercise service logic; enforcement
+// is covered in cm360-rate-limit.test.ts.
+const limiters: RateLimiter[] = [];
 function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  const limiter = createPlatformRateLimiter("cm360", 1000);
+  limiters.push(limiter);
+  vi.spyOn(limiter, "consume");
+  return limiter;
 }
+
+afterEach(() => {
+  for (const l of limiters.splice(0)) l.destroy();
+});
 
 // ---------------------------------------------------------------------------
 // Tests
