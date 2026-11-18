@@ -64,4 +64,4 @@ The DNS-rebinding 403 and the body-limit 413 happen before the request is classi
 - **`subscriptions/listen` over HTTP**: no server emits `list_changed` or resource-updated notifications, so there is nothing to subscribe to. Stdio gets the SDK's entry-level routing for free. Revisit if a server ever emits notifications.
 - **`Mcp-Method` / `Mcp-Name` routing**: the SDK's validation ladder already rejects a header that disagrees with the body (`-32020`); the factory does not route on them. The headers pass CORS preflight (`withStandardMcpHeaders`).
 - **`registry.json` `protocol_version`** stays `2025-11-25`: it is the single baseline the registry and the card test check containment of, and the card's `mcp_protocol_versions` already lists `2026-07-28` too.
-- **Elicitation reading `ctx.mcpReq.envelope`** belongs to #244 (its own session).
+- **Elicitation reading `ctx.mcpReq.envelope`** is done in #244 (see [confirmation-mrtr.md](confirmation-mrtr.md)).

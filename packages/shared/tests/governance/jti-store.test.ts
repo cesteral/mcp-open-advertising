@@ -21,6 +21,9 @@ function fakeFirestore(): FirestoreLike {
           docs.add(key);
           return {};
         },
+        delete: async () => {
+          docs.delete(`${name}/${id}`);
+        },
       }),
     }),
   };
@@ -31,6 +34,14 @@ describe("InMemoryJtiStore", () => {
     const s = new InMemoryJtiStore();
     expect(await s.consumeOnce("j1", 1000)).toBe("fresh");
     expect(await s.consumeOnce("j1", 1000)).toBe("replayed");
+    expect(await s.consumeOnce("j1", 1000)).toBe("replayed");
+  });
+
+  it("release gives a consumed jti back, once (#244)", async () => {
+    const s = new InMemoryJtiStore();
+    expect(await s.consumeOnce("j1", 1000)).toBe("fresh");
+    await s.release("j1");
+    expect(await s.consumeOnce("j1", 1000)).toBe("fresh");
     expect(await s.consumeOnce("j1", 1000)).toBe("replayed");
   });
 
@@ -60,6 +71,15 @@ describe("FirestoreJtiStore", () => {
     expect(await s.consumeOnce("j2", 1000)).toBe("fresh");
   });
 
+  it("release gives a consumed jti back, once (#244)", async () => {
+    const s = new FirestoreJtiStore(fakeFirestore());
+    expect(await s.consumeOnce("j9", 1000)).toBe("fresh");
+    expect(await s.consumeOnce("j9", 1000)).toBe("replayed");
+    await s.release("j9");
+    expect(await s.consumeOnce("j9", 1000)).toBe("fresh");
+    expect(await s.consumeOnce("j9", 1000)).toBe("replayed");
+  });
+
   it("propagates non-ALREADY_EXISTS errors (does not silently allow the write)", async () => {
     const db: FirestoreLike = {
       collection: () => ({
@@ -69,6 +89,7 @@ describe("FirestoreJtiStore", () => {
             err.code = 14;
             throw err;
           },
+          delete: async () => undefined,
         }),
       }),
     };

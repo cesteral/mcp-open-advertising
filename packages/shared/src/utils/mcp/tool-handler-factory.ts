@@ -28,6 +28,17 @@ import {
 } from "../observability/interaction-logger.js";
 import { getRecordedUpstreamRequests } from "../observability/http-request-recorder.js";
 import { getRawToolArgs, installRawToolArgsCapture } from "./raw-tool-args.js";
+import {
+  APPROVAL_NONCE_PREFIX,
+  ConfirmationRequired,
+  REQUEST_STATE_TTL_SECONDS,
+  buildInputRequired,
+  clientCanElicit,
+  createElicitInput,
+  installConfirmationGuard,
+  resolveRequestStateKey,
+  resolveRound,
+} from "./confirmation-rounds.js";
 import { toStandardSchema } from "./zod-standard-schema.js";
 import {
   TOOL_ERROR_UNTRUSTED_MARKER,
@@ -430,6 +441,18 @@ interface ToolCallContext {
     /** The request's `params._meta` (trace context lives here, #247). */
     _meta?: unknown;
     /**
+     * A 2026-07-28 request's reserved `_meta` envelope, lifted out of `_meta`:
+     * where the client's per-request capabilities are (#244). Absent on a
+     * 2025-era request, whose capabilities were declared at `initialize`.
+     */
+    envelope?: Record<string, unknown>;
+    /**
+     * The retry's answers (`inputResponses`) and sealed `requestState`
+     * (#244). Both arrive from the client: the state is verified before use.
+     */
+    inputResponses?: Record<string, unknown>;
+    requestState?: () => unknown;
+    /**
      * Sends a `notifications/message` tied to this request, honouring the
      * client's `logging/setLevel` filter. Being request-scoped, the
      * streamable-HTTP transport writes it on this request's POST response
@@ -572,6 +595,12 @@ export interface RegisterToolsOptions {
    * injectable for tests.
    */
   governanceEnv?: Record<string, string | undefined>;
+  /**
+   * Env source for the confirmation `requestState` key (`MCP_REQUEST_STATE_SECRET`,
+   * else derived from `MCP_AUTH_SECRET_KEY`). Defaults to `process.env`;
+   * injectable for tests.
+   */
+  requestStateEnv?: Record<string, string | undefined>;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -676,6 +705,23 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   const governanceEnv = opts.governanceEnv ?? process.env;
   const jtiStore = resolveJtiStore(opts.jtiStore);
   const jtiTtlMs = opts.jtiTtlMs ?? DEFAULT_JTI_TTL_MS;
+  const requestStateKey = resolveRequestStateKey(opts.requestStateEnv ?? process.env);
+  /**
+   * Who a sealed `requestState` belongs to. Read per request: on a session the
+   * credentials are fixed, on the stateless era `sessionId` is the principal key.
+   */
+  const principalOf = (): string => {
+    const auth = authContextResolver?.();
+    return [
+      auth?.authInfo?.clientId ?? "",
+      auth?.credentialFingerprint ?? "",
+      sessionId ?? "",
+    ].join("|");
+  };
+  // Set once the guard is in place (after the registration loop). Until then, and
+  // if it cannot be installed, no confirmation channel is offered: irreversible
+  // operations are refused rather than confirmed by nobody.
+  let confirmationGuardInstalled = false;
 
   // Deployment footgun guard (review P3): if any governed write resolves to
   // `enforce` while the jti store in use gives no CROSS-PROCESS consume-once
@@ -1055,36 +1101,45 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
-            // Only expose elicitInput when the connected client advertises the
-            // elicitation capability. Gating here means the `!sdkContext.elicitInput`
-            // fallback in shared elicitation-helpers triggers cleanly for stdio /
-            // unsupported clients, instead of the SDK rejecting downstream.
-            const clientSupportsElicitation = Boolean(
-              server.server.getClientCapabilities?.()?.elicitation
-            );
+            // Confirmation is a Multi Round-Trip Request (#244): `elicitInput`
+            // answers from this retry's `inputResponses`, or throws
+            // `ConfirmationRequired`, which becomes an `input_required` result
+            // below. The client's capability is read per request (the `_meta`
+            // envelope on 2026-07-28, `initialize` on 2025). With no capability,
+            // `elicitInput` stays undefined, so the helpers refuse irreversible
+            // operations (unless `MCP_ELICIT_DESTRUCTIVE=skip`).
+            // The round is resolved here, not only in the guard: the legacy shim
+            // re-enters this callback in-process, past the guard.
+            const rawToolArgs = getRawToolArgs();
+            const canElicit =
+              confirmationGuardInstalled &&
+              rawToolArgs !== undefined &&
+              clientCanElicit(ctx?.mcpReq?.envelope, server.server.getClientCapabilities?.());
+            const round = canElicit
+              ? resolveRound({
+                  key: requestStateKey,
+                  tool: tool.name,
+                  rawArgs: rawToolArgs,
+                  requestState: ctx?.mcpReq?.requestState?.(),
+                  inputResponses: ctx?.mcpReq?.inputResponses,
+                  principal: principalOf(),
+                })
+              : undefined;
 
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,
               sessionId,
-              // Both carry this tools/call's request id (#241), so the
-              // streamable-HTTP transport sends them on the POST response
-              // stream the client is reading, not the optional standalone GET
-              // stream — which this fleet does not serve (GET /mcp is 405).
-              // Without it, a destructive-op confirmation never reached the
-              // client and the elicitation timed out.
-              elicitInput: clientSupportsElicitation
-                ? async (params) => {
-                    // SDK v2's ctx.mcpReq.elicitInput does not add the request
-                    // id itself (unlike mcpReq.log), so it is passed here.
-                    const elicit = ctx?.mcpReq?.elicitInput;
-                    const related =
-                      ctx?.mcpReq?.id !== undefined
-                        ? { relatedRequestId: ctx.mcpReq.id }
-                        : undefined;
-                    return typeof elicit === "function"
-                      ? elicit(params, related)
-                      : server.server.elicitInput(params, related);
-                  }
+              elicitInput: round
+                ? createElicitInput({
+                    round,
+                    dryRun: (validatedInput as { dry_run?: unknown } | null)?.dry_run === true,
+                    // The approval's nonce shares the governance store, under its own prefix.
+                    consumeNonce: (nonce) =>
+                      jtiStore.consumeOnce(
+                        `${APPROVAL_NONCE_PREFIX}${nonce}`,
+                        REQUEST_STATE_TTL_SECONDS * 1000
+                      ),
+                  })
                 : undefined,
               sendLoggingMessage: async (params) => {
                 return sendRelatedLoggingMessage(server, ctx, params);
@@ -1105,7 +1160,51 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               setSpanAttribute("mcp.workflow.id", interactionContext.workflowId);
             }
 
-            const result = await tool.logic(validatedInput, context, sdkContext);
+            let result: unknown;
+            try {
+              result = await tool.logic(validatedInput, context, sdkContext);
+            } catch (thrown) {
+              if (!(thrown instanceof ConfirmationRequired)) throw thrown;
+              // The handler asked a question instead of acting. Nothing was
+              // written (confirmation precedes every platform write; an upstream
+              // PUT/PATCH/DELETE before it is a bug and fails loudly below).
+              const wrote = getRecordedUpstreamRequests().find((r) =>
+                /^(PUT|PATCH|DELETE)$/i.test(r.method)
+              );
+              if (wrote) {
+                logger.error(
+                  { toolName: tool.name, method: wrote.method },
+                  "confirmation requested after an upstream write"
+                );
+                throw new McpError(
+                  JsonRpcErrorCode.InternalError,
+                  `Tool ${tool.name} asked for confirmation after writing upstream`
+                );
+              }
+              // This round consumed the decision token's jti, but it does not
+              // execute the write. Give it back so the retry, which carries the
+              // same token, is not rejected as a replay.
+              if (idempotencyKey) {
+                if (jtiStore.release) {
+                  await jtiStore.release(idempotencyKey).catch((releaseError: unknown) => {
+                    logger.warn(
+                      { err: releaseError, toolName: tool.name },
+                      "decision-token jti release failed; the confirmed retry will be refused as a replay"
+                    );
+                  });
+                } else {
+                  logger.warn(
+                    { toolName: tool.name },
+                    "jti store cannot release a jti; the confirmed retry will be refused as a replay"
+                  );
+                }
+              }
+              logger.info(
+                { toolName: tool.name, requestId: context.requestId },
+                "Tool answered input_required (confirmation)"
+              );
+              return buildInputRequired(requestStateKey, principalOf(), round!, thrown);
+            }
 
             // #204: validate output HERE, not only in the SDK. The SDK's own
             // output-validation error quotes zod's message, which can quote the
@@ -1349,6 +1448,17 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   // verification. Installed after the loop because `McpServer` only creates its
   // `tools/call` handler on the first `registerTool`.
   const rawArgsCaptureInstalled = installRawToolArgsCapture(server.server);
+  confirmationGuardInstalled = installConfirmationGuard(server.server, {
+    key: requestStateKey,
+    principalOf,
+  });
+  if (!confirmationGuardInstalled) {
+    logger.error(
+      { component: "confirmation", event: "guard_unavailable" },
+      "confirmation: could not guard tools/call; no confirmation channel is offered and " +
+        "irreversible operations will be refused (unless MCP_ELICIT_DESTRUCTIVE=skip)"
+    );
+  }
   const hasGovernedWrite = tools.some(
     (t) =>
       (t.annotations as { cesteral?: CesteralToolAnnotations } | undefined)?.cesteral?.kind ===

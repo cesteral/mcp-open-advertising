@@ -18,6 +18,20 @@ export interface JtiStore {
   consumeOnce(jti: string, ttlMs: number): Promise<"fresh" | "replayed">;
 
   /**
+   * Give back a `jti` that this process consumed on a call that did NOT execute
+   * the write (#244): a destructive call answers `input_required` before any
+   * write, and the client's retry carries the same decision token. Without this
+   * the confirmation round would burn the token and the executing round would
+   * be rejected as a replay.
+   *
+   * Only the factory calls it, only for a `jti` it just consumed fresh, and only
+   * on a round that ended in `input_required`. Optional: a store without it
+   * cannot give a token back, so a confirmation round under that store makes the
+   * retry fail as a replay (fail closed; the caller mints a new token).
+   */
+  release?(jti: string): Promise<void>;
+
+  /**
    * Whether this store's consume-once guarantee holds ACROSS PROCESSES.
    *
    * The enforce-mode boot guard keys on this rather than on "was a store
@@ -71,6 +85,10 @@ export class InMemoryJtiStore implements JtiStore {
     return "fresh";
   }
 
+  async release(jti: string): Promise<void> {
+    this.seen.delete(jti);
+  }
+
   /**
    * Drop expired entries opportunistically so the map does not grow unbounded.
    * Uses strict `< t` (not `<= t`) to stay consistent with `consumeOnce`'s
@@ -90,6 +108,7 @@ export interface FirestoreLike {
   collection(name: string): {
     doc(id: string): {
       create(data: Record<string, unknown>): Promise<unknown>;
+      delete(): Promise<unknown>;
     };
   };
 }
@@ -134,6 +153,10 @@ export class FirestoreJtiStore implements JtiStore {
       }
       throw error;
     }
+  }
+
+  async release(jti: string): Promise<void> {
+    await this.db.collection(this.collectionName).doc(jti).delete();
   }
 }
 
