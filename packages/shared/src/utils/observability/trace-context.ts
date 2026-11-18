@@ -35,6 +35,32 @@ const MAX_TRACESTATE_LENGTH = 512;
 export function remoteParentFromMeta(meta: unknown): SpanContext | undefined {
   if (!meta || typeof meta !== "object") return undefined;
   const { traceparent, tracestate } = meta as Record<string, unknown>;
+  return parseTraceContext(traceparent, tracestate);
+}
+
+/** The slice of a Fetch `Headers` this module reads. */
+export interface HeaderReader {
+  get(name: string): string | null;
+}
+
+/**
+ * The remote parent for a `tools/call`: `_meta` first (the 2026-07-28 carrier),
+ * then the HTTP `traceparent` / `tracestate` request headers (what an
+ * OTEL-instrumented client or gateway sends), else `undefined` (the span
+ * starts a new root). A `_meta` traceparent that is present but invalid does
+ * not block the header. `tracestate` is only ever read from the same carrier
+ * as the `traceparent` it accompanies, and `baggage` is never read (#247).
+ */
+export function remoteParentFromRequest(
+  meta: unknown,
+  headers: HeaderReader | undefined
+): SpanContext | undefined {
+  const fromMeta = remoteParentFromMeta(meta);
+  if (fromMeta || !headers || typeof headers.get !== "function") return fromMeta;
+  return parseTraceContext(headers.get("traceparent"), headers.get("tracestate"));
+}
+
+function parseTraceContext(traceparent: unknown, tracestate: unknown): SpanContext | undefined {
   if (typeof traceparent !== "string") return undefined;
 
   const match = TRACEPARENT_RE.exec(traceparent.trim());
