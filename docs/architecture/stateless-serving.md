@@ -55,9 +55,13 @@ No tool takes a session-scoped argument today, so no new handle had to be minted
 
 Stdio is served by `serveStdioServer` (`@cesteral/shared`, `utils/transport/stdio-server.ts`), called by `bootstrapMcpServer`: the SDK's `serveStdio` picks the era from the opening message (`server/discover` → 2026-07-28, `initialize` → 2025) and pins one instance for the connection. No server has its own stdio code. The env-credential session (`setupStdioSession`, session id `stdio`) is built once before serving; every instance the factory makes (a `server/discover` probe is discarded on fallback) resolves it from the session store. Test: `packages/shared/tests/utils/stdio-server.test.ts` (linked in-memory transport, raw JSON-RPC).
 
-## Not done here (see the PR)
+## Rejections made before routing
 
-- `subscriptions/listen` over HTTP (stdio gets it from `serveStdio`, which routes it at the entry).
-- Modern-path rejections made before routing (DNS-rebinding 403, body-size 413 from Hono) are still plain JSON.
-- `registry.json` `protocol_version` stays `2025-11-25` (the card's `mcp_protocol_versions` now lists the modern revision too).
-- Elicitation reading `ctx.mcpReq.envelope` (#244), Mcp-Method/Mcp-Name header routing (#248).
+The DNS-rebinding 403 and the body-limit 413 happen before the request is classified. On a 2026-07-28 POST they are JSON-RPC error bodies (`-32005` / `-32600`, `rejectBeforeRouting` in the transport factory); a 2025-era request keeps its plain `{ error }` body. The 403 classifies with the SDK's `isLegacyRequest`; the 413 cannot (its body is over the limit and partly read), so it goes by headers: `Mcp-Method` present, or an `MCP-Protocol-Version` the 2025 path does not accept.
+
+## Decided, not done
+
+- **`subscriptions/listen` over HTTP**: no server emits `list_changed` or resource-updated notifications, so there is nothing to subscribe to. Stdio gets the SDK's entry-level routing for free. Revisit if a server ever emits notifications.
+- **`Mcp-Method` / `Mcp-Name` routing**: the SDK's validation ladder already rejects a header that disagrees with the body (`-32020`); the factory does not route on them. The headers pass CORS preflight (`withStandardMcpHeaders`).
+- **`registry.json` `protocol_version`** stays `2025-11-25`: it is the single baseline the registry and the card test check containment of, and the card's `mcp_protocol_versions` already lists `2026-07-28` too.
+- **Elicitation reading `ctx.mcpReq.envelope`** belongs to #244 (its own session).
