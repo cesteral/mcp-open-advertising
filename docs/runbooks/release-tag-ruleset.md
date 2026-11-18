@@ -6,7 +6,7 @@ This is a repository admin setting. It is not applied by any code in this repo; 
 
 ## Apply
 
-Run as an account with admin rights on the repository. `bypass_actors` below lets the repository admin role (`actor_id` 5) bypass the rule so maintainers can still cut releases; drop it to make the rule apply to admins too.
+Run as an account with admin rights on the repository. `bypass_actors` below lets only the repository **Admin** role (`actor_id` 5; Maintain and Write roles do not bypass) create, move and delete release tags. Keep it: with `creation` restricted and no bypass actor, nobody can create matching tags, so no release can start. To change who may release, replace it with an explicitly authorized actor rather than removing it. If published tags should be immutable even for release operators, add a separate ruleset restricting only `update` and `deletion` with no bypass.
 
 ```bash
 gh api -X POST repos/cesteral/mcp-open-advertising/rulesets --input - <<'JSON'
@@ -37,9 +37,14 @@ With `creation`, `update` and `deletion` restricted, only a bypass actor can cre
 
 ## Verify
 
+Capture the ID, then read the full ruleset as an admin and check `conditions`, `rules` and `bypass_actors`, not only the summary:
+
 ```bash
-gh api repos/cesteral/mcp-open-advertising/rulesets --jq '.[] | {name, target, enforcement}'
+id=$(gh api repos/cesteral/mcp-open-advertising/rulesets --jq '.[] | select(.name=="release-tags") | .id')
+gh api repos/cesteral/mcp-open-advertising/rulesets/$id --jq '{target, enforcement, include: .conditions.ref_name.include, rules: [.rules[].type], bypass_actors}'
 ```
+
+Expect `target: tag`, `enforcement: active`, include `refs/tags/v*` and `refs/tags/contract-v*`, rules `creation update deletion non_fast_forward`, and the single Admin bypass actor.
 
 ## Optional: protected Environment for publishing
 
