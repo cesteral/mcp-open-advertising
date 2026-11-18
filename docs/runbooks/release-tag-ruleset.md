@@ -53,3 +53,7 @@ Run the publishing jobs in a GitHub Environment with required reviewers so a tag
 ## Constraint
 
 Keep publishing in `.github/workflows/release.yml` with tags of the shape `vX.Y.Z` and `contract-vX.Y.Z`; downstream consumers verify both from the npm provenance.
+
+## Next release (#299 item e)
+
+Cut the next release only after the ruleset is applied and verified, so the published provenance comes from the hardened workflow and a protected tag. Tag the `main` commit that carries the workflow hardening and this runbook, and record that commit SHA in the release notes. The release regenerates every governed tool's `definitionHash` manifest (see [release-attestation.md](../architecture/release-attestation.md)); tell the downstream governance repo which tag and commit to admit before the tag is pushed.
