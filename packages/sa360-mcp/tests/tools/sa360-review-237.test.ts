@@ -5,6 +5,7 @@
  * revision 20260820 (https://searchads360.googleapis.com/$discovery/rest?version=v0).
  */
 import { readFileSync } from "node:fs";
+import { createSpiedSa360RateLimiter } from "../helpers/wire.js";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect, vi } from "vitest";
@@ -32,7 +33,7 @@ describe("sa360 review #14: path-interpolated ids cannot leave their path segmen
     const fetch = vi.fn().mockResolvedValue({ id: "x", isReportReady: false });
     const service = new SA360ReportingService(
       { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
-      { consume: vi.fn().mockResolvedValue(undefined) } as any,
+      createSpiedSa360RateLimiter(),
       { fetch } as any,
       {} as any
     );

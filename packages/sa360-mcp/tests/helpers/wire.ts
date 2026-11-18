@@ -12,7 +12,7 @@
  * with itself; this records what the platform would receive.
  */
 
-import { vi } from "vitest";
+import { vi, afterEach } from "vitest";
 import pino from "pino";
 import {
   createPlatformRateLimiter,
@@ -180,4 +180,22 @@ export function createWireSession(sessionId = "wire-session"): WireSession {
       rateLimiter.destroy();
     },
   };
+}
+
+const spiedLimiters: RateLimiter[] = [];
+afterEach(() => {
+  for (const l of spiedLimiters.splice(0)) l.destroy();
+});
+
+/**
+ * The real `sa360:*` / `sa360:v2:*` limiter with `consume` spied, for service
+ * suites that assert which key a call consumed. Unlike an always-resolving
+ * `consume: vi.fn()` mock it can still delay or refuse (#236); it is destroyed
+ * after each test.
+ */
+export function createSpiedSa360RateLimiter(): RateLimiter {
+  const limiter = createSa360TestRateLimiter();
+  vi.spyOn(limiter, "consume");
+  spiedLimiters.push(limiter);
+  return limiter;
 }
