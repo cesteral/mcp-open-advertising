@@ -47,4 +47,33 @@ describe("dv360_get_delivery_estimate", () => {
     expect(getDeliveryEstimate).toHaveBeenCalledWith("1", "li-1", { requestId: "r" });
     expect(result.estimate.source).toBe("lineItem");
   });
+
+  const run = () =>
+    getDeliveryEstimateLogic(
+      { advertiserId: "1", lineItemId: "li-1" },
+      { requestId: "r" } as any,
+      { sessionId: "s" } as any
+    );
+
+  it("returns the campaign and insertion order the line item names as parents", async () => {
+    getDeliveryEstimate.mockResolvedValue({
+      lineItem: { name: "x", campaignId: "111", insertionOrderId: "222" },
+      source: "lineItem",
+    });
+    const result = await run();
+    expect(result.parents).toEqual([
+      { kind: "campaign", id: "111" },
+      { kind: "insertion_order", id: "222" },
+    ]);
+  });
+
+  it("keeps only the ancestor the line item names", async () => {
+    getDeliveryEstimate.mockResolvedValue({ lineItem: { insertionOrderId: "222" } });
+    expect((await run()).parents).toEqual([{ kind: "insertion_order", id: "222" }]);
+  });
+
+  it("has no parents key when the line item names neither ancestor", async () => {
+    getDeliveryEstimate.mockResolvedValue({ lineItem: { name: "x", campaignId: "" } });
+    expect("parents" in (await run())).toBe(false);
+  });
 });
