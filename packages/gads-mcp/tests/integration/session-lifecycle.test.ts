@@ -252,7 +252,7 @@ describe("mcp transport session lifecycle", () => {
     });
     expect(terminateResponse.status).toBe(200);
 
-    // Post-termination: reuse rebuilds transparently (stateless-session-rebuild).
+    // A terminated id is no longer held by this instance.
     const postTerminateResponse = await postMcp(
       app,
       "tools/call",
@@ -260,7 +260,7 @@ describe("mcp transport session lifecycle", () => {
       sessionId as string,
       "fp-test"
     );
-    expect(postTerminateResponse.status).toBe(200);
+    expect(postTerminateResponse.status).toBe(404);
   });
 
   it("rejects reused session when fingerprint mismatches", async () => {

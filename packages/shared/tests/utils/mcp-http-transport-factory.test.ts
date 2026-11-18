@@ -10,8 +10,7 @@
  *
  *   - credential-fingerprint binding on session reuse (hijack rejection),
  *   - fail-closed reuse of an unbound live session (review Finding 2),
- *   - cold-instance rebuild binds the client-supplied id to the CALLER's
- *     credentials (the "scale-out rebuild doesn't weaken binding" claim),
+ *   - unknown session ids receive 404 without allocating services,
  *   - auth failure → 401, protocol/session-id validation, capacity, and the
  *     DELETE credential check.
  *
@@ -221,22 +220,16 @@ describe("createMcpHttpTransport — auth & session binding", () => {
     expect(active.createSessionForAuth).not.toHaveBeenCalled();
   });
 
-  it("rebuild on a cold instance binds the client-supplied id to the caller, not a victim", async () => {
+  it("answers 404 for an unknown id without binding it to the caller", async () => {
     active = makeHarness();
-    // Store is empty (scaled-out instance that never saw VICTIM_SID). Mallory
-    // presents the victim's leaked session id with HER OWN credentials.
-    await post(active.app, { "mcp-session-id": VICTIM_SID, "x-fake-cred": "mallory" });
-
-    // Rebuild re-authenticates and binds the id to Mallory — she gets her own
-    // client, never the victim's. The claim: rebuild does not weaken binding.
-    expect(active.createSessionForAuth).toHaveBeenCalledTimes(1);
-    const [authResult, sessionId] = active.createSessionForAuth.mock.calls[0]!;
-    expect(sessionId).toBe(VICTIM_SID);
-    expect((authResult as AuthResult).credentialFingerprint).toBe("fp-mallory");
-    expect(active.store.getFingerprint(VICTIM_SID)).toBe("fp-mallory");
+    const res = await post(active.app, { "mcp-session-id": VICTIM_SID, "x-fake-cred": "mallory" });
+    expect(res.status).toBe(404);
+    expect(active.createSessionForAuth).not.toHaveBeenCalled();
+    expect(active.store.get(VICTIM_SID)).toBeUndefined();
+    expect(active.store.getFingerprint(VICTIM_SID)).toBeUndefined();
   });
 
-  it("rejects a rebuild attempt with no credentials (cold instance, unknown id)", async () => {
+  it("authenticates before reporting an unknown id", async () => {
     active = makeHarness();
     const res = await post(active.app, { "mcp-session-id": NEW_SID }); // unknown id, no creds
     expect(res.status).toBe(401);
@@ -337,19 +330,17 @@ describe("createMcpHttpTransport — auth & session binding", () => {
     });
   });
 
-  // Sweep 2026-07-25, 02-F3. The capacity check was `!providedSessionId`, which
-  // skipped it in exactly the case that ALLOCATES: the scale-out rebuild path.
-  describe("session capacity on the rebuild path (02-F3)", () => {
-    it("refuses to rebuild an unknown session id when at capacity", async () => {
+  describe("session capacity with supplied ids", () => {
+    it("answers 404 for an unknown id even at capacity", async () => {
       active = makeHarness({ maxSessions: 1 });
       active.store.set(NEW_SID, { svc: "a" }, "fp-a"); // fill to capacity
 
       const res = await post(active.app, {
         "x-fake-cred": "mallory",
-        "mcp-session-id": VICTIM_SID, // unknown here → rebuild → allocation
+        "mcp-session-id": VICTIM_SID, // no allocation for an unknown id
       });
 
-      expect(res.status).toBe(503);
+      expect(res.status).toBe(404);
       expect(active.createSessionForAuth).not.toHaveBeenCalled();
     });
 

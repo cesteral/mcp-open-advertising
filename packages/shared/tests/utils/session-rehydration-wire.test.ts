@@ -1,24 +1,14 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-/**
- * Scale-out session rehydration through the REAL SDK transport (#242).
- *
- * Design principle 5: a request carrying an `Mcp-Session-Id` this instance has
- * never seen (the client initialized on another Cloud Run instance) is
- * re-authenticated and served. The factory decides that; the SDK v2 transport
- * would refuse it on its own ("Bad Request: Server not initialized"), because a
- * fresh transport never saw that session's `initialize`. The factory disables
- * that check (mcp-http-transport-factory.ts, `validateSession`), and the unit
- * tests of the factory use a stub server, so only this test proves a rebuilt
- * session's first request actually reaches a tool.
+/** Unknown-session recovery through the real SDK transport.
  */
 
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, vi } from "vitest";
 import type { AddressInfo } from "node:net";
 import pino from "pino";
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/server";
+import { McpServer, WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server";
 import {
   startMcpHttpServer,
   type McpHttpServer,
@@ -127,7 +117,7 @@ async function messageWithId(res: Response, id: number): Promise<Record<string, 
   return hit;
 }
 
-describe("session rehydration over the SDK v2 transport (#242)", () => {
+describe("session recovery over the SDK transport", () => {
   const instances: Instance[] = [];
   afterAll(async () => {
     for (const { http } of instances) {
@@ -136,7 +126,7 @@ describe("session rehydration over the SDK v2 transport (#242)", () => {
     }
   });
 
-  it("serves a session's tools/call on an instance that never saw its initialize", async () => {
+  it("requires re-initialization on an instance that never saw the session", async () => {
     const a = await startInstance();
     const b = await startInstance();
     instances.push(a, b);
@@ -165,16 +155,70 @@ describe("session rehydration over the SDK v2 transport (#242)", () => {
       },
       sessionId
     );
-    expect(call.status).toBe(200);
-    expect(call.headers.get("mcp-session-id")).toBe(sessionId);
-    const result = (await messageWithId(call, 2)) as {
-      result?: { isError?: boolean; structuredContent?: unknown };
-      error?: unknown;
-    };
+    expect(call.status).toBe(404);
+    expect(b.store.get(sessionId)).toBeUndefined();
+
+    const fresh = await post(b.baseUrl, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "initialize",
+      params: { protocolVersion: PROTO, capabilities: {}, clientInfo: { name: "c", version: "0" } },
+    });
+    expect(fresh.status).toBe(200);
+    const freshId = fresh.headers.get("mcp-session-id")!;
+    expect(freshId).not.toBe(sessionId);
+    await messageWithId(fresh, 3);
+    const retry = await post(
+      b.baseUrl,
+      {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "probe_echo", arguments: { text: "hi" } },
+      },
+      freshId
+    );
+    expect(retry.status).toBe(200);
+    const result = await messageWithId(retry, 4);
     expect(result.error).toBeUndefined();
-    expect(result.result?.isError).toBeFalsy();
     expect(JSON.stringify(result.result)).toContain("hi");
-    // B rebuilt the session rather than refusing it.
-    expect(b.store.get(sessionId)).toBeDefined();
+    expect(b.store.get(freshId)).toBeDefined();
+  });
+
+  it("serves a held session after a request error requires a fresh transport", async () => {
+    const a = await startInstance();
+    instances.push(a);
+    const init = await post(a.baseUrl, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: PROTO, capabilities: {}, clientInfo: { name: "c", version: "0" } },
+    });
+    const sessionId = init.headers.get("mcp-session-id")!;
+    await messageWithId(init, 1);
+    const fault = vi
+      .spyOn(WebStandardStreamableHTTPServerTransport.prototype, "handleRequest")
+      .mockRejectedValueOnce(new Error("request failure"));
+    try {
+      const failed = await post(a.baseUrl, { jsonrpc: "2.0", id: 2, method: "ping" }, sessionId);
+      expect(failed.status).toBe(500);
+    } finally {
+      fault.mockRestore();
+    }
+    expect(a.store.get(sessionId)).toBeDefined();
+    const retry = await post(
+      a.baseUrl,
+      {
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "probe_echo", arguments: { text: "after-error" } },
+      },
+      sessionId
+    );
+    expect(retry.status).toBe(200);
+    const result = await messageWithId(retry, 3);
+    expect(result.error).toBeUndefined();
+    expect(JSON.stringify(result.result)).toContain("after-error");
   });
 });
