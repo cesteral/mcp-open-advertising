@@ -70,7 +70,7 @@ describe("SnapchatAccessTokenAdapter", () => {
     await expect(adapter.validate()).rejects.toThrow("401");
   });
 
-  it("does not validate twice (cached)", async () => {
+  it("rechecks credentials on each explicit validate call", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }),
@@ -78,7 +78,7 @@ describe("SnapchatAccessTokenAdapter", () => {
     const adapter = new SnapchatAccessTokenAdapter("token", "acct_123");
     await adapter.validate();
     await adapter.validate();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it("returns the access token", async () => {

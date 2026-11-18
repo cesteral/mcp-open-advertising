@@ -101,15 +101,16 @@ describe("MetaAccessTokenAdapter", () => {
       expect(adapter.userId).toBe("12345");
     });
 
-    it("caches result on subsequent calls", async () => {
+    it("rechecks credentials on each explicit validate call", async () => {
       const adapter = new MetaAccessTokenAdapter("test-token", TEST_BASE_URL);
       mockSuccessResponse();
 
       await adapter.validate();
+      mockSuccessResponse();
       await adapter.validate();
 
       expect(adapter.userId).toBe("12345");
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
     it("validates against the configured Graph API base URL (no hard-coded version)", async () => {

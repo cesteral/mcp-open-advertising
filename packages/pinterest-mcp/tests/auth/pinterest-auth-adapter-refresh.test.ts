@@ -65,7 +65,7 @@ describe("PinterestAccessTokenAdapter", () => {
       await expect(adapter.validate()).rejects.toThrow("Pinterest token validation HTTP error");
     });
 
-    it("does not re-validate an already validated token", async () => {
+    it("rechecks credentials on each explicit validate call", async () => {
       mockFetchWithTimeout.mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -81,9 +81,9 @@ describe("PinterestAccessTokenAdapter", () => {
       );
 
       await adapter.validate();
-      await adapter.validate(); // second call should be a no-op
+      await adapter.validate();
 
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
   });
 

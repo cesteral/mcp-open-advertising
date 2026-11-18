@@ -41,7 +41,6 @@ interface GetUserResponse {
  * Validates via the Customer Management user query JSON endpoint.
  */
 export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
-  private validated = false;
   private _userId = "";
 
   constructor(
@@ -61,8 +60,6 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
-
     const response = await fetchWithTimeout(
       `${this.customerApiBaseUrl}/User/Query`,
       10_000,
@@ -89,7 +86,6 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
 
     const data = (await response.json()) as GetUserResponse;
     this._userId = String(data.User?.Id ?? "unknown");
-    this.validated = true;
   }
 }
 

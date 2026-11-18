@@ -96,10 +96,9 @@ async function fetchAmazonDspUserId(
 
 /**
  * Simple access token adapter — holds a pre-generated AmazonDsp access token.
- * Validates the token on first use by calling POST /adsApi/v1/query/advertiserAccounts.
+ * Validates the token when requested by calling POST /adsApi/v1/query/advertiserAccounts.
  */
 export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
-  private validated = false;
   private _userId = "";
 
   constructor(
@@ -126,9 +125,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     this._userId = await fetchAmazonDspUserId(this.accessToken, this.baseUrl, this._clientId);
-    this.validated = true;
   }
 }
 

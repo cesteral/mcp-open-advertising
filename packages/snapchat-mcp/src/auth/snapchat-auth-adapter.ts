@@ -105,10 +105,9 @@ async function fetchSnapchatUserId(token: string, baseUrl: string): Promise<stri
 
 /**
  * Simple access token adapter — holds a pre-generated Snapchat access token.
- * Validates the token on first use by calling GET /v1/me.
+ * Validates the token when requested by calling GET /v1/me.
  */
 export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
-  private validated = false;
   private _userId = "";
 
   constructor(
@@ -139,9 +138,7 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     this._userId = await fetchSnapchatUserId(this.accessToken, this.baseUrl);
-    this.validated = true;
   }
 }
 

@@ -372,6 +372,73 @@ function createMockAuthStrategy(options: {
 }
 
 describe("validateSessionReuse", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("rejects a revoked credential at the absolute age despite intervening activity", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2026-11-18T00:00:00Z").getTime();
+    vi.setSystemTime(start);
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const manager = new SessionManager(store);
+    manager.trackSession("s1");
+    const strategy = createMockAuthStrategy({
+      extractorFingerprint: "fp-abc",
+      throwOnVerify: true,
+    });
+
+    for (const elapsed of [60_000, 180_000, 299_999]) {
+      vi.setSystemTime(start + elapsed);
+      manager.touchSession("s1");
+      expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(true);
+    }
+    expect(strategy.verify).not.toHaveBeenCalled();
+    vi.setSystemTime(start + 300_000);
+    manager.touchSession("s1");
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(false);
+    expect(strategy.verify).toHaveBeenCalledTimes(1);
+    expect(store.getValidatedAt("s1")).toBe(start);
+    // Failed verification cannot open another five-minute window.
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(false);
+    expect(strategy.verify).toHaveBeenCalledTimes(2);
+  });
+
+  it("starts a fresh absolute window only after successful full verification", async () => {
+    vi.useFakeTimers();
+    const start = Date.now();
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({
+      extractorFingerprint: "fp-abc",
+      verifyFingerprint: "fp-abc",
+    });
+    vi.setSystemTime(start + 300_000);
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(true);
+    expect(store.getValidatedAt("s1")).toBe(start + 300_000);
+    vi.setSystemTime(start + 599_999);
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(true);
+    expect(strategy.verify).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(start + 600_000);
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(true);
+    expect(strategy.verify).toHaveBeenCalledTimes(2);
+    store.delete("s1");
+    expect(store.getValidatedAt("s1")).toBeUndefined();
+  });
+
+  it("rejects changed verified credentials without advancing the validation time", async () => {
+    vi.useFakeTimers();
+    const start = Date.now();
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({
+      extractorFingerprint: "fp-abc",
+      verifyFingerprint: "fp-other",
+    });
+    vi.setSystemTime(start + 300_000);
+    expect((await validateSessionReuse(strategy, store, {}, "s1")).valid).toBe(false);
+    expect(store.getValidatedAt("s1")).toBe(start);
+  });
+
   it("should return valid when extractor fingerprint matches", async () => {
     const store = new SessionServiceStore<MockServices>();
     store.set("s1", { svc: "a" }, "fp-abc");

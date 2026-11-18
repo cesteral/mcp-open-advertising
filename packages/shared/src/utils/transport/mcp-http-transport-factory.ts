@@ -118,6 +118,8 @@ export interface TransportSessionStore extends SessionServiceStoreLike {
   set(sessionId: string, services: unknown, fingerprint?: string): void;
   setAuthContext(sessionId: string, ctx: SessionAuthContext): void;
   getFingerprint(sessionId: string): string | undefined;
+  getValidatedAt?(sessionId: string): number | undefined;
+  setValidatedAt?(sessionId: string, timestamp: number): void;
   validateFingerprint(sessionId: string, fingerprint: string): boolean;
   isFull(): boolean;
   /** Present on the real SessionServiceStore; optional so test fakes stay small. */

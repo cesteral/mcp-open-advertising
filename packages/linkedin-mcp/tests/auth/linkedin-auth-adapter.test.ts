@@ -54,7 +54,7 @@ describe("LinkedInAccessTokenAdapter", () => {
       expect(adapter.personId).toBe("urn:li:person:person-xyz789");
     });
 
-    it("only calls API once (caches validated state)", async () => {
+    it("rechecks credentials on each explicit validate call", async () => {
       mockFetchWithTimeout.mockResolvedValue({
         ok: true,
         json: async () => accountUsersResponse("urn:li:person:person-cached"),
@@ -69,7 +69,7 @@ describe("LinkedInAccessTokenAdapter", () => {
       await adapter.validate();
       await adapter.validate();
 
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
     it("throws on 401 response", async () => {
@@ -487,9 +487,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
       expect(meOptions.headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
 
-    // Fleet review linkedin #20: the access-token adapter memoized validate()
-    // but the refresh adapter re-ran a token refresh + validation call on every call.
-    it("memoizes a successful validation", async () => {
+    it("revalidates the cached access token without another token exchange", async () => {
       const adapter = new LinkedInRefreshTokenAdapter(
         MOCK_REFRESH_CREDENTIALS,
         "https://api.linkedin.com",
@@ -499,9 +497,10 @@ describe("LinkedInRefreshTokenAdapter", () => {
       mockAccountUsersResponse();
 
       await adapter.validate();
+      mockAccountUsersResponse();
       await adapter.validate();
 
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(3);
       expect(adapter.personId).toBe("urn:li:person:person-123");
     });
   });

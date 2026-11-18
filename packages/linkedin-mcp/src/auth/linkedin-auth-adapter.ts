@@ -80,10 +80,9 @@ async function fetchLinkedInPersonId(
 
 /**
  * Simple access token adapter — holds a pre-generated LinkedIn access token.
- * Validates the token on first use (see fetchLinkedInPersonId).
+ * Validates the token when requested (see fetchLinkedInPersonId).
  */
 export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
-  private validated = false;
   private _personId = "";
 
   constructor(
@@ -105,9 +104,7 @@ export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (this.validated) return;
     this._personId = await fetchLinkedInPersonId(this.accessToken, this.baseUrl, this.apiVersion);
-    this.validated = true;
   }
 }
 
@@ -133,7 +130,6 @@ export class LinkedInRefreshTokenAdapter
   implements LinkedInAuthAdapter
 {
   private _personId = "";
-  private validated = false;
 
   constructor(
     credentials: LinkedInRefreshCredentials,
@@ -205,12 +201,8 @@ export class LinkedInRefreshTokenAdapter
   }
 
   async validate(): Promise<void> {
-    // Memoized like LinkedInAccessTokenAdapter: the credentials were proven
-    // once; re-validating would spend a token refresh and a validation call each time.
-    if (this.validated) return;
     const token = await this.getAccessToken();
     this._personId = await fetchLinkedInPersonId(token, this.baseUrl, this.apiVersion);
-    this.validated = true;
   }
 }
 
