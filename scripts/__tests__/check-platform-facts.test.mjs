@@ -115,6 +115,14 @@ describe("the shipped ledger", () => {
     ["amazon_dsp.advertiser_accounts_api", "2026-11-13"],
     ["amazon_dsp.account_id_header_value", "2026-11-13"],
     ["meta.v26_changes_apply_to_all_versions", "2026-11-13"],
+    ["meta.api_version", "2026-11-17"],
+    ["meta.graph_v26_field_schema", "2026-11-17"],
+    ["msads.campaignmanagement_api_version", "2026-11-17"],
+    ["msads.reporting_api_version", "2026-11-17"],
+    ["msads.customermanagement_api_version", "2026-11-17"],
+    ["snapchat.api_base", "2026-11-17"],
+    ["pinterest.api_base", "2026-11-18"],
+    ["tiktok.api_base", "2026-11-18"],
   ]);
 
   it("records a fact as verified only when it is in the reviewed set, with the date it was read", () => {
