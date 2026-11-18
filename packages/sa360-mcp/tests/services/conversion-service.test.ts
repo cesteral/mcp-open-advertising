@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createSpiedSa360RateLimiter } from "../helpers/wire.js";
 import { ConversionService } from "../../src/services/sa360-v2/conversion-service.js";
 import { V2_CONVERSION_PROPERTIES } from "../helpers/v2-conversion-schema.js";
 
@@ -26,9 +27,7 @@ function createMockV2HttpClient() {
 }
 
 function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  return createSpiedSa360RateLimiter();
 }
 
 // ---------------------------------------------------------------------------

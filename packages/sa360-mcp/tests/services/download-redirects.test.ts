@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { createSpiedSa360RateLimiter } from "../helpers/wire.js";
 import { McpError } from "@cesteral/shared";
 import { SA360ReportingService } from "../../src/services/sa360-v2/reporting-service.js";
 
@@ -18,7 +19,7 @@ const FILE_URL = "https://www.googleapis.com/doubleclicksearch/v2/reports/r1/fil
 function makeService() {
   const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
   const authAdapter = { getAccessToken: vi.fn().mockResolvedValue("tok") } as any;
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
+  const rateLimiter = createSpiedSa360RateLimiter();
   return new SA360ReportingService(logger, rateLimiter, {} as any, authAdapter);
 }
 

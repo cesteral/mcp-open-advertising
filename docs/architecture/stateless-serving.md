@@ -59,9 +59,12 @@ Stdio is served by `serveStdioServer` (`@cesteral/shared`, `utils/transport/stdi
 
 The DNS-rebinding 403 and the body-limit 413 happen before the request is classified. On a 2026-07-28 POST they are JSON-RPC error bodies (`-32005` / `-32600`, `rejectBeforeRouting` in the transport factory); a 2025-era request keeps its plain `{ error }` body. The 403 classifies with the SDK's `isLegacyRequest`; the 413 cannot (its body is over the limit and partly read), so it goes by headers: `Mcp-Method` present, or an `MCP-Protocol-Version` the 2025 path does not accept.
 
+## Standard headers before work (#248)
+
+On the modern path the transport reads `Mcp-Method` / `Mcp-Name` after authenticating and before building any upstream client or server (`utils/transport/standard-headers.ts`). A present header that contradicts the body is answered `-32020` (JSON-RPC body, HTTP 400) at once, and its method/name go into the request log fields. Missing headers, Base64 sentinels and batches are left to the SDK handler, which owns the full SEP-2243 rules, so this check is only ever earlier, never looser. An unauthenticated caller still gets 401 first. Per-method rate limiting on these headers is not done: the limiter guards upstream platform quotas keyed by the platform call, not by MCP method.
+
 ## Decided, not done
 
 - **`subscriptions/listen` over HTTP**: no server emits `list_changed` or resource-updated notifications, so there is nothing to subscribe to. Stdio gets the SDK's entry-level routing for free. Revisit if a server ever emits notifications.
-- **`Mcp-Method` / `Mcp-Name` routing**: the SDK's validation ladder already rejects a header that disagrees with the body (`-32020`); the factory does not route on them. The headers pass CORS preflight (`withStandardMcpHeaders`).
 - **`registry.json` `protocol_version`** stays `2025-11-25`: it is the single baseline the registry and the card test check containment of, and the card's `mcp_protocol_versions` already lists `2026-07-28` too.
 - **Elicitation reading `ctx.mcpReq.envelope`** is done in #244 (see [confirmation-mrtr.md](confirmation-mrtr.md)).
