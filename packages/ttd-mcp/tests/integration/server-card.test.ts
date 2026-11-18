@@ -61,7 +61,7 @@ describe("/.well-known/mcp/server-card.json (ttd-mcp)", () => {
       transports: [{ type: "streamable_http", endpoint: "/mcp" }],
       auth: {
         current_mode: "ttd-token",
-        supported_modes: ["ttd-token", "jwt", "none"],
+        supported_modes: ["ttd-token", "jwt", "oauth", "none"],
       },
       capabilities: { tools: true, prompts: true, resources: true, elicitation: true },
     });
