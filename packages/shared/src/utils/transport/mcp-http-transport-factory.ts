@@ -92,6 +92,18 @@ type HonoBindings = {
   outgoing: import("http").ServerResponse;
 };
 
+/**
+ * SEP-2243 standard request headers. A browser client sends them on every
+ * modern-era POST, so they must pass CORS preflight on every server without
+ * each package listing them.
+ */
+export const STANDARD_MCP_REQUEST_HEADERS = ["Mcp-Method", "Mcp-Name", "MCP-Protocol-Version"];
+
+export function withStandardMcpHeaders(headers: string[]): string[] {
+  const seen = new Set(headers.map((h) => h.toLowerCase()));
+  return [...headers, ...STANDARD_MCP_REQUEST_HEADERS.filter((h) => !seen.has(h.toLowerCase()))];
+}
+
 export interface McpHttpServer {
   server: ServerType;
   shutdown: () => Promise<void>;
@@ -335,7 +347,7 @@ export function createMcpHttpTransport(
     cors({
       origin: allowedOrigin,
       allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-      allowHeaders: platformConfig.corsAllowHeaders,
+      allowHeaders: withStandardMcpHeaders(platformConfig.corsAllowHeaders),
       exposeHeaders: ["Mcp-Session-Id", "WWW-Authenticate"],
       credentials: true,
     })

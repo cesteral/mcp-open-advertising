@@ -15,8 +15,10 @@
 // scripts/README.md for which and why. Everything here is plain JSON, because
 // vitest hands it to the workers by serialising it.
 
+import { execFile } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { ROOT, withServerClient, listRawTools, IDENTITY_SCHEMA } from "./boot-server.mjs";
 
 /**
@@ -68,6 +70,24 @@ async function renderPrompt(client, prompt) {
   return renders;
 }
 
+const execFileAsync = promisify(execFile);
+
+/**
+ * The 2026-07-28 `ttlMs` / `cacheScope` the server advertises (#248). The SDK
+ * serves that era only through `createMcpHandler`, so a child process
+ * (cache-hints-probe.mjs) drives the server's factory through it. A child, not
+ * an import: vitest's module graph and Node's would load the SDK twice, and the
+ * handler refuses a server built from another copy of its classes.
+ */
+async function snapshotCacheHints(pkg) {
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [join(ROOT, "scripts", "lib", "cache-hints-probe.mjs"), pkg],
+    { maxBuffer: 16 * 1024 * 1024 }
+  );
+  return JSON.parse(stdout);
+}
+
 /**
  * Boots `pkg` once and returns:
  *   serverVersion  the `initialize` serverInfo (name, title, version, ...)
@@ -75,8 +95,10 @@ async function renderPrompt(client, prompt) {
  *   tools          every tool as the raw `tools/list` wire object
  *   prompts        [{ prompt, renders: [{ arguments, text }] }]
  *   resources      [{ uri, text }]
+ *   cacheHints     the 2026-07-28 ttlMs / cacheScope per list method and resource read
  */
 export async function snapshotServer(pkg) {
+  const cacheHints = await snapshotCacheHints(pkg);
   return withServerClient(pkg, async (client) => {
     const capabilities = client.getServerCapabilities() ?? {};
     const tools = await listRawTools(client);
@@ -104,7 +126,14 @@ export async function snapshotServer(pkg) {
       }
     }
 
-    return { serverVersion: client.getServerVersion(), capabilities, tools, prompts, resources };
+    return {
+      serverVersion: client.getServerVersion(),
+      capabilities,
+      tools,
+      prompts,
+      resources,
+      cacheHints,
+    };
   });
 }
 

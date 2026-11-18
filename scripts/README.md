@@ -91,7 +91,7 @@ Boot a server yourself (`withServerClient` from `lib/boot-server.mjs`) only when
 | `untrusted-error-marker.test`    | Calls every tool with empty arguments to read the error results.                                             |
 | `evals/tool-search-ranking.test` | Runs the corpus's queries against each server's live `*_search_tools`.                                       |
 
-`boot-server.test` boots `meta-mcp` once, to test the harness itself. `tools-list-determinism.test` is also what proves the snapshot is what a live boot returns, for every server.
+`lib/cache-hints-probe.mjs` is run as a child process by the snapshot (once per server) to collect the 2026-07-28 cache hints: the SDK serves that era only through `createMcpHandler`, and a second in-process SDK copy would break it. `boot-server.test` boots `meta-mcp` once, to test the harness itself. `tools-list-determinism.test` is also what proves the snapshot is what a live boot returns, for every server.
 
 ## Deployment scripts
 

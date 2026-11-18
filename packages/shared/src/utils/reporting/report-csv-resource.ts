@@ -14,6 +14,9 @@ import { JsonRpcErrorCode, McpError } from "../mcp-errors.js";
  * Error surfaced as -32603, which tells a client the server broke rather than
  * that the URI is no good.
  */
+/** Registration-time hint for `report-csv://`: private, uncached unless a read narrows it. */
+export const REPORT_CSV_CACHE_HINT = { ttlMs: 0, cacheScope: "private" } as const;
+
 function reportCsvNotFound(href: string): McpError {
   return new McpError(
     JsonRpcErrorCode.InvalidParams,
@@ -30,12 +33,19 @@ export interface McpServerResourceLike {
   registerResource(
     name: string,
     template: unknown,
-    metadata: { description?: string; mimeType?: string },
+    metadata: {
+      description?: string;
+      mimeType?: string;
+      cacheHint?: { ttlMs?: number; cacheScope?: "public" | "private" };
+    },
     handler: (
       uri: { href: string },
       variables: unknown,
       extra?: { sessionId?: string }
     ) => Promise<{
+      /** 2026-07-28 cache fields; the SDK uses a handler's own over any registered hint. */
+      ttlMs?: number;
+      cacheScope?: "public" | "private";
       contents: Array<{
         uri: string;
         mimeType: string;
@@ -136,6 +146,10 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
         `Raw report CSV bodies stored on demand by ${downloadToolName} (storeRawCsv: true). ` +
         `Entries expire after 30 minutes.`,
       mimeType: "text/csv",
+      // #248: tenant data, never `public`. Pinned here so a server-level
+      // `resources/read` policy can never widen it; the per-read hint below
+      // narrows the TTL to the entry's own expiry.
+      cacheHint: REPORT_CSV_CACHE_HINT,
     },
     async (uri, _variables, extra) => {
       const callerSessionId = extra?.sessionId;
@@ -163,6 +177,9 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
         throw reportCsvNotFound(uri.href);
       }
       return {
+        // #248: private, and never cached past the entry's own expiry.
+        ttlMs: Math.max(0, entry.expiresAt - Date.now()),
+        cacheScope: "private" as const,
         contents: [
           {
             uri: uri.href,

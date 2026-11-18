@@ -148,6 +148,25 @@ export interface PlatformMcpServerOptions<TServer extends PlatformMcpServerLike>
 }
 
 /**
+ * #248 (MCP 2026-07-28 cache hints). The tool, prompt and template catalogs and
+ * the schema / fields / examples resources are fixed per release and identical
+ * for every principal, so they are advertised as long-lived and shareable.
+ * Anything that holds tenant data is not: `resources/read` keeps the SDK's
+ * `0` / `private` default unless a resource opts in, and `resources/list` is
+ * only public when the server has no `report-csv://` entries in it.
+ */
+export const STATIC_CATALOG_CACHE_HINT = { ttlMs: 60 * 60 * 1000, cacheScope: "public" } as const;
+
+export function buildListCacheHints(hasReportCsv: boolean) {
+  return {
+    "tools/list": STATIC_CATALOG_CACHE_HINT,
+    "prompts/list": STATIC_CATALOG_CACHE_HINT,
+    "resources/templates/list": STATIC_CATALOG_CACHE_HINT,
+    ...(hasReportCsv ? {} : { "resources/list": STATIC_CATALOG_CACHE_HINT }),
+  };
+}
+
+/**
  * Create and configure a platform's MCP server.
  */
 export async function createPlatformMcpServer<TServer extends PlatformMcpServerLike>(
@@ -160,6 +179,7 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
     {
       capabilities: { logging: {}, ...opts.extraCapabilities },
       instructions: opts.instructions,
+      cacheHints: buildListCacheHints(Boolean(reportCsv)),
     }
   );
 
@@ -202,7 +222,12 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
       : undefined,
   });
 
-  registerStaticResourcesFromDefinitions({ server, resources: opts.resources, logger });
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: opts.resources,
+    logger,
+    cacheHint: STATIC_CATALOG_CACHE_HINT,
+  });
 
   if (opts.templatedResources) {
     registerTemplatedResourcesFromDefinitions({
@@ -210,6 +235,7 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
       templateBuilder: (uriTemplate, options) => new sdk.ResourceTemplate(uriTemplate, options),
       resources: opts.templatedResources,
       logger,
+      cacheHint: STATIC_CATALOG_CACHE_HINT,
     });
   }
 

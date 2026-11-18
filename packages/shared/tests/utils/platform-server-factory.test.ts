@@ -19,7 +19,10 @@ vi.mock("../../src/utils/observability/interaction-logger.js", () => ({
   },
 }));
 
-import { createPlatformMcpServer } from "../../src/utils/mcp/platform-server-factory.js";
+import {
+  buildListCacheHints,
+  createPlatformMcpServer,
+} from "../../src/utils/mcp/platform-server-factory.js";
 import { registerToolsFromDefinitions } from "../../src/utils/mcp/tool-handler-factory.js";
 import { InteractionLogger } from "../../src/utils/observability/interaction-logger.js";
 import { ReportCsvStore } from "../../src/utils/reporting/report-csv-store.js";
@@ -129,6 +132,7 @@ describe("createPlatformMcpServer", () => {
     expect(server.options).toEqual({
       capabilities: { logging: {} },
       instructions: "Some instructions",
+      cacheHints: buildListCacheHints(false),
     });
   });
 
@@ -140,6 +144,7 @@ describe("createPlatformMcpServer", () => {
     expect(server.options).toEqual({
       capabilities: { logging: {}, completions: {} },
       instructions: "Some instructions",
+      cacheHints: buildListCacheHints(false),
     });
   });
 
