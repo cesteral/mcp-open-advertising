@@ -15,7 +15,7 @@ All MCP server packages depend on this package via pnpm workspace protocol (`wor
 | `auth-strategy.ts`             | `AuthStrategy`, `AuthInfo`, `AuthResult`, `createAuthStrategy()`                                                   | Pluggable auth strategy factory (`google-headers`, `jwt`, `none`)                                                        |
 | `bearer-auth-strategy-base.ts` | `BearerAuthStrategyBase`                                                                                           | Abstract base for platform-specific bearer auth (Meta, LinkedIn, TikTok, Pinterest, Snapchat, Amazon DSP, Microsoft Ads) |
 | `google-auth.ts`               | `GoogleAuthAdapter`, `ServiceAccountAuthAdapter`, `OAuth2RefreshTokenAuthAdapter`, `parseCredentialsFromHeaders()` | Google OAuth2/SA token management with caching                                                                           |
-| `jwt.ts`                       | `verifyJwt()`, `createJwt()`, `extractBearerToken()`, `decodeJwtPayload()`                                         | JWT verification and creation via `jose` library                                                                         |
+| `jwt.ts`                       | `verifyJwt()`, `createJwt()`, `extractBearerToken()`, `decodeJwtPayload()`                                         | JWT verification (requires `sub`, `exp`, `iat`) and creation via `jose`; unverified decoding for inspection only         |
 
 #### Example: Creating an auth strategy
 

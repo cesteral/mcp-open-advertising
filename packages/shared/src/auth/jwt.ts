@@ -37,6 +37,7 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
       // explicitly makes the single supported algorithm auditable and defends
       // against a future key-type change silently widening what is accepted.
       algorithms: ["HS256"],
+      requiredClaims: ["sub", "exp", "iat"],
       issuer: getJwtIssuer(),
       audience: getJwtAudience(),
     });
@@ -55,8 +56,9 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 
 /**
  * Decode a JWT payload without cryptographic verification.
- * Used for lightweight operations (e.g., fingerprinting on session reuse)
- * where the token was already fully verified at session creation.
+ * The result is untrusted: this checks neither signature, expiry nor claims.
+ * Use only for non-security inspection. Authentication, authorization and
+ * credential fingerprinting must use verifyJwt(), including on session reuse.
  */
 export function decodeJwtPayload(token: string): JwtPayload {
   const parts = token.split(".");
