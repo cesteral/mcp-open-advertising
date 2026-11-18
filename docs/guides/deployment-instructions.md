@@ -122,13 +122,13 @@ This script interactively prompts for each secret. It checks if each secret alre
 
 ### Environment Differences
 
-| Setting           | Dev               | Prod            |
-| ----------------- | ----------------- | --------------- |
-| Min instances     | 0 (scale to zero) | 1 (always warm) |
-| Max instances     | 3                 | 10              |
-| CPU / Memory      | 1 vCPU / 512Mi    | 2 vCPU / 1Gi    |
-| Log level         | `debug`           | `info`          |
-| Cloud NAT logging | ALL               | ERRORS only     |
+| Setting           | Dev               | Prod                                 |
+| ----------------- | ----------------- | ------------------------------------ |
+| Min instances     | 0 (scale to zero) | 1 (always warm)                      |
+| Max instances     | 1                 | 1 (capped until stateless MCP, #243) |
+| CPU / Memory      | 1 vCPU / 512Mi    | 2 vCPU / 1Gi                         |
+| Log level         | `debug`           | `info`                               |
+| Cloud NAT logging | ALL               | ERRORS only                          |
 
 ## Step 5: Verify
 

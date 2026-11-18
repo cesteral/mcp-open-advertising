@@ -42,7 +42,7 @@ enable_endpoint_independent_mapping = false
 
 # Cloud Run - conservative scaling for dev
 min_instances         = 0 # Scale to zero in dev
-max_instances         = 3 # Lower max for dev
+max_instances         = 1 # Pinned to 1 (sessions are per instance) until stateless MCP, #243
 cpu_limit             = "1"
 memory_limit          = "512Mi"
 cpu_always_allocated  = false

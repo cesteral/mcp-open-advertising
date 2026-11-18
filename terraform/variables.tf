@@ -116,9 +116,9 @@ variable "min_instances" {
 }
 
 variable "max_instances" {
-  description = "Maximum Cloud Run instances"
+  description = "Maximum Cloud Run instances. Capped at 1 per MCP service in main.tf (local.fleet_max_instances_cap) until stateless MCP (#243) ships."
   type        = number
-  default     = 10
+  default     = 1
 }
 
 variable "cpu_limit" {

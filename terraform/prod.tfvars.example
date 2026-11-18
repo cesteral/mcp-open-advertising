@@ -42,7 +42,7 @@ enable_endpoint_independent_mapping = true # Better for production
 
 # Cloud Run - production scaling
 min_instances         = 1   # Always keep 1 warm
-max_instances         = 10  # Scale up to 10 for peak loads
+max_instances         = 1   # Pinned to 1 (sessions are per instance) until stateless MCP, #243
 cpu_limit             = "2" # More CPU for production
 memory_limit          = "1Gi"
 cpu_always_allocated  = true # Faster response times
@@ -74,7 +74,7 @@ service_resource_overrides = {
   "dbm-mcp" = {
     cpu_limit     = "2"
     memory_limit  = "1Gi"
-    max_instances = 10
+    max_instances = 1
   }
 }
 
