@@ -10,7 +10,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * algorithms in DV360 — covers all 4 custom bidding tools.
  */
 export const customBiddingWorkflowPrompt: Prompt = {
-  name: "custom_bidding_workflow",
+  name: "dv360_custom_bidding_workflow",
   description:
     "Step-by-step guide for DV360 custom bidding: create algorithms, upload scripts, manage rules, check model readiness, and assign to line items.",
   arguments: [

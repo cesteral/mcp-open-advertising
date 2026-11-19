@@ -16,7 +16,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * - Best practices for entity relationships
  */
 export const fullCampaignSetupPrompt: Prompt = {
-  name: "full_campaign_setup_workflow",
+  name: "dv360_full_campaign_setup_workflow",
   description:
     "Step-by-step guide for creating a complete DV360 campaign structure including campaign, insertion order, line items, and optional targeting. Includes validation rules, common pitfalls, and troubleshooting guidance.",
   arguments: [

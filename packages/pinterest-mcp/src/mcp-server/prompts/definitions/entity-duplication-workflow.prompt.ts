@@ -171,7 +171,7 @@ Activate the new ad groups and ads the same way.
 3. Activate both campaigns and compare with \`pinterest_get_report\`
 
 ### Creative test
-You don't need a new campaign. Create a Pin with the alternative image or video (see the \`creative_upload_workflow\` prompt), then create a second ad in the same ad group with the new \`pin_id\`. An ad's creative is its Pin, so a creative test means a different \`pin_id\`, not an edited ad.
+You don't need a new campaign. Create a Pin with the alternative image or video (see the \`pinterest_creative_upload_workflow\` prompt), then create a second ad in the same ad group with the new \`pin_id\`. An ad's creative is its Pin, so a creative test means a different \`pin_id\`, not an edited ad.
 
 ---
 

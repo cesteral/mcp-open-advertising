@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const creativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "meta_creative_upload_workflow",
   description:
     "Step-by-step guide for uploading creative assets and creating Meta Ads creatives (images and videos)",
   arguments: [

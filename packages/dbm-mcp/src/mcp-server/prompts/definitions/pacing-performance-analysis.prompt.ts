@@ -10,7 +10,7 @@ import type { Prompt } from "./types.js";
  * metrics, identifying trends, and recommending remediation actions.
  */
 export const pacingPerformanceAnalysisPrompt: Prompt = {
-  name: "pacing_performance_analysis_workflow",
+  name: "dbm_pacing_performance_analysis_workflow",
   description:
     "Step-by-step guide for DV360 pacing assessment and performance deep-dive: check delivery pacing, analyze CPM/CTR/CPA/ROAS, identify historical trends, and recommend bid/budget adjustments via dv360-mcp.",
   arguments: [

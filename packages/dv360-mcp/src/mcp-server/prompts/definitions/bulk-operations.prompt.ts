@@ -10,7 +10,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * adjustment operations in DV360.
  */
 export const bulkOperationsPrompt: Prompt = {
-  name: "bulk_operations_workflow",
+  name: "dv360_bulk_operations_workflow",
   description:
     "Step-by-step guide for DV360 bulk operations: batch create entities, batch update with updateMask, batch status changes, and batch bid adjustments. Covers safety checks, partial failure handling, and verification.",
   arguments: [
