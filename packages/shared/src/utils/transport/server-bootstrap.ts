@@ -10,10 +10,12 @@
 
 import pino from "pino";
 import type { Logger } from "pino";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { closeAllInteractionLoggers } from "../observability/interaction-logger.js";
 import { trackInFlightRequests, type RequestEmitter } from "./in-flight-requests.js";
 import { shutdownOpenTelemetry } from "../observability/telemetry.js";
 import { initializeGovernanceRuntime } from "../../governance/runtime.js";
+import { serveStdioServer, STDIO_SESSION_ID } from "./stdio-server.js";
 
 // ---------------------------------------------------------------------------
 // Transport mode detection
@@ -80,12 +82,8 @@ export interface HttpServerResult {
   shutdown: () => Promise<void>;
 }
 
-/**
- * Bootstrap options. TServer is the concrete MCP server type from each package.
- * The bootstrap only requires `close()` on the server for shutdown handling,
- * but accepts the full server type so createMcpServer/runStdio can use it.
- */
-export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<void> }> {
+/** Bootstrap options. Stdio is served centrally via `serveStdioServer` (#243). */
+export interface BootstrapOptions<TConfig> {
   /** Service name for logging */
   serviceName: string;
   /** Parsed config object */
@@ -102,10 +100,12 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
   // Stdio mode callbacks
   /** Set up stdio session credentials. Return false if credentials are missing and required. */
   setupStdioSession: (sessionId: string) => boolean | void | Promise<boolean | void>;
-  /** Create MCP server instance */
-  createMcpServer: (logger: Logger, sessionId: string) => Promise<TServer>;
-  /** Run the server over stdio transport */
-  runStdio: (server: TServer, logger: Logger) => Promise<void>;
+  /**
+   * Create an MCP server instance. Stdio calls it once per server instance the
+   * connection needs (a `server/discover` probe may be discarded), so it must
+   * only build the server; credentials are set up once by `setupStdioSession`.
+   */
+  createMcpServer: (logger: Logger, sessionId: string) => Promise<McpServer>;
 
   // HTTP mode callback
   /** Start the HTTP server */
@@ -141,9 +141,7 @@ const SHUTDOWN_DRAIN_TIMEOUT_MS = 7_000;
  * Main bootstrap function that orchestrates server startup.
  * Handles transport detection, stdio vs HTTP branching, and graceful shutdown.
  */
-export async function bootstrapMcpServer<TConfig, TServer extends { close(): Promise<void> }>(
-  opts: BootstrapOptions<TConfig, TServer>
-): Promise<void> {
+export async function bootstrapMcpServer<TConfig>(opts: BootstrapOptions<TConfig>): Promise<void> {
   const { logger, transportMode } = opts;
 
   // Initialize OpenTelemetry first
@@ -166,8 +164,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
     if (transportMode === "stdio") {
       logger.info("Starting in stdio mode");
 
-      const stdioSessionId = "stdio";
-      const result = await opts.setupStdioSession(stdioSessionId);
+      const result = await opts.setupStdioSession(STDIO_SESSION_ID);
       if (result === false) {
         throw new Error(
           "No credentials found for stdio mode. " +
@@ -175,8 +172,10 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
         );
       }
 
-      const server = await opts.createMcpServer(logger, stdioSessionId);
-      await opts.runStdio(server, logger);
+      const server = serveStdioServer(
+        (sessionId) => opts.createMcpServer(logger, sessionId),
+        logger
+      );
 
       // Graceful shutdown for stdio mode
       const handleStdioShutdown = async () => {
