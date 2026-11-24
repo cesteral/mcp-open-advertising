@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GAdsService } from "../../src/services/gads/gads-service.js";
-import { JsonRpcErrorCode } from "@cesteral/shared";
+import { JsonRpcErrorCode, type RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -27,12 +28,6 @@ function createMockHttpClient() {
   } as any;
 }
 
-function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -41,12 +36,12 @@ describe("GAdsService", () => {
   let service: GAdsService;
   let logger: ReturnType<typeof createMockLogger>;
   let httpClient: ReturnType<typeof createMockHttpClient>;
-  let rateLimiter: ReturnType<typeof createMockRateLimiter>;
+  let rateLimiter: RateLimiter;
 
   beforeEach(() => {
     logger = createMockLogger();
     httpClient = createMockHttpClient();
-    rateLimiter = createMockRateLimiter();
+    rateLimiter = createSpiedRateLimiter();
     service = new GAdsService(logger, rateLimiter, httpClient);
   });
 

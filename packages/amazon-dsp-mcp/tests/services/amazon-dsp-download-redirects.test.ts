@@ -11,13 +11,14 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { McpError } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { AmazonDspReportingService } from "../../src/services/amazon-dsp/amazon-dsp-reporting-service.js";
 
 const S3_URL = "https://dsp-reports.s3.amazonaws.com/rpt-1.csv?X-Amz-Signature=1";
 
 function makeService() {
   const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
+  const rateLimiter = createSpiedRateLimiter();
   return new AmazonDspReportingService(rateLimiter, {} as any, logger, 1, 3);
 }
 

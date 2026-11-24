@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { LinkedInService } from "../../src/services/linkedin/linkedin-service.js";
 
 // Mock the LinkedInHttpClient module — we provide a static encodeUrn and instance methods separately
@@ -15,21 +17,18 @@ const mockHttpClient = {
   delete: vi.fn(),
 };
 
-const mockRateLimiter = {
-  consume: vi.fn().mockResolvedValue(undefined),
-  destroy: vi.fn(),
-};
+let mockRateLimiter: RateLimiter;
 
 describe("LinkedInService", () => {
   let service: LinkedInService;
 
   beforeEach(() => {
-    service = new LinkedInService(mockRateLimiter as any, mockHttpClient as any);
+    mockRateLimiter = createSpiedRateLimiter();
+    service = new LinkedInService(mockRateLimiter, mockHttpClient as any);
     mockHttpClient.get.mockReset();
     mockHttpClient.post.mockReset();
     mockHttpClient.patch.mockReset();
     mockHttpClient.delete.mockReset();
-    mockRateLimiter.consume.mockReset().mockResolvedValue(undefined);
   });
 
   describe("listEntities()", () => {

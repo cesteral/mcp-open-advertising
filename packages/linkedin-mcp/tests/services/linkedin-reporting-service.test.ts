@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { LinkedInReportingService } from "../../src/services/linkedin/linkedin-reporting-service.js";
 
-const mockRateLimiter = {
-  consume: vi.fn().mockResolvedValue(undefined),
-  destroy: vi.fn(),
-};
+let mockRateLimiter: RateLimiter;
 
 const mockHttpClient = {
   get: vi.fn(),
@@ -14,8 +13,9 @@ describe("LinkedInReportingService", () => {
   let service: LinkedInReportingService;
 
   beforeEach(() => {
-    service = new LinkedInReportingService(mockRateLimiter as any, mockHttpClient as any);
     vi.clearAllMocks();
+    mockRateLimiter = createSpiedRateLimiter();
+    service = new LinkedInReportingService(mockRateLimiter, mockHttpClient as any);
   });
 
   it("builds analytics query and returns parsed elements", async () => {

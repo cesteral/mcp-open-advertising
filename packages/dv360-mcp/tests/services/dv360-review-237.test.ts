@@ -27,6 +27,7 @@ vi.mock("../../src/services/domain/entity-mapping.js", async () => {
   };
 });
 
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import {
   DV360Service,
   DV360_HIGH_LATENCY_TIMEOUT_MS,
@@ -54,7 +55,7 @@ function makeService() {
       ),
     getUploadBaseUrl: vi.fn().mockReturnValue("https://displayvideo.googleapis.com/upload/v4"),
   };
-  const rateLimiter: any = { consume: vi.fn().mockResolvedValue(undefined) };
+  const rateLimiter = createSpiedRateLimiter();
   return { service: new DV360Service(logger, rateLimiter, httpClient as any), httpClient };
 }
 
