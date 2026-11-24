@@ -5,7 +5,7 @@
 import { readFileSync } from "fs";
 
 import { mcpConfig } from "./config/index.js";
-import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
+import { createMcpServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import {
@@ -63,7 +63,6 @@ bootstrapMcpServer({
   initOtel: initializeOpenTelemetry,
   setupStdioSession: setupStdioCredentials,
   createMcpServer,
-  runStdio: runStdioServer,
   startHttp: startHttpServer,
   onShutdown: () => rateLimiter.destroy(),
 }).catch((err) => {
