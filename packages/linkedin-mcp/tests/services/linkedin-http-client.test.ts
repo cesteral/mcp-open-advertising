@@ -9,6 +9,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { LinkedInHttpClient } from "../../src/services/linkedin/linkedin-http-client.js";
 import { LinkedInReportingService } from "../../src/services/linkedin/linkedin-reporting-service.js";
 import type { LinkedInAuthAdapter } from "../../src/auth/linkedin-auth-adapter.js";
@@ -120,10 +121,7 @@ describe("LinkedInHttpClient", () => {
 
     it("sends adAnalytics in Rest.li 2.0 syntax end to end", async () => {
       mockOkResponse({ elements: [] });
-      const reporting = new LinkedInReportingService(
-        { consume: vi.fn().mockResolvedValue(undefined) } as any,
-        client
-      );
+      const reporting = new LinkedInReportingService(createSpiedRateLimiter(), client);
 
       await reporting.getAnalytics(
         "urn:li:sponsoredAccount:123",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, type RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before importing the module under test
@@ -31,10 +32,6 @@ function createMockLogger() {
     child: vi.fn().mockReturnThis(),
     level: "debug",
   } as any;
-}
-
-function createMockRateLimiter() {
-  return { consume: vi.fn().mockResolvedValue(undefined) } as any;
 }
 
 function createMockHttpClient() {
@@ -89,13 +86,13 @@ function mockEntitySchema() {
 describe("DV360Service", () => {
   let service: DV360Service;
   let logger: ReturnType<typeof createMockLogger>;
-  let rateLimiter: ReturnType<typeof createMockRateLimiter>;
+  let rateLimiter: RateLimiter;
   let httpClient: ReturnType<typeof createMockHttpClient>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     logger = createMockLogger();
-    rateLimiter = createMockRateLimiter();
+    rateLimiter = createSpiedRateLimiter();
     httpClient = createMockHttpClient();
     service = new DV360Service(logger, rateLimiter, httpClient);
   });
@@ -191,6 +188,32 @@ describe("DV360Service", () => {
       await service.listEntities("lineItem", { advertiserId: "789" });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:789", 1);
+    });
+
+    it("delays a list beyond the per-advertiser capacity until the window refills (real limiter)", async () => {
+      mockEntityConfig();
+      mockEntitySchema();
+      httpClient.fetch.mockResolvedValue({ lineItems: [] });
+      const limited = createSpiedRateLimiter(2);
+      const limitedService = new DV360Service(logger, limited, httpClient);
+      const call = () => limitedService.listEntities("lineItem", { advertiserId: "789" });
+
+      vi.useFakeTimers({ shouldAdvanceTime: false });
+      try {
+        await call();
+        await call();
+        expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+        expect(limited.getRemainingTokens("dv360:789")).toBe(0);
+
+        const over = call();
+        await vi.advanceTimersByTimeAsync(59_999);
+        expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(1);
+        await over;
+        expect(httpClient.fetch).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("returns entities and nextPageToken from validated response", async () => {

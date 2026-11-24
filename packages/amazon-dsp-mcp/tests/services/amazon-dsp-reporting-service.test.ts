@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import pino from "pino";
 import { AmazonDspReportingService } from "../../src/services/amazon-dsp/amazon-dsp-reporting-service.js";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import type { AmazonDspHttpClient } from "../../src/services/amazon-dsp/amazon-dsp-http-client.js";
 
 // Contract under test: Amazon's Postman collection (amzn/ads-advanced-tools-docs,
@@ -12,12 +13,12 @@ import type { AmazonDspHttpClient } from "../../src/services/amazon-dsp/amazon-d
 //     Accept: application/vnd.dspgetreports.v3+json
 
 const logger = pino({ level: "silent" });
-const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
 
 function makeService(response: unknown) {
   const post = vi.fn().mockResolvedValue(response);
   const get = vi.fn().mockResolvedValue(response);
   const httpClient = { post, get, put: vi.fn() } as unknown as AmazonDspHttpClient;
+  const rateLimiter = createSpiedRateLimiter();
   const service = new AmazonDspReportingService(rateLimiter, httpClient, logger, 1, 3);
   return { service, post, get };
 }

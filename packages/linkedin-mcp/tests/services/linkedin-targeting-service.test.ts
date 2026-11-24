@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { LinkedInService } from "../../src/services/linkedin/linkedin-service.js";
 import { encodeRestliQuery } from "../../src/services/linkedin/restli-query.js";
 
@@ -9,7 +11,7 @@ vi.mock("../../src/services/linkedin/linkedin-http-client.js", () => ({
 }));
 
 const mockHttpClient = { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() };
-const mockRateLimiter = { consume: vi.fn().mockResolvedValue(undefined), destroy: vi.fn() };
+let mockRateLimiter: RateLimiter;
 
 // The expected query strings below are the "Encoded Sample Request" lines from
 // LinkedIn's pages, read 2026-10-01 (ads-targeting, ad-supply-forecasts,
@@ -28,10 +30,10 @@ describe("LinkedIn targeting, forecast, audience-count and preview requests", ()
   let service: LinkedInService;
 
   beforeEach(() => {
-    service = new LinkedInService(mockRateLimiter as any, mockHttpClient as any);
+    mockRateLimiter = createSpiedRateLimiter();
+    service = new LinkedInService(mockRateLimiter, mockHttpClient as any);
     mockHttpClient.get.mockReset().mockResolvedValue({ elements: [] });
     mockHttpClient.post.mockReset();
-    mockRateLimiter.consume.mockReset().mockResolvedValue(undefined);
   });
 
   describe("listTargetingFacets()", () => {

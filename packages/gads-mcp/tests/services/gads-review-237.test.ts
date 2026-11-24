@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { GAdsService } from "../../src/services/gads/gads-service.js";
 import { getPacingStatusTool } from "../../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
 
@@ -12,7 +13,7 @@ const logger: any = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn
 
 function makeService(fetch: ReturnType<typeof vi.fn>) {
   const httpClient: any = { fetch, developerToken: "d", loginCustomerId: undefined };
-  const rateLimiter: any = { consume: vi.fn().mockResolvedValue(undefined) };
+  const rateLimiter = createSpiedRateLimiter();
   return new GAdsService(logger, rateLimiter, httpClient);
 }
 

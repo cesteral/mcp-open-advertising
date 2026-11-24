@@ -14,6 +14,8 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedRateLimiter } from "../helpers/spied-rate-limiter.js";
 import { AmazonDspService } from "../../src/services/amazon-dsp/amazon-dsp-service.js";
 
 const mockHttpClient = {
@@ -23,9 +25,7 @@ const mockHttpClient = {
   delete: vi.fn(),
 };
 
-const mockRateLimiter = {
-  consume: vi.fn().mockResolvedValue(undefined),
-};
+let mockRateLimiter: RateLimiter;
 
 const ACCOUNT = "5550001112223";
 const V1_ARGS = [undefined, "application/json", undefined, { "Amazon-Ads-AccountId": ACCOUNT }];
@@ -35,7 +35,8 @@ describe("AmazonDspService (Unified API)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new AmazonDspService(mockRateLimiter as any, mockHttpClient as any);
+    mockRateLimiter = createSpiedRateLimiter();
+    service = new AmazonDspService(mockRateLimiter, mockHttpClient as any);
   });
 
   describe("listEntities (DSPQuery<Entity>)", () => {
