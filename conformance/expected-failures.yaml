@@ -16,7 +16,8 @@
 # NODE_ENV, so it binds 127.0.0.1 and the rebinding request gets 403 while the
 # localhost one is accepted. A non-loopback bind without MCP_ALLOWED_HOSTS
 # (every hosted deploy) still does not check Host; the scenario only applies to
-# localhost servers.
+# localhost servers. `./scripts/conformance-test.sh` runs it
+# as a core scenario (so CI covers it) and it passes on every server.
 #
 # The harness exits non-zero both on a failure missing from this list and on a
 # listed scenario that now passes, so every entry is a scenario that fails

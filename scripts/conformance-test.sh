@@ -26,11 +26,15 @@ get_port() {
 # Caveat: tools-call-simple-text calls test_simple_text with no `arguments`,
 # which the servers reject as invalid input; the 0.1.16 check accepts that
 # error result as "simple text", so its PASS does not show a successful call.
+# dns-rebinding-protection needs a server on a loopback bind (the harness
+# starts it without NODE_ENV, so it binds 127.0.0.1); a hosted deploy with no
+# MCP_ALLOWED_HOSTS would fail it by design (#241).
 CORE_SCENARIOS=(
   "server-initialize"
   "ping"
   "tools-list"
   "tools-call-simple-text"
+  "dns-rebinding-protection"
 )
 
 CI_MODE=false

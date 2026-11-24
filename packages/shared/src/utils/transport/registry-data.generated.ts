@@ -27,7 +27,7 @@ export interface RegistryData {
 }
 
 export const REGISTRY_DATA: RegistryData = {
-  "protocol_version": "2025-11-25",
+  "protocol_version": "2026-07-28",
   "repository": "https://github.com/cesteral/mcp-open-advertising",
   "servers": [
     {
