@@ -279,8 +279,8 @@ export async function adjustLineItemBidsLogic(
   // Process each adjustment
   for (const [index, adjustment] of input.adjustments.entries()) {
     const ids = resolved[index];
-    let advertiserId: string | undefined = ids.advertiserId;
-    let lineItemId: string | undefined = ids.lineItemId;
+    const advertiserId: string | undefined = ids.advertiserId;
+    const lineItemId: string | undefined = ids.lineItemId;
     let lineItemName: string | undefined;
     let campaignId: string | undefined;
     let insertionOrderId: string | undefined;
