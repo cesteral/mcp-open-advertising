@@ -5,7 +5,8 @@
 //
 //   pnpm promote:server <key> [--dry-run]
 //
-// It flips the registry `status` and adds the server to the deploy lists
+// It flips the registry `status`, adds the server to the deploy lists (and the
+// Claude Code and Codex configs)
 // (Cloud Build images, the three Terraform maps, the tfvars examples). It
 // refuses, writing nothing, unless the server meets its type's whole contract.
 // Promotion proves the contract is complete, not that the writes work: CI's
@@ -60,7 +61,11 @@ async function main() {
   }
 
   applyPlan(ROOT, plan);
-  for (const script of ["generate-server-json.mjs", "sync-registry-data.mjs"]) {
+  for (const script of [
+    "generate-server-json.mjs",
+    "sync-registry-data.mjs",
+    "generate-client-configs.mjs",
+  ]) {
     execFileSync("node", [join(ROOT, "scripts/generate", script)], { stdio: "inherit" });
   }
   console.log(

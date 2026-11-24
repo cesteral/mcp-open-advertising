@@ -6,7 +6,9 @@
 // It owns two things only: the registry `status` flip and the server's entries
 // in the deploy lists (DEPLOY_SITE_FILES). It first checks the entry as stable
 // against the whole contract tier (MUSTs and SHOULD exceptions), so a promotion
-// can never leave CI red on contract-tiers. That proves the contract is
+// can never leave CI red on contract-tiers. It also requires the registry
+// `client` block (the credentials the generated Claude Code and Codex configs
+// use), because a stable server is published and those configs `npx` it. That proves the contract is
 // complete, not that the writes work: wire-request coverage still blocks the
 // merge until each write has a wire test. Pure: it writes nothing; applyPlan
 // does.
@@ -18,6 +20,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkClientBlocks } from "../lib/client-configs.mjs";
 import { checkContractTiers } from "../lib/contract-tiers.mjs";
 import { DEPLOY_SITE_FILES, serverTokens } from "../lib/fleet-inventory.mjs";
 import { names } from "./entries.mjs";
@@ -65,7 +68,7 @@ export async function planPromotion(root, key) {
   if (entry.status === "stable") throw new ScaffoldError(`${entry.package} is already stable`);
 
   const stable = { ...entry, status: "stable" };
-  const violations = checkContractTiers({ servers: [stable] });
+  const violations = [...checkContractTiers({ servers: [stable] }), ...checkClientBlocks([stable])];
   if (violations.length) {
     throw new ScaffoldError(
       `${entry.package} cannot be promoted until it meets its whole contract:\n  ${violations.join("\n  ")}`

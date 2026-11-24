@@ -62,3 +62,5 @@ export function filesUnder(dir, base = dir, out = new Map()) {
   }
   return out;
 }
+
+export { addClientBlock } from "./client-block.mjs";

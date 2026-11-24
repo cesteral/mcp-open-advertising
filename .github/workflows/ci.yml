@@ -56,6 +56,9 @@ jobs:
       - name: Check registry → tools list (registry tools match source definitions)
         run: pnpm run check:registry-tools
 
+      - name: Check client configs (generated Claude Code and Codex configs match registry.json)
+        run: pnpm run check:client-configs
+
       - name: Check registry → docs (README + CLAUDE.md tool counts match registry.json)
         run: pnpm run check:doc-tool-counts
 

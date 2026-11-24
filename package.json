@@ -28,6 +28,8 @@
     "new:server": "node scripts/new-server.mjs",
     "promote:server": "node scripts/promote-server.mjs",
     "check:registry": "node scripts/generate/generate-server-json.mjs --check",
+    "generate:client-configs": "node scripts/generate/generate-client-configs.mjs",
+    "check:client-configs": "node scripts/generate/generate-client-configs.mjs --check",
     "sync:registry-tools": "node scripts/generate/sync-registry-tools.mjs",
     "check:registry-tools": "node scripts/generate/sync-registry-tools.mjs --check",
     "sync:registry-data": "node scripts/generate/sync-registry-data.mjs",

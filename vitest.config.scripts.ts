@@ -15,7 +15,7 @@ export default defineConfig({
     // Boots every server once and hands the result to every test file, instead
     // of each file booting its own (scripts/lib/fleet-snapshot.mjs).
     globalSetup: ["scripts/lib/fleet-snapshot-global-setup.mjs"],
-    // Three suites still boot servers of their own (see scripts/README.md), and
+    // Four suites still boot servers of their own (see scripts/README.md), and
     // a boot imports a server's whole dist graph: about 2s alone, but several
     // seconds when vitest runs the files in parallel. Under that load it
     // regularly passed the 5s default (the failures moved between runs and

@@ -53,6 +53,43 @@
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": []
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "SERVICE_ACCOUNT_FILE",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "service-account",
+              "preferred": true,
+              "description": "Path to a Google service account JSON key with Bid Manager access."
+            },
+            {
+              "name": "SERVICE_ACCOUNT_JSON",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "service-account",
+              "description": "The service account JSON itself, instead of a file path."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "X-Cesteral-Google-Auth-Type",
+              "requirement": "required",
+              "value": "service_account",
+              "description": "Credential type."
+            },
+            {
+              "name": "X-Cesteral-Google-Credentials",
+              "requirement": "required",
+              "env": "DBM_SERVICE_ACCOUNT_B64",
+              "description": "Service account JSON, base64-encoded (base64 < key.json | tr -d '\\n')."
+            }
+          ]
+        }
       }
     },
     {
@@ -173,6 +210,43 @@
             "note": "Each item is an update_entity PATCH, so a batch can set entityStatus=ENTITY_STATUS_ARCHIVED, the same irreversible value dv360_update_entity is declared for. Terminal only for that status value."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "DV360_SERVICE_ACCOUNT_FILE",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "service-account",
+              "preferred": true,
+              "description": "Path to a Google service account JSON key with DV360 access."
+            },
+            {
+              "name": "DV360_SERVICE_ACCOUNT_JSON",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "service-account",
+              "description": "The service account JSON itself, instead of a file path."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "X-Cesteral-Google-Auth-Type",
+              "requirement": "required",
+              "value": "service_account",
+              "description": "Credential type."
+            },
+            {
+              "name": "X-Cesteral-Google-Credentials",
+              "requirement": "required",
+              "env": "DV360_SERVICE_ACCOUNT_B64",
+              "description": "Service account JSON, base64-encoded (base64 < key.json | tr -d '\\n')."
+            }
+          ]
+        }
       }
     },
     {
@@ -324,6 +398,34 @@
             "note": "The delete action removes a bid list. No tool on this server restores it. Terminal only for action=delete."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "TTD_API_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Pre-generated The Trade Desk user token."
+            },
+            {
+              "name": "TTD_USE_SANDBOX",
+              "requirement": "optional",
+              "secret": false,
+              "description": "true routes REST and GraphQL to the TTD Partner Sandbox."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "TTD-Auth",
+              "requirement": "required",
+              "env": "TTD_API_TOKEN",
+              "description": "The same TTD user token."
+            }
+          ]
+        }
       }
     },
     {
@@ -414,6 +516,76 @@
             "note": "Sends caller-built :mutate operations, which may include `remove` (the same irreversible removal gads_remove_entity is declared for) or an update to status REMOVED. Terminal for those operations; create and other updates are not."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "GADS_DEVELOPER_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Google Ads developer token."
+            },
+            {
+              "name": "GADS_CLIENT_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "OAuth2 client ID."
+            },
+            {
+              "name": "GADS_CLIENT_SECRET",
+              "requirement": "required",
+              "secret": true,
+              "description": "OAuth2 client secret."
+            },
+            {
+              "name": "GADS_REFRESH_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "OAuth2 refresh token."
+            },
+            {
+              "name": "GADS_LOGIN_CUSTOMER_ID",
+              "requirement": "optional",
+              "secret": false,
+              "description": "Manager account customer ID, digits only."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "X-Gads-Developer-Token",
+              "requirement": "required",
+              "env": "GADS_DEVELOPER_TOKEN",
+              "description": "Google Ads developer token."
+            },
+            {
+              "name": "X-Gads-Client-Id",
+              "requirement": "required",
+              "env": "GADS_CLIENT_ID",
+              "description": "OAuth2 client ID."
+            },
+            {
+              "name": "X-Gads-Client-Secret",
+              "requirement": "required",
+              "env": "GADS_CLIENT_SECRET",
+              "description": "OAuth2 client secret."
+            },
+            {
+              "name": "X-Gads-Refresh-Token",
+              "requirement": "required",
+              "env": "GADS_REFRESH_TOKEN",
+              "description": "OAuth2 refresh token."
+            },
+            {
+              "name": "X-Gads-Login-Customer-Id",
+              "requirement": "optional",
+              "env": "GADS_LOGIN_CUSTOMER_ID",
+              "description": "Manager account customer ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -515,6 +687,29 @@
             "note": "Accepts ARCHIVED, which the tool documents as permanent and not reversible. Terminal only when the batch sets ARCHIVED."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "META_ACCESS_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Marketing API access token (ads_read; add ads_management for writes)."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "META_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "Marketing API access token."
+            }
+          ]
+        }
       }
     },
     {
@@ -603,6 +798,29 @@
             "note": "Accepts ARCHIVED (documented by the tool as not reactivatable) and CANCELED. Terminal only when the batch sets one of those; ACTIVE/PAUSED/DRAFT are reversible."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "LINKEDIN_ACCESS_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "LinkedIn Marketing API access token."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "LINKEDIN_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "LinkedIn access token."
+            }
+          ]
+        }
       }
     },
     {
@@ -702,6 +920,41 @@
             "note": "Accepts DELETE for Upgraded Smart+ campaigns, ad groups and ads, which is irreversible on TikTok. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "TIKTOK_ACCESS_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "TikTok Marketing API access token."
+            },
+            {
+              "name": "TIKTOK_ADVERTISER_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Advertiser ID the session works on."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "TIKTOK_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "TikTok access token."
+            },
+            {
+              "name": "X-TikTok-Advertiser-Id",
+              "requirement": "required",
+              "env": "TIKTOK_ADVERTISER_ID",
+              "description": "Advertiser ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -810,6 +1063,43 @@
             "note": "PATCHes arbitrary fields per item, so a batch can set a placement's activeStatus to PLACEMENT_STATUS_PERMANENTLY_ARCHIVED, the same irreversible value cm360_update_entity is declared for. Terminal only for that value."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "CM360_SERVICE_ACCOUNT_FILE",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "service-account",
+              "preferred": true,
+              "description": "Path to a Google service account JSON key with Campaign Manager 360 access."
+            },
+            {
+              "name": "CM360_SERVICE_ACCOUNT_JSON",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "service-account",
+              "description": "The service account JSON itself, instead of a file path."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "X-Cesteral-Google-Auth-Type",
+              "requirement": "required",
+              "value": "service_account",
+              "description": "Credential type."
+            },
+            {
+              "name": "X-Cesteral-Google-Credentials",
+              "requirement": "required",
+              "env": "CM360_SERVICE_ACCOUNT_B64",
+              "description": "Service account JSON, base64-encoded (base64 < key.json | tr -d '\\n')."
+            }
+          ]
+        }
       }
     },
     {
@@ -888,6 +1178,78 @@
             "note": "Bulk entity removal. No tool on this server restores it."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "SNAPCHAT_AD_ACCOUNT_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Ad account ID the session works on."
+            },
+            {
+              "name": "SNAPCHAT_APP_ID",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "OAuth app ID (auto-refreshing flow, preferred)."
+            },
+            {
+              "name": "SNAPCHAT_APP_SECRET",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "OAuth app secret."
+            },
+            {
+              "name": "SNAPCHAT_REFRESH_TOKEN",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "OAuth refresh token."
+            },
+            {
+              "name": "SNAPCHAT_ACCESS_TOKEN",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "access-token",
+              "description": "Short-lived access token, instead of the refresh-token flow."
+            },
+            {
+              "name": "SNAPCHAT_ORG_ID",
+              "requirement": "optional",
+              "secret": false,
+              "description": "Organization ID, needed to list ad accounts."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "SNAPCHAT_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "Snapchat access token."
+            },
+            {
+              "name": "X-Snapchat-Advertiser-Id",
+              "requirement": "required",
+              "env": "SNAPCHAT_AD_ACCOUNT_ID",
+              "description": "Ad account ID."
+            },
+            {
+              "name": "X-Snapchat-Org-Id",
+              "requirement": "optional",
+              "env": "SNAPCHAT_ORG_ID",
+              "description": "Organization ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -952,6 +1314,64 @@
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
         "terminalOperations": []
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "SA360_CLIENT_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "OAuth2 client ID."
+            },
+            {
+              "name": "SA360_CLIENT_SECRET",
+              "requirement": "required",
+              "secret": true,
+              "description": "OAuth2 client secret."
+            },
+            {
+              "name": "SA360_REFRESH_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "OAuth2 refresh token."
+            },
+            {
+              "name": "SA360_LOGIN_CUSTOMER_ID",
+              "requirement": "optional",
+              "secret": false,
+              "description": "Manager account customer ID."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "X-SA360-Client-Id",
+              "requirement": "required",
+              "env": "SA360_CLIENT_ID",
+              "description": "OAuth2 client ID."
+            },
+            {
+              "name": "X-SA360-Client-Secret",
+              "requirement": "required",
+              "env": "SA360_CLIENT_SECRET",
+              "description": "OAuth2 client secret."
+            },
+            {
+              "name": "X-SA360-Refresh-Token",
+              "requirement": "required",
+              "env": "SA360_REFRESH_TOKEN",
+              "description": "OAuth2 refresh token."
+            },
+            {
+              "name": "X-SA360-Login-Customer-Id",
+              "requirement": "optional",
+              "env": "SA360_LOGIN_CUSTOMER_ID",
+              "description": "Manager account customer ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -1040,6 +1460,41 @@
             "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "PINTEREST_ACCESS_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Pinterest API access token."
+            },
+            {
+              "name": "PINTEREST_AD_ACCOUNT_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Ad account ID the session works on."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "PINTEREST_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "Pinterest access token."
+            },
+            {
+              "name": "X-Pinterest-Advertiser-Id",
+              "requirement": "required",
+              "env": "PINTEREST_AD_ACCOUNT_ID",
+              "description": "Ad account ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -1121,6 +1576,79 @@
             "note": "Bulk removal: Unified API delete of targets / ad associations (POST /adsApi/v1/delete/targets|adAssociations), and the legacy PUT state=ARCHIVED of orders / line items (the Unified API has no campaign or ad group delete and no ARCHIVED update state). No tool on this server restores either."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "AMAZON_DSP_PROFILE_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Advertising profile ID."
+            },
+            {
+              "name": "AMAZON_DSP_APP_ID",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "Login with Amazon app ID (refresh-token flow, preferred)."
+            },
+            {
+              "name": "AMAZON_DSP_APP_SECRET",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "Login with Amazon app secret."
+            },
+            {
+              "name": "AMAZON_DSP_REFRESH_TOKEN",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "refresh-token",
+              "preferred": true,
+              "description": "Login with Amazon refresh token."
+            },
+            {
+              "name": "AMAZON_DSP_CLIENT_ID",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "access-token",
+              "description": "Login with Amazon client ID, sent as Amazon-Ads-ClientId. Amazon rejects a static access token without it."
+            },
+            {
+              "name": "AMAZON_DSP_ACCESS_TOKEN",
+              "requirement": "alternative",
+              "secret": true,
+              "group": "access-token",
+              "description": "Short-lived access token (about 60 minutes), instead of the refresh-token flow."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "AMAZON_DSP_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "Login with Amazon access token."
+            },
+            {
+              "name": "Amazon-Advertising-API-ClientId",
+              "requirement": "required",
+              "env": "AMAZON_DSP_CLIENT_ID",
+              "description": "Login with Amazon client ID. Amazon rejects a static access token without it."
+            },
+            {
+              "name": "Amazon-Advertising-API-Scope",
+              "requirement": "required",
+              "env": "AMAZON_DSP_PROFILE_ID",
+              "description": "Advertising profile ID."
+            }
+          ]
+        }
       }
     },
     {
@@ -1208,6 +1736,65 @@
             "note": "Setting Status=Deleted removes the entity; Microsoft Advertising has no undelete and no tool on this server restores it. Terminal only for that status value."
           }
         ]
+      },
+      "client": {
+        "stdio": {
+          "env": [
+            {
+              "name": "MSADS_ACCESS_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Microsoft Advertising OAuth access token."
+            },
+            {
+              "name": "MSADS_DEVELOPER_TOKEN",
+              "requirement": "required",
+              "secret": true,
+              "description": "Microsoft Advertising developer token."
+            },
+            {
+              "name": "MSADS_CUSTOMER_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Customer ID."
+            },
+            {
+              "name": "MSADS_ACCOUNT_ID",
+              "requirement": "required",
+              "secret": false,
+              "description": "Account ID."
+            }
+          ]
+        },
+        "http": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "requirement": "required",
+              "env": "MSADS_ACCESS_TOKEN",
+              "prefix": "Bearer ",
+              "description": "OAuth access token."
+            },
+            {
+              "name": "X-MsAds-Developer-Token",
+              "requirement": "required",
+              "env": "MSADS_DEVELOPER_TOKEN",
+              "description": "Developer token."
+            },
+            {
+              "name": "X-MsAds-Customer-Id",
+              "requirement": "required",
+              "env": "MSADS_CUSTOMER_ID",
+              "description": "Customer ID."
+            },
+            {
+              "name": "X-MsAds-Account-Id",
+              "requirement": "required",
+              "env": "MSADS_ACCOUNT_ID",
+              "description": "Account ID."
+            }
+          ]
+        }
       }
     }
   ]

@@ -78,6 +78,8 @@ pnpm --filter @cesteral/meta-mcp dev:http
 
 Server starts on `http://localhost:3005`.
 
+> Connecting Claude Code or Codex instead, or another platform? See [Connect your AI client](connect-clients.md).
+
 ### 5. Connect to Claude Desktop
 
 Add to your Claude Desktop MCP config (`claude_desktop_config.json`):
