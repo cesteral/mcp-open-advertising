@@ -1,6 +1,7 @@
 // Fleet review 2026-09 (#237), pinterest-mcp findings fixed in the triage pass.
 // Spec references are to Pinterest's OpenAPI description v5.28.0.
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createPlatformRateLimiter } from "@cesteral/shared";
 import pino from "pino";
 
 const { mockResolveSessionServices, mockElicitDelete, mockElicitStatus, mockElicitBids } =
@@ -97,14 +98,14 @@ describe("#24 account scope is checked before the user is asked to confirm", () 
 describe("#20 an empty-string bookmark ends list_entities pagination", () => {
   it("normalizes '' to null (bookmark is a nullable string; '' is the last page)", async () => {
     const httpClient = { get: vi.fn().mockResolvedValue({ items: [{ id: "1" }], bookmark: "" }) };
-    const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) };
-    const service = new PinterestService(
-      rateLimiter as any,
-      httpClient as any,
-      pino({ level: "silent" })
-    );
-    const { pageInfo } = await service.listEntities("campaign", { adAccountId: "123" });
-    expect(pageInfo.bookmark).toBeNull();
+    const rateLimiter = createPlatformRateLimiter("pinterest", 1000);
+    const service = new PinterestService(rateLimiter, httpClient as any, pino({ level: "silent" }));
+    try {
+      const { pageInfo } = await service.listEntities("campaign", { adAccountId: "123" });
+      expect(pageInfo.bookmark).toBeNull();
+    } finally {
+      rateLimiter.destroy();
+    }
   });
 });
 

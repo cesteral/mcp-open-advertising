@@ -9,8 +9,8 @@
  * the caller's) route, so an ad squad from another campaign went to the wrong one.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { McpError } from "@cesteral/shared";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { McpError, createPlatformRateLimiter } from "@cesteral/shared";
 import { SnapchatService } from "../../src/services/snapchat/snapchat-service.js";
 
 const ACCOUNT = "acct_456";
@@ -49,14 +49,17 @@ const httpClient = {
   delete: vi.fn(),
 };
 
-const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) };
+// Real limiter (same factory the server uses) with `consume` spied (#236).
+const rateLimiter = createPlatformRateLimiter("snapchat", 1000);
+vi.spyOn(rateLimiter, "consume");
+afterAll(() => rateLimiter.destroy());
 
 describe("SnapchatService update parent route (#16)", () => {
   let service: SnapchatService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SnapchatService(httpClient as any, "org_123", ACCOUNT, rateLimiter as any);
+    service = new SnapchatService(httpClient as any, "org_123", ACCOUNT, rateLimiter);
   });
 
   it("refuses a bulk batch whose ad squad belongs to another campaign, sending nothing", async () => {

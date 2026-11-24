@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import { MetaTargetingService } from "../../src/services/meta/meta-targeting-service.js";
 
 // ---------------------------------------------------------------------------
@@ -14,11 +15,19 @@ function createMockHttpClient() {
   } as any;
 }
 
-function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
+// Real limiter (same factory the server uses), spied so call assertions keep
+// working; capacity is high so these tests exercise service logic (#236).
+const limiters: RateLimiter[] = [];
+function createMockRateLimiter(): RateLimiter {
+  const limiter = createPlatformRateLimiter("meta", 1000);
+  limiters.push(limiter);
+  vi.spyOn(limiter, "consume");
+  return limiter;
 }
+
+afterEach(() => {
+  for (const l of limiters.splice(0)) l.destroy();
+});
 
 function createMockLogger() {
   return {

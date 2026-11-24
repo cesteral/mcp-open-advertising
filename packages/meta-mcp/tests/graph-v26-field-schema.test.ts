@@ -17,7 +17,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import catalog from "../src/config/insights-catalog.json" with { type: "json" };
 import { MetaInsightsService } from "../src/services/meta/meta-insights-service.js";
 import { MetaService } from "../src/services/meta/meta-service.js";
@@ -54,13 +55,20 @@ function unknownFields(node: string, fields: readonly string[]): string[] {
   return fields.filter((f) => !known.has(f));
 }
 
+const limiters: RateLimiter[] = [];
+afterEach(() => {
+  for (const l of limiters.splice(0)) l.destroy();
+});
+
 function stubs() {
   const httpClient = {
     get: vi.fn().mockResolvedValue({ data: [] }),
     post: vi.fn().mockResolvedValue({ report_run_id: "1" }),
     delete: vi.fn(),
   } as any;
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
+  const rateLimiter = createPlatformRateLimiter("meta", 1000);
+  limiters.push(rateLimiter);
+  vi.spyOn(rateLimiter, "consume");
   const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
   return { httpClient, rateLimiter, logger };
 }

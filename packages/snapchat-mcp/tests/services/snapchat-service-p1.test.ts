@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import { SnapchatService } from "../../src/services/snapchat/snapchat-service.js";
 
 /**
@@ -16,7 +17,10 @@ const mockHttpClient = {
   put: vi.fn(),
   delete: vi.fn(),
 };
-const mockRateLimiter = { consume: vi.fn().mockResolvedValue(undefined) };
+// Real limiter (same factory the server uses) with `consume` spied (#236). Built
+// per test: `vi.resetAllMocks()` below would strip a spy's implementation.
+let mockRateLimiter: RateLimiter;
+afterEach(() => mockRateLimiter.destroy());
 
 const BOUND = "acct_456";
 
@@ -38,8 +42,9 @@ describe("SnapchatService P1 fixes", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    mockRateLimiter.consume.mockResolvedValue(undefined);
-    service = new SnapchatService(mockHttpClient as any, "org_123", BOUND, mockRateLimiter as any);
+    mockRateLimiter = createPlatformRateLimiter("snapchat", 1000);
+    vi.spyOn(mockRateLimiter, "consume");
+    service = new SnapchatService(mockHttpClient as any, "org_123", BOUND, mockRateLimiter);
   });
 
   describe("parent-ID injection on create", () => {
