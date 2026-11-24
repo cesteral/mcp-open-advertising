@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("gads-mcp"),
 
   // Auth — Google Ads-specific modes
-  mcpAuthMode: z.enum(["gads-headers", "jwt", "none"]).default("gads-headers"),
+  mcpAuthMode: z.enum(["gads-headers", "jwt", "oauth", "none"]).default("gads-headers"),
 
   // Google Ads API Configuration
   gadsApiBaseUrl: z.string().url().default("https://googleads.googleapis.com/v26"),

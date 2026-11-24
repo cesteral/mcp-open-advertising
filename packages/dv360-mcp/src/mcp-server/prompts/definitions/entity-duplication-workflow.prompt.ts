@@ -11,7 +11,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * line items); campaigns, which have no duplicate method, use get-then-create.
  */
 export const entityDuplicationWorkflowPrompt: Prompt = {
-  name: "entity_duplication_workflow",
+  name: "dv360_entity_duplication_workflow",
   description:
     "Step-by-step guide for duplicating DV360 entities (campaigns, insertion orders, line items). Line items use DV360's native lineItems:duplicate via dv360_duplicate_entity; campaigns use the get-then-create pattern.",
   arguments: [

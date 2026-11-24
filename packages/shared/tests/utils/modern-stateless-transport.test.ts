@@ -259,6 +259,34 @@ describe("2026-07-28 stateless serving (#243)", () => {
     expect((await res.json()).error.code).toBe(-32020);
   });
 
+  it("refuses a header/body mismatch before building any services (#248)", async () => {
+    active = makeHarness();
+    const res = await modernPost(
+      active.app,
+      "tools/call",
+      { name: "probe_whoami", arguments: {} },
+      { "x-fake-cred": "alice", "mcp-name": "some_other_tool" }
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe(-32020);
+    expect(body.id).toBe(7);
+    expect(active.createSessionForAuth).not.toHaveBeenCalled();
+  });
+
+  it("still answers 401 before any header check", async () => {
+    active = makeHarness();
+    const res = await modernPost(
+      active.app,
+      "tools/call",
+      { name: "probe_whoami" },
+      {
+        "mcp-method": "tools/list",
+      }
+    );
+    expect(res.status).toBe(401);
+  });
+
   it("returns a JSON-RPC 403 for a scoped token calling a write tool", async () => {
     registerToolScopes([{ name: "probe_whoami", annotations: { readOnlyHint: false } }]);
     active = makeHarness({ authMode: "jwt" });
@@ -286,6 +314,54 @@ describe("2026-07-28 stateless serving (#243)", () => {
       { "x-fake-cred": "alice", host: "evil.example" }
     );
     expect(res.status).toBe(403);
+    // A rejection made before routing is still a JSON-RPC error on the modern path.
+    expect(await res.json()).toMatchObject({
+      jsonrpc: "2.0",
+      id: 7,
+      error: { code: -32005, message: expect.stringContaining("DNS rebinding") },
+    });
+  });
+
+  it("keeps the plain 403 body for a 2025-era request", async () => {
+    active = makeHarness();
+    const res = await active.app.request("/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "mcp-protocol-version": "2025-06-18",
+        "x-fake-cred": "alice",
+        host: "evil.example",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Invalid host. DNS rebinding protection." });
+  });
+
+  it("answers an oversized modern body with a JSON-RPC 413", async () => {
+    active = makeHarness();
+    const huge = "x".repeat(10 * 1024 * 1024 + 1024);
+    const res = await active.app.request("/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": MODERN,
+        "mcp-method": "tools/list",
+        "x-fake-cred": "alice",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 7,
+        method: "tools/list",
+        params: { _meta: meta({ pad: huge }) },
+      }),
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toMatchObject({
+      jsonrpc: "2.0",
+      error: { code: -32600, message: "Request body too large" },
+    });
   });
 
   it("leaves the 2025 path unchanged: initialize mints a session id, unknown ids get 404", async () => {

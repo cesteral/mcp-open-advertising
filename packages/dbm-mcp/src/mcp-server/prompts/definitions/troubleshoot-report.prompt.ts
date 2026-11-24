@@ -10,7 +10,7 @@
 import type { Prompt } from "./types.js";
 
 export const troubleshootReportPrompt: Prompt = {
-  name: "troubleshoot_report",
+  name: "dbm_troubleshoot_report",
   description: "Diagnostic workflow for debugging failed Bid Manager queries and common issues",
   arguments: [
     {

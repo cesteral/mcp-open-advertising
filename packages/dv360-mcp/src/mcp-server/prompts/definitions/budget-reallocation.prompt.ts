@@ -15,7 +15,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * - dv360-mcp for entity hierarchy and budget updates
  */
 export const budgetReallocationPrompt: Prompt = {
-  name: "budget_reallocation_workflow",
+  name: "dv360_budget_reallocation_workflow",
   description:
     "Guide for reallocating budget across insertion orders and line items based on performance data. Includes performance analysis, reallocation formulas, and execution steps with DV360-specific constraints.",
   arguments: [
@@ -179,7 +179,7 @@ Where:
 - **Target CPA Achievement %** = target_CPA / actual_CPA × 100 (higher is better)
 - **CTR Percentile** = entity CTR rank among siblings × 100
 
-⚠️ **GOTCHA**: Don't reallocate budget away from entities that are underdelivering due to fixable issues (low bids, paused status). Fix those issues first — see the **troubleshoot_underdelivery** prompt.
+⚠️ **GOTCHA**: Don't reallocate budget away from entities that are underdelivering due to fixable issues (low bids, paused status). Fix those issues first — see the **dv360_troubleshoot_underdelivery** prompt.
 
 ---
 
@@ -397,7 +397,7 @@ Next Review: {date}
 
 After budget reallocation:
 - Schedule a follow-up review in 24-48 hours
-- If underdelivery persists for specific entities, use the **troubleshoot_underdelivery** prompt
+- If underdelivery persists for specific entities, use the **dv360_troubleshoot_underdelivery** prompt
 - Consider adjusting bids alongside budget for maximum impact
 - Document the reallocation rationale for stakeholders
 

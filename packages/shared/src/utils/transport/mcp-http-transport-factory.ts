@@ -51,12 +51,18 @@ import {
   warnIfProtectedResourceMetadataIncomplete,
   wwwAuthenticateChallenge,
   insufficientScopeChallenge,
+  servesProtectedResourceMetadata,
   SessionManager,
   principalSessionKey,
 } from "./mcp-transport-helpers.js";
 import { JsonRpcErrorCode } from "../mcp-errors.js";
 import type { AuthStrategy, AuthResult, SessionAuthContext } from "../../auth/auth-strategy.js";
 import type { SessionServiceStoreLike } from "./mcp-transport-helpers.js";
+import {
+  HEADER_MISMATCH_CODE,
+  findStandardHeaderMismatch,
+  readStandardHeaders,
+} from "./standard-headers.js";
 import {
   SUPPORTED_SCOPES,
   scopeEnforcementApplies,
@@ -108,7 +114,7 @@ const MAX_BODY_BYTES = 10 * 1024 * 1024;
 
 /** A transport-level rejection to send on the modern path. */
 interface ModernRejection {
-  status: 400 | 401 | 403 | 503;
+  status: 400 | 401 | 403 | 413 | 503;
   code: number;
   message: string;
   data?: Record<string, unknown>;
@@ -411,7 +417,7 @@ export function createMcpHttpTransport(
   /** Transport-level rejection on the modern path: a JSON-RPC error body, not ad-hoc JSON. */
   const modernRejection = async (
     c: Context,
-    status: 400 | 401 | 403 | 503,
+    status: 400 | 401 | 403 | 413 | 503,
     code: number,
     message: string,
     data?: Record<string, unknown>
@@ -424,6 +430,41 @@ export function createMcpHttpTransport(
       { jsonrpc: "2.0", id: await rpcIdOf(c), error: { code, message, ...(data ? { data } : {}) } },
       status
     );
+  };
+
+  /**
+   * A rejection made before routing (DNS-rebinding 403, body-size 413): a
+   * 2026-07-28 POST gets a JSON-RPC error body like every other modern
+   * rejection; anything else keeps the plain `{ error }` body.
+   */
+  const rejectBeforeRouting = async (
+    c: Context,
+    status: 403 | 413,
+    code: number,
+    message: string
+  ): Promise<Response> => {
+    if (c.req.method === "POST") {
+      let modern = false;
+      if (status === 413) {
+        // The body is over the limit and already partly consumed, so it cannot
+        // be classified. SEP-2243 headers say it: a modern client sends
+        // `Mcp-Method`, and a 2025 client never sends a 2026 protocol version.
+        const version = c.req.header("mcp-protocol-version");
+        modern =
+          c.req.header("mcp-method") !== undefined ||
+          (version !== undefined && !validateProtocolVersion(version));
+      } else {
+        try {
+          modern = !(await isLegacyRequest(c.req.raw, undefined, {
+            maxRequestBodySize: MAX_BODY_BYTES,
+          }));
+        } catch {
+          // An unreadable body is not a modern claim.
+        }
+      }
+      if (modern) return modernRejection(c, status, code, message);
+    }
+    return c.json({ error: message }, status);
   };
 
   /**
@@ -537,6 +578,26 @@ export function createMcpHttpTransport(
     }
 
     const key = principalSessionKey(fingerprint);
+
+    // Standard headers (#248): refuse a header/body contradiction before any
+    // upstream client or server is built. The SDK handler validates the rest.
+    const declared = readStandardHeaders(c.req.raw.headers);
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(await c.req.raw.clone().text());
+    } catch {
+      parsedBody = undefined; // malformed JSON: the SDK answers with a parse error
+    }
+    const mismatch = findStandardHeaderMismatch(c.req.raw.headers, parsedBody);
+    if (mismatch) {
+      logger.warn(
+        { ...declared, principal: key, requestId, event: "header_mismatch" },
+        "Modern request rejected: standard header contradicts body"
+      );
+      return modernRejection(c, 400, HEADER_MISMATCH_CODE, mismatch.message, mismatch.data);
+    }
+    logger.debug({ ...declared, principal: key, requestId }, "Modern MCP request");
+
     const rejected = await ensurePrincipal(headers, key, verified);
     if (rejected) {
       return modernRejection(c, rejected.status, rejected.code, rejected.message, rejected.data);
@@ -662,11 +723,21 @@ export function createMcpHttpTransport(
         { origin, allowedOrigins: allowedOrigin, mode: dnsRebinding.mode },
         "Rejected request with invalid Origin header"
       );
-      return c.json({ error: "Invalid origin. DNS rebinding protection." }, 403);
+      return rejectBeforeRouting(
+        c,
+        403,
+        JsonRpcErrorCode.Forbidden,
+        "Invalid origin. DNS rebinding protection."
+      );
     }
     if (rejected === "host") {
       logger.warn({ host, mode: dnsRebinding.mode }, "Rejected request with invalid Host header");
-      return c.json({ error: "Invalid host. DNS rebinding protection." }, 403);
+      return rejectBeforeRouting(
+        c,
+        403,
+        JsonRpcErrorCode.Forbidden,
+        "Invalid host. DNS rebinding protection."
+      );
     }
     return await next();
   });
@@ -712,7 +783,7 @@ export function createMcpHttpTransport(
       auth: {
         current_mode: config.mcpAuthMode,
         ...(extras?.supportedAuthModes ? { supported_modes: extras.supportedAuthModes } : {}),
-        ...(config.mcpAuthMode === "jwt"
+        ...(servesProtectedResourceMetadata(config.mcpAuthMode)
           ? {
               oauth_protected_resource: "/.well-known/oauth-protected-resource",
               scopes_supported: [...SUPPORTED_SCOPES],
@@ -810,7 +881,14 @@ export function createMcpHttpTransport(
   });
 
   // Request body size limit (10 MB)
-  app.post("*", bodyLimit({ maxSize: MAX_BODY_BYTES }));
+  app.post(
+    "*",
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) =>
+        rejectBeforeRouting(c, 413, JsonRpcErrorCode.InvalidRequest, "Request body too large"),
+    })
+  );
 
   // POST /mcp — JSON-RPC over Streamable HTTP
   app.post("/mcp", async (c) => {

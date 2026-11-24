@@ -4,7 +4,7 @@
 import type { Prompt } from "@modelcontextprotocol/server";
 
 export const tiktokCreativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "tiktok_creative_upload_workflow",
   description: "Step-by-step guide for uploading creative assets and creating TikTok Ads creatives",
   arguments: [
     {

@@ -1,7 +1,6 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
@@ -93,11 +92,4 @@ export async function createMcpServer(
       downloadToolName: "msads_download_report",
     },
   });
-}
-
-export async function runStdioServer(server: McpServer, logger: Logger): Promise<void> {
-  logger.info("Starting MCP server with stdio transport");
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  logger.info("MCP server connected via stdio");
 }

@@ -15,7 +15,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * - dv360-mcp for entity configuration and updates
  */
 export const troubleshootUnderdeliveryPrompt: Prompt = {
-  name: "troubleshoot_underdelivery",
+  name: "dv360_troubleshoot_underdelivery",
   description:
     "Step-by-step guide for diagnosing and fixing underdelivering campaigns or line items in DV360. Covers pacing analysis, configuration checks, targeting review, and corrective actions.",
   arguments: [
@@ -421,7 +421,7 @@ If the above steps don't resolve underdelivery, consider:
 
 After resolving the immediate underdelivery:
 - Set up recurring monitoring using \`dbm_get_pacing_status\`
-- Consider the **budget_reallocation_workflow** prompt if budget needs redistribution
+- Consider the **dv360_budget_reallocation_workflow** prompt if budget needs redistribution
 - Review campaign-level frequency caps to prevent future issues
 - Document the root cause and fix for future reference
 

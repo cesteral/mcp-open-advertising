@@ -31,7 +31,7 @@ export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): 
 ## Prerequisites
 - Ad Account ID: \`${adAccountId}\`
 - Verify access: \`pinterest_list_ad_accounts\`
-- A Pin to promote (see the \`creative_upload_workflow\` prompt)
+- A Pin to promote (see the \`pinterest_creative_upload_workflow\` prompt)
 
 Everything below is created **PAUSED** and activated in Step 4, after review. Field names and enums are Pinterest's own (OpenAPI v5); \`ad_account_id\` comes from \`adAccountId\`.
 

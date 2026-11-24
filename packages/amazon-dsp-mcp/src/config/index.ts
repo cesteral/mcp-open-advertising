@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("amazon-dsp-mcp"),
 
   // Auth — Amazon DSP-specific modes
-  mcpAuthMode: z.enum(["amazon-dsp-bearer", "jwt", "none"]).default("amazon-dsp-bearer"),
+  mcpAuthMode: z.enum(["amazon-dsp-bearer", "jwt", "oauth", "none"]).default("amazon-dsp-bearer"),
 
   // Amazon DSP API Configuration
   amazonDspApiBaseUrl: z.string().url().default("https://advertising-api.amazon.com"),

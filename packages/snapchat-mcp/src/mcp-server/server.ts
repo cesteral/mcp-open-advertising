@@ -1,7 +1,6 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
@@ -75,7 +74,7 @@ export async function createMcpServer(
       "Snapchat Ads campaign management and reporting server. Supports campaign, ad squad, ad, creative, and audience workflows with async reporting, targeting, bid adjustments, and bulk operations via the Snap Marketing API. " +
       "Progressive discovery: (1) start with snapchat_list_ad_accounts to resolve accessible account IDs, then snapchat_list_entities to browse campaigns/adSquads/ads/creatives; " +
       "(2) before authoring writes, read MCP Resources entity-schema://snapchat/all for field shapes, entity-hierarchy://snapchat/all for parent/child rules, entity-examples://snapchat/all for payloads, and reporting-reference://snapchat for stats fields and breakdowns; " +
-      "(3) for multi-step flows use MCP Prompts: snapchat_campaign_setup_workflow, snapchat_reporting_workflow, snapchat_targeting_discovery_workflow, creative_upload_workflow, snapchat_bulk_operations_workflow.",
+      "(3) for multi-step flows use MCP Prompts: snapchat_campaign_setup_workflow, snapchat_reporting_workflow, snapchat_targeting_discovery_workflow, snapchat_creative_upload_workflow, snapchat_bulk_operations_workflow.",
     tools: allTools,
     resources: allResources,
     prompts: promptRegistry.values(),
@@ -88,14 +87,4 @@ export async function createMcpServer(
       downloadToolName: "snapchat_download_report",
     },
   });
-}
-
-/**
- * Connect server to stdio transport
- */
-export async function runStdioServer(server: McpServer, logger: Logger): Promise<void> {
-  logger.info("Starting MCP server with stdio transport");
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  logger.info("MCP server connected via stdio");
 }

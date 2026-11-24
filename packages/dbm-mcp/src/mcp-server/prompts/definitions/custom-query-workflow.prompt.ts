@@ -10,7 +10,7 @@
 import type { Prompt } from "./types.js";
 
 export const customQueryWorkflowPrompt: Prompt = {
-  name: "custom_query_workflow",
+  name: "dbm_custom_query_workflow",
   description:
     "Step-by-step guide for building custom Bid Manager queries with the dbm_run_custom_query tool",
   arguments: [

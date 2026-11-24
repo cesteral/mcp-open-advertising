@@ -18,7 +18,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   port: z.number().int().min(1).max(65535).default({{port}}),
   otelServiceName: z.string().default("{{package}}"),
 
-  mcpAuthMode: z.enum(["{{key}}-bearer", "jwt", "none"]).default("{{key}}-bearer"),
+  mcpAuthMode: z.enum(["{{key}}-bearer", "jwt", "oauth", "none"]).default("{{key}}-bearer"),
 
   // {{displayName}} API. Both values are platform facts (platform-facts.json).
   apiBaseUrl: z.string().url().default("{{baseUrl}}"),

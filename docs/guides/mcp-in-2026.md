@@ -139,7 +139,7 @@ This is forward-looking, but XAA is the auth lever enterprise buyers will ask ab
 
 ### 9. Treat prompts as the local precursor to "skills over MCP" ✅
 
-The repo already ships workflow prompts (`full_campaign_setup_workflow` in dv360-mcp, `msads_import_from_google` in msads-mcp). When the formal "skills over MCP" SEP lands, these are the migration anchors. Action: keep adding prompts for genuinely cross-tool workflows (pacing-fix, conversion backfill, cross-platform import) rather than per-tool guidance, so the migration surface stays coherent.
+The repo already ships workflow prompts (`dv360_full_campaign_setup_workflow` in dv360-mcp, `msads_import_from_google` in msads-mcp). When the formal "skills over MCP" SEP lands, these are the migration anchors. Action: keep adding prompts for genuinely cross-tool workflows (pacing-fix, conversion backfill, cross-platform import) rather than per-tool guidance, so the migration surface stays coherent.
 
 ### 10. Surface tool-failure observability as a 2026 differentiator ✅
 

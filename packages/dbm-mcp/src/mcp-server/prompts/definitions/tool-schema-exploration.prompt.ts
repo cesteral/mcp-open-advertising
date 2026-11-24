@@ -10,7 +10,7 @@
 import type { Prompt } from "./types.js";
 
 export const toolSchemaExplorationPrompt: Prompt = {
-  name: "tool_schema_exploration_workflow",
+  name: "dbm_tool_schema_exploration_workflow",
   description:
     "Step-by-step workflow for exploring available MCP tools, prompts, and resources with minimal context usage.",
   arguments: [
@@ -73,8 +73,8 @@ Start with one call, inspect output, then iterate.
 - Reuse fetched resource facts instead of re-fetching full docs
 
 ## Suggested next prompt
-- For reporting query construction: \`custom_query_workflow\`
-- For reporting troubleshooting: \`troubleshoot_report\`
+- For reporting query construction: \`dbm_custom_query_workflow\`
+- For reporting troubleshooting: \`dbm_troubleshoot_report\`
 - For DV360 budget/campaign setup: use corresponding dv360-mcp prompts
 `;
 }

@@ -20,7 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("meta-mcp"),
 
   // Auth — Meta-specific modes
-  mcpAuthMode: z.enum(["meta-bearer", "jwt", "none"]).default("meta-bearer"),
+  mcpAuthMode: z.enum(["meta-bearer", "jwt", "oauth", "none"]).default("meta-bearer"),
 
   // Meta API Configuration
   metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v26.0"),

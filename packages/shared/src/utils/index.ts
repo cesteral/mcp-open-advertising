@@ -37,6 +37,7 @@ export * from "./transport/mcp-http-transport-factory.js";
 export * from "./transport/mcp-transport-helpers.js";
 export * from "./transport/operational-envelope.js";
 export * from "./transport/server-bootstrap.js";
+export * from "./transport/stdio-server.js";
 export * from "./transport/server-card-builder.js";
 export * from "./transport/session-resolver.js";
 export * from "./transport/env-credential-session.js";

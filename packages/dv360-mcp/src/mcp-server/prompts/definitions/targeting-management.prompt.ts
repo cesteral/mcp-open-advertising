@@ -10,7 +10,7 @@ import type { Prompt } from "@modelcontextprotocol/server";
  * DV360 targeting options across Advertisers, Line Items, and Ad Groups.
  */
 export const targetingManagementPrompt: Prompt = {
-  name: "targeting_management_workflow",
+  name: "dv360_targeting_management_workflow",
   description:
     "Step-by-step guide for managing DV360 targeting options: discover available types, create assignments, audit configurations, and delete options. Covers geo, audience, device, content, and all 50 targeting types.",
   arguments: [

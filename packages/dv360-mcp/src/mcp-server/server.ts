@@ -1,7 +1,6 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { allTools } from "./tools/index.js";
 import { allResources, allTemplatedResources } from "./resources/index.js";
@@ -76,7 +75,7 @@ export async function createMcpServer(
     instructions:
       "DV360 campaign management server. Supports CRUD for campaigns, insertion orders, line items, and targeting via Display & Video 360 API. " +
       "Use dv360_list_entities to discover entities, MCP Resources (entity-schema://{entityType}) for field details, " +
-      "and MCP Prompts (full_campaign_setup_workflow) for multi-step workflows.",
+      "and MCP Prompts (dv360_full_campaign_setup_workflow) for multi-step workflows.",
     tools: allTools,
     resources: allResources,
     templatedResources: allTemplatedResources,
@@ -85,14 +84,4 @@ export async function createMcpServer(
     manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
     sessionServiceStore,
   });
-}
-
-/**
- * Connect server to stdio transport (for local MCP client testing)
- */
-export async function runStdioServer(server: McpServer, logger: Logger): Promise<void> {
-  logger.info("Starting MCP server with stdio transport");
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  logger.info("MCP server connected via stdio");
 }
