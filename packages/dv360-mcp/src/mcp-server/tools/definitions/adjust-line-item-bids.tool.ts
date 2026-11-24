@@ -120,9 +120,21 @@ export const AdjustLineItemBidsOutputSchema = z
         })
       )
       .describe("Failed adjustments with error messages"),
+    results: z
+      .array(
+        z.object({
+          success: z.boolean(),
+          advertiserId: z.string().optional(),
+          lineItemId: z.string().optional(),
+          error: z.string().optional(),
+        })
+      )
+      .describe(
+        "Per-adjustment outcome, in request order (`successful` and `failed` carry the detail)"
+      ),
     totalRequested: z.number().describe("Total adjustments requested"),
-    totalSuccessful: z.number().describe("Total successful adjustments"),
-    totalFailed: z.number().describe("Total failed adjustments"),
+    successCount: z.number().describe("Number of successful adjustments"),
+    failureCount: z.number().describe("Number of failed adjustments"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No bids were changed."
@@ -175,9 +187,10 @@ export async function adjustLineItemBidsLogic(
       confirmed: true,
       successful: [],
       failed: [],
+      results: [],
       totalRequested: input.adjustments.length,
-      totalSuccessful: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -211,9 +224,10 @@ export async function adjustLineItemBidsLogic(
       declineReason: "user_declined",
       successful: [],
       failed: [],
+      results: [],
       totalRequested: input.adjustments.length,
-      totalSuccessful: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -227,6 +241,12 @@ export async function adjustLineItemBidsLogic(
     insertionOrderId?: string;
     previousBidMicros: number;
     newBidMicros: number;
+  }> = [];
+  const results: Array<{
+    success: boolean;
+    advertiserId?: string;
+    lineItemId?: string;
+    error?: string;
   }> = [];
   const failed: Array<{
     advertiserId?: string;
@@ -344,14 +364,21 @@ export async function adjustLineItemBidsLogic(
         previousBidMicros,
         newBidMicros: adjustment.newBidMicros,
       });
+      results.push({
+        success: true,
+        advertiserId: resolvedAdvertiserId,
+        lineItemId: resolvedLineItemId,
+      });
     } catch (error: any) {
+      const message: string = error.message || String(error);
+      results.push({ success: false, advertiserId, lineItemId, error: message });
       failed.push({
         advertiserId,
         lineItemId,
         lineItemName,
         campaignId,
         insertionOrderId,
-        error: error.message || String(error),
+        error: message,
         nextAction:
           !advertiserId || !lineItemId
             ? buildNextAction({
@@ -388,9 +415,10 @@ export async function adjustLineItemBidsLogic(
     confirmed: true,
     successful,
     failed,
+    results,
     totalRequested: input.adjustments.length,
-    totalSuccessful: successful.length,
-    totalFailed: failed.length,
+    successCount: successful.length,
+    failureCount: failed.length,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -466,7 +494,7 @@ export function adjustLineItemBidsResponseFormatter(
       },
     ];
   }
-  const summary = `Batch bid adjustment completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
+  const summary = `Batch bid adjustment completed: ${result.successCount}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0
       ? `\n\nSuccessful adjustments:\n${JSON.stringify(result.successful, null, 2)}`

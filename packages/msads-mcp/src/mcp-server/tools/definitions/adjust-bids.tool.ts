@@ -92,9 +92,23 @@ export const AdjustBidsOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.string(), z.any()),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-adjustment outcome, in the order of `adjustments`"),
+    response: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("Raw Microsoft Ads Update response (PartialErrors / BatchErrors)"),
     entityType: z.string(),
-    adjustmentCount: z.number(),
+    totalRequested: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No bids were changed."
@@ -127,9 +141,11 @@ export async function adjustBidsLogic(
     const dryRun = buildAdjustBidsEffectDryRun(input);
     return {
       confirmed: true,
-      result: {},
+      results: [],
       entityType: input.entityType,
-      adjustmentCount: input.adjustments.length,
+      totalRequested: input.adjustments.length,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -155,9 +171,11 @@ export async function adjustBidsLogic(
     return {
       confirmed: false,
       declineReason: "user_declined",
-      result: {},
+      results: [],
       entityType: input.entityType,
-      adjustmentCount: 0,
+      totalRequested: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -188,10 +206,8 @@ export async function adjustBidsLogic(
   // cannot be read against `adjustments` on its own.
   const succeeded = results.filter((r) => r.success).length;
   const failed = results.length - succeeded;
-  const result: Record<string, unknown> = {
-    ...(response && typeof response === "object" ? (response as Record<string, unknown>) : {}),
-    adjustmentResults: results,
-  };
+  const rawResponse: Record<string, unknown> =
+    response && typeof response === "object" ? (response as Record<string, unknown>) : {};
 
   const effect: EffectResult = {
     effectKind: "bids_adjusted",
@@ -206,9 +222,16 @@ export async function adjustBidsLogic(
 
   return {
     confirmed: true,
-    result,
+    results: results.map((r) => ({
+      entityId: r.entityId,
+      success: r.success,
+      ...(r.error ? { error: r.error } : {}),
+    })),
+    response: rawResponse,
     entityType: input.entityType,
-    adjustmentCount: input.adjustments.length,
+    totalRequested: input.adjustments.length,
+    successCount: succeeded,
+    failureCount: failed,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -273,7 +296,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
       result.dryRun;
     const verdict = wouldSucceed ? "would succeed" : "would FAIL";
     const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
-    const n = result.dryRun.expectedEffect?.summary.requested ?? result.adjustmentCount;
+    const n = result.dryRun.expectedEffect?.summary.requested ?? result.totalRequested;
     return [
       {
         type: "text" as const,
@@ -292,24 +315,14 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
       },
     ];
   }
-  const itemResults = Array.isArray(result.result.adjustmentResults)
-    ? (result.result.adjustmentResults as Array<{
-        entityId: string;
-        success: boolean;
-        error?: string;
-      }>)
-    : undefined;
-  const succeeded = itemResults
-    ? itemResults.filter((r) => r.success).length
-    : result.adjustmentCount;
-  const failures = itemResults ? itemResults.filter((r) => !r.success) : [];
+  const failures = result.results.filter((r) => !r.success);
   const failureLines = failures.length
     ? `\n\nFailed:\n${failures.map((r) => `  ${r.entityId}: ${r.error ?? "unknown error"}`).join("\n")}`
     : "";
   return [
     {
       type: "text" as const,
-      text: `Adjusted ${succeeded}/${result.adjustmentCount} ${result.entityType} bids${failureLines}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Adjusted ${result.successCount}/${result.totalRequested} ${result.entityType} bids${failureLines}\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nResponse:\n${JSON.stringify(result.response ?? {}, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -358,9 +371,9 @@ export const adjustBidsTool = {
   ],
   logic: adjustBidsLogic,
   responseFormatter: adjustBidsResponseFormatter,
-  // result is the raw Microsoft response (BatchErrors/PartialErrors text) and is printed in block 0. dryRun is symbolic over caller input (no read), so it is not declared.
+  // results[].error and response carry the raw Microsoft response (BatchErrors/PartialErrors text) and is printed in block 0. dryRun is symbolic over caller input (no read), so it is not declared.
   untrustedContent: {
-    structuredPaths: ["$.result"],
+    structuredPaths: ["$.results", "$.response"],
     contentBlocks: [0],
   },
 };

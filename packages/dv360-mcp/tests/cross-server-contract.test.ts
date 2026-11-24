@@ -8,5 +8,5 @@ describeCrossServerContract({
   tools: allTools,
   prefix: "dv360_",
   requiredTools: [...ENTITY_CRUD_TOOLS],
-  destructiveTools: ["upload_image", "upload_video", "duplicate_entity"],
+  destructiveTools: ["update_entity", "delete_entity", "bulk_update_status"],
 });

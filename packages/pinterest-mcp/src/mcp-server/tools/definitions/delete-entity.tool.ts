@@ -80,8 +80,8 @@ export const DeleteEntityOutputSchema = z
       ),
     entityType: z.string(),
     entityIds: z.array(z.string()),
-    succeededCount: z.number().describe("Number of ids Pinterest confirmed archived/deleted"),
-    failedCount: z.number().describe("Number of ids whose archive/delete request failed"),
+    successCount: z.number().describe("Number of ids Pinterest confirmed archived/deleted"),
+    failureCount: z.number().describe("Number of ids whose archive/delete request failed"),
     results: z
       .array(
         z.object({
@@ -151,8 +151,8 @@ export async function deleteEntityLogic(
       removal,
       entityType: input.entityType,
       entityIds: input.entityIds,
-      succeededCount: 0,
-      failedCount: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -187,8 +187,8 @@ export async function deleteEntityLogic(
       removal,
       entityType: input.entityType,
       entityIds: input.entityIds,
-      succeededCount: 0,
-      failedCount: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -204,8 +204,8 @@ export async function deleteEntityLogic(
     input.entityIds,
     context
   );
-  const succeededCount = results.filter((r) => r.success).length;
-  const failedCount = results.length - succeededCount;
+  const successCount = results.filter((r) => r.success).length;
+  const failureCount = results.length - successCount;
 
   // Batch effect carries the real per-id outcome counts.
   const effect: EffectResult = {
@@ -214,20 +214,20 @@ export async function deleteEntityLogic(
       entity_kind: input.entityType,
       removal,
       requested: input.entityIds.length,
-      succeeded: succeededCount,
-      failed: failedCount,
-      partial_success: succeededCount > 0 && failedCount > 0,
+      succeeded: successCount,
+      failed: failureCount,
+      partial_success: successCount > 0 && failureCount > 0,
     },
   };
 
   return {
     confirmed: true,
-    deleted: failedCount === 0,
+    deleted: failureCount === 0,
     removal,
     entityType: input.entityType,
     entityIds: input.entityIds,
-    succeededCount,
-    failedCount,
+    successCount,
+    failureCount,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -305,7 +305,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
     ];
   }
   const lines: string[] = [
-    `${result.entityType} ${result.removal === "archived" ? "archives (status ARCHIVED — the entities still exist)" : "deletions"}: ${result.succeededCount}/${result.entityIds.length} succeeded, ${result.failedCount} failed`,
+    `${result.entityType} ${result.removal === "archived" ? "archives (status ARCHIVED — the entities still exist)" : "deletions"}: ${result.successCount}/${result.entityIds.length} succeeded, ${result.failureCount} failed`,
     "",
   ];
   for (const r of result.results) {

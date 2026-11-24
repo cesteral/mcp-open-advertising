@@ -121,7 +121,7 @@ describe("msads_delete_entity governance contract (effect class)", () => {
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.deleteEntity).toHaveBeenCalledOnce();
-    expect(result.deletedCount).toBe(2);
+    expect(result.successCount).toBe(2);
     expect(result.effect).toEqual({
       effectKind: "entities_deleted",
       summary: {
@@ -133,7 +133,7 @@ describe("msads_delete_entity governance contract (effect class)", () => {
       },
     });
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
-    expect(result.failedCount).toBe(0);
+    expect(result.failureCount).toBe(0);
     expect(() => DeleteEntityOutputSchema.parse(result)).not.toThrow();
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
   });
@@ -144,8 +144,8 @@ describe("msads_delete_entity governance contract (effect class)", () => {
       PartialErrors: [{ Index: 1, Code: 1100, Message: "EntityNotExist" }],
     });
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
-    expect(result.deletedCount).toBe(1);
-    expect(result.failedCount).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(result.effect?.summary).toEqual({
       entity_kind: "campaign",
       requested: 2,

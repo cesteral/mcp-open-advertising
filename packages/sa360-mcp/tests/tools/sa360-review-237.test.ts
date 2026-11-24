@@ -53,11 +53,13 @@ describe("sa360 review #19: pacing points at a budget amount that exists", () =>
 
 describe("sa360 review #22: every tool that calls the SA360 API is open-world", () => {
   // The client-side tools never leave the process. sa360_search_tools only
-  // ranks this server's own tool registry.
+  // ranks this server's own tool registry. sa360_get_change_history is
+  // unavailable on Reporting API v0 and errors without making a call.
   const CLIENT_SIDE = new Set([
     "sa360_get_pacing_status",
     "sa360_validate_conversion",
     "sa360_search_tools",
+    "sa360_get_change_history",
   ]);
 
   it.each(allTools.filter((t) => !CLIENT_SIDE.has(t.name)).map((t) => [t.name, t] as const))(

@@ -224,7 +224,7 @@ describe("meta bulk capacity pre-check (real default limiter: 20/min, 120s budge
       expect(mockElicitBid).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(5);
       expect(http.post).toHaveBeenCalledTimes(5);
-      expect(result.totalSucceeded).toBe(5);
+      expect(result.successCount).toBe(5);
     });
 
     it("dry-run predicts the refusal", async () => {

@@ -53,8 +53,8 @@ export const BulkCreateEntitiesInputSchema = z
 
 export const BulkCreateEntitiesOutputSchema = z
   .object({
-    created: z.number().describe("Number of entities created"),
-    failed: z.number().describe("Number that failed"),
+    successCount: z.number().describe("Number of items that succeeded"),
+    failureCount: z.number().describe("Number of items that failed"),
     results: z
       .array(
         z.object({
@@ -110,8 +110,8 @@ export async function bulkCreateEntitiesLogic(
     );
     const dryRun = buildBulkEffectDryRun(input, capacityError ? [capacityError] : []);
     return {
-      created: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -164,8 +164,8 @@ export async function bulkCreateEntitiesLogic(
   };
 
   return {
-    created,
-    failed,
+    successCount: created,
+    failureCount: failed,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -236,7 +236,7 @@ export function bulkCreateEntitiesResponseFormatter(
       },
     ];
   }
-  const summary = `Bulk create: ${result.created} succeeded, ${result.failed} failed`;
+  const summary = `Bulk create: ${result.successCount} succeeded, ${result.failureCount} failed`;
   const failures = result.results
     .filter((r) => !r.success)
     .map((r) => `  - Item ${r.index}: ${r.error}`)

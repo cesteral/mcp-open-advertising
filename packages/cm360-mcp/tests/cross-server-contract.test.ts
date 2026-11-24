@@ -16,6 +16,4 @@ describeCrossServerContract({
     "bulk_update_status",
     "validate_entity",
   ],
-  // CM360 bulk tools report updated/created + failed, not successCount/failureCount.
-  bulkOutputShape: "updated-or-created",
 });

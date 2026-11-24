@@ -486,7 +486,7 @@ describe("pinterest_delete_entity", () => {
         [{ status: "ARCHIVED", id: "112" }],
       ])
     );
-    expect(out.succeededCount).toBe(2);
+    expect(out.successCount).toBe(2);
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
     expectAccountTokensPerCall();
   });

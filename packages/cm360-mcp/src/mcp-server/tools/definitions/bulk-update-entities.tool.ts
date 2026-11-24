@@ -63,8 +63,8 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    updated: z.number().describe("Number of entities updated"),
-    failed: z.number().describe("Number that failed"),
+    successCount: z.number().describe("Number of items that succeeded"),
+    failureCount: z.number().describe("Number of items that failed"),
     results: z
       .array(
         z.object({
@@ -114,8 +114,8 @@ export async function bulkUpdateEntitiesLogic(
     const dryRun = buildBulkEffectDryRun(input, cm360Service.quotaUser);
     return {
       confirmed: true,
-      updated: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -141,8 +141,8 @@ export async function bulkUpdateEntitiesLogic(
     return {
       confirmed: false,
       declineReason: "user_declined",
-      updated: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -184,8 +184,8 @@ export async function bulkUpdateEntitiesLogic(
 
   return {
     confirmed: true,
-    updated,
-    failed,
+    successCount: updated,
+    failureCount: failed,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -278,7 +278,7 @@ export function bulkUpdateEntitiesResponseFormatter(
       },
     ];
   }
-  const summary = `Bulk update: ${result.updated} succeeded, ${result.failed} failed`;
+  const summary = `Bulk update: ${result.successCount} succeeded, ${result.failureCount} failed`;
   const failures = result.results
     .filter((r) => !r.success)
     .map((r) => `  - ${r.entityId}: ${r.error}`)

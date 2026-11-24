@@ -113,6 +113,8 @@ describe("msads_bulk_update_entities governance contract (effect class)", () => 
       results: [],
       entityType: "campaign",
       totalItems: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "bulk_job", canonicalEntityKind: null },
       dryRun: {

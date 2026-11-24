@@ -263,11 +263,11 @@ describe("bulk writes report per-item failures", () => {
       sdk
     );
 
-    expect(result.result.adjustmentResults).toEqual([
+    expect(result.results).toEqual([
       expect.objectContaining({ entityId: "1", success: false }),
       { entityId: "2", success: true },
     ]);
-    expect(result.result.PartialErrors).toHaveLength(1);
+    expect(result.response?.PartialErrors).toHaveLength(1);
     expect(result.effect?.summary).toMatchObject({
       requested: 2,
       succeeded: 1,

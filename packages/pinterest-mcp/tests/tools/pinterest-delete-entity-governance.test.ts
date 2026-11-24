@@ -84,8 +84,8 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.deleteEntity).toHaveBeenCalledOnce();
     expect(result.deleted).toBe(true);
-    expect(result.succeededCount).toBe(2);
-    expect(result.failedCount).toBe(0);
+    expect(result.successCount).toBe(2);
+    expect(result.failureCount).toBe(0);
     expect(result.effect).toEqual({
       effectKind: "entities_deleted",
       summary: {
@@ -112,8 +112,8 @@ describe("pinterest_delete_entity governance contract (effect class)", () => {
     });
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(result.deleted).toBe(false);
-    expect(result.succeededCount).toBe(1);
-    expect(result.failedCount).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(result.effect?.summary).toEqual({
       entity_kind: "campaign",
       removal: "archived",

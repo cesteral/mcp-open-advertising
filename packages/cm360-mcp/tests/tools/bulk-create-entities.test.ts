@@ -88,8 +88,8 @@ describe("bulkCreateEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.created).toBe(3);
-    expect(result.failed).toBe(0);
+    expect(result.successCount).toBe(3);
+    expect(result.failureCount).toBe(0);
     result.results.forEach((r) => expect(r.success).toBe(true));
   });
 
@@ -110,8 +110,8 @@ describe("bulkCreateEntitiesLogic", () => {
     expect(result.results[0].success).toBe(true);
     expect(result.results[1].success).toBe(false);
     expect(result.results[1].error).toBe("API error");
-    expect(result.created).toBe(1);
-    expect(result.failed).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
   });
 
   it("all fail: created is 0, failed equals items.length", async () => {
@@ -126,8 +126,8 @@ describe("bulkCreateEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.created).toBe(0);
-    expect(result.failed).toBe(2);
+    expect(result.successCount).toBe(0);
+    expect(result.failureCount).toBe(2);
   });
 
   it("captures error message for non-Error thrown value", async () => {
@@ -169,8 +169,8 @@ describe("bulkCreateEntitiesLogic", () => {
 describe("bulkCreateEntitiesResponseFormatter", () => {
   it("shows success and failure counts", () => {
     const output = bulkCreateEntitiesResponseFormatter({
-      created: 2,
-      failed: 1,
+      successCount: 2,
+      failureCount: 1,
       results: [
         { index: 0, success: true, entity: {} },
         { index: 1, success: true, entity: {} },
@@ -185,8 +185,8 @@ describe("bulkCreateEntitiesResponseFormatter", () => {
 
   it("shows failure details with item index", () => {
     const output = bulkCreateEntitiesResponseFormatter({
-      created: 0,
-      failed: 1,
+      successCount: 0,
+      failureCount: 1,
       results: [{ index: 0, success: false, error: "Quota exceeded" }],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
@@ -197,8 +197,8 @@ describe("bulkCreateEntitiesResponseFormatter", () => {
 
   it("no failure section when all succeed", () => {
     const output = bulkCreateEntitiesResponseFormatter({
-      created: 2,
-      failed: 0,
+      successCount: 2,
+      failureCount: 0,
       results: [
         { index: 0, success: true, entity: {} },
         { index: 1, success: true, entity: {} },

@@ -213,7 +213,7 @@ describe("tiktok bulk capacity pre-check (real default limiter: 10/min, 120s bud
       expect(mockElicitBid).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(2);
       expect(http.post).toHaveBeenCalledTimes(2);
-      expect(result.totalSucceeded).toBe(2);
+      expect(result.successCount).toBe(2);
     });
 
     it("dry-run predicts the refusal", async () => {

@@ -29,9 +29,6 @@ describeCrossServerContract({
     "import_from_google",
     "search_targeting",
   ],
-  // Bulk create and update are governed as one batch effect, so they report
-  // `results` / `totalItems` / `timestamp` instead of per-item success counters.
-  bulkOutputExemptTools: ["bulk_create_entities", "bulk_update_entities"],
 });
 
 describe("msads-mcp cross-server contract", () => {

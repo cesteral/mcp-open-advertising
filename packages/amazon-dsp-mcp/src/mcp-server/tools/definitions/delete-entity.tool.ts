@@ -70,8 +70,8 @@ export const DeleteEntityOutputSchema = z
     declineReason: z.string().optional(),
     entityType: z.string(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -125,8 +125,8 @@ export async function deleteEntityLogic(
       confirmed: true,
       entityType: input.entityType,
       totalRequested: 0,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -150,8 +150,8 @@ export async function deleteEntityLogic(
       declineReason: "user_declined",
       entityType: input.entityType,
       totalRequested: input.entityIds.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -189,17 +189,17 @@ export async function deleteEntityLogic(
     }
   }
 
-  const totalSucceeded = results.filter((r) => r.success).length;
-  const totalFailed = input.entityIds.length - totalSucceeded;
+  const successCount = results.filter((r) => r.success).length;
+  const failureCount = input.entityIds.length - successCount;
 
   const effect: EffectResult = {
     effectKind: EFFECT_KIND,
     summary: {
       entity_kind: input.entityType,
       requested: input.entityIds.length,
-      succeeded: totalSucceeded,
-      failed: totalFailed,
-      partial_success: totalSucceeded > 0 && totalFailed > 0,
+      succeeded: successCount,
+      failed: failureCount,
+      partial_success: successCount > 0 && failureCount > 0,
     },
   };
 
@@ -207,8 +207,8 @@ export async function deleteEntityLogic(
     confirmed: true,
     entityType: input.entityType,
     totalRequested: input.entityIds.length,
-    totalSucceeded,
-    totalFailed,
+    successCount,
+    failureCount,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -279,7 +279,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
     ];
   }
   const lines: string[] = [
-    `${result.entityType} deletions: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    `${result.entityType} deletions: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",
   ];
 

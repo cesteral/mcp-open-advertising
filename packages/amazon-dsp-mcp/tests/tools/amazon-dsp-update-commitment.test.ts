@@ -82,7 +82,7 @@ describe("amazon_dsp_update_commitment — governed write annotation", () => {
     expect(cesteral!.requiresSimulation).toBe(true);
     expect(cesteral!.supportsDryRun).toBe(true);
     expect(cesteral!.supportsBeforeAfterSnapshot).toBe(true);
-    expect(updateCommitmentTool.annotations.destructiveHint).toBe(false);
+    expect(updateCommitmentTool.annotations.destructiveHint).toBe(true);
     expect(updateCommitmentTool.annotations.idempotentHint).toBe(true);
   });
 });

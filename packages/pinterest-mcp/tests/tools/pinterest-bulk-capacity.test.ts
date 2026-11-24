@@ -237,7 +237,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
       expect(mockElicitBid).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(2);
       expect(http.patch).toHaveBeenCalledTimes(2);
-      expect(result.totalSucceeded).toBe(2);
+      expect(result.successCount).toBe(2);
     });
 
     it("dry-run predicts the refusal", async () => {
@@ -262,7 +262,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
       const result = await deleteEntityLogic(input("ad", 3), ctx, sdk);
       expect(mockElicitDelete).toHaveBeenCalledOnce();
       expect(http.patch).toHaveBeenCalledTimes(3);
-      expect(result.succeededCount).toBe(3);
+      expect(result.successCount).toBe(3);
     });
 
     it("archive types: dry-run predicts the refusal", async () => {
@@ -283,7 +283,7 @@ describe("pinterest bulk capacity pre-check (real default limiter: 10/min, 120s 
       const result = await deleteEntityLogic(input("creative", 3), ctx, sdk);
       expect(http.delete).toHaveBeenCalledTimes(3);
       expect(rateLimiter.getRemainingTokens(`pinterest:user:u-1:account:${ACCOUNT}`)).toBe(1);
-      expect(result.succeededCount).toBe(3);
+      expect(result.successCount).toBe(3);
     });
   });
 });

@@ -63,11 +63,11 @@ const createdCommitment = {
 };
 
 describe("amazon_dsp_create_commitment", () => {
-  it("is a destructive entity-class governed create write", () => {
+  it("is an additive (non-destructive) entity-class governed create write", () => {
     expect(createCommitmentTool.name).toBe("amazon_dsp_create_commitment");
     expect(createCommitmentTool.annotations.readOnlyHint).toBe(false);
-    expect(createCommitmentTool.annotations.destructiveHint).toBe(true);
-    expect(createCommitmentTool.annotations.openWorldHint).toBe(false);
+    expect(createCommitmentTool.annotations.destructiveHint).toBe(false);
+    expect(createCommitmentTool.annotations.openWorldHint).toBe(true);
     const cesteral = (createCommitmentTool.annotations as { cesteral?: any }).cesteral;
     expect(cesteral?.kind).toBe("write");
     expect(cesteral?.writeClass).toBe("entity");

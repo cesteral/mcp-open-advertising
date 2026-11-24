@@ -130,8 +130,8 @@ describe("cm360_bulk_update_status governance contract (effect class)", () => {
   it("formatter renders a dry-run message without a false success", () => {
     const content = bulkUpdateStatusResponseFormatter({
       confirmed: true,
-      updated: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "bulk_job", canonicalEntityKind: null },

@@ -61,6 +61,17 @@ export const DeleteEntityOutputSchema = z
     deleted: z.boolean(),
     entityType: z.string(),
     entityIds: z.array(z.string()),
+    successCount: z.number().describe("Number of ids TikTok accepted for deletion"),
+    failureCount: z.number().describe("Number of ids that failed (the batch is all-or-nothing)"),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-id results; empty on a dry run or a declined confirmation"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were deleted."
@@ -96,6 +107,9 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -115,6 +129,9 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -143,6 +160,9 @@ export async function deleteEntityLogic(
     deleted: true,
     entityType: input.entityType,
     entityIds: input.entityIds,
+    successCount: input.entityIds.length,
+    failureCount: 0,
+    results: input.entityIds.map((entityId) => ({ entityId, success: true })),
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -213,7 +233,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `${result.entityType} entities deleted: ${result.entityIds.join(", ")}\n\nTimestamp: ${result.timestamp}`,
+      text: `${result.entityType} deletions: ${result.successCount}/${result.entityIds.length} succeeded, ${result.failureCount} failed (${result.entityIds.join(", ")})\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

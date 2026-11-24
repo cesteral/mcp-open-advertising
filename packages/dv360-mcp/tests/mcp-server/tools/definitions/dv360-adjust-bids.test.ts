@@ -107,8 +107,8 @@ describe("dv360_adjust_line_item_bids", () => {
       );
 
       expect(result.totalRequested).toBe(1);
-      expect(result.totalSuccessful).toBe(1);
-      expect(result.totalFailed).toBe(0);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(0);
       expect(result.successful).toHaveLength(1);
       expect(result.successful[0]).toEqual(
         expect.objectContaining({
@@ -242,7 +242,7 @@ describe("dv360_adjust_line_item_bids", () => {
       );
 
       expect(result.totalRequested).toBe(2);
-      expect(result.totalSuccessful).toBe(2);
+      expect(result.successCount).toBe(2);
       expect(result.successful).toHaveLength(2);
     });
 
@@ -268,8 +268,8 @@ describe("dv360_adjust_line_item_bids", () => {
       );
 
       expect(result.totalRequested).toBe(2);
-      expect(result.totalSuccessful).toBe(1);
-      expect(result.totalFailed).toBe(1);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(1);
       expect(result.failed[0].error).toContain("Line item not found");
     });
 
@@ -303,9 +303,10 @@ describe("dv360_adjust_line_item_bids", () => {
           },
         ],
         failed: [],
+        results: [],
         totalRequested: 1,
-        totalSuccessful: 1,
-        totalFailed: 0,
+        successCount: 1,
+        failureCount: 0,
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -325,9 +326,10 @@ describe("dv360_adjust_line_item_bids", () => {
             error: "Entity not found",
           },
         ],
+        results: [],
         totalRequested: 1,
-        totalSuccessful: 0,
-        totalFailed: 1,
+        successCount: 0,
+        failureCount: 1,
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -341,9 +343,10 @@ describe("dv360_adjust_line_item_bids", () => {
         confirmed: true,
         successful: [],
         failed: [],
+        results: [],
         totalRequested: 0,
-        totalSuccessful: 0,
-        totalFailed: 0,
+        successCount: 0,
+        failureCount: 0,
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 

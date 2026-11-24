@@ -57,12 +57,25 @@ export const DeleteEntityOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    result: z.record(z.string(), z.any()),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-id outcome, in the order of `entityIds`"),
+    response: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("Raw Microsoft Ads delete response (PartialErrors / BatchErrors)"),
     entityType: z.string(),
-    deletedCount: z
+    totalRequested: z.number(),
+    successCount: z
       .number()
       .describe("Number of ids Microsoft Ads accepted (requested − PartialErrors)"),
-    failedCount: z.number().describe("Number of ids Microsoft Ads rejected via PartialErrors"),
+    failureCount: z.number().describe("Number of ids Microsoft Ads rejected via PartialErrors"),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were deleted."
@@ -95,10 +108,11 @@ export async function deleteEntityLogic(
     const dryRun = buildBulkEffectDryRun(input);
     return {
       confirmed: true,
-      result: {},
+      results: [],
       entityType: input.entityType,
-      deletedCount: 0,
-      failedCount: 0,
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -115,10 +129,11 @@ export async function deleteEntityLogic(
     return {
       confirmed: false,
       declineReason: "user_declined",
-      result: {},
+      results: [],
       entityType: input.entityType,
-      deletedCount: 0,
-      failedCount: 0,
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -137,7 +152,13 @@ export async function deleteEntityLogic(
   // some ids fail — the per-item failures arrive as `PartialErrors[].Index`. Count
   // them so the effect reports the real outcome rather than blanket success.
   const requested = input.entityIds.length;
-  const failedCount = mapMsAdsItemOutcomes(result, requested).filter((o) => !o.success).length;
+  const outcomes = mapMsAdsItemOutcomes(result, requested);
+  const results = outcomes.map((o) => ({
+    entityId: input.entityIds[o.index] ?? String(o.index),
+    success: o.success,
+    ...(o.error ? { error: o.error } : {}),
+  }));
+  const failedCount = outcomes.filter((o) => !o.success).length;
   const succeeded = requested - failedCount;
 
   const effect: EffectResult = {
@@ -153,10 +174,12 @@ export async function deleteEntityLogic(
 
   return {
     confirmed: true,
-    result,
+    results,
+    response: result,
     entityType: input.entityType,
-    deletedCount: succeeded,
-    failedCount,
+    totalRequested: requested,
+    successCount: succeeded,
+    failureCount: failedCount,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -237,13 +260,13 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
       },
     ];
   }
-  const total = result.deletedCount + result.failedCount;
+  const total = result.successCount + result.failureCount;
   const failedNote =
-    result.failedCount > 0 ? ` (${result.failedCount} rejected via PartialErrors)` : "";
+    result.failureCount > 0 ? ` (${result.failureCount} rejected via PartialErrors)` : "";
   return [
     {
       type: "text" as const,
-      text: `Deleted ${result.deletedCount}/${total} ${result.entityType} entities${failedNote}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Deleted ${result.successCount}/${total} ${result.entityType} entities${failedNote}\n\nResults:\n${JSON.stringify(result.results, null, 2)}\n\nResponse:\n${JSON.stringify(result.response ?? {}, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -291,9 +314,9 @@ export const deleteEntityTool = {
   ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
-  // result is the raw delete response (PartialErrors text), printed in block 0. dryRun not declared: the bulk effect dry run is symbolic over caller ids (no read).
+  // results[].error and response are the raw delete response (PartialErrors text), printed in block 0. dryRun not declared: the bulk effect dry run is symbolic over caller ids (no read).
   untrustedContent: {
-    structuredPaths: ["$.result"],
+    structuredPaths: ["$.results", "$.response"],
     contentBlocks: [0],
   },
 };

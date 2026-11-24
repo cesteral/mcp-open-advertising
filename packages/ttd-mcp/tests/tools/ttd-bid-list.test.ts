@@ -231,8 +231,8 @@ describe("ttd bid list tools", () => {
 
       expect(result.operation).toBe("batch_get");
       expect(result.totalItems).toBe(2);
-      expect(result.succeeded).toBe(2);
-      expect(result.failed).toBe(0);
+      expect(result.successCount).toBe(2);
+      expect(result.failureCount).toBe(0);
       expect(mockTtdService.batchGetBidLists).toHaveBeenCalledWith(
         ["bl-001", "bl-002"],
         expect.any(Object),
@@ -260,8 +260,8 @@ describe("ttd bid list tools", () => {
 
       expect(result.operation).toBe("batch_update");
       expect(result.totalItems).toBe(2);
-      expect(result.succeeded).toBe(1);
-      expect(result.failed).toBe(1);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(1);
       expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(
         items,
         expect.any(Object),
@@ -485,8 +485,8 @@ describe("ttd bid list tools", () => {
       );
 
       expect(result.totalItems).toBe(3);
-      expect(result.succeeded).toBe(1);
-      expect(result.failed).toBe(2);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(2);
       expect(result.effect?.summary).toMatchObject({ succeeded: 1, failed: 2 });
       const failed = result.results.filter((r) => r.success === false);
       expect(failed.map((r) => String(r.error))).toEqual(
@@ -505,8 +505,8 @@ describe("ttd bid list tools", () => {
         createMockSdkContext()
       );
 
-      expect(result.succeeded).toBe(1);
-      expect(result.failed).toBe(1);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(1);
     });
   });
 });

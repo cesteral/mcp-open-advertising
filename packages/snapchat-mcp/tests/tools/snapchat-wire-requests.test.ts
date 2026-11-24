@@ -585,7 +585,7 @@ describe("snapchat_delete_entity → ownership read, then DELETE /v1/{entity}s/{
     expect(deletes.map((r) => r.url).sort()).toEqual(
       [`${API}/v1/campaigns/${CAMP}`, `${API}/v1/campaigns/${CAMP_2}`].sort()
     );
-    expect(out).toMatchObject({ confirmed: true, deleted: true, succeededCount: 2 });
+    expect(out).toMatchObject({ confirmed: true, deleted: true, successCount: 2 });
     expect(remaining()).toBe(LIMIT - 2 * (1 + 3));
   });
 

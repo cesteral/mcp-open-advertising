@@ -8,5 +8,5 @@ describeCrossServerContract({
   tools: allTools,
   prefix: "linkedin_",
   requiredTools: [...ENTITY_CRUD_TOOLS, "list_ad_accounts"],
-  destructiveTools: ["upload_image", "upload_video"],
+  destructiveTools: ["update_entity", "delete_entity", "bulk_update_status"],
 });

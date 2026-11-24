@@ -98,7 +98,7 @@ describe("dv360_adjust_line_item_bids: handler re-run", () => {
       [promptFor("Line Item ID", 2, 2)]: { action: "accept", content: { lineItemId: "L-second" } },
     });
     const result = await adjustLineItemBidsLogic(two, context, r.sdkContext);
-    expect(result.totalSuccessful).toBe(2);
+    expect(result.successCount).toBe(2);
     expect(service.updateEntity.mock.calls.map((c: any[]) => c[1].lineItemId)).toEqual([
       "L-first",
       "L-second",
@@ -131,15 +131,15 @@ describe("dv360_adjust_line_item_bids: handler re-run", () => {
     answers[promptFor("Line Item ID", 2, 2)] = { action: "accept", content: { lineItemId: "L2" } };
     r = round(answers);
     const result = await adjustLineItemBidsLogic(three, context, r.sdkContext);
-    expect(result.totalSuccessful).toBe(2);
+    expect(result.successCount).toBe(2);
     expect(service.updateEntity).toHaveBeenCalledTimes(2);
   });
 
   it("a declined id answer fails that item only", async () => {
     const r = round({ [promptFor("Line Item ID", 2, 2)]: { action: "decline" } });
     const result = await adjustLineItemBidsLogic(input, context, r.sdkContext);
-    expect(result.totalSuccessful).toBe(1);
-    expect(result.totalFailed).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(result.failed[0].error).toContain("Unable to continue");
     expect(service.updateEntity).toHaveBeenCalledTimes(1);
   });

@@ -101,8 +101,8 @@ describe("pinterest_adjust_bids governance contract (effect class)", () => {
     const content = adjustBidsResponseFormatter({
       confirmed: true,
       totalRequested: 1,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: "2026-06-02T00:00:00.000Z",
       dispatchedCapability: { operation: "adjust_bids", canonicalEntityKind: null },

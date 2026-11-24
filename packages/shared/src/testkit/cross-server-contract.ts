@@ -62,19 +62,6 @@ export interface CrossServerContractOptions {
    * Omit for servers that do not pin any.
    */
   destructiveTools?: readonly string[];
-  /**
-   * How a canonical bulk tool (`*_bulk_update_status`, `*_bulk_create_entities`,
-   * `*_bulk_update_entities`) names its result counters. `standard` (default):
-   * `successCount` + `failureCount`. `updated-or-created`: CM360's
-   * `updated`/`created` + `failed`, with the standard counters also accepted.
-   */
-  bulkOutputShape?: "standard" | "updated-or-created";
-  /**
-   * Canonical bulk tools (names without the prefix) that report their result in
-   * another shape and are therefore not held to {@link bulkOutputShape}. Say
-   * why beside the call.
-   */
-  bulkOutputExemptTools?: readonly string[];
 }
 
 const CANONICAL_BULK_TOOL = /_(bulk_update_status|bulk_create_entities|bulk_update_entities)$/;
@@ -104,8 +91,7 @@ function describeRequiredTools(options: CrossServerContractOptions): void {
 }
 
 function describeToolStructure(options: CrossServerContractOptions): void {
-  const { tools, prefix, bulkOutputShape = "standard", bulkOutputExemptTools = [] } = options;
-  const bulkExempt = new Set(bulkOutputExemptTools.map((name) => `${prefix}${name}`));
+  const { tools } = options;
   describe("tool structure requirements", () => {
     for (const tool of tools) {
       describe(tool.name, () => {
@@ -141,23 +127,15 @@ function describeToolStructure(options: CrossServerContractOptions): void {
           expect(typeof tool.responseFormatter).toBe("function");
         });
 
-        if (CANONICAL_BULK_TOOL.test(tool.name) && !bulkExempt.has(tool.name)) {
-          it("canonical bulk tools expose standard bulk output fields", () => {
+        if (CANONICAL_BULK_TOOL.test(tool.name)) {
+          it("canonical bulk tools expose results, successCount and failureCount", () => {
             expect(tool.outputSchema).toBeDefined();
             const shape = getObjectShape(tool.outputSchema);
             expect(shape).not.toBeNull();
             expect(shape).toHaveProperty("results");
-            if (bulkOutputShape === "standard") {
-              expect(shape).toHaveProperty("successCount");
-              expect(shape).toHaveProperty("failureCount");
-              expect(shape).toHaveProperty("timestamp");
-            } else {
-              const keys = Object.keys(shape ?? {});
-              expect(keys.some((k) => ["successCount", "updated", "created"].includes(k))).toBe(
-                true
-              );
-              expect(keys.some((k) => ["failureCount", "failed"].includes(k))).toBe(true);
-            }
+            expect(shape).toHaveProperty("successCount");
+            expect(shape).toHaveProperty("failureCount");
+            expect(shape).toHaveProperty("timestamp");
           });
         }
       });

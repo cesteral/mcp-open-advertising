@@ -91,7 +91,7 @@ Valid statuses:
 
 ### Step 3: Review Results
 
-Check \`results\` array for per-entity success/failure, \`totalSucceeded\` / \`totalFailed\` counts.
+Check \`results\` array for per-entity success/failure, \`successCount\` / \`failureCount\` counts.
 
 ---
 
