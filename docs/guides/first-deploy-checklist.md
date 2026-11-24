@@ -52,6 +52,15 @@ In `<env>.tfvars`, set at minimum:
   must already have a **version** (a `secret_key_ref` to an empty secret
   fails revision deploys). Dev-first: leave this commented in prod until the
   prod value is set.
+- `request_state_secret_name` — the shared key that seals the destructive-op
+  confirmation `requestState` (`MCP_REQUEST_STATE_SECRET`, at least 32
+  characters, the same on every instance). Same rule as the decision-token
+  secret: create the container and add a version **before** apply. Create the
+  container, then add a value without it touching shell history or a file:
+  `gcloud secrets create mcp-request-state-secret --replication-policy=automatic`
+  then `openssl rand -base64 48 | tr -d '\n' | gcloud secrets versions add mcp-request-state-secret --data-file=-`.
+  Rotating it only invalidates confirmations in flight (the client is asked
+  again), so no previous-key slot exists.
 - The `mcp_images` entries in the example are placeholders. Both deploy
   paths override the whole map on every run: `deploy.sh` with the SHA tags it
   just built (`:latest` under `--skip-build`), `cloudbuild.yaml` with the

@@ -196,6 +196,12 @@ variable "governance_token_secret_previous_name" {
   default     = ""
 }
 
+variable "request_state_secret_name" {
+  description = "Name of the EXISTING Secret Manager secret holding the shared MRTR requestState sealing key (MCP_REQUEST_STATE_SECRET, at least 32 characters). Every instance of every service must hold the same key, or a destructive-op confirmation retry that lands on another instance fails closed with -32602, so it is provisioned out-of-band (gcloud / console), never created by terraform. Threaded to every mcp-service module: each wires the env var and grants its runtime SA secretAccessor. Empty leaves the env unset (the server then derives the key from MCP_AUTH_SECRET_KEY in jwt mode, else a random per-process key). See docs/architecture/confirmation-mrtr.md."
+  type        = string
+  default     = ""
+}
+
 variable "governance_token_enforce_contracts" {
   description = "contractIds staged into enforce mode via GOVERNANCE_TOKEN_MODE_ENFORCE_CONTRACTS (highest precedence in resolveTokenMode), letting proven contracts enforce while the fleet mode stays 'warn'. Add contracts only after their decision_token_verification audit lines show steady ok:true with definitionHashVerified:true — see the rollout runbook."
   type        = list(string)

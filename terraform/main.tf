@@ -327,6 +327,7 @@ module "mcp_service" {
   governance_token_secret_name          = var.governance_token_secret_name
   governance_token_secret_previous_name = var.governance_token_secret_previous_name
   governance_token_enforce_contracts    = var.governance_token_enforce_contracts
+  request_state_secret_name             = var.request_state_secret_name
   enable_gcs_persistence                = var.enable_gcs_persistence
   gcs_bucket_name                       = var.gcs_bucket_name
   secret_names                          = each.value.secret_names

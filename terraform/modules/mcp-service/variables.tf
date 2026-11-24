@@ -193,6 +193,12 @@ variable "governance_token_secret_name" {
   default     = ""
 }
 
+variable "request_state_secret_name" {
+  description = "Name of an EXISTING Secret Manager secret holding the shared MRTR requestState sealing key (MCP_REQUEST_STATE_SECRET, at least 32 characters). Shared fleet-wide, provisioned out-of-band and NOT created by this module. When set, the env var is wired from it and the runtime SA is granted secretAccessor. Empty leaves the env unset. See docs/architecture/confirmation-mrtr.md."
+  type        = string
+  default     = ""
+}
+
 variable "governance_token_secret_previous_name" {
   description = "Name of an EXISTING Secret Manager secret holding the previous decision-token signing secret (GOVERNANCE_DECISION_TOKEN_SECRET_PREVIOUS), accepted during zero-downtime rotation. Set only while a rotation is in flight — the referenced secret must have at least one version or revision deploys fail. Empty (the steady state) leaves the env unset."
   type        = string
