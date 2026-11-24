@@ -4,7 +4,7 @@
 // edits, so new:server, --add-write-stubs and promote:server run without
 // touching the checkout. Imported by the scaffold's *.test.mjs files only.
 
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DERIVED, INVENTORY_SITES } from "../lib/fleet-inventory.mjs";
@@ -61,4 +61,39 @@ export function filesUnder(dir, base = dir, out = new Map()) {
     else out.set(abs.slice(base.length + 1), readFileSync(abs, "utf8"));
   }
   return out;
+}
+
+/**
+ * Gives the scaffolded server (by `tool_prefix`) the `client` block promotion
+ * requires. A scaffold has none on purpose: it is never published, and the
+ * credentials are the contributor's to write.
+ */
+export function addClientBlock(root, key) {
+  const path = join(root, "registry.json");
+  const registry = JSON.parse(readFileSync(path, "utf8"));
+  const entry = registry.servers.find((s) => s.tool_prefix === key);
+  entry.client = {
+    stdio: {
+      env: [
+        {
+          name: "FOO_BAR_ACCESS_TOKEN",
+          requirement: "required",
+          secret: true,
+          description: "Foo Bar API access token.",
+        },
+      ],
+    },
+    http: {
+      headers: [
+        {
+          name: "Authorization",
+          requirement: "required",
+          env: "FOO_BAR_ACCESS_TOKEN",
+          prefix: "Bearer ",
+          description: "Foo Bar access token.",
+        },
+      ],
+    },
+  };
+  writeFileSync(path, JSON.stringify(registry, null, 2) + "\n");
 }

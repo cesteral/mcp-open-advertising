@@ -10,7 +10,7 @@ import { validateLedger } from "../check/check-platform-facts.mjs";
 import { ScaffoldError, applyPlan, planScaffold } from "./scaffold.mjs";
 import { planAddWrites } from "./add-writes.mjs";
 import { planPromotion } from "./promote.mjs";
-import { SCAFFOLD_OPTS as opts, TODAY, makeTempRepo } from "./test-fixture.mjs";
+import { SCAFFOLD_OPTS as opts, TODAY, addClientBlock, makeTempRepo } from "./test-fixture.mjs";
 
 let tmp;
 beforeEach(() => {
@@ -26,6 +26,7 @@ describe("scaffold: promote:server", () => {
   it("the journey: read-only → --add-write-stubs → promote leaves every check green", async () => {
     applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
     applyPlan(tmp, await planAddWrites(tmp, "foo_bar"));
+    addClientBlock(tmp, "foo_bar");
     applyPlan(tmp, await planPromotion(tmp, "foo_bar"));
 
     const reg = registry();
@@ -75,6 +76,7 @@ describe("scaffold: promote:server", () => {
     // early would otherwise get a second "foo-bar-mcp" = { block.
     applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
     applyPlan(tmp, await planAddWrites(tmp, "foo_bar"));
+    addClientBlock(tmp, "foo_bar");
     const tf = read("terraform/variables.tf").replace(
       "  default = {\n",
       '  default = {\n    "foo-bar-mcp" = {\n    }\n'
@@ -85,6 +87,16 @@ describe("scaffold: promote:server", () => {
       /terraform\/variables\.tf already lists foo-bar-mcp/
     );
     expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a server with no client block, so a published package always has a config", async () => {
+    applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    applyPlan(tmp, await planAddWrites(tmp, "foo_bar"));
+    const before = snapshot();
+    await expect(planPromotion(tmp, "foo_bar")).rejects.toThrow(/registry `client` needs/);
+    expect(snapshot()).toEqual(before);
+    addClientBlock(tmp, "foo_bar");
+    await expect(planPromotion(tmp, "foo_bar")).resolves.toBeTruthy();
   });
 
   it("refuses an unknown server and a stable one", async () => {

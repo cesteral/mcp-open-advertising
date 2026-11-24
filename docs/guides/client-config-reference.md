@@ -96,7 +96,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-dbm]
+url = "http://localhost:3001/mcp"
+http_headers = { "X-Cesteral-Google-Auth-Type" = "service_account" }
+env_http_headers = { "X-Cesteral-Google-Credentials" = "DBM_SERVICE_ACCOUNT_B64" }
+```
 
 ## DV360 MCP Server (cesteral-dv360)
 
@@ -172,7 +179,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-dv360]
+url = "http://localhost:3002/mcp"
+http_headers = { "X-Cesteral-Google-Auth-Type" = "service_account" }
+env_http_headers = { "X-Cesteral-Google-Credentials" = "DV360_SERVICE_ACCOUNT_B64" }
+```
 
 ## The Trade Desk MCP Server (cesteral-ttd)
 
@@ -246,7 +260,13 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-ttd]
+url = "http://localhost:3003/mcp"
+env_http_headers = { "TTD-Auth" = "TTD_API_TOKEN" }
+```
 
 ## Google Ads MCP Server (cesteral-gads)
 
@@ -333,7 +353,13 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-gads]
+url = "http://localhost:3004/mcp"
+env_http_headers = { "X-Gads-Developer-Token" = "GADS_DEVELOPER_TOKEN", "X-Gads-Client-Id" = "GADS_CLIENT_ID", "X-Gads-Client-Secret" = "GADS_CLIENT_SECRET", "X-Gads-Refresh-Token" = "GADS_REFRESH_TOKEN" }
+```
 
 ## Meta Ads MCP Server (cesteral-meta)
 
@@ -568,7 +594,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-tiktok]
+url = "http://localhost:3007/mcp"
+bearer_token_env_var = "TIKTOK_ACCESS_TOKEN"
+env_http_headers = { "X-TikTok-Advertiser-Id" = "TIKTOK_ADVERTISER_ID" }
+```
 
 ## Campaign Manager 360 MCP Server (cesteral-cm360)
 
@@ -644,7 +677,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-cm360]
+url = "http://localhost:3008/mcp"
+http_headers = { "X-Cesteral-Google-Auth-Type" = "service_account" }
+env_http_headers = { "X-Cesteral-Google-Credentials" = "CM360_SERVICE_ACCOUNT_B64" }
+```
 
 ## Snapchat Ads MCP Server (cesteral-snapchat)
 
@@ -728,7 +768,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-snapchat]
+url = "http://localhost:3009/mcp"
+bearer_token_env_var = "SNAPCHAT_ACCESS_TOKEN"
+env_http_headers = { "X-Snapchat-Advertiser-Id" = "SNAPCHAT_AD_ACCOUNT_ID" }
+```
 
 ## Search Ads 360 MCP Server (cesteral-sa360)
 
@@ -811,7 +858,13 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-sa360]
+url = "http://localhost:3010/mcp"
+env_http_headers = { "X-SA360-Client-Id" = "SA360_CLIENT_ID", "X-SA360-Client-Secret" = "SA360_CLIENT_SECRET", "X-SA360-Refresh-Token" = "SA360_REFRESH_TOKEN" }
+```
 
 ## Pinterest Ads MCP Server (cesteral-pinterest)
 
@@ -888,7 +941,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-pinterest]
+url = "http://localhost:3011/mcp"
+bearer_token_env_var = "PINTEREST_ACCESS_TOKEN"
+env_http_headers = { "X-Pinterest-Advertiser-Id" = "PINTEREST_AD_ACCOUNT_ID" }
+```
 
 ## Amazon DSP MCP Server (cesteral-amazon-dsp)
 
@@ -896,13 +956,14 @@ Amazon DSP management — CRUD, async reports, video upload, and Ads API v1 comm
 
 ### Credentials (stdio)
 
-| Variable                   | Needed                            | Secret | What it is                                                                      |
-| -------------------------- | --------------------------------- | ------ | ------------------------------------------------------------------------------- |
-| `AMAZON_DSP_PROFILE_ID`    | required                          | no     | Advertising profile ID.                                                         |
-| `AMAZON_DSP_APP_ID`        | one of: refresh-token (preferred) | no     | Login with Amazon app ID (refresh-token flow, preferred).                       |
-| `AMAZON_DSP_APP_SECRET`    | one of: refresh-token (preferred) | yes    | Login with Amazon app secret.                                                   |
-| `AMAZON_DSP_REFRESH_TOKEN` | one of: refresh-token (preferred) | yes    | Login with Amazon refresh token.                                                |
-| `AMAZON_DSP_ACCESS_TOKEN`  | one of: access-token              | yes    | Short-lived access token (about 60 minutes), instead of the refresh-token flow. |
+| Variable                   | Needed                            | Secret | What it is                                                                                                 |
+| -------------------------- | --------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
+| `AMAZON_DSP_PROFILE_ID`    | required                          | no     | Advertising profile ID.                                                                                    |
+| `AMAZON_DSP_APP_ID`        | one of: refresh-token (preferred) | no     | Login with Amazon app ID (refresh-token flow, preferred).                                                  |
+| `AMAZON_DSP_APP_SECRET`    | one of: refresh-token (preferred) | yes    | Login with Amazon app secret.                                                                              |
+| `AMAZON_DSP_REFRESH_TOKEN` | one of: refresh-token (preferred) | yes    | Login with Amazon refresh token.                                                                           |
+| `AMAZON_DSP_CLIENT_ID`     | one of: access-token              | no     | Login with Amazon client ID, sent as Amazon-Ads-ClientId. Amazon rejects a static access token without it. |
+| `AMAZON_DSP_ACCESS_TOKEN`  | one of: access-token              | yes    | Short-lived access token (about 60 minutes), instead of the refresh-token flow.                            |
 
 ### Claude Code, stdio
 
@@ -948,10 +1009,11 @@ env_vars = ["AMAZON_DSP_PROFILE_ID", "AMAZON_DSP_APP_ID", "AMAZON_DSP_APP_SECRET
 
 Run `./scripts/dev-server.sh amazon-dsp-mcp` first. Headers the server reads:
 
-| Header                         | Needed   | Value                                          | What it is                      |
-| ------------------------------ | -------- | ---------------------------------------------- | ------------------------------- |
-| `Authorization`                | required | `$AMAZON_DSP_ACCESS_TOKEN` (prefixed `Bearer`) | Login with Amazon access token. |
-| `Amazon-Advertising-API-Scope` | required | `$AMAZON_DSP_PROFILE_ID`                       | Advertising profile ID.         |
+| Header                            | Needed   | Value                                          | What it is                                                                    |
+| --------------------------------- | -------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| `Authorization`                   | required | `$AMAZON_DSP_ACCESS_TOKEN` (prefixed `Bearer`) | Login with Amazon access token.                                               |
+| `Amazon-Advertising-API-ClientId` | required | `$AMAZON_DSP_CLIENT_ID`                        | Login with Amazon client ID. Amazon rejects a static access token without it. |
+| `Amazon-Advertising-API-Scope`    | required | `$AMAZON_DSP_PROFILE_ID`                       | Advertising profile ID.                                                       |
 
 Claude Code:
 
@@ -963,6 +1025,7 @@ Claude Code:
       "url": "http://localhost:3012/mcp",
       "headers": {
         "Authorization": "Bearer ${AMAZON_DSP_ACCESS_TOKEN}",
+        "Amazon-Advertising-API-ClientId": "${AMAZON_DSP_CLIENT_ID}",
         "Amazon-Advertising-API-Scope": "${AMAZON_DSP_PROFILE_ID}"
       }
     }
@@ -970,7 +1033,14 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-amazon-dsp]
+url = "http://localhost:3012/mcp"
+bearer_token_env_var = "AMAZON_DSP_ACCESS_TOKEN"
+env_http_headers = { "Amazon-Advertising-API-ClientId" = "AMAZON_DSP_CLIENT_ID", "Amazon-Advertising-API-Scope" = "AMAZON_DSP_PROFILE_ID" }
+```
 
 ## Microsoft Advertising MCP Server (cesteral-msads)
 
@@ -1055,4 +1125,11 @@ Claude Code:
 }
 ```
 
-Codex: this server needs more than one header, which Codex's `bearer_token_env_var` cannot carry. Use the stdio config above.
+Codex:
+
+```toml
+[mcp_servers.cesteral-msads]
+url = "http://localhost:3013/mcp"
+bearer_token_env_var = "MSADS_ACCESS_TOKEN"
+env_http_headers = { "X-MsAds-Developer-Token" = "MSADS_DEVELOPER_TOKEN", "X-MsAds-Customer-Id" = "MSADS_CUSTOMER_ID", "X-MsAds-Account-Id" = "MSADS_ACCOUNT_ID" }
+```

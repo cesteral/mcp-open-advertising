@@ -43,7 +43,7 @@ const setupStdioCredentials = createStdioSessionSetup({
     "No AmazonDsp credentials found in env vars. " +
     "Set AMAZON_DSP_PROFILE_ID plus either (AMAZON_DSP_APP_ID + AMAZON_DSP_APP_SECRET + " +
     "AMAZON_DSP_REFRESH_TOKEN) for the refresh-token flow, or AMAZON_DSP_ACCESS_TOKEN " +
-    "for a short-lived static token.",
+    "+ AMAZON_DSP_CLIENT_ID for a short-lived static token.",
 });
 
 // Opt-in age warning for the env-configured refresh token. Amazon expires

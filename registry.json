@@ -1611,6 +1611,13 @@
               "description": "Login with Amazon refresh token."
             },
             {
+              "name": "AMAZON_DSP_CLIENT_ID",
+              "requirement": "alternative",
+              "secret": false,
+              "group": "access-token",
+              "description": "Login with Amazon client ID, sent as Amazon-Ads-ClientId. Amazon rejects a static access token without it."
+            },
+            {
               "name": "AMAZON_DSP_ACCESS_TOKEN",
               "requirement": "alternative",
               "secret": true,
@@ -1627,6 +1634,12 @@
               "env": "AMAZON_DSP_ACCESS_TOKEN",
               "prefix": "Bearer ",
               "description": "Login with Amazon access token."
+            },
+            {
+              "name": "Amazon-Advertising-API-ClientId",
+              "requirement": "required",
+              "env": "AMAZON_DSP_CLIENT_ID",
+              "description": "Login with Amazon client ID. Amazon rejects a static access token without it."
             },
             {
               "name": "Amazon-Advertising-API-Scope",

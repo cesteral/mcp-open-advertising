@@ -6,10 +6,10 @@ The per-server credentials and copy-paste configs are in the [client configurati
 
 ## Pick how to connect
 
-| Path                           | Use it when                                                        | What you need                                 |
-| ------------------------------ | ------------------------------------------------------------------ | --------------------------------------------- |
-| **stdio via npx** (start here) | You want the server on your own machine, with your own credentials | Node.js 26 or later, the platform credentials |
-| **Self-hosted HTTP**           | You run the server yourself and share one instance                 | A clone of this repo, a running server        |
+| Path                           | Use it when                                                        | What you need                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **stdio via npx** (start here) | You want the server on your own machine, with your own credentials | Node.js 26 (the version this repo requires and tests; the published packages declare no minimum), the platform credentials |
+| **Self-hosted HTTP**           | You run the server yourself and share one instance                 | A clone of this repo, a running server                                                                                     |
 
 The hosted Cesteral fleet at `mcp.cesteral.com` is not a path for outside users: it sits behind Google Cloud IAM and expects an identity token that these clients cannot send as a static header.
 
@@ -21,7 +21,7 @@ Find the server in the [reference](client-config-reference.md). Each section has
 export META_ACCESS_TOKEN="..."
 ```
 
-Servers with several credentials list a **preferred** group. For example, Snapchat and Amazon DSP prefer the refresh-token flow, because their access tokens expire within about an hour.
+Servers with several credentials list a **preferred** group. For example, Snapchat and Amazon DSP prefer the refresh-token flow, because their access tokens last 60 minutes. A static Amazon DSP token also needs `AMAZON_DSP_CLIENT_ID`, or Amazon rejects it.
 
 Start with the narrowest credential you have. Every server exposes write tools (create, update, delete), and a token that can only read cannot spend money. For Meta, `ads_read` is enough for reporting.
 
@@ -81,20 +81,20 @@ pnpm --filter @cesteral/meta-mcp build
 ./scripts/dev-server.sh meta-mcp
 ```
 
-The server answers on `http://localhost:<port>/mcp`. In its default auth mode each server reads its credentials from request headers, and the headers differ per server. The reference lists them, with a Claude Code block for each. Codex can connect over HTTP only to servers whose sole header is a bearer token (Meta and LinkedIn); for the rest, use stdio.
+The server answers on `http://localhost:<port>/mcp`. In its default auth mode each server reads its credentials from request headers, and the headers differ per server. The reference lists them, with a Claude Code block for each. Codex connects over HTTP to every server: the reference shows the table for each, with the bearer token in `bearer_token_env_var`, headers taken from your environment in `env_http_headers` and fixed ones in `http_headers`.
 
 If you run a server with `MCP_AUTH_MODE=none`, a client needs no headers, but anyone who can reach the port can use your credentials. Keep that to a loopback address.
 
 ## Troubleshooting
 
-| Symptom                                          | Cause and fix                                                                                                                                              |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server shows as failed at startup                | A required variable is unset. Run the server by hand (`npx -y @cesteral/<pkg>`) and read the first log line: it names the variables it needs.              |
-| `Invalid OAuth access token` or a 401 at startup | The token is wrong or expired. Meta and Amazon access tokens last about an hour; use the refresh-token variables where the reference marks them preferred. |
-| `${VAR}` shows up literally in an error          | The variable was not exported before the client started.                                                                                                   |
-| HTTP: 401 with no `WWW-Authenticate`             | Header-style servers (Google, Google Ads, SA360, TTD) send no challenge. Check the header names against the reference.                                     |
-| HTTP: 404 on `/dv360-mcp/mcp`                    | A self-hosted server answers on `/mcp`. The `/<package>/mcp` path in each `server.json` is a registry key, not a route.                                    |
-| Two clients, same server, different results      | Each client starts its own server process with its own environment. Export the same variables in both.                                                     |
+| Symptom                                          | Cause and fix                                                                                                                                                                                                                                                              |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server shows as failed at startup                | A required variable is unset. Run the server by hand (`npx -y @cesteral/<pkg>`) and read the first log line: it names the variables it needs.                                                                                                                              |
+| `Invalid OAuth access token` or a 401 at startup | The token is wrong or expired. Amazon and Snapchat access tokens last 60 minutes, and the short-lived token from Meta's Graph API Explorer about an hour (Meta also issues longer-lived tokens). Use the refresh-token variables where the reference marks them preferred. |
+| `${VAR}` shows up literally in an error          | The variable was not exported before the client started.                                                                                                                                                                                                                   |
+| HTTP: 401 with no `WWW-Authenticate`             | Header-style servers (Google, Google Ads, SA360, TTD) send no challenge. Check the header names against the reference.                                                                                                                                                     |
+| HTTP: 404 on `/dv360-mcp/mcp`                    | A self-hosted server answers on `/mcp`. The `/<package>/mcp` path in each `server.json` is a registry listing template, not a route.                                                                                                                                       |
+| Two clients, same server, different results      | Each client starts its own server process with its own environment. Export the same variables in both.                                                                                                                                                                     |
 
 ## Keeping the configs current
 

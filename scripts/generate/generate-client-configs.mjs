@@ -4,8 +4,8 @@
 /**
  * Generates the client configuration files from the `client` block of registry.json:
  *   docs/guides/client-config-reference.md   per-server credentials and snippets
- *   examples/clients/claude-code.mcp.json    every server, stdio, as a Claude Code .mcp.json
- *   examples/clients/codex.config.toml       every server, stdio, as Codex config.toml tables
+ *   examples/clients/claude-code.mcp.json    every stable server, stdio, as a Claude Code .mcp.json
+ *   examples/clients/codex.config.toml       every stable server, stdio, as Codex config.toml tables
  *
  * Usage: node scripts/generate/generate-client-configs.mjs [--check]
  *   --check   Fail if a generated file differs from what would be written (CI mode)
@@ -15,7 +15,13 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { claudeCodeMcpJson, codexConfigToml, referenceDocument } from "../lib/client-configs.mjs";
+import {
+  checkClientBlocks,
+  claudeCodeMcpJson,
+  codexConfigToml,
+  referenceDocument,
+} from "../lib/client-configs.mjs";
+import { deployableServers } from "../lib/server-status.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const registry = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf8"));
@@ -24,6 +30,15 @@ const CODEX_HEADER =
   "# Cesteral MCP servers for Codex. Generated from registry.json; do not edit by hand.\n" +
   "# Copy the tables you need into ~/.codex/config.toml and export the variables each one lists.\n" +
   "# Credentials are read from your shell environment (env_vars), never stored here.\n\n";
+
+// Only stable servers are published to npm, so only they get a config: an
+// experimental package would be advertised as an `npx` target that does not exist.
+const published = deployableServers(registry);
+const violations = checkClientBlocks(published);
+if (violations.length) {
+  console.error(`registry.json:\n  ${violations.join("\n  ")}`);
+  process.exit(1);
+}
 
 const REFERENCE = "docs/guides/client-config-reference.md";
 const CLAUDE_CODE = "examples/clients/claude-code.mcp.json";
@@ -39,8 +54,8 @@ const prettier = (path, input) =>
 /** Generated files as path -> content. */
 const files = {
   [REFERENCE]: prettier(REFERENCE, referenceDocument(registry)),
-  [CLAUDE_CODE]: prettier(CLAUDE_CODE, claudeCodeMcpJson(registry.servers)),
-  "examples/clients/codex.config.toml": CODEX_HEADER + codexConfigToml(registry.servers),
+  [CLAUDE_CODE]: prettier(CLAUDE_CODE, claudeCodeMcpJson(published)),
+  "examples/clients/codex.config.toml": CODEX_HEADER + codexConfigToml(published),
 };
 
 const check = process.argv.includes("--check");

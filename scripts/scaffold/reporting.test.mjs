@@ -15,7 +15,7 @@ import { planAddWrites } from "./add-writes.mjs";
 import { planPromotion } from "./promote.mjs";
 import { expectedTodoTools } from "./expected-todo.mjs";
 import { TEMPLATE_DIR, renderTemplate } from "./render.mjs";
-import { SCAFFOLD_OPTS, TODAY, filesUnder, makeTempRepo } from "./test-fixture.mjs";
+import { SCAFFOLD_OPTS, TODAY, addClientBlock, filesUnder, makeTempRepo } from "./test-fixture.mjs";
 
 const PKG = "packages/foo-bar-mcp";
 let tmp;
@@ -105,6 +105,7 @@ describe("scaffold: the reporting type", () => {
 
   it("promotes while still read-only: the reporting type has no write requirement", async () => {
     applyPlan(tmp, await planScaffold(tmp, opts, TODAY));
+    addClientBlock(tmp, "foo_bar");
     const plan = await planPromotion(tmp, "foo_bar");
     applyPlan(tmp, plan);
     expect(registryOf(tmp).servers.at(-1).status).toBe("stable");
@@ -169,6 +170,7 @@ describe("scaffold: the reporting_conversions type", () => {
       "foo_bar_submit_report",
       "foo_bar_insert_conversions",
     ]);
+    addClientBlock(tmp, "foo_bar");
     applyPlan(tmp, await planPromotion(tmp, "foo_bar"));
     expect(registryOf(tmp).servers.at(-1)).toMatchObject({ status: "stable", governed: true });
     expect(fleetChecks(tmp)).toEqual([]);

@@ -73,8 +73,12 @@ describe("scaffold: names, registry entry, platform facts", () => {
 
   it("the registry entry has every field the existing entries have", () => {
     const entry = buildRegistryEntry({ ...opts, writes: true }, registry, tools);
+    // `client` is the credentials the generated Claude Code and Codex configs use. A scaffold
+    // has none: it is experimental, so never published, and `pnpm promote:server` requires it.
     const fields = new Set(registry.servers.flatMap((s) => Object.keys(s)));
+    fields.delete("client");
     expect([...fields].filter((f) => !(f in entry))).toEqual([]);
+    expect(entry).not.toHaveProperty("client");
   });
 
   it("a read-only entry is experimental and ungoverned, with exceptions for every missing SHOULD", () => {
