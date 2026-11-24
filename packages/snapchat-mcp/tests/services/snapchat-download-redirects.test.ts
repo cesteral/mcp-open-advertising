@@ -11,14 +11,17 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { McpError } from "@cesteral/shared";
+import { McpError, createPlatformRateLimiter, type RateLimiter } from "@cesteral/shared";
 import { SnapchatReportingService } from "../../src/services/snapchat/snapchat-reporting-service.js";
 
 const REPORT_URL = "https://storage.googleapis.com/snap-reports/r-1.csv?sig=1";
 
+const limiters: RateLimiter[] = [];
+
 function makeService() {
   const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
+  const rateLimiter = createPlatformRateLimiter("snapchat", 1000);
+  limiters.push(rateLimiter);
   return new SnapchatReportingService(rateLimiter, {} as any, "acct-1", logger);
 }
 
@@ -36,7 +39,10 @@ function stubFetch(responses: Array<{ status: number; location?: string; body?: 
   return sent;
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const l of limiters.splice(0)) l.destroy();
+});
 
 describe("snapchat downloadReport redirects", () => {
   it.each([

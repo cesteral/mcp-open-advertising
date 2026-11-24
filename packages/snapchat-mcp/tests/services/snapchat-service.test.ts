@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPlatformRateLimiter } from "@cesteral/shared";
 import { SnapchatService } from "../../src/services/snapchat/snapchat-service.js";
 
 const mockHttpClient = {
@@ -8,19 +9,17 @@ const mockHttpClient = {
   delete: vi.fn(),
 };
 
-const mockRateLimiter = { consume: vi.fn().mockResolvedValue(undefined) };
+// Real limiter (same factory the server uses) with `consume` spied (#236).
+const mockRateLimiter = createPlatformRateLimiter("snapchat", 1000);
+vi.spyOn(mockRateLimiter, "consume");
+afterAll(() => mockRateLimiter.destroy());
 
 describe("SnapchatService", () => {
   let service: SnapchatService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SnapchatService(
-      mockHttpClient as any,
-      "org_123",
-      "acct_456",
-      mockRateLimiter as any
-    );
+    service = new SnapchatService(mockHttpClient as any, "org_123", "acct_456", mockRateLimiter);
   });
 
   it("lists entities using next_link pagination and accepts lowercase success", async () => {

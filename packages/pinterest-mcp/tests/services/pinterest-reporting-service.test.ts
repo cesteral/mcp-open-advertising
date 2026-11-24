@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
@@ -19,15 +19,15 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, createPlatformRateLimiter } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import { PinterestReportingService } from "../../src/services/pinterest/pinterest-reporting-service.js";
 
-const mockRateLimiter = {
-  consume: vi.fn().mockResolvedValue(undefined),
-  destroy: vi.fn(),
-};
+// Real limiter (same factory the server uses) with `consume` spied (#236).
+const mockRateLimiter = createPlatformRateLimiter("pinterest", 1000);
+vi.spyOn(mockRateLimiter, "consume");
+afterAll(() => mockRateLimiter.destroy());
 
 const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -42,11 +42,7 @@ describe("PinterestReportingService", () => {
   let service: PinterestReportingService;
 
   beforeEach(() => {
-    service = new PinterestReportingService(
-      mockRateLimiter as any,
-      mockHttpClient as any,
-      mockLogger
-    );
+    service = new PinterestReportingService(mockRateLimiter, mockHttpClient as any, mockLogger);
     vi.clearAllMocks();
   });
 
