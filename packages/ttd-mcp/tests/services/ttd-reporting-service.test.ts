@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createSpiedTtdRateLimiter } from "../helpers/spied-limiter.js";
 import {
   TtdReportingService,
   type TtdReportConfig,
@@ -29,9 +30,7 @@ function createMockHttpClient() {
 }
 
 function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  return createSpiedTtdRateLimiter();
 }
 
 /** Standard report config for tests. */
@@ -57,11 +56,13 @@ describe("TtdReportingService", () => {
   let rateLimiter: ReturnType<typeof createMockRateLimiter>;
 
   beforeEach(() => {
+    // The real limiter's cleanup interval must be a real timer: created under
+    // fake timers, `runAllTimersAsync` would tick it forever.
+    rateLimiter = createMockRateLimiter();
     vi.useFakeTimers({ shouldAdvanceTime: false });
 
     logger = createMockLogger();
     httpClient = createMockHttpClient();
-    rateLimiter = createMockRateLimiter();
     service = new TtdReportingService(rateLimiter, httpClient, logger);
   });
 

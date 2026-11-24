@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createSpiedTtdRateLimiter } from "../helpers/spied-limiter.js";
 import {
   createSessionServices,
   SessionServiceStore,
@@ -32,10 +33,7 @@ function createMockAuthAdapter(token = "token") {
 }
 
 function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-    configure: vi.fn(),
-  } as any;
+  return createSpiedTtdRateLimiter();
 }
 
 /** Create a stub SessionServices object for store tests. */

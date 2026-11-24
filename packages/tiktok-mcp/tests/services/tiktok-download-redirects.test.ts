@@ -10,6 +10,7 @@
  * fetch is real.
  */
 
+import { createSpiedTikTokRateLimiter } from "../helpers/spied-limiter.js";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { McpError } from "@cesteral/shared";
 import { TikTokReportingService } from "../../src/services/tiktok/tiktok-reporting-service.js";
@@ -18,7 +19,7 @@ const REPORT_URL = "https://ads.tiktok.com/report/download/task-1.csv?sig=1";
 
 function makeService() {
   const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
-  const rateLimiter = { consume: vi.fn().mockResolvedValue(undefined) } as any;
+  const rateLimiter = createSpiedTikTokRateLimiter();
   return new TikTokReportingService(rateLimiter, {} as any, logger);
 }
 

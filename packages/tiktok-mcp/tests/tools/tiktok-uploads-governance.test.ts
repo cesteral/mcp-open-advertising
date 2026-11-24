@@ -26,6 +26,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
+import { createSpiedTikTokRateLimiter } from "../helpers/spied-limiter.js";
 import {
   uploadImageLogic,
   uploadImageResponseFormatter,
@@ -66,7 +67,7 @@ describe("tiktok uploads governance contract (effect class)", () => {
     };
     // A real TikTokService over the fake HTTP client, so the upload calls go
     // through the service methods that draw limiter tokens.
-    const limiter = { consume: vi.fn().mockResolvedValue(undefined) };
+    const limiter = createSpiedTikTokRateLimiter();
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     mockResolveSessionServices.mockReturnValue({
       tiktokService: new TikTokService(limiter as any, client as any, logger as any),

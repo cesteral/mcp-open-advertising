@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createSpiedTtdRateLimiter } from "../helpers/spied-limiter.js";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
 
 function createMockLogger() {
@@ -23,9 +24,7 @@ function createMockHttpClient() {
 }
 
 function createMockRateLimiter() {
-  return {
-    consume: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  return createSpiedTtdRateLimiter();
 }
 
 describe("TtdService advanced methods", () => {
