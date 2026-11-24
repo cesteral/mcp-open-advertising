@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedTikTokRateLimiter } from "../helpers/spied-limiter.js";
 import { TikTokService } from "../../src/services/tiktok/tiktok-service.js";
 
 // Mock the HTTP client
@@ -12,11 +14,7 @@ const mockHttpClient: any = {
   delete: mockDelete,
 };
 
-const mockConsume = vi.fn().mockResolvedValue(undefined);
-const mockRateLimiter: any = {
-  consume: mockConsume,
-  destroy: vi.fn(),
-};
+let mockRateLimiter: RateLimiter;
 
 const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -24,11 +22,11 @@ describe("TikTokService", () => {
   let service: TikTokService;
 
   beforeEach(() => {
+    mockRateLimiter = createSpiedTikTokRateLimiter();
     service = new TikTokService(mockRateLimiter, mockHttpClient, mockLogger);
     mockGet.mockReset();
     mockPost.mockReset();
     mockDelete.mockReset();
-    mockConsume.mockResolvedValue(undefined);
   });
 
   describe("listEntities()", () => {

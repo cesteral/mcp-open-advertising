@@ -19,6 +19,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
+import type { RateLimiter } from "@cesteral/shared";
+import { createSpiedTikTokRateLimiter } from "../helpers/spied-limiter.js";
 import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
@@ -27,10 +29,7 @@ import {
   mapTikTokReportTaskStatus,
 } from "../../src/services/tiktok/tiktok-reporting-service.js";
 
-const mockRateLimiter = {
-  consume: vi.fn().mockResolvedValue(undefined),
-  destroy: vi.fn(),
-};
+let mockRateLimiter: RateLimiter;
 
 const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -46,6 +45,7 @@ describe("TikTokReportingService", () => {
   let service: TikTokReportingService;
 
   beforeEach(() => {
+    mockRateLimiter = createSpiedTikTokRateLimiter();
     service = new TikTokReportingService(mockRateLimiter as any, mockHttpClient as any, mockLogger);
     vi.clearAllMocks();
   });

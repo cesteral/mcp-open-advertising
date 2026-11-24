@@ -8,6 +8,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
+import { createSpiedTtdRateLimiter } from "../helpers/spied-limiter.js";
 import {
   duplicateEntityLogic,
   DuplicateEntityInputSchema,
@@ -110,7 +111,7 @@ describe("TtdService.duplicateEntity create body", () => {
       .mockResolvedValueOnce({ CampaignId: "new-1" });
     const service = new TtdService(
       { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
-      { consume: vi.fn().mockResolvedValue(undefined) } as any,
+      createSpiedTtdRateLimiter(),
       { quotaClient: "c", fetch, fetchDirect: vi.fn() } as any
     );
 
