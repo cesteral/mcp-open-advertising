@@ -77,12 +77,12 @@ describe("client blocks of the published servers", () => {
     // A scaffolded server has no block, is never published, and must not break the renderer.
     const experimental = {
       ...published[0],
-      package: "scaffold-mcp",
+      package: "never-published-mcp",
       status: "experimental",
       client: undefined,
     };
     const doc = referenceDocument({ servers: [...registry.servers, experimental] });
-    expect(doc).not.toContain("scaffold-mcp");
+    expect(doc).not.toContain("never-published-mcp");
     expect(doc).toContain(serverKey(published[0]));
   });
 
