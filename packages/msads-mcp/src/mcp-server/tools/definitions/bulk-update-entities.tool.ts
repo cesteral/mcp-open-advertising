@@ -66,7 +66,20 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    results: z.array(z.record(z.string(), z.any())),
+    results: z
+      .array(
+        z.object({
+          index: z.number().describe("Zero-based position of the item in the request's `items`"),
+          success: z.boolean(),
+          entityId: z
+            .string()
+            .optional()
+            .describe("Created ID (create) or targeted ID (update); absent when unknown"),
+          error: z.string().optional(),
+          errorCode: z.string().optional(),
+        })
+      )
+      .describe("Per-item outcome, one per input item, in request order"),
     entityType: z.string(),
     totalItems: z.number(),
     successCount: z.number(),
@@ -200,7 +213,7 @@ export async function bulkUpdateEntitiesLogic(
 
   return {
     confirmed: true,
-    results: results as unknown as Record<string, unknown>[],
+    results,
     entityType: input.entityType,
     totalItems: input.items.length,
     successCount: succeeded,

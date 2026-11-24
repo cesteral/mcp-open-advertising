@@ -145,3 +145,12 @@ describe("multi-item write result shape (#235, #248)", () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe("gads_bulk_mutate keeps Google's native response and still reports counts", () => {
+  it("exposes mutateResult, operationCount, successCount and failureCount", () => {
+    const tool = toolsOf("gads-mcp").find((t) => t.name === "gads_bulk_mutate");
+    const keys = Object.keys(tool?.outputSchema?.properties ?? {});
+    for (const k of ["mutateResult", "operationCount", "successCount", "failureCount"])
+      expect(keys, k).toContain(k);
+  });
+});

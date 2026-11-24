@@ -101,7 +101,7 @@ export const insertConversionsTool = {
   outputSchema: InsertConversionsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
     cesteral: {

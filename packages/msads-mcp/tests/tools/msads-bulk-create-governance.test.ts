@@ -93,6 +93,25 @@ describe("msads_bulk_create_entities governance contract (effect class)", () => 
     expect(() => EffectResultSchema.parse(result.effect)).not.toThrow();
   });
 
+  it("a mixed batch types each row and counts successes and failures", async () => {
+    svc.bulkCreateEntities.mockResolvedValue([
+      { index: 0, entityId: "1", success: true },
+      { index: 1, success: false, error: "InvalidName", errorCode: "E101" },
+    ]);
+    const result = await bulkCreateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
+    expect(result.results).toEqual([
+      { index: 0, entityId: "1", success: true },
+      { index: 1, success: false, error: "InvalidName", errorCode: "E101" },
+    ]);
+    expect(() => BulkCreateEntitiesOutputSchema.parse(result)).not.toThrow();
+    // index and success are required on every row
+    expect(() =>
+      BulkCreateEntitiesOutputSchema.parse({ ...result, results: [{ entityId: "1" }] })
+    ).toThrow();
+  });
+
   it("formatter renders a dry-run message without a false success", () => {
     const content = bulkCreateEntitiesResponseFormatter({
       results: [],

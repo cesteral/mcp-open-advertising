@@ -207,7 +207,7 @@ Every tool that writes several items in one call returns the same three keys, so
 - `results[]` — one item per input item; each carries
   - `success: boolean`
   - `error?: string` (present when success is false)
-  - the item's identifier under the key its entity uses (`entityId`, `entityUrn`, `adGroupId`, `lineItemId`, or `index` for a create that has no id yet)
+  - the item's identifier under the key its entity uses (`entityId`, `entityUrn`, `adGroupId`, `lineItemId`, or `index` for a create that has no id yet; where `index` (the item's zero-based position in the request) is the only reference a row carries, a failed create has no entity id to report)
 - `successCount: number` — items that succeeded
 - `failureCount: number` — items that failed
 - `timestamp: string` (ISO 8601)
@@ -222,4 +222,4 @@ Some tools add fields beside the three; none replaces them:
 
 Changed in the 2026-11 contract bump (#235, #248), no aliases kept: `created`/`updated`/`failed` (cm360), `totalSucceeded`/`totalFailed` (adjust_bids, amazon delete), `succeededCount`/`failedCount` (pinterest and snapchat delete), `succeeded`/`failed` (`ttd_bulk_manage_bid_lists`), `totalSuccessful`/`totalFailed` (dv360 adjust), `deletedCount`/`failedCount`/`result` (msads delete), `adjustmentCount`/`result` (msads adjust_bids) became `successCount`/`failureCount`/`results`.
 
-`gads_bulk_mutate` is not covered: it returns Google's own `GoogleAdsService.Mutate` response (`mutateResult`, `operationCount`), a single atomic call with no per-item success flag.
+`gads_bulk_mutate` keeps Google's native `GoogleAdsService.Mutate` response (`mutateResult`, `operationCount`) in place of a per-item `results[]`, so it is outside the `results[]` rule. In atomic mode (the default) the batch succeeds or fails as a whole; with `partialFailure: true` the native response carries per-operation outcomes and `partialFailureError`. It still reports `successCount` and `failureCount`, derived from that response.
