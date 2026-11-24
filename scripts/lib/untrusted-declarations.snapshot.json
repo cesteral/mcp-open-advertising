@@ -698,7 +698,7 @@
   },
   "msads-mcp": {
     "msads_adjust_bids": {
-      "structuredPaths": ["$.result"],
+      "structuredPaths": ["$.results", "$.response"],
       "contentBlocks": [0]
     },
     "msads_bulk_create_entities": {
@@ -726,7 +726,7 @@
       "contentBlocks": []
     },
     "msads_delete_entity": {
-      "structuredPaths": ["$.result"],
+      "structuredPaths": ["$.results", "$.response"],
       "contentBlocks": [0]
     },
     "msads_delete_report_schedule": {

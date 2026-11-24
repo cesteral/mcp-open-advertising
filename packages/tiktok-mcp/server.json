@@ -7,7 +7,7 @@
     "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
-  "version": "2.0.0",
+  "version": "3.0.0",
   "remotes": [
     {
       "type": "streamable-http",
@@ -24,7 +24,7 @@
     {
       "registryType": "npm",
       "identifier": "@cesteral/tiktok-mcp",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "transport": {
         "type": "stdio"
       }
