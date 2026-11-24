@@ -18,6 +18,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { addClientBlock } from "./client-block.mjs";
 import { expectedTodoFailures, expectedTodoTools } from "./expected-todo.mjs";
 import { failuresFromReport } from "./report.mjs";
 import { TEMPLATE_TYPES } from "./render.mjs";
@@ -174,6 +175,8 @@ async function main() {
       await checks(tree, tmp, "read-only", { writes: false, promoted: false });
     } else if (VARIANT === "journey") {
       addWrites();
+      // A contributor writes the registry `client` block before promoting.
+      addClientBlock(tree, KEY);
       run(`node scripts/promote-server.mjs ${KEY}`, tree);
       await checks(tree, tmp, "promoted", { writes: true, promoted: true });
     } else {
