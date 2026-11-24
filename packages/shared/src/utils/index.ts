@@ -10,6 +10,8 @@ export * from "./mcp/bulk-capacity.js";
 export * from "./mcp/bulk-executor.js";
 export * from "./mcp/bulk-operation-schemas.js";
 export * from "./mcp/client-validation-helpers.js";
+// The one confirmation-rounds name a tool may need: a catch that wraps a prompt must rethrow it.
+export { ConfirmationRequired } from "./mcp/confirmation-rounds.js";
 export * from "./mcp/cross-platform-prompts.js";
 export * from "./mcp/elicitation-helpers.js";
 export * from "./mcp/governed-dry-run.js";
