@@ -255,8 +255,8 @@ export const deleteEntityTool = {
   annotations: {
     readOnlyHint: false,
     destructiveHint: true,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     cesteral: {
       kind: "write",
       writeClass: "entity",

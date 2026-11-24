@@ -74,32 +74,6 @@ describe("describeCrossServerContract", () => {
   });
 });
 
-describe("describeCrossServerContract, updated/created bulk shape", () => {
-  describeCrossServerContract({
-    tools: [
-      tool("fx_bulk_update_entities", {
-        results: z.array(z.unknown()),
-        updated: z.number(),
-        failed: z.number(),
-      }),
-    ],
-    prefix: "fx_",
-    requiredTools: ["bulk_update_entities"],
-    bulkOutputShape: "updated-or-created",
-  });
-});
-
-describe("describeCrossServerContract, exempt bulk tool", () => {
-  describeCrossServerContract({
-    tools: [
-      tool("fx_bulk_create_entities", { results: z.array(z.unknown()), totalItems: z.number() }),
-    ],
-    prefix: "fx_",
-    requiredTools: ["bulk_create_entities"],
-    bulkOutputExemptTools: ["bulk_create_entities"],
-  });
-});
-
 function repoRegistry(): { protocol_version: string; servers: Array<Record<string, any>> } {
   let dir = dirname(fileURLToPath(import.meta.url));
   while (!existsSync(resolve(dir, "registry.json"))) dir = dirname(dir);

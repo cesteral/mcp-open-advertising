@@ -79,7 +79,7 @@ export const getEntityTool = {
   outputSchema: GetEntityOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
     cesteral: {

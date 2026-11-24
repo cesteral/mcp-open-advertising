@@ -514,7 +514,7 @@ export const bulkUpdateStatusTool = {
   annotations: {
     readOnlyHint: false,
     destructiveHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     cesteral: {
       kind: "write",

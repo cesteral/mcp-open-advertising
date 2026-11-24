@@ -201,8 +201,8 @@ describe("bulkUpdateStatusLogic", () => {
       mockContext
     );
 
-    expect(result.updated).toBe(3);
-    expect(result.failed).toBe(0);
+    expect(result.successCount).toBe(3);
+    expect(result.failureCount).toBe(0);
   });
 
   it("all fail: updated is 0, failed equals entityIds.length", async () => {
@@ -213,8 +213,8 @@ describe("bulkUpdateStatusLogic", () => {
       mockContext
     );
 
-    expect(result.updated).toBe(0);
-    expect(result.failed).toBe(2);
+    expect(result.successCount).toBe(0);
+    expect(result.failureCount).toBe(2);
   });
 
   // The status mapping does not depend on the entity, so an unmapped pair is
@@ -247,8 +247,8 @@ describe("bulkUpdateStatusResponseFormatter", () => {
   it("shows success and failure counts", () => {
     const output = bulkUpdateStatusResponseFormatter({
       confirmed: true,
-      updated: 2,
-      failed: 1,
+      successCount: 2,
+      failureCount: 1,
       results: [
         { entityId: "1", success: true },
         { entityId: "2", success: true },
@@ -264,8 +264,8 @@ describe("bulkUpdateStatusResponseFormatter", () => {
   it("shows entityId in failure details", () => {
     const output = bulkUpdateStatusResponseFormatter({
       confirmed: true,
-      updated: 0,
-      failed: 1,
+      successCount: 0,
+      failureCount: 1,
       results: [{ entityId: "abc-123", success: false, error: "Not found" }],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
@@ -277,8 +277,8 @@ describe("bulkUpdateStatusResponseFormatter", () => {
   it("no failure section when all succeed", () => {
     const output = bulkUpdateStatusResponseFormatter({
       confirmed: true,
-      updated: 2,
-      failed: 0,
+      successCount: 2,
+      failureCount: 0,
       results: [
         { entityId: "1", success: true },
         { entityId: "2", success: true },

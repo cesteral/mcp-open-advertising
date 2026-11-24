@@ -193,9 +193,9 @@ export const createEntityTool = {
   outputSchema: CreateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
-    destructiveHint: true,
+    destructiveHint: false,
     cesteral: {
       kind: "write",
       writeClass: "entity",

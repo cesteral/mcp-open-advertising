@@ -446,7 +446,7 @@ describe("cm360_bulk_update_status → <collection>.get then <collection>.update
     expect(req.url).toBe(`${API}/userprofiles/${PID}/campaigns`);
     expectJsonAuth(req);
     expect(req.body).toEqual({ ...current, archived: true });
-    expect(out.updated).toBe(1);
+    expect(out.successCount).toBe(1);
     expectOneTokenPerApiCall();
   });
 
@@ -530,7 +530,7 @@ describe("cm360_bulk_create_entities → one <collection>.insert per item", () =
     }
     // Items run concurrently, so match bodies irrespective of order.
     expect(reqs.map((r) => r.body)).toEqual(expect.arrayContaining(items));
-    expect(out.created).toBe(2);
+    expect(out.successCount).toBe(2);
     expectOneTokenPerApiCall();
   });
 
@@ -575,7 +575,7 @@ describe("cm360_bulk_update_entities → one <collection>.patch per item", () =>
     expect(byId["11"]?.body).toEqual({ name: "Creative 11", id: "11" });
     expect(byId["12"]?.url).toBe(`${API}/userprofiles/${PID}/creatives?id=12`);
     expect(byId["12"]?.body).toEqual({ active: false, id: "12" });
-    expect(out.updated).toBe(2);
+    expect(out.successCount).toBe(2);
     expectOneTokenPerApiCall();
   });
 

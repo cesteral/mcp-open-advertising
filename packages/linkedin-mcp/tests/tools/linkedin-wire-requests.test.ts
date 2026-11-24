@@ -982,7 +982,7 @@ describe("linkedin_adjust_bids → PARTIAL_UPDATE of unitCost", () => {
     ]);
     for (const req of reqs) expectRestliHeaders(req, { json: true, method: "PARTIAL_UPDATE" });
     expect(sdk.elicitInput).toHaveBeenCalledTimes(1);
-    expect(out.totalSucceeded).toBe(2);
+    expect(out.successCount).toBe(2);
     expect(apiRequests()).toHaveLength(2);
     expect(remaining()).toBe(LIMIT - 2 * 3);
   });

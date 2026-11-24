@@ -74,8 +74,8 @@ export const AdjustBidsOutputSchema = z
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     reason: z.string().optional(),
     results: z.array(
       z.object({
@@ -127,8 +127,8 @@ export async function adjustBidsLogic(
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       reason: input.reason,
       results: [],
       timestamp: new Date().toISOString(),
@@ -154,8 +154,8 @@ export async function adjustBidsLogic(
       confirmed: false,
       declineReason: "user_declined",
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       reason: input.reason,
       results: [],
       timestamp: new Date().toISOString(),
@@ -175,23 +175,23 @@ export async function adjustBidsLogic(
     context
   );
 
-  const totalSucceeded = result.results.filter((r) => r.success).length;
+  const successCount = result.results.filter((r) => r.success).length;
 
   const effect: EffectResult = {
     effectKind: "bids_adjusted",
     summary: {
       entity_label: "line_item",
       requested: input.adjustments.length,
-      succeeded: totalSucceeded,
-      failed: input.adjustments.length - totalSucceeded,
+      succeeded: successCount,
+      failed: input.adjustments.length - successCount,
     },
   };
 
   return {
     confirmed: true,
     totalRequested: input.adjustments.length,
-    totalSucceeded,
-    totalFailed: input.adjustments.length - totalSucceeded,
+    successCount,
+    failureCount: input.adjustments.length - successCount,
     reason: input.reason,
     results: result.results,
     timestamp: new Date().toISOString(),
@@ -264,7 +264,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
     ];
   }
   const lines: string[] = [
-    `Bid adjustments: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    `Bid adjustments: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
   ];
 
   if (result.reason) {
@@ -295,7 +295,7 @@ export const adjustBidsTool = {
   outputSchema: AdjustBidsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: true,
     cesteral: {

@@ -235,9 +235,9 @@ export const updateCommitmentTool = {
   outputSchema: UpdateCommitmentOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
-    destructiveHint: false,
+    destructiveHint: true,
     cesteral: {
       kind: "write",
       writeClass: "entity",

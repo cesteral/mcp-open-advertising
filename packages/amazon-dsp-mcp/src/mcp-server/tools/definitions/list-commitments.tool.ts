@@ -94,7 +94,7 @@ export const listCommitmentsTool = {
   // read partners of governed writes (see get-entity.tool.ts → update_entity).
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

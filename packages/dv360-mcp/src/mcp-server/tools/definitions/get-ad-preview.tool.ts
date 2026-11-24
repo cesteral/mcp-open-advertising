@@ -162,7 +162,7 @@ export const getAdPreviewTool = {
   outputSchema: GetAdPreviewOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

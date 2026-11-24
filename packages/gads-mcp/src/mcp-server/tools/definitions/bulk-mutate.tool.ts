@@ -77,6 +77,16 @@ export const BulkMutateOutputSchema = z
   .object({
     mutateResult: z.record(z.string(), z.any()).describe("Full mutate response"),
     operationCount: z.number(),
+    successCount: z
+      .number()
+      .describe(
+        "Operations applied, derived from the mutate response (all of them in atomic mode on success)"
+      ),
+    failureCount: z
+      .number()
+      .describe(
+        "Operations that failed: with `partialFailure: true`, those named by the response; 0 in atomic mode (a failure throws)"
+      ),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were mutated."
@@ -113,6 +123,8 @@ export async function bulkMutateLogic(
     return {
       mutateResult: {},
       operationCount: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -151,6 +163,8 @@ export async function bulkMutateLogic(
   return {
     mutateResult: result as Record<string, any>,
     operationCount: input.operations.length,
+    successCount: succeeded,
+    failureCount: failed,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -313,7 +327,7 @@ export const bulkMutateTool = {
   outputSchema: BulkMutateOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: false,
     cesteral: {

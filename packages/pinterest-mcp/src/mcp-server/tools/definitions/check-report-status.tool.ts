@@ -106,7 +106,7 @@ export const checkReportStatusTool = {
   outputSchema: CheckReportStatusOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

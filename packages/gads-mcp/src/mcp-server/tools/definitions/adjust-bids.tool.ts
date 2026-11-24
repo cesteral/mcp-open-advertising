@@ -90,8 +90,8 @@ export const AdjustBidsOutputSchema = z
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         adGroupId: z.string(),
@@ -152,8 +152,8 @@ export async function adjustBidsLogic(
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -177,8 +177,8 @@ export async function adjustBidsLogic(
       confirmed: false,
       declineReason: "user_declined",
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -202,8 +202,8 @@ export async function adjustBidsLogic(
   return {
     confirmed: true,
     totalRequested: input.adjustments.length,
-    totalSucceeded: succeeded,
-    totalFailed: input.adjustments.length - succeeded,
+    successCount: succeeded,
+    failureCount: input.adjustments.length - succeeded,
     results: results.map((r) => ({
       adGroupId: r.adGroupId,
       adGroupName: r.adGroupName,
@@ -333,7 +333,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
     return `  x ${r.adGroupId}: ${r.error}`;
   });
 
-  const summary = `Bid adjustments: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`;
+  const summary = `Bid adjustments: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   return [
     {
@@ -353,7 +353,7 @@ export const adjustBidsTool = {
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

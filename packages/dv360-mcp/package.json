@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/dv360-mcp",
   "mcpName": "io.github.cesteral/dv360-mcp",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "DV360 MCP Server - Campaign entity management and configuration",
   "license": "Apache-2.0",
   "repository": {

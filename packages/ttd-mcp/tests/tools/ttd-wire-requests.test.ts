@@ -1427,7 +1427,7 @@ describe("ttd_bulk_manage_bid_lists batch_update → one bidListUpdate per item"
       expect(gqlQuery(req)).toMatch(/bidListUpdate\(input: \$input\)/);
     }
     expect(m.map(gqlVariables)).toEqual(expect.arrayContaining(items.map((input) => ({ input }))));
-    expect(out.succeeded).toBe(2);
+    expect(out.successCount).toBe(2);
     expect(remaining()).toBe(LIMIT - 2);
   });
 

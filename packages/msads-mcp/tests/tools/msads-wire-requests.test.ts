@@ -244,7 +244,7 @@ describe("msads_delete_entity", () => {
     expect(req.url).toBe(`${CM}/AdGroups`);
     expectAuthHeaders(req);
     expect(req.body).toEqual({ AdGroupIds: [1, 2], CampaignId: 20 });
-    expect(out.deletedCount).toBe(2);
+    expect(out.successCount).toBe(2);
   });
 
   it("campaign → DELETE /Campaigns { CampaignIds, AccountId }", async () => {
@@ -293,9 +293,9 @@ describe("msads_delete_entity", () => {
       expect((w.body as { AdGroupId: number }).AdGroupId).toBe(7);
     }
     expect(writes.flatMap((w) => (w.body as { AdIds: number[] }).AdIds)).toEqual(ids.map(Number));
-    expect(out.deletedCount).toBe(119);
-    expect(out.failedCount).toBe(1);
-    expect(out.result).toEqual({
+    expect(out.successCount).toBe(119);
+    expect(out.failureCount).toBe(1);
+    expect(out.response).toEqual({
       PartialErrors: [{ Index: 53, ErrorCode: "InvalidAdId", Code: 1201, Message: "x" }],
     });
   });

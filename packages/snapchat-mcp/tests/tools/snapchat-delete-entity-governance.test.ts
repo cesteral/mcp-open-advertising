@@ -96,8 +96,8 @@ describe("snapchat_delete_entity governance contract (effect class)", () => {
     const result = await deleteEntityLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.deleteEntity).toHaveBeenCalledTimes(2);
     expect(result.deleted).toBe(false);
-    expect(result.succeededCount).toBe(1);
-    expect(result.failedCount).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(result.results.find((r) => !r.success)?.error).toBe("delete failed");
     expect(result.effect?.summary).toEqual({
       entity_kind: "campaign",

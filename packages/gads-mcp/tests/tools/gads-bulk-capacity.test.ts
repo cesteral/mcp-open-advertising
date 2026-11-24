@@ -124,6 +124,6 @@ describe("gads_adjust_bids bulk capacity pre-check", () => {
     );
     expect(mockElicit).toHaveBeenCalledOnce();
     expect(fetch).toHaveBeenCalledTimes(10);
-    expect(result.totalSucceeded).toBe(5);
+    expect(result.successCount).toBe(5);
   });
 });

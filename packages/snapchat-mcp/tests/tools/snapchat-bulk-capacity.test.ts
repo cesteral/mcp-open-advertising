@@ -260,7 +260,7 @@ describe("snapchat bulk capacity pre-check (real default limiter: 10/min, 120s b
       expect(mockElicitDelete).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(3);
       expect(http.delete).toHaveBeenCalledTimes(1);
-      expect(result.succeededCount).toBe(1);
+      expect(result.successCount).toBe(1);
       expect(used()).toBe(3 + 3);
     });
 
@@ -288,7 +288,7 @@ describe("snapchat bulk capacity pre-check (real default limiter: 10/min, 120s b
       expect(mockElicitBid).toHaveBeenCalledOnce();
       expect(http.get).toHaveBeenCalledTimes(3); // squad, its campaign, squad re-read
       expect(http.put).toHaveBeenCalledTimes(1);
-      expect(result.totalSucceeded).toBe(1);
+      expect(result.successCount).toBe(1);
       expect(used()).toBe(1 + 1 + 3 + 1);
     });
 

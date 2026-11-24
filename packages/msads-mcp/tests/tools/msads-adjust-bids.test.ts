@@ -173,9 +173,11 @@ describe("msads_adjust_bids governance contract (effect class)", () => {
   it("formatter renders a dry-run message without a false success", () => {
     const content = adjustBidsResponseFormatter({
       confirmed: true,
-      result: {},
+      results: [],
       entityType: "keyword",
-      adjustmentCount: 1,
+      totalRequested: 1,
+      successCount: 0,
+      failureCount: 0,
       timestamp: "2026-06-02T00:00:00.000Z",
       dispatchedCapability: { operation: "adjust_bids", canonicalEntityKind: null },
       dryRun: {

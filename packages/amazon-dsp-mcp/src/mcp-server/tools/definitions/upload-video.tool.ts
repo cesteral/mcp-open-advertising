@@ -223,7 +223,7 @@ export const uploadVideoTool = {
     readOnlyHint: false,
     openWorldHint: true,
     idempotentHint: false,
-    destructiveHint: true,
+    destructiveHint: false,
     cesteral: {
       kind: "write",
       writeClass: "effect",

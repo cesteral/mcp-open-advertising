@@ -257,7 +257,7 @@ export const graphqlCancelBulkJobTool = {
   outputSchema: GraphqlCancelBulkJobOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: true,
     cesteral: {

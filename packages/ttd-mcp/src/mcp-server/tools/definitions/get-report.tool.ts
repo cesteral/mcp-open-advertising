@@ -143,9 +143,9 @@ export const getReportTool = {
   outputSchema: GetReportOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
-    idempotentHint: false,
+    idempotentHint: true,
   },
   inputExamples: [
     {

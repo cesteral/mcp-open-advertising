@@ -194,7 +194,7 @@ export const updateEntityTool = {
   outputSchema: UpdateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: true,
     cesteral: {

@@ -284,11 +284,11 @@ export const bulkUpdateStatusTool = {
   outputSchema: BulkUpdateStatusOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     // ENABLED / PAUSED only since #234 (no ARCHIVED on the Unified update) —
     // every value this tool accepts is reversible by the other.
-    destructiveHint: false,
+    destructiveHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

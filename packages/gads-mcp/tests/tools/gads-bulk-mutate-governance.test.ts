@@ -159,12 +159,16 @@ describe("gads_bulk_mutate governance contract (effect class)", () => {
     });
     const result = await bulkMutateLogic({ ...baseInput } as any, ctx, sdk);
     expect(result.effect?.summary).toMatchObject({ requested: 2, succeeded: 1, failed: 1 });
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
   });
 
   it("formatter renders a dry-run message without a false success", () => {
     const content = bulkMutateResponseFormatter({
       mutateResult: {},
       operationCount: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "bulk_job", canonicalEntityKind: null },
       dryRun: {

@@ -257,7 +257,7 @@ export const updateReportScheduleTool = {
   outputSchema: UpdateReportScheduleOutputSchema,
   annotations: {
     readOnlyHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: true,
     openWorldHint: true,
     cesteral: {

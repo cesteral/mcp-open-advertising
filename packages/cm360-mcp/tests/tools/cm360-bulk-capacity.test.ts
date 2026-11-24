@@ -154,7 +154,7 @@ describe("cm360_bulk_update_status (GET + PUT per entity)", () => {
     await vi.advanceTimersByTimeAsync(120_000);
     const result = await pending;
     expect(mockElicitStatus).toHaveBeenCalledTimes(1);
-    expect(result.updated).toBe(7);
+    expect(result.successCount).toBe(7);
     expect(fetchMock).toHaveBeenCalledTimes(14);
   });
 
@@ -170,7 +170,7 @@ describe("cm360_bulk_update_status (GET + PUT per entity)", () => {
     mockResolveSessionServices.mockReturnValue({ cm360Service: serviceFor("user-b") });
     const other = bulkUpdateStatusLogic(input(6) as any, ctx, sdk);
     await vi.advanceTimersByTimeAsync(120_000);
-    expect((await other).updated).toBe(6);
+    expect((await other).successCount).toBe(6);
   });
 
   it("counts the user's reporting calls against the same capacity", async () => {
@@ -222,7 +222,7 @@ describe("cm360_bulk_update_entities (one PATCH per item)", () => {
     await vi.advanceTimersByTimeAsync(120_000);
     const result = await pending;
     expect(mockElicitMutation).toHaveBeenCalledTimes(1);
-    expect(result.updated).toBe(15);
+    expect(result.successCount).toBe(15);
     expect(fetchMock).toHaveBeenCalledTimes(15);
   });
 
@@ -254,7 +254,7 @@ describe("cm360_bulk_create_entities (one POST per item)", () => {
     const pending = bulkCreateEntitiesLogic(input(15) as any, ctx, sdk);
     await vi.advanceTimersByTimeAsync(120_000);
     const result = await pending;
-    expect(result.created).toBe(15);
+    expect(result.successCount).toBe(15);
     expect(fetchMock).toHaveBeenCalledTimes(15);
   });
 

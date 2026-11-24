@@ -288,7 +288,7 @@ export const createReportScheduleTool = {
   outputSchema: CreateReportScheduleOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: false,
     cesteral: {

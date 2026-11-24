@@ -73,8 +73,8 @@ describe("cm360_bulk_create_entities governance contract (effect class)", () => 
   it("execute returns the batch effect identity + null-kind capability", async () => {
     const result = await bulkCreateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
     expect(svc.bulkCreateEntities).toHaveBeenCalledOnce();
-    expect(result.created).toBe(1);
-    expect(result.failed).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(result.effect).toEqual({
       effectKind: "entities_created",
       summary: {
@@ -92,8 +92,8 @@ describe("cm360_bulk_create_entities governance contract (effect class)", () => 
 
   it("formatter renders a dry-run message without a false success", () => {
     const content = bulkCreateEntitiesResponseFormatter({
-      created: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "bulk_job", canonicalEntityKind: null },

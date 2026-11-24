@@ -88,8 +88,8 @@ export const BidListBulkOutputSchema = z
   .object({
     operation: z.string(),
     totalItems: z.number(),
-    succeeded: z.number(),
-    failed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(z.record(z.string(), z.any())),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
@@ -131,8 +131,8 @@ export async function bidListBulkLogic(
     return {
       operation: input.operation,
       totalItems: requested,
-      succeeded: 0,
-      failed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: ts,
       dryRun: buildBidListBulkEffectDryRun(
@@ -168,8 +168,8 @@ export async function bidListBulkLogic(
   return {
     operation: input.operation,
     totalItems: results.length,
-    succeeded,
-    failed: results.length - succeeded,
+    successCount: succeeded,
+    failureCount: results.length - succeeded,
     results: results as unknown as Record<string, unknown>[],
     timestamp: ts,
     effect,
@@ -225,7 +225,7 @@ export function bidListBulkResponseFormatter(result: BidListBulkOutput): McpText
     {
       type: "text" as const,
       text: [
-        `${label} via GraphQL: ${result.succeeded}/${result.totalItems} succeeded, ${result.failed} failed`,
+        `${label} via GraphQL: ${result.successCount}/${result.totalItems} succeeded, ${result.failureCount} failed`,
         "",
         `Results: ${JSON.stringify(result.results, null, 2)}`,
         `Timestamp: ${result.timestamp}`,
@@ -242,9 +242,9 @@ export const bulkManageBidListsTool = {
   outputSchema: BidListBulkOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    destructiveHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    destructiveHint: true,
+    idempotentHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

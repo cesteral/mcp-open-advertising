@@ -119,7 +119,7 @@ export const getCommitmentSpendTool = {
   outputSchema: GetCommitmentSpendOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

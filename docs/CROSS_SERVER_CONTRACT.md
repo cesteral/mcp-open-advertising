@@ -202,21 +202,24 @@ The search tool excludes itself from results. Returned items carry `name`, `titl
 
 ## Bulk Result Conventions
 
-All bulk operation tools must return results in this format:
+Every tool that writes several items in one call returns the same three keys, so a client reads one shape: `*_bulk_create_entities`, `*_bulk_update_entities`, `*_bulk_update_status`, `*_adjust_bids` (dv360: `dv360_adjust_line_item_bids`), `ttd_archive_entities`, `ttd_bulk_manage_bid_lists`, and `delete_entity` on the servers whose input is `entityIds[]` (amazon-dsp, msads, pinterest, snapchat, tiktok). `scripts/lib/fleet-naming-shape.test.mjs` enforces it from the fleet snapshot.
 
-- `results[]` — Canonical per-item array; each item contains:
+- `results[]` — one item per input item; each carries
   - `success: boolean`
   - `error?: string` (present when success is false)
-  - `entityId: string` — the affected entity's ID (all current bulk tools use `entityId`)
-- `successCount: number` — count of successful items
-- `failureCount: number` — count of failed items
+  - the item's identifier under the key its entity uses (`entityId`, `entityUrn`, `adGroupId`, `lineItemId`, or `index` for a create that has no id yet; where `index` (the item's zero-based position in the request) is the only reference a row carries, a failed create has no entity id to report)
+- `successCount: number` — items that succeeded
+- `failureCount: number` — items that failed
 - `timestamp: string` (ISO 8601)
 
-Some tools return additional aggregate fields alongside `results[]`:
+On a dry run and on a declined confirmation `results` is `[]` and both counts are `0`; on an execute `successCount + failureCount === results.length`.
 
-- `totalRequested: number` — total items submitted
-- `totalSuccessful` / `totalSucceeded: number` — aliases for successCount (naming varies by server)
-- `totalFailed: number` — alias for failureCount
-- `successful[]` / `failed[]` — typed sub-arrays of successful and failed items with enriched fields (e.g., previousStatus, newStatus); present in dv360-mcp bulk tools
+Some tools add fields beside the three; none replaces them:
 
-These additional fields supplement but do not replace the canonical `results[]` + `successCount` + `failureCount` shape.
+- `totalRequested: number` (or `totalItems` on msads and `ttd_bulk_manage_bid_lists`) — items submitted
+- `successful[]` / `failed[]` — typed sub-arrays with enriched fields (e.g. previousStatus, newStatus); dv360 bulk tools
+- a per-tool context field (`entityType`, `targetStatus`, `operation`, `reason`)
+
+Changed in the 2026-11 contract bump (#235, #248), no aliases kept: `created`/`updated`/`failed` (cm360), `totalSucceeded`/`totalFailed` (adjust_bids, amazon delete), `succeededCount`/`failedCount` (pinterest and snapchat delete), `succeeded`/`failed` (`ttd_bulk_manage_bid_lists`), `totalSuccessful`/`totalFailed` (dv360 adjust), `deletedCount`/`failedCount`/`result` (msads delete), `adjustmentCount`/`result` (msads adjust_bids) became `successCount`/`failureCount`/`results`.
+
+`gads_bulk_mutate` keeps Google's native `GoogleAdsService.Mutate` response (`mutateResult`, `operationCount`) in place of a per-item `results[]`, so it is outside the `results[]` rule. In atomic mode (the default) the batch succeeds or fails as a whole; with `partialFailure: true` the native response carries per-operation outcomes and `partialFailureError`. It still reports `successCount` and `failureCount`, derived from that response.

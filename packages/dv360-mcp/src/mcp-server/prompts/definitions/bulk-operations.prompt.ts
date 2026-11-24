@@ -92,7 +92,7 @@ List entities to find their IDs:
 Check the response for:
 - \`successful\` array — entities that were updated (includes \`previousStatus\` and \`newStatus\`)
 - \`failed\` array — entities that failed (includes \`error\` message)
-- \`totalSuccessful\` / \`totalFailed\` counts
+- \`successCount\` / \`failureCount\` counts
 
 ⚠️ **GOTCHA**: Valid statuses are \`ENTITY_STATUS_ACTIVE\`, \`ENTITY_STATUS_PAUSED\`, \`ENTITY_STATUS_ARCHIVED\`. An insertion order or line item cannot go back to \`ENTITY_STATUS_DRAFT\` once it has left it. Archiving is **irreversible** — you cannot unarchive.
 

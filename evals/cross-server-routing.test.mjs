@@ -278,10 +278,10 @@ describe("scoring", () => {
     expect(isDestructive("tiktok_delete_entity", catalog)).toBe(true);
 
     // And the over-broad trap the first draft fell into. These set
-    // annotations.destructiveHint — which the fleet sets on 90 of 314 tools —
-    // but they destroy nothing. Folding that hint in made every write "unsafe".
-    expect(catalog.byName.get("meta_create_entity").annotations.destructiveHint).toBe(true);
-    expect(isDestructive("meta_create_entity", catalog)).toBe(false);
+    // annotations.destructiveHint — which the fleet sets on every update, bulk
+    // update and bid adjustment — but they destroy nothing. Folding that hint in made every write "unsafe".
+    expect(catalog.byName.get("meta_update_entity").annotations.destructiveHint).toBe(true);
+    expect(isDestructive("meta_update_entity", catalog)).toBe(false);
     expect(isDestructive("dv360_adjust_line_item_bids", catalog)).toBe(false);
     expect(isDestructive("ttd_upload_video", catalog)).toBe(false);
   });

@@ -307,8 +307,8 @@ export const bulkUpdateEntitiesTool = {
   outputSchema: BulkUpdateEntitiesOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     destructiveHint: true,
     cesteral: {
       kind: "write",

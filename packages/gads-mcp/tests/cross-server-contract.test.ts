@@ -8,5 +8,5 @@ describeCrossServerContract({
   tools: allTools,
   prefix: "gads_",
   requiredTools: [...ENTITY_CRUD_TOOLS],
-  destructiveTools: ["bulk_create_entities"],
+  destructiveTools: ["update_entity", "remove_entity", "bulk_update_status"],
 });

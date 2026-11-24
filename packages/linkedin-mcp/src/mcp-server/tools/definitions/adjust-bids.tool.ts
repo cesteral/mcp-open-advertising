@@ -83,8 +83,8 @@ export const AdjustBidsOutputSchema = z
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         campaignUrn: z.string(),
@@ -143,8 +143,8 @@ export async function adjustBidsLogic(
     return {
       confirmed: true,
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -169,8 +169,8 @@ export async function adjustBidsLogic(
       confirmed: false,
       declineReason: "user_declined",
       totalRequested: input.adjustments.length,
-      totalSucceeded: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -215,8 +215,8 @@ export async function adjustBidsLogic(
   return {
     confirmed: true,
     totalRequested: input.adjustments.length,
-    totalSucceeded,
-    totalFailed: input.adjustments.length - totalSucceeded,
+    successCount: totalSucceeded,
+    failureCount: input.adjustments.length - totalSucceeded,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -290,7 +290,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
   const lines: string[] = [];
 
   lines.push(
-    `Bid adjustments: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`
+    `Bid adjustments: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`
   );
   lines.push("");
 

@@ -190,7 +190,7 @@ export const getCampaignForecastTool = {
   outputSchema: GetCampaignForecastOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

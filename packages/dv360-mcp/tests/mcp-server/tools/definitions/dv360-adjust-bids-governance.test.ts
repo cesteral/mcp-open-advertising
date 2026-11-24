@@ -138,9 +138,10 @@ describe("dv360_adjust_line_item_bids governance contract (effect class)", () =>
       confirmed: true,
       successful: [],
       failed: [],
+      results: [],
       totalRequested: 1,
-      totalSuccessful: 0,
-      totalFailed: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: "2026-06-02T00:00:00.000Z",
       dispatchedCapability: { operation: "adjust_bids", canonicalEntityKind: null },
       dryRun: {

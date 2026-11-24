@@ -175,7 +175,7 @@ export const duplicateEntityTool = {
   outputSchema: DuplicateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
     cesteral: {

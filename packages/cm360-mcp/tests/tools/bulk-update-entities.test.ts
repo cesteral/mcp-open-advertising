@@ -94,8 +94,8 @@ describe("bulkUpdateEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.updated).toBe(2);
-    expect(result.failed).toBe(0);
+    expect(result.successCount).toBe(2);
+    expect(result.failureCount).toBe(0);
     expect(result.results).toHaveLength(2);
     expect(result.results[0].success).toBe(true);
     expect(result.results[1].success).toBe(true);
@@ -149,8 +149,8 @@ describe("bulkUpdateEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.updated).toBe(2);
-    expect(result.failed).toBe(1);
+    expect(result.successCount).toBe(2);
+    expect(result.failureCount).toBe(1);
     expect(result.results[1].success).toBe(false);
     expect(result.results[1].entityId).toBe("2");
   });
@@ -175,8 +175,8 @@ describe("bulkUpdateEntitiesResponseFormatter", () => {
   it("shows success/failure counts", () => {
     const result = bulkUpdateEntitiesResponseFormatter({
       confirmed: true,
-      updated: 3,
-      failed: 1,
+      successCount: 3,
+      failureCount: 1,
       results: [
         { entityId: "1", success: true },
         { entityId: "2", success: true },
@@ -193,8 +193,8 @@ describe("bulkUpdateEntitiesResponseFormatter", () => {
   it("shows entityId in failure details", () => {
     const result = bulkUpdateEntitiesResponseFormatter({
       confirmed: true,
-      updated: 0,
-      failed: 1,
+      successCount: 0,
+      failureCount: 1,
       results: [{ entityId: "failing-entity", success: false, error: "API error" }],
       timestamp: "2026-01-01T00:00:00.000Z",
     });

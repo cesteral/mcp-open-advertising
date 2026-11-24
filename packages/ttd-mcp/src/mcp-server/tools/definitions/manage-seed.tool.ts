@@ -417,7 +417,7 @@ export const manageSeedTool = {
   outputSchema: ManageSeedOutputSchema,
   annotations: {
     readOnlyHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: false,
     openWorldHint: true,
     cesteral: {

@@ -11,11 +11,12 @@
 //    unprefixed names are the shared cross-platform prompts, which are
 //    byte-identical on every server by design (cross-platform-prompts.test.mjs).
 //
-// 2. A bulk write reports `results[]` + `successCount` + `failureCount`
-//    (docs/CROSS_SERVER_CONTRACT.md, "Bulk Result Conventions"). cm360 and
-//    msads diverge. Changing a governed tool's output schema moves its
-//    definitionHash and needs the governance repo to admit the new hash, so
-//    those five are an allowlist that may only shrink, not a fix made here.
+// 2. A multi-item write reports `results[]` + `successCount` + `failureCount`
+//    (docs/CROSS_SERVER_CONTRACT.md, "Bulk Result Conventions"). cm360, msads,
+//    ttd_bulk_manage_bid_lists, the multi-id delete_entity and adjust_bids
+//    diverged until the 2026-11 contract bump (#235, #248) fixed them together
+//    with the tool hints; the shrink-only allowlist that held them is gone, so
+//    a new multi-item write follows the convention from its first commit.
 //
 // Reads the fleet snapshot (fleet-snapshot-inject.mjs); boots nothing.
 
@@ -38,19 +39,16 @@ const SHARED_PROMPTS = new Set([
 ]);
 
 /**
- * Bulk write tools whose output predates the convention. An entry must still
- * diverge (the second test fails when it no longer does), and a new bulk tool
- * may not be added here: it follows the convention from its first commit.
+ * Every tool that writes several items in one call. `delete_entity` is one
+ * only where it takes `entityIds[]` (amazon-dsp, msads, pinterest, snapchat,
+ * tiktok); the single-id deletes report one entity.
  */
-export const BULK_SHAPE_ALLOWLIST = new Set([
-  "cm360_bulk_create_entities", // created / failed
-  "cm360_bulk_update_entities", // updated / failed
-  "cm360_bulk_update_status", // updated / failed
-  "msads_bulk_create_entities", // totalItems only
-  "msads_bulk_update_entities", // totalItems only
-]);
+const MULTI_ITEM_WRITE =
+  /_(bulk_create_entities|bulk_update_entities|bulk_update_status|adjust_bids|adjust_line_item_bids|archive_entities|bulk_manage_bid_lists)$/;
+const isMultiItemWrite = (t) =>
+  MULTI_ITEM_WRITE.test(t.name) ||
+  (/_delete_entity$/.test(t.name) && "entityIds" in (t.inputSchema?.properties ?? {}));
 
-const BULK_WRITE = /_bulk_(create_entities|update_entities|update_status)$/;
 const REQUIRED_KEYS = ["results", "successCount", "failureCount"];
 
 describe("prompt names are prefixed (#235)", () => {
@@ -80,34 +78,79 @@ describe("prompt names are prefixed (#235)", () => {
   });
 });
 
-describe("bulk write result shape (#235)", () => {
+describe("multi-item write result shape (#235, #248)", () => {
   const bulkTools = packages.flatMap((pkg) =>
     toolsOf(pkg)
-      .filter((t) => BULK_WRITE.test(t.name))
+      .filter(isMultiItemWrite)
       .map((t) => ({
         name: t.name,
         keys: Object.keys(t.outputSchema?.properties ?? {}),
+        item: t.outputSchema?.properties?.results?.items?.properties,
+        types: Object.fromEntries(
+          Object.entries(t.outputSchema?.properties ?? {}).map(([k, v]) => [k, v?.type])
+        ),
       }))
   );
 
-  it("finds the bulk write tools", () => {
-    expect(bulkTools.length).toBeGreaterThan(30);
+  it("finds the multi-item write tools", () => {
+    // 3 bulk tools + adjust_bids on 11 servers' worth, archive, bid lists, 5 multi-id deletes.
+    expect(bulkTools.length).toBeGreaterThan(45);
+    for (const must of [
+      "cm360_bulk_create_entities",
+      "msads_bulk_update_entities",
+      "ttd_bulk_manage_bid_lists",
+      "tiktok_delete_entity",
+      "dv360_adjust_line_item_bids",
+    ])
+      expect(
+        bulkTools.map((t) => t.name),
+        must
+      ).toContain(must);
   });
 
-  it("every bulk write outside the allowlist publishes results, successCount and failureCount", () => {
+  it("every multi-item write publishes results, successCount and failureCount", () => {
     const bad = bulkTools
-      .filter((t) => !BULK_SHAPE_ALLOWLIST.has(t.name))
       .filter((t) => REQUIRED_KEYS.some((k) => !t.keys.includes(k)))
       .map((t) => `${t.name}: has ${t.keys.join(",")}`);
     expect(bad).toEqual([]);
   });
 
-  it("the allowlist only lists tools that still diverge", () => {
-    const byName = new Map(bulkTools.map((t) => [t.name, t]));
-    const stale = [...BULK_SHAPE_ALLOWLIST].filter((name) => {
-      const t = byName.get(name);
-      return !t || REQUIRED_KEYS.every((k) => t.keys.includes(k));
-    });
-    expect(stale).toEqual([]);
+  it("no multi-item write keeps a retired counter name", () => {
+    const retired = [
+      "created",
+      "updated",
+      "failed",
+      "succeeded",
+      "totalSucceeded",
+      "totalFailed",
+      "totalSuccessful",
+      "succeededCount",
+      "failedCount",
+      "deletedCount",
+      "adjustmentCount",
+    ];
+    const bad = bulkTools
+      .map((t) => ({
+        name: t.name,
+        // dv360's `failed[]` array is a sanctioned sub-array; a retired COUNTER is a number.
+        hit: t.keys.filter((k) => retired.includes(k) && t.types[k] !== "array"),
+      }))
+      .filter((t) => t.hit.length)
+      .map((t) => `${t.name}: ${t.hit.join(",")}`);
+    expect(bad).toEqual([]);
+  });
+
+  it("a typed per-item result says whether the item succeeded", () => {
+    const bad = bulkTools.filter((t) => t.item && !("success" in t.item)).map((t) => t.name);
+    expect(bad).toEqual([]);
+  });
+});
+
+describe("gads_bulk_mutate keeps Google's native response and still reports counts", () => {
+  it("exposes mutateResult, operationCount, successCount and failureCount", () => {
+    const tool = toolsOf("gads-mcp").find((t) => t.name === "gads_bulk_mutate");
+    const keys = Object.keys(tool?.outputSchema?.properties ?? {});
+    for (const k of ["mutateResult", "operationCount", "successCount", "failureCount"])
+      expect(keys, k).toContain(k);
   });
 });

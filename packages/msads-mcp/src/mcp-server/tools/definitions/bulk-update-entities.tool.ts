@@ -66,9 +66,24 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     confirmed: z.boolean(),
     declineReason: z.string().optional(),
-    results: z.array(z.record(z.string(), z.any())),
+    results: z
+      .array(
+        z.object({
+          index: z.number().describe("Zero-based position of the item in the request's `items`"),
+          success: z.boolean(),
+          entityId: z
+            .string()
+            .optional()
+            .describe("Created ID (create) or targeted ID (update); absent when unknown"),
+          error: z.string().optional(),
+          errorCode: z.string().optional(),
+        })
+      )
+      .describe("Per-item outcome, one per input item, in request order"),
     entityType: z.string(),
     totalItems: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     timestamp: z.string().datetime(),
     dryRun: EffectDryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. No entities were updated."
@@ -119,6 +134,8 @@ export async function bulkUpdateEntitiesLogic(
       results: [],
       entityType: input.entityType,
       totalItems: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dryRun,
       dispatchedCapability,
@@ -163,6 +180,8 @@ export async function bulkUpdateEntitiesLogic(
       results: [],
       entityType: input.entityType,
       totalItems: items.length,
+      successCount: 0,
+      failureCount: 0,
       timestamp: new Date().toISOString(),
       dispatchedCapability,
     };
@@ -194,9 +213,11 @@ export async function bulkUpdateEntitiesLogic(
 
   return {
     confirmed: true,
-    results: results as unknown as Record<string, unknown>[],
+    results,
     entityType: input.entityType,
     totalItems: input.items.length,
+    successCount: succeeded,
+    failureCount: failed,
     timestamp: new Date().toISOString(),
     effect,
     dispatchedCapability,
@@ -294,9 +315,9 @@ export const bulkUpdateEntitiesTool = {
   outputSchema: BulkUpdateEntitiesOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
-    destructiveHint: false,
+    destructiveHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

@@ -67,8 +67,8 @@ export const DeleteEntityOutputSchema = z
     deleted: z.boolean().describe("True only when every requested id was deleted."),
     entityType: z.string(),
     entityIds: z.array(z.string()),
-    succeededCount: z.number().describe("Number of ids Snapchat confirmed deleted"),
-    failedCount: z.number().describe("Number of ids whose delete request failed"),
+    successCount: z.number().describe("Number of ids Snapchat confirmed deleted"),
+    failureCount: z.number().describe("Number of ids whose delete request failed"),
     results: z
       .array(
         z.object({
@@ -126,8 +126,8 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
-      succeededCount: 0,
-      failedCount: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dryRun,
@@ -156,8 +156,8 @@ export async function deleteEntityLogic(
       deleted: false,
       entityType: input.entityType,
       entityIds: input.entityIds,
-      succeededCount: 0,
-      failedCount: 0,
+      successCount: 0,
+      failureCount: 0,
       results: [],
       timestamp: new Date().toISOString(),
       dispatchedCapability,
@@ -182,8 +182,8 @@ export async function deleteEntityLogic(
       ? { error: outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason) }
       : {}),
   }));
-  const succeededCount = results.filter((r) => r.success).length;
-  const failedCount = results.length - succeededCount;
+  const successCount = results.filter((r) => r.success).length;
+  const failureCount = results.length - successCount;
 
   // Batch effect carries the real per-id outcome counts.
   const effect: EffectResult = {
@@ -191,19 +191,19 @@ export async function deleteEntityLogic(
     summary: {
       entity_kind: input.entityType,
       requested: input.entityIds.length,
-      succeeded: succeededCount,
-      failed: failedCount,
-      partial_success: succeededCount > 0 && failedCount > 0,
+      succeeded: successCount,
+      failed: failureCount,
+      partial_success: successCount > 0 && failureCount > 0,
     },
   };
 
   return {
     confirmed: true,
-    deleted: failedCount === 0,
+    deleted: failureCount === 0,
     entityType: input.entityType,
     entityIds: input.entityIds,
-    succeededCount,
-    failedCount,
+    successCount,
+    failureCount,
     results,
     timestamp: new Date().toISOString(),
     effect,
@@ -276,7 +276,7 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
     ];
   }
   const lines: string[] = [
-    `${result.entityType} deletions: ${result.succeededCount}/${result.entityIds.length} succeeded, ${result.failedCount} failed`,
+    `${result.entityType} deletions: ${result.successCount}/${result.entityIds.length} succeeded, ${result.failureCount} failed`,
     "",
   ];
   for (const r of result.results) {
@@ -294,8 +294,8 @@ export const deleteEntityTool = {
   outputSchema: DeleteEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     destructiveHint: true,
     cesteral: {
       kind: "write",

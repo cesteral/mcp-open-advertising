@@ -107,12 +107,33 @@ describe("msads_bulk_update_entities governance contract (effect class)", () => 
     expect(result.dispatchedCapability.canonicalEntityKind).toBeNull();
   });
 
+  it("a mixed batch types each row and counts successes and failures", async () => {
+    svc.bulkUpdateEntities.mockResolvedValue([
+      { index: 0, entityId: "1", success: true },
+      { index: 1, success: false, error: "InvalidName", errorCode: "E101" },
+    ]);
+    const result = await bulkUpdateEntitiesLogic({ ...baseInput } as any, ctx, sdk);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
+    expect(result.results).toEqual([
+      { index: 0, entityId: "1", success: true },
+      { index: 1, success: false, error: "InvalidName", errorCode: "E101" },
+    ]);
+    expect(() => BulkUpdateEntitiesOutputSchema.parse(result)).not.toThrow();
+    // index and success are required on every row
+    expect(() =>
+      BulkUpdateEntitiesOutputSchema.parse({ ...result, results: [{ entityId: "1" }] })
+    ).toThrow();
+  });
+
   it("formatter renders a dry-run message without a false success", () => {
     const content = bulkUpdateEntitiesResponseFormatter({
       confirmed: true,
       results: [],
       entityType: "campaign",
       totalItems: 0,
+      successCount: 0,
+      failureCount: 0,
       timestamp: "2026-06-03T00:00:00.000Z",
       dispatchedCapability: { operation: "bulk_job", canonicalEntityKind: null },
       dryRun: {
