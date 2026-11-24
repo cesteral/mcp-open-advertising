@@ -99,7 +99,7 @@ export const listEntitiesTool = {
   outputSchema: ListEntitiesOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

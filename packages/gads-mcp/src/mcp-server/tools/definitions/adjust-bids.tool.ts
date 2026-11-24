@@ -353,7 +353,7 @@ export const adjustBidsTool = {
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

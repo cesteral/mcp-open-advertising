@@ -466,7 +466,7 @@ export const manageCustomBiddingScriptTool = {
   annotations: {
     readOnlyHint: false,
     destructiveHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     cesteral: {
       kind: "write",

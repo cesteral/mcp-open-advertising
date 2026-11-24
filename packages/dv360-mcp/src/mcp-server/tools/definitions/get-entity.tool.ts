@@ -161,7 +161,7 @@ export const getEntityTool = {
   annotations: {
     readOnlyHint: true,
     destructiveHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     cesteral: {
       kind: "read",

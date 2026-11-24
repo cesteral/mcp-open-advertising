@@ -139,7 +139,7 @@ export const getAssignedTargetingTool = {
   annotations: {
     readOnlyHint: true,
     destructiveHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
   },
   logic: getAssignedTargetingLogic,

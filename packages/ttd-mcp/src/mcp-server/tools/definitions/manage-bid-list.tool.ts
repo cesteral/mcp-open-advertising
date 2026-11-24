@@ -242,7 +242,7 @@ export const manageBidListTool = {
   outputSchema: BidListOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     // `operation: "delete"` runs bidListDelete, which removes the bid list and
     // nothing on this server restores it (declared terminal in registry.json).
     destructiveHint: true,

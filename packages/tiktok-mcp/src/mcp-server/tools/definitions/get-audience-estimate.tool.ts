@@ -78,7 +78,7 @@ export const getAudienceEstimateTool = {
   outputSchema: GetAudienceEstimateOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

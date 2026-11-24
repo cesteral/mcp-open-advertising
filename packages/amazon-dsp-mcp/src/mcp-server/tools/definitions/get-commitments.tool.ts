@@ -85,7 +85,7 @@ export const getCommitmentsTool = {
   // utility next to it.
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

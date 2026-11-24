@@ -271,7 +271,7 @@ export const cancelReportExecutionTool = {
   annotations: {
     readOnlyHint: false,
     destructiveHint: true,
-    idempotentHint: false,
+    idempotentHint: true,
     openWorldHint: true,
     cesteral: {
       kind: "write",

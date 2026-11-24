@@ -333,7 +333,7 @@ export const updateConversionsTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: true,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: true,
     cesteral: {
       kind: "write",

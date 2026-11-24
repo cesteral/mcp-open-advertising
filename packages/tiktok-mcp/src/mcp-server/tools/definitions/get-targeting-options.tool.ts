@@ -134,7 +134,7 @@ export const getTargetingOptionsTool = {
   outputSchema: GetTargetingOptionsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

@@ -69,7 +69,7 @@ export const listAccountsTool = {
   outputSchema: ListAccountsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

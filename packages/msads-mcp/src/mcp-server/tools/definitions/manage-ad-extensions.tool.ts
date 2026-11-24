@@ -218,7 +218,7 @@ export const manageAdExtensionsTool = {
   outputSchema: ManageAdExtensionsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: true,
     cesteral: {

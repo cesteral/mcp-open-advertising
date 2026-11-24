@@ -195,7 +195,7 @@ export const graphqlQueryTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: true,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: false,
     cesteral: {
       kind: "write",

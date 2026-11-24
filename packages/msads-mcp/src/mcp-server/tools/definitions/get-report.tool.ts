@@ -130,8 +130,8 @@ export const getReportTool = {
   outputSchema: GetReportOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     destructiveHint: false,
   },
   inputExamples: [

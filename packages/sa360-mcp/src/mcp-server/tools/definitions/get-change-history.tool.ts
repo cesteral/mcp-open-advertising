@@ -122,7 +122,7 @@ export const getChangeHistoryTool = {
   annotations: {
     readOnlyHint: true,
     idempotentHint: true,
-    openWorldHint: true,
+    openWorldHint: false,
     destructiveHint: false,
   },
   inputExamples: [

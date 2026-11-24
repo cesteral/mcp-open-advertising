@@ -206,7 +206,7 @@ export const deleteReportScheduleTool = {
   outputSchema: DeleteReportScheduleOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: true,
     cesteral: {

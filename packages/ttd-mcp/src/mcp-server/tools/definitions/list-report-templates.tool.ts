@@ -133,7 +133,7 @@ export const listReportTemplatesTool = {
   outputSchema: ListReportTemplatesOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

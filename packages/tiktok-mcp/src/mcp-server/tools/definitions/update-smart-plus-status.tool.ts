@@ -274,7 +274,7 @@ export const updateSmartPlusStatusTool = {
   outputSchema: UpdateSmartPlusStatusOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: true,
     cesteral: {

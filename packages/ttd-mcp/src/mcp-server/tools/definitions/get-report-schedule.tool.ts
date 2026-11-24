@@ -74,7 +74,7 @@ export const getReportScheduleTool = {
   outputSchema: GetReportScheduleOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

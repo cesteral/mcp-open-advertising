@@ -200,8 +200,8 @@ export const deleteEntityTool = {
   outputSchema: DeleteEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     destructiveHint: true,
     cesteral: {
       kind: "write",

@@ -161,7 +161,7 @@ export const getInsightsTool = {
   outputSchema: GetInsightsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

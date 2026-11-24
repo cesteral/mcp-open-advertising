@@ -199,7 +199,7 @@ export const importFromGoogleTool = {
   outputSchema: ImportFromGoogleOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
     cesteral: {

@@ -74,7 +74,7 @@ export const getCommitmentTool = {
   outputSchema: GetCommitmentOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
     cesteral: {

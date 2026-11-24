@@ -276,7 +276,7 @@ export const bulkUpdateStatusTool = {
   outputSchema: BulkUpdateStatusOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: true,
     cesteral: {

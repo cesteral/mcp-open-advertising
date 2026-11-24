@@ -80,7 +80,7 @@ export const checkReportStatusTool = {
   outputSchema: CheckReportStatusOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

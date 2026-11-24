@@ -151,8 +151,8 @@ export const getReportBreakdownsTool = {
   outputSchema: GetReportBreakdownsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    idempotentHint: true,
     destructiveHint: false,
   },
   inputExamples: [

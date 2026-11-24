@@ -260,7 +260,7 @@ export const bulkCreateEntitiesTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: true,
-    destructiveHint: true,
+    destructiveHint: false,
     idempotentHint: false,
     cesteral: {
       kind: "write",

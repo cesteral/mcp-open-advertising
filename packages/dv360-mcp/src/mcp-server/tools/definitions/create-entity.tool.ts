@@ -396,8 +396,8 @@ export const createEntityTool = {
   ],
   annotations: {
     readOnlyHint: false,
-    destructiveHint: true,
-    openWorldHint: false,
+    destructiveHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     cesteral: {
       kind: "write",

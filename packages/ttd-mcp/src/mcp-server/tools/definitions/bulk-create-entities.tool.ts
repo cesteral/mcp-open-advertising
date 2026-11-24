@@ -254,8 +254,8 @@ export const bulkCreateEntitiesTool = {
   outputSchema: BulkCreateEntitiesOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    destructiveHint: true,
+    openWorldHint: true,
+    destructiveHint: false,
     idempotentHint: false,
     cesteral: {
       kind: "write",

@@ -199,7 +199,7 @@ export const createEntityTool = {
   outputSchema: CreateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
     cesteral: {

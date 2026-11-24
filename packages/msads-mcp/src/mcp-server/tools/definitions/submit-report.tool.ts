@@ -232,7 +232,7 @@ export const submitReportTool = {
   outputSchema: SubmitReportOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: false,
     cesteral: {

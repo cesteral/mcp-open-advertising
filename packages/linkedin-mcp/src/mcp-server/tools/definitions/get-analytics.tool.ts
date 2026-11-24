@@ -203,7 +203,7 @@ export const getAnalyticsTool = {
   outputSchema: GetAnalyticsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

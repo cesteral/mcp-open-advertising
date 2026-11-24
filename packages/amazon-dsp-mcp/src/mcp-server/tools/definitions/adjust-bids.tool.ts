@@ -295,7 +295,7 @@ export const adjustBidsTool = {
   outputSchema: AdjustBidsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: true,
     cesteral: {

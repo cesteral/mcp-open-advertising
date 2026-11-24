@@ -92,7 +92,7 @@ export const listAdAccountsTool = {
   outputSchema: ListAdvertisersOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },

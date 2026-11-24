@@ -234,7 +234,7 @@ export const manageCriterionsTool = {
   outputSchema: ManageCriterionsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: false,
     destructiveHint: true,
     cesteral: {

@@ -242,9 +242,9 @@ export const bulkManageBidListsTool = {
   outputSchema: BidListBulkOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
-    destructiveHint: false,
-    idempotentHint: false,
+    openWorldHint: true,
+    destructiveHint: true,
+    idempotentHint: true,
     cesteral: {
       kind: "write",
       writeClass: "effect",

@@ -154,7 +154,7 @@ export const getInsightsBreakdownsTool = {
   outputSchema: GetInsightsBreakdownsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     idempotentHint: true,
     destructiveHint: false,
   },
