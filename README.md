@@ -202,7 +202,7 @@ repository.
 
 ## Quick Start
 
-For a guided walkthrough, see the [10-minute quickstart](docs/guides/quickstart.md).
+For a guided walkthrough, see the [10-minute quickstart](docs/guides/quickstart.md). To connect Claude Code or Codex to any of the servers without cloning anything, see [Connect your AI client](docs/guides/connect-clients.md).
 
 ### Prerequisites
 

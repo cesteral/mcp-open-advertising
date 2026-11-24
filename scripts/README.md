@@ -53,14 +53,15 @@ Read-only; each exits non-zero on a violation.
 
 The sync scripts and `generate-server-json.mjs` take `--check` (or have a `check:` alias) to verify without writing.
 
-| Script                            | Alias                                         | What it writes                                                                                                                            |
-| --------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `generate-manifests.mjs`          | `generate:manifests`                          | `dist/cesteral-manifest.json` for every package with governed tools (needs a build).                                                      |
-| `generate-server-json.mjs`        | `generate:registry`, `check:registry`         | Each package's MCP Registry `server.json`, from `registry.json` and `package.json`.                                                       |
-| `sync-registry-tools.mjs`         | `sync:registry-tools`, `check:registry-tools` | The tool lists in `registry.json`, from the tool definition files.                                                                        |
-| `sync-registry-data.mjs`          | `sync:registry-data`                          | `packages/shared/src/utils/transport/registry-data.generated.ts`, run by `@cesteral/shared`'s `prebuild`.                                 |
-| `sync-untrusted-declarations.mjs` | `sync:untrusted-declarations`                 | `scripts/lib/untrusted-declarations.snapshot.json`; run after an intended `untrustedContent` change.                                      |
-| `sync-tool-definition-hashes.mjs` | `sync:tool-definition-hashes`                 | `scripts/lib/tool-definition-hashes.snapshot.json`; run after an intended change to any tool's name, description, schemas or annotations. |
+| Script                            | Alias                                             | What it writes                                                                                                                            |
+| --------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate-manifests.mjs`          | `generate:manifests`                              | `dist/cesteral-manifest.json` for every package with governed tools (needs a build).                                                      |
+| `generate-client-configs.mjs`     | `generate:client-configs`, `check:client-configs` | The Claude Code and Codex configs and the client reference, from the `client` block of `registry.json`.                                   |
+| `generate-server-json.mjs`        | `generate:registry`, `check:registry`             | Each package's MCP Registry `server.json`, from `registry.json` and `package.json`.                                                       |
+| `sync-registry-tools.mjs`         | `sync:registry-tools`, `check:registry-tools`     | The tool lists in `registry.json`, from the tool definition files.                                                                        |
+| `sync-registry-data.mjs`          | `sync:registry-data`                              | `packages/shared/src/utils/transport/registry-data.generated.ts`, run by `@cesteral/shared`'s `prebuild`.                                 |
+| `sync-untrusted-declarations.mjs` | `sync:untrusted-declarations`                     | `scripts/lib/untrusted-declarations.snapshot.json`; run after an intended `untrustedContent` change.                                      |
+| `sync-tool-definition-hashes.mjs` | `sync:tool-definition-hashes`                     | `scripts/lib/tool-definition-hashes.snapshot.json`; run after an intended change to any tool's name, description, schemas or annotations. |
 
 ### `lib/` and `__tests__/`
 
@@ -83,13 +84,14 @@ serverSnapshot("meta-mcp"); // { serverVersion, capabilities, tools, prompts, re
 - A snapshot is plain JSON shared by every file: read it, never mutate it.
 - Running a single test file through `vitest.config.scripts.ts` still runs `globalSetup`, so it boots the whole fleet once first.
 
-Boot a server yourself (`withServerClient` from `lib/boot-server.mjs`) only when the test must **drive** it or compare a fresh boot. Three suites do, one boot per server each:
+Boot a server yourself (`withServerClient` from `lib/boot-server.mjs`) only when the test must **drive** it or compare a fresh boot. Four suites do, one boot per server each:
 
 | Suite                            | Why it cannot read the snapshot                                                                              |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `tools-list-determinism.test`    | Compares a fresh boot with the snapshot's boot (another process): reading the snapshot twice proves nothing. |
 | `untrusted-error-marker.test`    | Calls every tool with empty arguments to read the error results.                                             |
 | `evals/tool-search-ranking.test` | Runs the corpus's queries against each server's live `*_search_tools`.                                       |
+| `client-configs.test`            | Starts each server's `dist/index.js` over stdio with an empty environment to read the variables it asks for. |
 
 `lib/cache-hints-probe.mjs` is run as a child process by the snapshot (once per server) to collect the 2026-07-28 cache hints: the SDK serves that era only through `createMcpHandler`, and a second in-process SDK copy would break it. `boot-server.test` boots `meta-mcp` once, to test the harness itself. `tools-list-determinism.test` is also what proves the snapshot is what a live boot returns, for every server.
 

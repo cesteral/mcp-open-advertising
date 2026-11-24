@@ -1,0 +1,81 @@
+# Cesteral MCP servers for Codex. Generated from registry.json; do not edit by hand.
+# Copy the tables you need into ~/.codex/config.toml and export the variables each one lists.
+# Credentials are read from your shell environment (env_vars), never stored here.
+
+[mcp_servers.cesteral-dbm]
+command = "npx"
+args = ["-y", "@cesteral/dbm-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["SERVICE_ACCOUNT_FILE"]
+
+[mcp_servers.cesteral-dv360]
+command = "npx"
+args = ["-y", "@cesteral/dv360-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["DV360_SERVICE_ACCOUNT_FILE"]
+
+[mcp_servers.cesteral-ttd]
+command = "npx"
+args = ["-y", "@cesteral/ttd-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["TTD_API_TOKEN"]
+
+[mcp_servers.cesteral-gads]
+command = "npx"
+args = ["-y", "@cesteral/gads-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["GADS_DEVELOPER_TOKEN", "GADS_CLIENT_ID", "GADS_CLIENT_SECRET", "GADS_REFRESH_TOKEN"]
+
+[mcp_servers.cesteral-meta]
+command = "npx"
+args = ["-y", "@cesteral/meta-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["META_ACCESS_TOKEN"]
+
+[mcp_servers.cesteral-linkedin]
+command = "npx"
+args = ["-y", "@cesteral/linkedin-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["LINKEDIN_ACCESS_TOKEN"]
+
+[mcp_servers.cesteral-tiktok]
+command = "npx"
+args = ["-y", "@cesteral/tiktok-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["TIKTOK_ACCESS_TOKEN", "TIKTOK_ADVERTISER_ID"]
+
+[mcp_servers.cesteral-cm360]
+command = "npx"
+args = ["-y", "@cesteral/cm360-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["CM360_SERVICE_ACCOUNT_FILE"]
+
+[mcp_servers.cesteral-snapchat]
+command = "npx"
+args = ["-y", "@cesteral/snapchat-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["SNAPCHAT_AD_ACCOUNT_ID", "SNAPCHAT_APP_ID", "SNAPCHAT_APP_SECRET", "SNAPCHAT_REFRESH_TOKEN"]
+
+[mcp_servers.cesteral-sa360]
+command = "npx"
+args = ["-y", "@cesteral/sa360-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["SA360_CLIENT_ID", "SA360_CLIENT_SECRET", "SA360_REFRESH_TOKEN"]
+
+[mcp_servers.cesteral-pinterest]
+command = "npx"
+args = ["-y", "@cesteral/pinterest-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["PINTEREST_ACCESS_TOKEN", "PINTEREST_AD_ACCOUNT_ID"]
+
+[mcp_servers.cesteral-amazon-dsp]
+command = "npx"
+args = ["-y", "@cesteral/amazon-dsp-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["AMAZON_DSP_PROFILE_ID", "AMAZON_DSP_APP_ID", "AMAZON_DSP_APP_SECRET", "AMAZON_DSP_REFRESH_TOKEN"]
+
+[mcp_servers.cesteral-msads]
+command = "npx"
+args = ["-y", "@cesteral/msads-mcp"]
+env = { MCP_TRANSPORT_MODE = "stdio" }
+env_vars = ["MSADS_ACCESS_TOKEN", "MSADS_DEVELOPER_TOKEN", "MSADS_CUSTOMER_ID", "MSADS_ACCOUNT_ID"]

@@ -1,0 +1,124 @@
+{
+  "mcpServers": {
+    "cesteral-dbm": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/dbm-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "SERVICE_ACCOUNT_FILE": "${SERVICE_ACCOUNT_FILE}"
+      }
+    },
+    "cesteral-dv360": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/dv360-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "DV360_SERVICE_ACCOUNT_FILE": "${DV360_SERVICE_ACCOUNT_FILE}"
+      }
+    },
+    "cesteral-ttd": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/ttd-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "TTD_API_TOKEN": "${TTD_API_TOKEN}"
+      }
+    },
+    "cesteral-gads": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/gads-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "GADS_DEVELOPER_TOKEN": "${GADS_DEVELOPER_TOKEN}",
+        "GADS_CLIENT_ID": "${GADS_CLIENT_ID}",
+        "GADS_CLIENT_SECRET": "${GADS_CLIENT_SECRET}",
+        "GADS_REFRESH_TOKEN": "${GADS_REFRESH_TOKEN}"
+      }
+    },
+    "cesteral-meta": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/meta-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "META_ACCESS_TOKEN": "${META_ACCESS_TOKEN}"
+      }
+    },
+    "cesteral-linkedin": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/linkedin-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "LINKEDIN_ACCESS_TOKEN": "${LINKEDIN_ACCESS_TOKEN}"
+      }
+    },
+    "cesteral-tiktok": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/tiktok-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "TIKTOK_ACCESS_TOKEN": "${TIKTOK_ACCESS_TOKEN}",
+        "TIKTOK_ADVERTISER_ID": "${TIKTOK_ADVERTISER_ID}"
+      }
+    },
+    "cesteral-cm360": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/cm360-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "CM360_SERVICE_ACCOUNT_FILE": "${CM360_SERVICE_ACCOUNT_FILE}"
+      }
+    },
+    "cesteral-snapchat": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/snapchat-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "SNAPCHAT_AD_ACCOUNT_ID": "${SNAPCHAT_AD_ACCOUNT_ID}",
+        "SNAPCHAT_APP_ID": "${SNAPCHAT_APP_ID}",
+        "SNAPCHAT_APP_SECRET": "${SNAPCHAT_APP_SECRET}",
+        "SNAPCHAT_REFRESH_TOKEN": "${SNAPCHAT_REFRESH_TOKEN}"
+      }
+    },
+    "cesteral-sa360": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/sa360-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "SA360_CLIENT_ID": "${SA360_CLIENT_ID}",
+        "SA360_CLIENT_SECRET": "${SA360_CLIENT_SECRET}",
+        "SA360_REFRESH_TOKEN": "${SA360_REFRESH_TOKEN}"
+      }
+    },
+    "cesteral-pinterest": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/pinterest-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "PINTEREST_ACCESS_TOKEN": "${PINTEREST_ACCESS_TOKEN}",
+        "PINTEREST_AD_ACCOUNT_ID": "${PINTEREST_AD_ACCOUNT_ID}"
+      }
+    },
+    "cesteral-amazon-dsp": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/amazon-dsp-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "AMAZON_DSP_PROFILE_ID": "${AMAZON_DSP_PROFILE_ID}",
+        "AMAZON_DSP_APP_ID": "${AMAZON_DSP_APP_ID}",
+        "AMAZON_DSP_APP_SECRET": "${AMAZON_DSP_APP_SECRET}",
+        "AMAZON_DSP_REFRESH_TOKEN": "${AMAZON_DSP_REFRESH_TOKEN}"
+      }
+    },
+    "cesteral-msads": {
+      "command": "npx",
+      "args": ["-y", "@cesteral/msads-mcp"],
+      "env": {
+        "MCP_TRANSPORT_MODE": "stdio",
+        "MSADS_ACCESS_TOKEN": "${MSADS_ACCESS_TOKEN}",
+        "MSADS_DEVELOPER_TOKEN": "${MSADS_DEVELOPER_TOKEN}",
+        "MSADS_CUSTOMER_ID": "${MSADS_CUSTOMER_ID}",
+        "MSADS_ACCOUNT_ID": "${MSADS_ACCOUNT_ID}"
+      }
+    }
+  }
+}

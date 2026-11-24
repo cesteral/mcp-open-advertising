@@ -13,6 +13,7 @@ Navigation index for the `docs/` directory. Every file under `docs/` is reachabl
 | -------------------------------------------------------------------------------- | ---------------------------------------------- |
 | [`guides/quickstart.md`](guides/quickstart.md)                                   | Run a connector locally and connect an AI tool |
 | [`../CLAUDE.md`](../CLAUDE.md)                                                   | Primary developer guide (repo root)            |
+| [`guides/connect-clients.md`](guides/connect-clients.md)                         | Connect Claude Code or Codex to the servers    |
 | [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md)                 | Environment variable reference for all servers |
 | [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                           | Standards all management servers must follow   |
 | [`guides/mcp-prompts-quick-reference.md`](guides/mcp-prompts-quick-reference.md) | Catalog of every MCP prompt, by server         |
@@ -27,6 +28,7 @@ Navigation index for the `docs/` directory. Every file under `docs/` is reachabl
 | Document                                                 | Description                                                           |
 | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | [`guides/quickstart.md`](guides/quickstart.md)           | Self-host a flagship connector, by how much credential setup you have |
+| [`guides/connect-clients.md`](guides/connect-clients.md) | Connect Claude Code or Codex, with per-server credentials and configs |
 | [`guides/demo-transcript.md`](guides/demo-transcript.md) | What the Meta Ads quickstart looks like once running                  |
 | [`guides/observability.md`](guides/observability.md)     | Audit-grade logging: tool-call and tool-failure records               |
 
