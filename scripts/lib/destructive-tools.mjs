@@ -23,9 +23,10 @@
 //
 // WHAT IS DELIBERATELY NOT PART OF IT
 //
-// `annotations.destructiveHint`. MCP's hint means "this is a mutating write",
-// not "this destroys data", and the fleet sets it on 90 of 314 tools — including
-// `create_entity` and `upload_video`. Folding it in would classify every write
+// `annotations.destructiveHint`. MCP's hint means "may delete or overwrite", not
+// "cannot be undone": the fleet sets it on 76 of 324 tools (docs/architecture/
+// tool-hints.md), every update, bulk update, bid adjustment and `manage_*` tool
+// among them, and an overwrite can be set back. Folding it in would classify every write
 // as destructive and make any safety metric built on this meaningless.
 
 /**
