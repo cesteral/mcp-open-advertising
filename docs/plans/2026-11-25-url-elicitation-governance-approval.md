@@ -1,6 +1,6 @@
 # Governance Approval over URL-Mode Elicitation (design)
 
-**Status:** draft, revision 3 (2026-11-25), addressing both reviews on #408. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
+**Status:** draft, revision 4 (2026-11-25), addressing the three reviews on #408. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
 
 **Goal:** someone in an end-user MCP client (Claude, Claude Code) takes a governed write that needs approval, approves it in the browser, and gets the result in the same conversation. The decision token never passes through the client or the model. Intelligence's approval model (roles, maker-checker, tiers, personal-workspace rules) is reused, not duplicated.
 
@@ -176,6 +176,19 @@ Phase A does not ship to a client until the probe (see "Client support") shows t
 - a partial unique index `uq_workflow_approvals_open_attach_key ON (attach_key) WHERE status IN ('pending','approved','executing')`.
 - `createActionApproval` inserting with `ON CONFLICT (attach_key) WHERE … DO NOTHING RETURNING id`. On conflict it reads the existing open row and takes the reuse path. `mintApproval` must create the change set and notification only for the row that won the insert. Two simultaneous first calls therefore produce one approval.
 
+**The guard is serialized against settlement.** The partial index stops two _open_ rows, but it doesn't cover the 15-minute guard. A call can check, find no recently executed row, and then the existing row settles to `executed`. That row leaves the index, and the call's insert creates a second approval. So the guard and the transition into `executed` take the same lock:
+
+- **Creation** runs the guard read (open row? recent `executed` row?) and the `createActionApproval` insert in one transaction holding `pg_advisory_xact_lock(hashtextextended('approval-attach:' || attach_key, 0))`. This is the same pattern as the `budget-booking` lock (`outcomes/mutations.ts:366`).
+- **Settlement:** the transaction that moves a row into `executed` (`persist-result`, A5, and the Phase B settlement, B4) takes the same lock for that row's `attach_key` and stamps `settled_at` in the same UPDATE.
+- **Other terminal statuses** (`rejected`, `expired`, `timed_out`, `abandoned`, `superseded`) don't take the lock. After them a new approval is correct: the earlier change never ran.
+
+Whichever transaction takes the lock first decides the call:
+
+- the call first: it sees the open row and attaches;
+- settlement first: the call sees the fresh `executed` row and gets its result.
+
+Neither order produces a second approval. Test both orders by holding the settlement transaction open across an identical call arriving during `executing → executed`. Assert one approval and the correct answer each time.
+
 ### A7. The approval page says why
 
 The page evaluates the responder rules for the signed-in user before showing Approve, and shows the actual refusal:
@@ -213,11 +226,18 @@ The row records the binding: `requestedBy` = `sub`; `requestedByAgentKind: "oaut
 3. `executeWritePreview` (`preview-pipeline.ts:200`), run **by Intelligence** through its `MCPClient` against the connection: read partner → preState, dry run + `validateStructuredResponse(dry_run)`, `expectedPostState`, `diffSnapshots`. The connector posts no preview; the frozen preview is Intelligence's own.
 4. `logActionExecution(admissionDecisionRow(...))` (`funnel.ts:475`).
 5. `buildApprovedPayload` (`approved-payload.ts:100`): freezes `writeArgsHash`, `dispatchedCapability`, `dryRunResultHash`, `toolDefinitionHash`.
-6. `withGovernance` → `runGovernance` → `recordOrRefuse`. This is the full kernel walk, and it can also answer `allow` (go straight to claim, B4) or `block` (a tool error).
+6. `withGovernance` → `runGovernance` → `recordOrRefuse`. This is the full kernel walk. `block` is a tool error. `allow` is left out of the pilot (below).
 7. On `require_approval`: `mintApproval` (`governance-steps.ts:418`) with the attach-key insert from A6. That stores `dryRunResult.writePreview` (`:545`), creates the change set, records escalation, links it and notifies.
 8. `recordExecutableActionHash` with the connector-projection `actionHash`, moved here from Step 6. It becomes the A6 attach key input and is what the token will bind.
 
 Creation is idempotent on `submissionId` across **all** statuses (unique index), so a retry of the same submission returns the same approval whatever happened to it. A different submission with the same attach key attaches to an open row, or hits the 15-minute guard (A6).
+
+**`allow` in the pilot.** Claim needs an `approved` row, and creation makes one only on `require_approval`, so an `allow` has no durable execution record to claim. The pilot therefore doesn't execute `allow` directly:
+
+- Creation records the admission decision row (step 4) and the kernel decision, as for any decision.
+- It creates no approval row, mints no token, and returns the tool error `allowed_not_in_pilot`: "Policy allows this write without approval, but direct execution of an allowed write isn't in the pilot yet. Send it through the Cesteral gateway."
+
+After the pilot, the durable record for `allow` should be the one the gateway already uses for auto-cleared writes: the ledger Change (`claimForDispatch`, `external-write-ledger.ts:157`; unique `change_sets.ledger_key = attempt:<attempt_key>`), with `attempt_key` = `submissionId`. The B3 claim, dispatch and outcome fences would then sit on that Change instead of an approval row. That needs its own design pass.
 
 ### B3. Claim, dispatch and outcome are fenced to one claim
 
@@ -226,18 +246,23 @@ The existing helpers don't give this as-is:
 - `claimApprovalExecution` allows re-entry only by the run that owns the claim (`mutations.ts:1933-1943`).
 - `beginApprovalDispatch` increments `dispatchAttempts` on **every** entry (`:2020-2032`; only `attempt === 1` means a first send).
 
-Phase B therefore adds three fenced transitions, each a single conditional UPDATE. A call that matches zero rows is refused.
+Phase B therefore adds fenced transitions, each a single conditional UPDATE. A call that matches zero rows is refused.
 
-| Call              | Condition (all in the `WHERE`)                                                                                                                                   | Effect                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **claim** (first) | `status = 'approved'`, not past the execution deadline, binding matches                                                                                          | `status = 'executing'`, new `executionClaimRunId`, `executionClaimedAt = now()`                                                     |
-| **re-claim**      | `status = 'executing'`, `executionClaimRunId = :presentedPreviousClaim`, `dispatchAttempts = 0`, `executionResult IS NULL`, same `submissionId`, binding matches | new `executionClaimRunId`, `executionClaimedAt = now()`. The old claim is dead: its `/dispatch` and `/outcome` will match zero rows |
-| **dispatch**      | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`                                                                                   | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                             |
-| **outcome**       | `status = 'executing'`, `executionClaimRunId = :claim`, `executionResult IS NULL`                                                                                | Settle (B4)                                                                                                                         |
+**The claim has an identity before it is sent.** The connector mints a `claimRequestId` (128-bit random) before its first `POST …/claim`, and resends the same request with the same id if the HTTP call fails within the tool call. Intelligence stores it on the row (`execution_claim_request_id`). Recovery then never depends on the `claimRunId`, which exists only in a response that may be lost.
+
+| Call                    | Condition (all in the `WHERE`)                                                                                                                                                | Effect                                                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **claim** (first)       | `status = 'approved'`, not past the execution deadline, binding matches                                                                                                       | `status = 'executing'`, new `executionClaimRunId`, `execution_claim_request_id = :claimRequestId`, `executionClaimedAt = now()`                          |
+| **claim, same request** | `status = 'executing'`, `execution_claim_request_id = :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, binding matches                                    | Nothing changes. Returns the **same** `claimRunId` and a freshly minted token                                                                            |
+| **claim takeover**      | `status = 'executing'`, `execution_claim_request_id <> :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, `executionClaimedAt < now() - L`, binding matches | New `executionClaimRunId`, the new `claimRequestId`, `executionClaimedAt = now()`. The old claim is dead: its `/dispatch` and `/outcome` match zero rows |
+| **dispatch**            | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`                                                                                                | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                                                  |
+| **outcome**             | `status = 'executing'`, `executionClaimRunId = :claim`, `executionResult IS NULL`                                                                                             | Accept the result (B4)                                                                                                                                   |
+
+A claim with a different `claimRequestId` inside the lease `L` (placeholder 60 s), or after dispatch, gets `executing` (open: wait or re-ask per A4). That covers a new tool call after a lost response, and a URL-less resume that has only the approval id: both just wait out the lease, then take over. The binding (B1) and the pre-dispatch fence (`dispatchAttempts = 0`) are the safety conditions. The lease only stops two live connectors racing each other.
 
 What the connector does:
 
-1. `POST …/claim`. Intelligence runs the existing pre-execution steps of `execute-approved-action`, in its order, through a shared `prepareApprovedExecution(approval)` extracted from the Inngest function:
+1. `POST …/claim {claimRequestId}`. Intelligence runs the existing pre-execution steps of `execute-approved-action`, in its order, through a shared `prepareApprovedExecution(approval)` extracted from the Inngest function:
    - the expiry check;
    - `check-connection-sign-in`;
    - the person's-own-campaign-change holds (`check-requester-access`, `check-before-value`);
@@ -257,15 +282,16 @@ What the connector does:
 
 Recovery:
 
-| Situation                                                                          | Answer                                                                                                                                        |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claim response lost, token expired, or an in-tool `input_required` before dispatch | The next retry re-claims (same submission, presenting the previous `claimRunId` from its sealed state). It gets a fresh token and `jti`       |
-| A retry finds `dispatchAttemptedAt` set, now < `dispatchDeadlineAt`, no result     | Report `executing` (open: wait or re-ask per A4). Never re-claim, never re-dispatch                                                           |
-| Now ≥ `dispatchDeadlineAt` and no result                                           | Settle outcome unknown through the same settlement path (B4, `status: "unknown"`). Whoever reads it first does this, or the strand reconciler |
-| `executing`, `dispatchAttempts = 0`, past the claim lease with no re-claim         | The strand reconciler's never-sent ending applies unchanged (`endNeverSentApprovals`: approval `abandoned`, change `failed`)                  |
-| `outcome` posted twice by the winning claim with the same body                     | Idempotent: 200 with the stored settlement (compared by a digest of the body). A different body → 409                                         |
-| `outcome` from a dead claim                                                        | 409, nothing changes                                                                                                                          |
-| `outcome` from the winning claim after the deadline already settled unknown        | Stored as late evidence on the outcome row and shown in reconciliation. The settlement stays `outcome_unknown` until a person resolves it     |
+| Situation                                                                                                  | Answer                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claim response lost, within the same tool call                                                             | The connector resends with the same `claimRequestId` and gets the same `claimRunId` and a fresh token                                                                                                                                                                        |
+| Claim response lost and the tool call ended; token expired; or an in-tool `input_required` before dispatch | The next call (a retry, or the B5 resume by approval id) waits out the lease `L`, then takes over with its own `claimRequestId`. The connector also seals `claimRequestId` into its `requestState`, so a retry that carries the state resumes the same claim without waiting |
+| A retry finds `dispatchAttemptedAt` set, now < `dispatchDeadlineAt`, no result                             | Report `executing` (open: wait or re-ask per A4). Never re-claim, never re-dispatch                                                                                                                                                                                          |
+| Now ≥ `dispatchDeadlineAt` and no result                                                                   | Accept an `outcomeUnknown` result through the **same** accept transaction as a real outcome (B4). Whoever reads it first does this, or the strand reconciler                                                                                                                 |
+| `executing`, `dispatchAttempts = 0`, past the claim lease with no re-claim                                 | The strand reconciler's never-sent ending applies unchanged (`endNeverSentApprovals`: approval `abandoned`, change `failed`)                                                                                                                                                 |
+| `outcome` posted twice by the winning claim with the same body                                             | Idempotent: `202` with the current `settlement_state` and the steps done so far (B4). Bodies are compared by digest; a different body gets `409`. `200` only once `settlement_state = 'done'`                                                                                |
+| `outcome` from a dead claim                                                                                | 409, nothing changes                                                                                                                                                                                                                                                         |
+| `outcome` from the winning claim after the deadline already settled unknown                                | Stored as late evidence on the outcome row and shown in reconciliation. The settlement stays `outcome_unknown` until a person resolves it                                                                                                                                    |
 
 `execute-approved-action` skips `executionMode: "connector_retry"` rows, so Inngest and the connector can never both dispatch.
 
@@ -278,7 +304,35 @@ Recovery:
 - `failed`;
 - `unknown` (sent, no answer).
 
-Intelligence settles through a shared `settleApprovedExecution(approval, executionResult)` extracted from `store-result` and the steps after it, so both executors run identical code:
+Settlement has two parts: a synchronous **accept**, which records the result once, and a durable **continuation**, which finishes every side effect idempotently. Both come from code extracted out of `store-result` and the steps after it, so the Inngest executor and the connector path run the same functions.
+
+**Accept, in `/outcome`.** Accept is steps 1–3 below, then one transaction that:
+
+- holds the A6 attach-key lock;
+- runs the `outcome` fence (`executionResult IS NULL` for the winning claim);
+- writes `executionResult` (validation, reconciliation and classification included), `status = 'executed'`, `settled_at` and `settlement_state = 'pending'`;
+- inserts an outbox event, `approval/settle {approvalId}`, through the same outbox the approve route already uses.
+
+The response is `202 {settlement_state}`. A failure anywhere before the commit leaves nothing written, and the connector retries the same body.
+
+**Continuation: the Inngest function `settle-approved-execution`.** It is fed by the outbox event, and the strand reconciler re-emits it for any row stuck at `settlement_state = 'pending'`. It runs steps 5–8 as separate Inngest steps. Each step is guarded by a row in `approval_settlement_steps (approval_id, step)` with a unique key, written in the same transaction as the step's effect, so a retried or re-emitted run skips steps that are done. Where the effect already has its own guard, that guard is used: the `budget-booking` advisory lock plus `setBookingAccrualState`, the change-set projector's CAS, and a notification dedupe key of `approvalId`. `recordOutcome` needs one added: a unique `action_outcomes.approval_id`. When the last step is done, `settlement_state = 'done'`.
+
+**Timeout against a real outcome.** The deadline path (B3 recovery) and `/outcome` both go through the same accept transaction, under the same lock and the same `executionResult IS NULL` fence. Whichever commits first defines the settlement:
+
+- A real outcome that loses to the timeout is kept as late evidence (B3).
+- A timeout that loses to a real outcome matches zero rows and does nothing.
+
+The continuation only ever sees the winner.
+
+**Test:** fail the run immediately after the accept commit, and again after each continuation step. Assert:
+
+- the booking happens exactly once, and the change is settled exactly once;
+- a duplicate `/outcome` reports `202 pending`, then `200 done`;
+- the strand reconciler's re-emit finishes a run whose event was lost.
+
+The same continuation replaces the tail of Inngest's `store-result` (A5's `persist-result` is its accept), so both executors have one settlement path.
+
+Steps:
 
 1. Validate the posted execute response: `validateStructuredResponse` in execute mode, which requires `structuredContent.after` and parses it as a `NormalizedEntitySnapshot` (`structured-response.ts:305-337`). Then `upsertValidationAccuracy` and `checkApprovedPayloadCapabilityBinding` (`dispatchedCapability`). A failure is a `responseContractViolation`, as on the Inngest path.
 2. Reconcile with `reconcileForApproval` → `reconcileWriteOutcome`:
@@ -289,8 +343,8 @@ Intelligence settles through a shared `settleApprovedExecution(approval, executi
    A digest of the response can't feed this, so the connector posts the full validated `structuredContent`.
 
 3. `classifyExecutionSettlement` → verified, failed or unknown.
-4. `persist-result`: the durable save from A5, with the same throw-and-retry rule.
-5. `recordOutcome`, including the spend booking. `buildApprovedSpendBooking` books only on `succeeded`; `recordBudgetBooking` runs under its advisory lock, then `trackBudgetSpend` settles reservations and the actor-scoped daily envelope.
+4. Accept: the transaction above (`persist-result` on the Inngest path).
+5. _Continuation from here._ `recordOutcome`, including the spend booking. `buildApprovedSpendBooking` books only on `succeeded`; `recordBudgetBooking` runs under its advisory lock, then `trackBudgetSpend` settles reservations and the actor-scoped daily envelope.
 6. `logActionExecution` (audit), `dispatchNotification` (owner), `updateAdjustmentStatus`.
 7. `advanceLinkedChangeSetForExecution(id, settlement)`. On `failed`, `releaseReservations`; an unknown outcome keeps its hold until the TTL.
 8. Reconciliation telemetry.
@@ -299,7 +353,12 @@ Intelligence settles through a shared `settleApprovedExecution(approval, executi
 
 The connector creates the approval for every client, URL-capable or not. A client without `elicitation.url` gets `Unauthorized` carrying the approval link and "approve it, then call `{platform}_resume_approved_write` with approvalId {id}; do not repeat the write".
 
-`{platform}_resume_approved_write({approvalId})` is a fleet-wide tool registered by a shared factory, like `*_search_tools`. It is read-only towards the client: it takes **no write arguments**.
+`{platform}_resume_approved_write({approvalId})` is a fleet-wide tool registered by a shared factory, like `*_search_tools`. It takes **no write arguments**, but it can cause a platform mutation, so it is **classified as a write**:
+
+- **Hints:** `readOnlyHint: false`, `destructiveHint: true` (it may run any approved write, deletes included), `idempotentHint: false`, `openWorldHint: true`. It gets an entry in `tool-hint-rules.mjs`.
+- **Connector scope:** `requiredScopeForTool` (`packages/shared/src/auth/tool-scopes.ts`) maps any tool that isn't `readOnlyHint: true` to `mcp:write`, so the transport answers `403 insufficient_scope` to a read-only token before the tool runs.
+- **Intelligence scope:** the claim endpoint checks the subject token's `scope` ⊇ `mcp:write` (B1). Both checks apply.
+- The gateway's `resume_approved_action` (A6) stays `readOnlyHint: true`. It only reads, and Inngest executes.
 
 - **Open, approved row bound to this caller:** it claims (B3), receives the frozen tool name and args, and executes those.
 - **Terminal row:** it returns the A5 answer, read from Intelligence (`GET …/approvals/{id}` with the B1 credentials).
@@ -317,7 +376,7 @@ URL-capable clients that hit the A4 round cap get the same tool. A repeat of the
 
   A signature or hash mismatch stays a hard reject.
 
-- **Reuse the #244 machinery.** `ConfirmationPayload` gains `apr` (approval id), `sid` (submission id), `clm` (the current claim run id) and `r` (round). Add `clientCanElicitUrl()` beside `clientCanElicit`.
+- **Reuse the #244 machinery.** `ConfirmationPayload` gains `apr` (approval id), `sid` (submission id), `crq` (the claim request id, B3) and `r` (round). Add `clientCanElicitUrl()` beside `clientCanElicit`.
 - **The "before first upstream write" hook** for `/dispatch`. A refusal aborts with no write. This sits next to the existing upstream-write recorder in `tool-handler-factory.ts`.
 - **The outcome call** with the tool's full `structuredContent`.
 - **No double confirmation.** When the token carries `approvalId`, `elicitInput` skips the in-client checkbox.
@@ -326,11 +385,15 @@ URL-capable clients that hit the A4 round cap get the same tool. A repeat of the
 - **Tests:**
   - wire tests on both eras;
   - a changed-args retry gets `-32602`;
-  - re-claim before dispatch;
+  - a committed claim whose response is dropped: same `claimRequestId` → same `claimRunId`; a new request within `L` → `executing`; after `L` → takeover, and the old claim's `/dispatch` refused;
   - a dead claim's `/dispatch` refused, and no write;
   - a retry inside the dispatch window reports `executing`;
   - settle unknown after the deadline;
-  - a duplicate `/outcome` is idempotent;
+  - a duplicate `/outcome` is idempotent (`202` while pending, `200` once done);
+  - a failure right after the accept commit, finished by the continuation with one booking;
+  - a timeout and a real outcome racing for the same row;
+  - `allow` returns `allowed_not_in_pilot` and creates no row;
+  - a read-only token calling `{platform}_resume_approved_write` gets `403 insufficient_scope`;
   - a URL-less resume by approval id executes the frozen args.
 
 ## Confirmation audit (connector, independent)
