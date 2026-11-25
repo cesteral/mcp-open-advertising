@@ -37,17 +37,18 @@ Most scripts have a `pnpm run` alias in the root `package.json`; use the alias w
 
 Read-only; each exits non-zero on a violation.
 
-| Script                                       | Alias                                                    | Guards against                                                                                              |
-| -------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `check-account-scope.mjs`                    | `check:account-scope`                                    | A single-account tool that reads the session's account id but never calls `assertAccountScope()`.           |
-| `check-contract-version-bump.mjs`            | `check:contract-version-bump`                            | Editing a contract library's `src/` without a version bump (PR guard).                                      |
-| `check-contract-hash-published-parity.mjs`   | `check:contract-hash-parity`                             | The workspace `contract-hash` hashing differently from the published package (release guard).               |
-| `check-contract-schema-published-parity.mjs` | `check:contract-schema-parity`                           | The workspace `contract-schema` accepting different annotations than the published package (release guard). |
-| `check-doc-tool-counts.mjs`                  | `check:doc-tool-counts`                                  | The README fleet table's tool counts drifting from `registry.json`.                                         |
-| `check-registry-runtime.mjs`                 | `check:registry-runtime`                                 | `registry.json` tools and prompts differing from what each built server advertises (needs a build).         |
-| `check-platform-facts.mjs`                   | `check:platform-facts`, `check:platform-facts:freshness` | The platform-facts ledger disagreeing with the code, or expired facts (`--freshness`).                      |
-| `check-terraform-drift.mjs`                  | `check:terraform-drift`                                  | Terraform state drifting from live GCP (needs Terraform and credentials; scheduled).                        |
-| `check-dv360-codegen-drift.mjs`              | `check:dv360-codegen-drift`                              | The committed dv360 schemas differing from Google's live Discovery document (network; scheduled).           |
+| Script                                       | Alias                                                    | Guards against                                                                                                                              |
+| -------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-account-scope.mjs`                    | `check:account-scope`                                    | A single-account tool that reads the session's account id but never calls `assertAccountScope()`.                                           |
+| `check-contract-version-bump.mjs`            | `check:contract-version-bump`                            | Editing a contract library's `src/` without a version bump (PR guard).                                                                      |
+| `check-contract-hash-published-parity.mjs`   | `check:contract-hash-parity`                             | The workspace `contract-hash` hashing differently from the published package (release guard).                                               |
+| `check-contract-schema-published-parity.mjs` | `check:contract-schema-parity`                           | The workspace `contract-schema` accepting different annotations than the published package (release guard).                                 |
+| `check-doc-tool-counts.mjs`                  | `check:doc-tool-counts`                                  | The README fleet table's tool counts drifting from `registry.json`.                                                                         |
+| `check-registry-runtime.mjs`                 | `check:registry-runtime`                                 | `registry.json` tools and prompts differing from what each built server advertises (needs a build).                                         |
+| `check-platform-facts.mjs`                   | `check:platform-facts`, `check:platform-facts:freshness` | The platform-facts ledger disagreeing with the code, or expired facts (`--freshness`).                                                      |
+| `check-terraform-drift.mjs`                  | `check:terraform-drift`                                  | Terraform state drifting from live GCP (needs Terraform and credentials; scheduled).                                                        |
+| `check-dv360-codegen-drift.mjs`              | `check:dv360-codegen-drift`                              | The committed dv360 schemas differing from Google's live Discovery document (network; scheduled).                                           |
+| `check-dv360-api-version-watch.mjs`          | `check:dv360-api-version-watch`                          | Time to move dv360-mcp off its API version: a newer GA, a deprecation date on the pin, or the pin gone from Discovery (network; scheduled). |
 
 ### `generate/`: generators and sync scripts
 
