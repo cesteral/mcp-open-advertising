@@ -26,6 +26,11 @@ import { SchemaExtractor } from "./lib/schema-extractor.js";
 import { convertToOpenAPI } from "./lib/convert-to-openapi.js";
 import { generateZodSchemas as generateZodSchemasFromSpec } from "./lib/generate-zod-schemas.js";
 import { ExtractionError } from "./lib/types.js";
+import {
+  REVISION_PIN_FILE,
+  buildRevisionPin,
+  serializeRevisionPin,
+} from "./lib/discovery-revision.js";
 
 // Get __dirname equivalent in ESM
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,6 +91,17 @@ async function main() {
     console.log("✨ Step 6/7: Generating Zod schemas...");
     await generateZodSchemas(openApiSpec);
     console.log("");
+
+    // Record which Discovery revision the generated files came from.
+    const pinPath = path.resolve(
+      PACKAGE_ROOT,
+      VALIDATED_CONFIG.output.generatedPath,
+      REVISION_PIN_FILE
+    );
+    await fs.writeFile(pinPath, serializeRevisionPin(buildRevisionPin(discoveryDoc)), "utf-8");
+    console.log(
+      `   ✓ Pinned Discovery revision ${discoveryDoc.revision} (${VALIDATED_CONFIG.output.generatedPath}/${REVISION_PIN_FILE})\n`
+    );
 
     // Step 7: Save extraction report
     console.log("📊 Step 7/7: Saving extraction report...");

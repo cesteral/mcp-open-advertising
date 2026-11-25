@@ -15,6 +15,8 @@ export interface DiscoveryDocument {
   id: string;
   name: string;
   version: string;
+  /** Google's revision stamp for this document (YYYYMMDD). Changes whenever the document does. */
+  revision: string;
   title: string;
   description: string;
   baseUrl: string;
