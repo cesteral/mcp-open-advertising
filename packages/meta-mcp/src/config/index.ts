@@ -50,6 +50,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Optional: for token debug endpoint
   metaAppId: z.string().optional(),
   metaAppSecret: z.string().optional(),
+
+  // Prototype (SEP-2640): publish the cross-platform-campaign-setup skill over
+  // the Skills over MCP extension. Off by default; MCP_SKILLS_ENABLED=true turns it on.
+  mcpSkillsEnabled: z.boolean().default(false),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -95,6 +99,8 @@ export function parseConfig(): AppConfig {
     // Optional
     metaAppId: process.env.META_APP_ID,
     metaAppSecret: process.env.META_APP_SECRET,
+
+    mcpSkillsEnabled: process.env.MCP_SKILLS_ENABLED === "true",
   };
 
   return parseConfigWithSchema(ConfigSchema, rawConfig);

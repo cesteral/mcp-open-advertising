@@ -14,10 +14,13 @@
  * Registration order is part of the wire contract (`tools/list`,
  * `resources/list`, `resources/templates/list` and `prompts/list` list in
  * registration order), so it is fixed here: tools, static resources, templated
- * resources, `report-csv://`, conformance fixtures, prompts.
+ * resources, `report-csv://`, conformance fixtures, prompts, skills. Skills come
+ * last so a server that turns them on lists everything else exactly where it
+ * did before; the skills template is appended to `resources/templates/list`.
  *
- * The shared package takes no dependency on `@modelcontextprotocol/server`, so the
- * caller passes the two SDK classes it needs (`McpServer`, `ResourceTemplate`).
+ * The factory does not import `@modelcontextprotocol/server` statically, so the
+ * caller passes the two SDK classes it needs (`McpServer`, `ResourceTemplate`);
+ * the Skills extension module is imported only when a server asks for skills.
  */
 
 import type { Logger } from "pino";
@@ -145,6 +148,67 @@ export interface PlatformMcpServerOptions<TServer extends PlatformMcpServerLike>
     platformLabel: string;
     downloadToolName: string;
   };
+
+  /**
+   * Prototype (SEP-2640, Skills over MCP): serve a skills catalog and declare
+   * the `io.modelcontextprotocol/skills` extension. Either a folder of skill
+   * folders on disk (`loadSkills`) or the same layout as an in-memory files map
+   * (`CROSS_PLATFORM_SKILL_FILES`). Off unless passed; no server passes it by
+   * default.
+   */
+  skills?: PlatformSkillsSource;
+}
+
+/** Where a server's skills come from: a folder, or files keyed `<skill>/SKILL.md`. */
+export type PlatformSkillsSource = { folder: string } | { files: Readonly<Record<string, string>> };
+
+/** The one method of the SDK's `SkillsExtension` the factory calls. */
+interface SkillsCatalogLike {
+  attach(server: unknown): void;
+}
+
+/**
+ * A catalog is built once per source and attached to every server instance
+ * (the SDK allows one extension instance on any number of servers). Building it
+ * reads and digests every file, which the stateless path would otherwise redo
+ * on every request.
+ */
+const catalogsByFolder = new Map<string, Promise<SkillsCatalogLike>>();
+const catalogsByFiles = new WeakMap<object, Promise<SkillsCatalogLike>>();
+
+async function buildSkillsCatalog(source: PlatformSkillsSource): Promise<SkillsCatalogLike> {
+  const options = {
+    // Skill text is fixed per release and the same for every principal.
+    cacheHint: STATIC_CATALOG_CACHE_HINT,
+    // A bad SKILL.md fails server creation instead of being skipped with a warning.
+    strict: true,
+  };
+  if ("folder" in source) {
+    const { loadSkills } = await import("@modelcontextprotocol/server/ext/skills/node");
+    return loadSkills(source.folder, options);
+  }
+  const { SkillsExtension, memorySkillFiles } = await import(
+    "@modelcontextprotocol/server/ext/skills"
+  );
+  return SkillsExtension.load(memorySkillFiles({ ...source.files }), options);
+}
+
+/** The memoised catalog for `source`; a failed build is not cached. */
+export function loadPlatformSkillsCatalog(
+  source: PlatformSkillsSource
+): Promise<SkillsCatalogLike> {
+  const cached =
+    "folder" in source ? catalogsByFolder.get(source.folder) : catalogsByFiles.get(source.files);
+  if (cached) return cached;
+  const built = buildSkillsCatalog(source);
+  const forget = () => {
+    if ("folder" in source) catalogsByFolder.delete(source.folder);
+    else catalogsByFiles.delete(source.files);
+  };
+  built.catch(forget);
+  if ("folder" in source) catalogsByFolder.set(source.folder, built);
+  else catalogsByFiles.set(source.files, built);
+  return built;
 }
 
 /**
@@ -294,6 +358,13 @@ export async function createPlatformMcpServer<TServer extends PlatformMcpServerL
     prompts,
     logger,
   });
+
+  if (opts.skills) {
+    // `attach` registers the `skill://{+path}` template and the skills/list and
+    // skills/get handlers, and declares the extension in the capabilities
+    // (`initialize` and `server/discover`). Experimental in SDK 2.4.0.
+    (await loadPlatformSkillsCatalog(opts.skills)).attach(server);
+  }
 
   return server;
 }

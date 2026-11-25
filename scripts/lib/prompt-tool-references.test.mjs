@@ -22,10 +22,15 @@
 // `{platform prefix}_{name}` token in that text to be a registered tool or a
 // prompt name somewhere in the fleet. Cross-platform prompts may name other
 // servers' tools; the set is fleet-wide for that reason.
+//
+// Skills (SEP-2640 prototype) are checked the same way. They are off by default,
+// so the booted snapshot never carries them; their text is read straight from
+// `@cesteral/shared`'s built `CROSS_PLATFORM_SKILL_FILES` instead.
 
 import { describe, expect, it } from "vitest";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { ROOT } from "./boot-server.mjs";
 import { serverSnapshot } from "./fleet-snapshot-inject.mjs";
 import { registryPrefixes } from "../../evals/lib/merged-catalog.mjs";
@@ -113,6 +118,20 @@ function collectFleet() {
   return { names, texts };
 }
 
+const sharedSkillsModule = join(
+  ROOT,
+  "packages",
+  "shared",
+  "dist",
+  "utils",
+  "mcp",
+  "cross-platform-skills.js"
+);
+if (!existsSync(sharedSkillsModule)) {
+  throw new Error(`${sharedSkillsModule} not found. Build @cesteral/shared before this suite.`);
+}
+const { CROSS_PLATFORM_SKILL_FILES } = await import(pathToFileURL(sharedSkillsModule).href);
+
 describe("prompts and resources name only registered tools", () => {
   it("every {prefix}_* token in fleet prompt and resource text is a tool or prompt", () => {
     const { names, texts } = collectFleet();
@@ -122,6 +141,21 @@ describe("prompts and resources name only registered tools", () => {
     for (const { pkg, where, text } of texts) {
       const unknown = unknownToolReferences(text, names);
       if (unknown.length > 0) problems.push(`${pkg} ${where}: ${unknown.join(", ")}`);
+    }
+    expect(problems).toEqual([]);
+  });
+});
+
+describe("skills name only registered tools", () => {
+  it("every {prefix}_* token in every shared skill file is a tool or prompt", () => {
+    const { names } = collectFleet();
+    const files = Object.entries(CROSS_PLATFORM_SKILL_FILES);
+    expect(files.length).toBeGreaterThan(0);
+
+    const problems = [];
+    for (const [path, text] of files) {
+      const unknown = unknownToolReferences(text, names);
+      if (unknown.length > 0) problems.push(`skill ${path}: ${unknown.join(", ")}`);
     }
     expect(problems).toEqual([]);
   });
