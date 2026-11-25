@@ -1,6 +1,6 @@
 # Governance Approval over URL-Mode Elicitation (design)
 
-**Status:** draft, revision 6 (2026-11-25), addressing the five reviews on #408. Phase A design approved. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
+**Status:** draft, revision 7 (2026-11-25). Phase A design approved; no remaining design blockers for the Phase B pilot (#408 reviews). It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
 
 **Goal:** someone in an end-user MCP client (Claude, Claude Code) takes a governed write that needs approval, approves it in the browser, and gets the result in the same conversation. The decision token never passes through the client or the model. Intelligence's approval model (roles, maker-checker, tiers, personal-workspace rules) is reused, not duplicated.
 
@@ -284,6 +284,11 @@ A claim with a different `claimRequestId` inside the lease `L` (placeholder 60 s
   Both are refused with `recovery_window_closed`, and the connector stops before any platform write. The tool answer is "The approval's execution window closed before anything was sent. Nothing was written." The row waits for the reconciler's never-sent ending. A decision token minted just before `X` is no help after it: `/dispatch` re-checks `X`, and the connector writes only after `/dispatch` returns 200.
 
 - **A claim that dispatched before `X`** is unaffected by `X`. It reports its outcome under the separate dispatch deadline `D` (B4).
+- **Compare against the time at which the row lock is held, not the transaction's start.** In PostgreSQL, `now()` is fixed when the transaction starts. A request that starts just before `X` and waits on the row lock until after `X` would still see a pre-`X` time. So every time predicate in B3 and in the reconciler's never-sent arm (`< L`, `< X`, `≥ X`, `< D`) reads the current time **after** the lock is held. Two equivalent ways:
+  - lock the row first (`SELECT … FOR UPDATE`, or `lockStrandedClaim` for the reconciler), then evaluate the predicate in a later statement with `clock_timestamp()`;
+  - put `clock_timestamp()` in the single `UPDATE … WHERE`. It is volatile, so PostgreSQL re-evaluates it when it rechecks the row after the lock wait.
+
+  Never use `now()` or `CURRENT_TIMESTAMP` in these predicates. Timestamps written on success (`executionClaimedAt`, `dispatchAttemptedAt`, `dispatchDeadlineAt`) use the same post-lock `clock_timestamp()`.
 
 Test the caller and the reconciler racing at both boundaries:
 
@@ -450,6 +455,7 @@ URL-capable clients that hit the A4 round cap get the same tool. A repeat of the
   - takeover against abandonment at `X`, and a same-request resend against a takeover at `L`;
   - after `X`, before the reconciler runs: a same-request retry and a delayed `/dispatch` are both refused, with no token and no write;
   - a claim dispatched before `X` reports its outcome after `X`;
+  - a same-request claim and a `/dispatch` that each **start before `X` but acquire the row lock after `X`** (another transaction holds the lock across `X`): both refused, with no token and no write;
   - replaying an attaching submission after the 15-minute guard expires (same approval);
   - a booking failure after the outcome row commits (`pending` until booked once);
   - `allow` returns `allowed_not_in_pilot` and creates no row;
