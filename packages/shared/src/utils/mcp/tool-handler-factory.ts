@@ -35,9 +35,13 @@ import {
   buildInputRequired,
   clientCanElicit,
   createElicitInput,
+  digestArguments,
   installConfirmationGuard,
+  principalTag,
+  requestKeyFor,
   resolveRequestStateKey,
   resolveRound,
+  type ElicitParams,
 } from "./confirmation-rounds.js";
 import { toStandardSchema } from "./zod-standard-schema.js";
 import {
@@ -904,6 +908,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
           // Always start with an empty recorder array so this tool call
           // sees only its own upstream attempts.
           upstreamRequests: [],
+          // Set below, once the call's token verdict and round are known.
+          confirmationAudit: undefined,
         };
 
         return runWithRequestContext(toolAlsContext, async () => {
@@ -980,6 +986,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             // enforced rejection prevents the mutation. Gated to cesteral write
             // annotations; mode `off` (the off-hosted default) is a no-op.
             let idempotencyKey: string | undefined;
+            let verifiedApprovalId: string | undefined;
             const cesteralAnnotation = (
               tool.annotations as { cesteral?: CesteralToolAnnotations } | undefined
             )?.cesteral;
@@ -1098,6 +1105,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 if (verdict.ok && verdict.claims?.jti) {
                   idempotencyKey = verdict.claims.jti;
                 }
+                if (verdict.ok) verifiedApprovalId = verdict.claims?.approvalId;
               }
             }
 
@@ -1125,6 +1133,20 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                   principal: principalOf(),
                 })
               : undefined;
+
+            // What a confirmation's audit record needs about this call. On the
+            // call's own request context, so `confirmDestructive` reads it and
+            // none of its call sites change. Digests and tags only.
+            toolAlsContext.confirmationAudit = {
+              logger,
+              toolName: tool.name,
+              argsDigest: digestArguments(rawToolArgs !== undefined ? rawToolArgs : args),
+              principalTag: principalTag(requestStateKey, principalOf()),
+              jti: idempotencyKey,
+              approvalId: verifiedApprovalId,
+              isCarriedAnswer: (params) =>
+                round?.carried.has(requestKeyFor(params as ElicitParams)) ?? false,
+            };
 
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,

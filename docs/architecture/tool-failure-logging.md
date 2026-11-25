@@ -20,6 +20,8 @@ Redaction lives in **`secret-redaction.ts`**, shared by `http-request-recorder.t
 
 The two used to be separate copies that drifted, and `mcp-errors.ts` held the weaker one: JSON-quoted keys only, no `=` form, no hyphen spelling, no URL handling — one of the four shapes the fleet's clients actually produce (sweep 2026-07-25, 02-F6/F7). `InteractionLogger.logFailure` also redacts `errorMessage` itself rather than trusting callers: `errorData` arrived sanitized while the message beside it, built by interpolating the failing URL or response body, did not (02-F5). **Add new patterns to `secret-redaction.ts` only** — a second copy is how this drifted the first time.
 
+The same redaction covers the `governance-audit` records that are not failures: the action text of a `destructive_confirmation` record goes through `redactSecretsInText`, and that record carries an arguments digest and a principal tag rather than the arguments or the principal ([confirmation-mrtr.md](confirmation-mrtr.md#audit-record)).
+
 ## MCP `notifications/message` and trace context (#247)
 
 The record of truth for what a tool did is Pino plus the `InteractionLogger` above. MCP logging (`notifications/message`) is a courtesy channel on top of it, and the spec has deprecated it (SEP-2577).

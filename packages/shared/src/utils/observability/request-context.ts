@@ -3,6 +3,7 @@
 
 import { randomUUID } from "crypto";
 import { AsyncLocalStorage } from "async_hooks";
+import type { ConfirmationAuditScope } from "../../governance/audit.js";
 
 /**
  * Request context for tracking requests across async boundaries.
@@ -27,6 +28,13 @@ export interface RequestContext {
    * signature) so consumers get `string | undefined`, not `unknown`.
    */
   decisionToken?: string;
+  /**
+   * Set by the tool-handler factory for the tool call it runs: what a
+   * destructive-operation confirmation's audit record needs to know about the
+   * call (tool, args digest, principal tag, verified token ids). Read by
+   * `confirmDestructive`, so none of the confirmation call sites pass it.
+   */
+  confirmationAudit?: ConfirmationAuditScope;
   [key: string]: unknown;
 }
 
