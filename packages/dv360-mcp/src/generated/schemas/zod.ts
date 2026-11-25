@@ -6,7 +6,7 @@
 import { z } from 'zod';
 
 /**
- * A single ad group associated with a line item.
+ * LINT: LEGACY_NAMES A single ad group associated with a line item.
  */
 export const AdGroup = z.object({
   /** Required. Immutable. The format of the ads in the ad group. */
@@ -34,7 +34,7 @@ export const AdGroup = z.object({
 });
 
 /**
- * LINT: LEGACY_NAMES A single ad associated with an ad group.
+ * A single ad associated with an ad group.
  */
 export const AdGroupAd = z.object({
   /** Output only. The unique ID of the ad. Assigned by the system. */
@@ -51,7 +51,7 @@ export const AdGroupAd = z.object({
   audioAd: z.lazy(() => AudioAd).optional(),
   /** Optional. Details of a [non-skippable short video ad](//support.google.com/displ */
   bumperAd: z.lazy(() => BumperAd).optional(),
-  /** Optional. The DCM tracking ad info. Only valid for Demand Gen ads. To remove the */
+  /** Optional. The DCM tracking ad info. To remove the DCM tracking ad info, please l */
   dcmTrackingInfo: z.lazy(() => DcmTrackingInfo).optional(),
   /** Optional. Details of a [Demand Gen carousel ad](//support.google.com/displayvide */
   demandGenCarouselAd: z.lazy(() => DemandGenCarouselAd).optional(),
@@ -77,7 +77,7 @@ export const AdGroupAd = z.object({
   nonSkippableAd: z.lazy(() => NonSkippableAd).optional(),
   /** Output only. Details of an [ad promoting a video](//support.google.com/displayvi */
   videoDiscoverAd: z.lazy(() => VideoDiscoveryAd).optional(),
-  /** Optional. Details of an [ad used in a video action campaign](//support.google.co */
+  /** Optional. Details of a YouTube ad that can be served across various formats, suc */
   videoPerformanceAd: z.lazy(() => VideoPerformanceAd).optional(),
 });
 
@@ -692,7 +692,7 @@ export const AudioAd = z.object({
   displayUrl: z.string().optional(),
   /** The URL address of the webpage that people reach after they click the ad. */
   finalUrl: z.string().optional(),
-  /** The URL address loaded in the background for tracking purposes. */
+  /** The URL address loaded in the background for tracking purposes. In v4 and earlie */
   trackingUrl: z.string().optional(),
   /** The YouTube video of the ad. */
   video: z.lazy(() => YoutubeVideoDetails).optional(),
@@ -884,6 +884,8 @@ export const CarrierAndIspAssignedTargetingOptionDetails = z.object({
 export const CategoryAssignedTargetingOptionDetails = z.object({
   /** Output only. The display name of the category. */
   displayName: z.string().optional(),
+  /** Output only. The exclusion status of the category. */
+  exclusionStatus: z.enum(["CATEGORY_EXCLUSION_STATUS_UNSPECIFIED", "CATEGORY_EXCLUSION_STATUS_ALLOWED", "CATEGORY_EXCLUSION_STATUS_DEPRECATED", "CATEGORY_EXCLUSION_STATUS_NOT_ALLOWED"]).optional(),
   /** Indicates if this option is being negatively targeted. */
   negative: z.boolean().optional(),
   /** Required. The targeting_option_id field when targeting_type is `TARGETING_TYPE_C */
@@ -952,7 +954,7 @@ export const CombinedAudienceTargetingSetting = z.object({
  * Common attributes for in-stream, non-skippable and bumper ads.
  */
 export const CommonInStreamAttribute = z.object({
-  /** Optional. The text on the call-to-action button. */
+  /** Optional. The text on the call-to-action button. Must be set if actionHeadline i */
   actionButtonLabel: z.string().optional(),
   /** Optional. The headline of the call-to-action banner. */
   actionHeadline: z.string().optional(),
@@ -962,7 +964,7 @@ export const CommonInStreamAttribute = z.object({
   displayUrl: z.string(),
   /** Required. The URL address of the webpage that people reach after they click the  */
   finalUrl: z.string(),
-  /** Output only. The URL address loaded in the background for tracking purposes. */
+  /** Output only. The URL address loaded in the background for tracking purposes. In  */
   trackingUrl: z.string().optional(),
   /** Required. Immutable. The YouTube video of the ad. */
   video: z.lazy(() => YoutubeVideoDetails),
@@ -1440,7 +1442,7 @@ export const DeviceMakeModelAssignedTargetingOptionDetails = z.object({
 export const DeviceTypeAssignedTargetingOptionDetails = z.object({
   /** Required. The display name of the device type. */
   deviceType: z.enum(["DEVICE_TYPE_UNSPECIFIED", "DEVICE_TYPE_COMPUTER", "DEVICE_TYPE_CONNECTED_TV", "DEVICE_TYPE_SMART_PHONE", "DEVICE_TYPE_TABLET", "DEVICE_TYPE_CONNECTED_DEVICE"]),
-  /** Optional. Bid multiplier allows you to show your ads more or less frequently bas */
+  /** Output only. Bid multiplier allows you to show your ads more or less frequently  */
   youtubeAndPartnersBidMultiplier: z.number().optional(),
 });
 
@@ -1746,7 +1748,7 @@ export const InsertionOrder = z.object({
   kpi: z.lazy(() => Kpi),
   /** Output only. The resource name of the insertion order. */
   name: z.string().optional(),
-  /** Optional. Required. The optimization objective of the insertion order. */
+  /** Required. The optimization objective of the insertion order. */
   optimizationObjective: z.enum(["OPTIMIZATION_OBJECTIVE_UNSPECIFIED", "CONVERSION", "CLICK", "BRAND_AWARENESS", "CUSTOM", "NO_OBJECTIVE"]).optional(),
   /** Required. The budget spending speed setting of the insertion order. pacing_type  */
   pacing: z.lazy(() => Pacing),
@@ -1831,7 +1833,7 @@ export const IntegrationDetails = z.object({
 });
 
 /**
- * Targeting details for inventory source. This will be populated in the details field of an AssignedTargetingOption when targeting_type is one of `TARGETING_TYPE_INVENTORY_SOURCE` or `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`.
+ * Targeting details for inventory source. This will be populated in the details field of an AssignedTargetingOption when targeting_type is `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`.
  */
 export const InventorySourceAssignedTargetingOptionDetails = z.object({
   /** Required. ID of the inventory source. Should refer to the inventory_source_id fi */
@@ -2725,17 +2727,19 @@ export const VideoDiscoveryAd = z.object({
  * Details for a video performance ad.
  */
 export const VideoPerformanceAd = z.object({
-  /** Optional. The list of text assets shown on the call-to-action button. */
+  /** Optional. The list of text assets shown on the call-to-action button. Must be se */
   actionButtonLabels: z.array(z.string()).optional(),
+  /** Optional. The business name shown on the ad. This setting is required unless def */
+  businessName: z.string().optional(),
   /** Optional. The list of companion banners used by this ad. */
   companionBanners: z.array(z.lazy(() => ImageAsset)).optional(),
   /** Optional. The custom parameters and accompanying values to add to the tracking U */
   customParameters: z.record(z.string(), z.string()).optional(),
-  /** Optional. The list of descriptions shown on the call-to-action banner. */
+  /** Optional. The list of descriptions shown on the call-to-action banner. Must be s */
   descriptions: z.array(z.string()).optional(),
   /** Optional. The first piece after the domain in the display URL. */
   displayUrlBreadcrumb1: z.string().optional(),
-  /** Optional. The second piece after the domain in the display URL. */
+  /** Optional. The second piece after the domain in the display URL. Can only be set  */
   displayUrlBreadcrumb2: z.string().optional(),
   /** Output only. The domain of the display URL. */
   domain: z.string().optional(),
@@ -2743,9 +2747,11 @@ export const VideoPerformanceAd = z.object({
   finalUrl: z.string(),
   /** Optional. The list of headlines shown on the call-to-action banner. */
   headlines: z.array(z.string()).optional(),
-  /** Optional. The list of long headlines shown on the call-to-action banner. */
+  /** Optional. The logo image used by this ad. This setting is required unless defaul */
+  logo: z.lazy(() => ImageAsset).optional(),
+  /** Optional. The list of long headlines shown on the call-to-action banner. Must be */
   longHeadlines: z.array(z.string()).optional(),
-  /** Output only. The URL address loaded in the background for tracking purposes. */
+  /** Output only. The URL address loaded in the background for tracking purposes. In  */
   trackingUrl: z.string().optional(),
   /** Required. The list of YouTube video assets used by this ad. */
   videos: z.array(z.lazy(() => YoutubeVideoDetails)),
