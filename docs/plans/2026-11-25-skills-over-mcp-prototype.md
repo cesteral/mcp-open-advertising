@@ -25,6 +25,16 @@ The Skills over MCP extension (SEP-2640, `io.modelcontextprotocol/skills`) went 
 
 The test is `packages/shared/tests/utils/skills-extension.test.ts`. It drives a factory-built server through the SDK's `createMcpHandler` (2026-07-28) and covers `skills/list`, `skills/get`, `resources/read`, `resources/directory/read`, the `-32602` error for an unknown skill, `server/discover` with skills on and off, list order, and loading from a folder on disk.
 
+## Live check in Claude Code (2026-11-25)
+
+Setup: meta-mcp ran locally over HTTP (`MCP_TRANSPORT_MODE=http`, `MCP_AUTH_MODE=none`, `MCP_SKILLS_ENABLED=true`), with a logging proxy in front. `claude -p` 2.1.332 connected to it through `--strict-mcp-config`. The check ran twice: once from inside the desktop app, and once with `CLAUDE_CODE_ENTRYPOINT` and `CLAUDECODE` unset, the way a plain terminal launch starts.
+
+- **Server side works.** `server/discover` returned `extensions: { "io.modelcontextprotocol/skills": { "directoryRead": true } }`. A 2025-era `initialize` declares it too.
+- **The client did not use it.** Claude Code spoke 2026-07-28 and sent `server/discover`, `tools/list`, `prompts/list` and `resources/list`, but never `skills/list` or `skills/get`. Its own `clientCapabilities.extensions` listed only `io.modelcontextprotocol/tasks`. The skill did not appear in the session's skill list. Asked about a three-platform launch, the model did not reach for it. The `cross_platform_campaign_setup` prompt did appear, as the slash command `mcp__…__cross_platform_campaign_setup`.
+- **Why.** This build of Claude Code knows the extension id, but its MCP skills support sits behind a feature flag that the server controls, and the flag was off for this account. That fits the beta's rollout (Team needs an admin to turn it on; Enterprise has not shipped). It is not a defect in the server.
+
+**Still open:** an end-to-end check on an account where the beta is on (Pro, Max, Ultra, or a Team whose admin has turned it on). Look for `skills/list` in the server traffic, and for the skill being pulled in without the user picking it.
+
 ## Decision: keep both, don't migrate
 
 **Recommendation: keep the prompts as they are and add skills next to them, generated from the same source. Don't migrate prompts to skills.**
@@ -50,4 +60,4 @@ Weaker fits: `tool_schema_exploration`, which duplicates what the resources and 
 - Decide on the frontmatter `description`. It drives automatic activation, and today it is the prompt description plus one sentence.
 - Declare the extension in the server card.
 - Choose between one fleet-wide flag in `BaseConfigSchema` and per-server opt-in.
-- Run a live check in Claude Code (beta) that the skill is found and activated.
+- Repeat the live check on an account where the beta is on (see above).
