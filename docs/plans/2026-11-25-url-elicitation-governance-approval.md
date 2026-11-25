@@ -1,6 +1,6 @@
 # Governance Approval over URL-Mode Elicitation (design)
 
-**Status:** draft, revision 5 (2026-11-25), addressing the four reviews on #408. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
+**Status:** draft, revision 6 (2026-11-25), addressing the five reviews on #408. Phase A design approved. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
 
 **Goal:** someone in an end-user MCP client (Claude, Claude Code) takes a governed write that needs approval, approves it in the browser, and gets the result in the same conversation. The decision token never passes through the client or the model. Intelligence's approval model (roles, maker-checker, tiers, personal-workspace rules) is reused, not duplicated.
 
@@ -258,30 +258,42 @@ Phase B therefore adds fenced transitions, each a single conditional UPDATE. A c
 | Call                    | Condition (all in the `WHERE`)                                                                                                                                                                                          | Effect                                                                                                                                                                                                                                     |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **claim** (first)       | `status = 'approved'`, not past the execution deadline, binding matches                                                                                                                                                 | `status = 'executing'`, new `executionClaimRunId`, `execution_claim_request_id = :claimRequestId`, `executionClaimedAt = now()`, and `claim_recovery_deadline_at = now() + X`. That deadline is set once and **never moved by a takeover** |
-| **claim, same request** | `status = 'executing'`, `execution_claim_request_id = :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, binding matches                                                                              | Nothing changes. Returns the **same** `claimRunId` and a freshly minted token                                                                                                                                                              |
+| **claim, same request** | `status = 'executing'`, `execution_claim_request_id = :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, **`now() < claim_recovery_deadline_at`**, binding matches                                    | Nothing changes. Returns the **same** `claimRunId` and a freshly minted token                                                                                                                                                              |
 | **claim takeover**      | `status = 'executing'`, `execution_claim_request_id <> :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, `executionClaimedAt < now() - L`, **`now() < claim_recovery_deadline_at`**, binding matches | New `executionClaimRunId`, the new `claimRequestId`, `executionClaimedAt = now()`. The old claim is dead: its `/dispatch` and `/outcome` match zero rows                                                                                   |
-| **dispatch**            | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`                                                                                                                                          | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                                                                                                                                    |
+| **dispatch**            | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`, **`now() < claim_recovery_deadline_at`**                                                                                                | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                                                                                                                                    |
 | **outcome**             | `status = 'executing'`, `executionClaimRunId = :claim`, `executionResult IS NULL`                                                                                                                                       | Accept the result (B4)                                                                                                                                                                                                                     |
 
 A claim with a different `claimRequestId` inside the lease `L` (placeholder 60 s), or after dispatch, gets `executing` (open: wait or re-ask per A4). That covers a new tool call after a lost response, and a URL-less resume that has only the approval id: both just wait out the lease, then take over. The binding (B1) and the pre-dispatch fence (`dispatchAttempts = 0`) are the safety conditions. The lease only stops two live connectors racing each other.
 
 **Takeover and abandonment have separate windows.** An expired lease permits takeover only. Abandonment waits for a later, fixed deadline:
 
-| Time since the first claim           | Takeover (new `claimRequestId`)                           | Never-sent abandonment (strand reconciler) |
-| ------------------------------------ | --------------------------------------------------------- | ------------------------------------------ |
-| `< L`                                | No (the live claim keeps it; the caller gets `executing`) | No                                         |
-| `L` … `X`                            | Yes                                                       | No                                         |
-| `≥ X` (`claim_recovery_deadline_at`) | No                                                        | Yes                                        |
+| Time since the first claim           | Same-request claim (token re-mint) | Takeover (new `claimRequestId`)                           | Dispatch (undispatched claim) | Never-sent abandonment (strand reconciler) |
+| ------------------------------------ | ---------------------------------- | --------------------------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `< L`                                | Yes                                | No (the live claim keeps it; the caller gets `executing`) | Yes                           | No                                         |
+| `L` … `X`                            | Yes                                | Yes                                                       | Yes (current claim only)      | No                                         |
+| `≥ X` (`claim_recovery_deadline_at`) | **No**                             | No                                                        | **No**                        | Yes                                        |
 
 - `X` defaults to the strand window `APPROVAL_OUTCOME_UNKNOWN_AFTER_MINUTES` (30 minutes; `stranded-claim.ts`), so the reconciler's existing threshold and the takeover cutoff are the same instant.
 - For `connector_retry` rows, the reconciler's never-sent arm adds `now() >= claim_recovery_deadline_at` to `claimNeverDispatchedSql`. It evaluates that predicate again after `lockStrandedClaim` has locked the row, not only when it lists candidates.
 - Takeover is a single conditional UPDATE on the same row, so the two serialize on the row lock. At `X` exactly, one of them wins and the other matches zero rows.
 - Because a takeover never moves `claim_recovery_deadline_at`, repeated takeovers can't keep a row alive forever.
+- **`X` is a hard cutoff for every operation on an undispatched claim**, not just takeover and abandonment. The same-request claim and `/dispatch` carry `now() < claim_recovery_deadline_at` in their `WHERE` too. After `X`:
+  - a same-request retry gets no fresh token;
+  - the current claim gets no dispatch permission, even if it reaches the row before the reconciler does.
+
+  Both are refused with `recovery_window_closed`, and the connector stops before any platform write. The tool answer is "The approval's execution window closed before anything was sent. Nothing was written." The row waits for the reconciler's never-sent ending. A decision token minted just before `X` is no help after it: `/dispatch` re-checks `X`, and the connector writes only after `/dispatch` returns 200.
+
+- **A claim that dispatched before `X`** is unaffected by `X`. It reports its outcome under the separate dispatch deadline `D` (B4).
 
 Test the caller and the reconciler racing at both boundaries:
 
 - **At `L`:** the live claim's same-request resend against a takeover. Exactly one claim survives.
 - **At `X`:** a takeover against abandonment. Either the row is taken over and not abandoned, or it is abandoned and the takeover gets `abandoned`. Never both.
+- **After `X`, before the reconciler runs:**
+  - a same-request retry is refused with no token minted;
+  - a delayed `/dispatch` from the current claim is refused, and the connector makes no platform call;
+  - the reconciler then abandons the row.
+- **Dispatch just before `X`, outcome after `X`:** the outcome is accepted under `D`, and the reconciler does not abandon a dispatched row.
 
 What the connector does:
 
@@ -436,6 +448,8 @@ URL-capable clients that hit the A4 round cap get the same tool. A repeat of the
   - a failure right after the accept commit, finished by the continuation with one booking;
   - a timeout and a real outcome racing for the same row;
   - takeover against abandonment at `X`, and a same-request resend against a takeover at `L`;
+  - after `X`, before the reconciler runs: a same-request retry and a delayed `/dispatch` are both refused, with no token and no write;
+  - a claim dispatched before `X` reports its outcome after `X`;
   - replaying an attaching submission after the 15-minute guard expires (same approval);
   - a booking failure after the outcome row commits (`pending` until booked once);
   - `allow` returns `allowed_not_in_pilot` and creates no row;
