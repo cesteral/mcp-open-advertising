@@ -1,6 +1,6 @@
 # Governance Approval over URL-Mode Elicitation (design)
 
-**Status:** draft, revision 4 (2026-11-25), addressing the three reviews on #408. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
+**Status:** draft, revision 5 (2026-11-25), addressing the four reviews on #408. It spans this repo and cesteral-intelligence. Nothing is built. Intelligence references point at its `origin/main` `00c9afa4`.
 
 **Goal:** someone in an end-user MCP client (Claude, Claude Code) takes a governed write that needs approval, approves it in the browser, and gets the result in the same conversation. The decision token never passes through the client or the model. Intelligence's approval model (roles, maker-checker, tiers, personal-workspace rules) is reused, not duplicated.
 
@@ -230,7 +230,12 @@ The row records the binding: `requestedBy` = `sub`; `requestedByAgentKind: "oaut
 7. On `require_approval`: `mintApproval` (`governance-steps.ts:418`) with the attach-key insert from A6. That stores `dryRunResult.writePreview` (`:545`), creates the change set, records escalation, links it and notifies.
 8. `recordExecutableActionHash` with the connector-projection `actionHash`, moved here from Step 6. It becomes the A6 attach key input and is what the token will bind.
 
-Creation is idempotent on `submissionId` across **all** statuses (unique index), so a retry of the same submission returns the same approval whatever happened to it. A different submission with the same attach key attaches to an open row, or hits the 15-minute guard (A6).
+**Every submission is remembered, not only the one that created the row.** A unique `submissionId` on the approval row would remember only the submission that created it. If submission B attached to approval A's row, a replay of B after the 15-minute guard expires would find nothing and create a second approval. So creation keeps a mapping table, `approval_submissions (submission_id PRIMARY KEY, approval_id, created_at)`:
+
+- **Lookup first.** Before anything else, creation looks up `submission_id`. A hit returns the mapped approval's current answer (A4 / A5) in **any** status, and never enters governance.
+- **One row per submission.** Creation inserts the mapping in the **same** transaction as the A6 guard and insert, under the same attach-key lock. That applies to the submission that creates a row, and equally to one that **attaches** to an open row or is answered by the 15-minute guard.
+- **Retention:** mappings are kept for the approval's lifetime plus the execution window.
+- **Test:** submission A creates; submission B attaches; the approval executes; 15 minutes pass; replaying B returns A's result, with no new approval and no governance run.
 
 **`allow` in the pilot.** Claim needs an `approved` row, and creation makes one only on `require_approval`, so an `allow` has no durable execution record to claim. The pilot therefore doesn't execute `allow` directly:
 
@@ -250,15 +255,33 @@ Phase B therefore adds fenced transitions, each a single conditional UPDATE. A c
 
 **The claim has an identity before it is sent.** The connector mints a `claimRequestId` (128-bit random) before its first `POST …/claim`, and resends the same request with the same id if the HTTP call fails within the tool call. Intelligence stores it on the row (`execution_claim_request_id`). Recovery then never depends on the `claimRunId`, which exists only in a response that may be lost.
 
-| Call                    | Condition (all in the `WHERE`)                                                                                                                                                | Effect                                                                                                                                                   |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **claim** (first)       | `status = 'approved'`, not past the execution deadline, binding matches                                                                                                       | `status = 'executing'`, new `executionClaimRunId`, `execution_claim_request_id = :claimRequestId`, `executionClaimedAt = now()`                          |
-| **claim, same request** | `status = 'executing'`, `execution_claim_request_id = :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, binding matches                                    | Nothing changes. Returns the **same** `claimRunId` and a freshly minted token                                                                            |
-| **claim takeover**      | `status = 'executing'`, `execution_claim_request_id <> :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, `executionClaimedAt < now() - L`, binding matches | New `executionClaimRunId`, the new `claimRequestId`, `executionClaimedAt = now()`. The old claim is dead: its `/dispatch` and `/outcome` match zero rows |
-| **dispatch**            | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`                                                                                                | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                                                  |
-| **outcome**             | `status = 'executing'`, `executionClaimRunId = :claim`, `executionResult IS NULL`                                                                                             | Accept the result (B4)                                                                                                                                   |
+| Call                    | Condition (all in the `WHERE`)                                                                                                                                                                                          | Effect                                                                                                                                                                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **claim** (first)       | `status = 'approved'`, not past the execution deadline, binding matches                                                                                                                                                 | `status = 'executing'`, new `executionClaimRunId`, `execution_claim_request_id = :claimRequestId`, `executionClaimedAt = now()`, and `claim_recovery_deadline_at = now() + X`. That deadline is set once and **never moved by a takeover** |
+| **claim, same request** | `status = 'executing'`, `execution_claim_request_id = :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, binding matches                                                                              | Nothing changes. Returns the **same** `claimRunId` and a freshly minted token                                                                                                                                                              |
+| **claim takeover**      | `status = 'executing'`, `execution_claim_request_id <> :claimRequestId`, `dispatchAttempts = 0`, `executionResult IS NULL`, `executionClaimedAt < now() - L`, **`now() < claim_recovery_deadline_at`**, binding matches | New `executionClaimRunId`, the new `claimRequestId`, `executionClaimedAt = now()`. The old claim is dead: its `/dispatch` and `/outcome` match zero rows                                                                                   |
+| **dispatch**            | `status = 'executing'`, `executionClaimRunId = :claim`, `dispatchAttempts = 0`                                                                                                                                          | `dispatchAttempts = 1`, `dispatchAttemptedAt = now()`, `dispatchDeadlineAt = now() + D`                                                                                                                                                    |
+| **outcome**             | `status = 'executing'`, `executionClaimRunId = :claim`, `executionResult IS NULL`                                                                                                                                       | Accept the result (B4)                                                                                                                                                                                                                     |
 
 A claim with a different `claimRequestId` inside the lease `L` (placeholder 60 s), or after dispatch, gets `executing` (open: wait or re-ask per A4). That covers a new tool call after a lost response, and a URL-less resume that has only the approval id: both just wait out the lease, then take over. The binding (B1) and the pre-dispatch fence (`dispatchAttempts = 0`) are the safety conditions. The lease only stops two live connectors racing each other.
+
+**Takeover and abandonment have separate windows.** An expired lease permits takeover only. Abandonment waits for a later, fixed deadline:
+
+| Time since the first claim           | Takeover (new `claimRequestId`)                           | Never-sent abandonment (strand reconciler) |
+| ------------------------------------ | --------------------------------------------------------- | ------------------------------------------ |
+| `< L`                                | No (the live claim keeps it; the caller gets `executing`) | No                                         |
+| `L` … `X`                            | Yes                                                       | No                                         |
+| `≥ X` (`claim_recovery_deadline_at`) | No                                                        | Yes                                        |
+
+- `X` defaults to the strand window `APPROVAL_OUTCOME_UNKNOWN_AFTER_MINUTES` (30 minutes; `stranded-claim.ts`), so the reconciler's existing threshold and the takeover cutoff are the same instant.
+- For `connector_retry` rows, the reconciler's never-sent arm adds `now() >= claim_recovery_deadline_at` to `claimNeverDispatchedSql`. It evaluates that predicate again after `lockStrandedClaim` has locked the row, not only when it lists candidates.
+- Takeover is a single conditional UPDATE on the same row, so the two serialize on the row lock. At `X` exactly, one of them wins and the other matches zero rows.
+- Because a takeover never moves `claim_recovery_deadline_at`, repeated takeovers can't keep a row alive forever.
+
+Test the caller and the reconciler racing at both boundaries:
+
+- **At `L`:** the live claim's same-request resend against a takeover. Exactly one claim survives.
+- **At `X`:** a takeover against abandonment. Either the row is taken over and not abandoned, or it is abandoned and the takeover gets `abandoned`. Never both.
 
 What the connector does:
 
@@ -288,7 +311,7 @@ Recovery:
 | Claim response lost and the tool call ended; token expired; or an in-tool `input_required` before dispatch | The next call (a retry, or the B5 resume by approval id) waits out the lease `L`, then takes over with its own `claimRequestId`. The connector also seals `claimRequestId` into its `requestState`, so a retry that carries the state resumes the same claim without waiting |
 | A retry finds `dispatchAttemptedAt` set, now < `dispatchDeadlineAt`, no result                             | Report `executing` (open: wait or re-ask per A4). Never re-claim, never re-dispatch                                                                                                                                                                                          |
 | Now ≥ `dispatchDeadlineAt` and no result                                                                   | Accept an `outcomeUnknown` result through the **same** accept transaction as a real outcome (B4). Whoever reads it first does this, or the strand reconciler                                                                                                                 |
-| `executing`, `dispatchAttempts = 0`, past the claim lease with no re-claim                                 | The strand reconciler's never-sent ending applies unchanged (`endNeverSentApprovals`: approval `abandoned`, change `failed`)                                                                                                                                                 |
+| `executing`, `dispatchAttempts = 0`, `now() ≥ claim_recovery_deadline_at`                                  | The strand reconciler's never-sent ending (`endNeverSentApprovals`: approval `abandoned`, change `failed`), with the deadline predicate re-checked under the row lock                                                                                                        |
 | `outcome` posted twice by the winning claim with the same body                                             | Idempotent: `202` with the current `settlement_state` and the steps done so far (B4). Bodies are compared by digest; a different body gets `409`. `200` only once `settlement_state = 'done'`                                                                                |
 | `outcome` from a dead claim                                                                                | 409, nothing changes                                                                                                                                                                                                                                                         |
 | `outcome` from the winning claim after the deadline already settled unknown                                | Stored as late evidence on the outcome row and shown in reconciliation. The settlement stays `outcome_unknown` until a person resolves it                                                                                                                                    |
@@ -311,11 +334,28 @@ Settlement has two parts: a synchronous **accept**, which records the result onc
 - holds the A6 attach-key lock;
 - runs the `outcome` fence (`executionResult IS NULL` for the winning claim);
 - writes `executionResult` (validation, reconciliation and classification included), `status = 'executed'`, `settled_at` and `settlement_state = 'pending'`;
-- inserts an outbox event, `approval/settle {approvalId}`, through the same outbox the approve route already uses.
+- inserts an outbox row for `approval/settle {approvalId}` (event id `approval-settle:{approvalId}`) **inside this transaction**.
+
+  This needs a new transaction-aware helper, `enqueueOutboxEvent(tx, event)`. It only writes the outbox row; the existing `event-outbox-flush` function delivers it. The existing `sendWithOutbox` (`lib/features/event-outbox/send.ts:32`) can't be used here: it calls `inngest.send` first and writes a fallback row only when that fails, outside any caller transaction. So a committed accept could lose its event, or an event could go out for an accept that rolled back.
 
 The response is `202 {settlement_state}`. A failure anywhere before the commit leaves nothing written, and the connector retries the same body.
 
-**Continuation: the Inngest function `settle-approved-execution`.** It is fed by the outbox event, and the strand reconciler re-emits it for any row stuck at `settlement_state = 'pending'`. It runs steps 5–8 as separate Inngest steps. Each step is guarded by a row in `approval_settlement_steps (approval_id, step)` with a unique key, written in the same transaction as the step's effect, so a retried or re-emitted run skips steps that are done. Where the effect already has its own guard, that guard is used: the `budget-booking` advisory lock plus `setBookingAccrualState`, the change-set projector's CAS, and a notification dedupe key of `approvalId`. `recordOutcome` needs one added: a unique `action_outcomes.approval_id`. When the last step is done, `settlement_state = 'done'`.
+**Continuation: the Inngest function `settle-approved-execution`.** It is fed by the outbox event, and the strand reconciler re-emits it for any row stuck at `settlement_state = 'pending'`. It runs steps 5–8 as separate Inngest steps. **Each step has its own completion check, read from the state it changes, never from a function's return value.** That matters because `recordOutcome` catches and logs a failed spend booking and still returns success (`outcomes/mutations.ts:284-293`). The continuation therefore splits outcome insertion from booking:
+
+| Step            | Done when                                                                                                                                                                                                                                                                                                   | On failure                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `outcome_row`   | An `action_outcomes` row exists for the approval (new unique `action_outcomes.approval_id`). It calls `recordOutcome` **with booking turned off**                                                                                                                                                           | Throw → Inngest retries the step                                                   |
+| `spend_booking` | The booking for `approvalId` has accrual state `done` (`setBookingAccrualState`). The step is `not_applicable` when `buildApprovedSpendBooking` books nothing (not `succeeded`, or no positive `actualValue`). It calls `recordBudgetBooking` directly, under its existing advisory lock, with **no catch** | Throw → retry; booking is idempotent under the lock plus the accrual state         |
+| `audit`         | A `logActionExecution` row keyed on `approvalId` exists                                                                                                                                                                                                                                                     | Throw → retry                                                                      |
+| `notify`        | Delivered with dedupe key `approvalId`                                                                                                                                                                                                                                                                      | Retry; at worst one duplicate notice, never a missing one                          |
+| `adjustment`    | `updateAdjustmentStatus` has reached the target status                                                                                                                                                                                                                                                      | Throw → retry                                                                      |
+| `change_settle` | The linked change is in the settlement's status (`advanceLinkedChangeSetForExecution` is a projector CAS)                                                                                                                                                                                                   | Throw → retry. It is not best-effort here, unlike `execution-linkage.ts:221` today |
+| `reservations`  | On `failed`: no live reservations for the approval (`releaseReservations`); otherwise `not_applicable`                                                                                                                                                                                                      | Throw → retry                                                                      |
+| `telemetry`     | Emitted                                                                                                                                                                                                                                                                                                     | Best-effort; it doesn't block `done`                                               |
+
+- `approval_settlement_steps (approval_id, step)` records each step's result (`done` or `not_applicable`) once its completion check passes. A retried or re-emitted run re-checks a step's state rather than trusting the record.
+- `settlement_state = 'done'` is set only when every step except `telemetry` is `done` or `not_applicable`.
+- **Test:** commit the outcome row, make `recordBudgetBooking` fail once, and assert three things: `settlement_state` stays `pending`, the retry books exactly once, and only then does the row reach `done`.
 
 **Timeout against a real outcome.** The deadline path (B3 recovery) and `/outcome` both go through the same accept transaction, under the same lock and the same `executionResult IS NULL` fence. Whichever commits first defines the settlement:
 
@@ -330,7 +370,10 @@ The continuation only ever sees the winner.
 - a duplicate `/outcome` reports `202 pending`, then `200 done`;
 - the strand reconciler's re-emit finishes a run whose event was lost.
 
-The same continuation replaces the tail of Inngest's `store-result` (A5's `persist-result` is its accept), so both executors have one settlement path.
+**Rollout order.** The continuation is **not** part of Phase A:
+
+- **Phase A** ships with today's Inngest `store-result` tail unchanged. Its only executor change is A5's retryable `persist-result`, which can ship on its own, ahead of everything else.
+- **Moving Inngest's tail onto this continuation** comes after Phase A, as the first step of Phase B (Rollout 6.1), before any connector calls `/outcome`. At that point both executors share one settlement path.
 
 Steps:
 
@@ -392,6 +435,9 @@ URL-capable clients that hit the A4 round cap get the same tool. A repeat of the
   - a duplicate `/outcome` is idempotent (`202` while pending, `200` once done);
   - a failure right after the accept commit, finished by the continuation with one booking;
   - a timeout and a real outcome racing for the same row;
+  - takeover against abandonment at `X`, and a same-request resend against a takeover at `L`;
+  - replaying an attaching submission after the 15-minute guard expires (same approval);
+  - a booking failure after the outcome row commits (`pending` until booked once);
   - `allow` returns `allowed_not_in_pilot` and creates no row;
   - a read-only token calling `{platform}_resume_approved_write` gets `403 insufficient_scope`;
   - a URL-less resume by approval id executes the frozen args.
@@ -436,7 +482,7 @@ Anthropic's 2026-11-24 announcement calls elicitation GA without naming modes. B
 
 1. Client probe. Confirmation audit (connector).
 2. **Prerequisites in Intelligence:**
-   - durable result save (A5) with its failed-save test;
+   - durable result save (A5) with its failed-save test. This can ship on its own, first;
    - the `attach_key` column, its partial unique index, and the atomic insert in `createActionApproval` (A6);
    - problem 1 fixed.
 3. Gateway 2026-07-28 support (A1) and `resume_approved_action`, behind a flag.
@@ -444,15 +490,23 @@ Anthropic's 2026-11-24 announcement calls elicitation GA without naming modes. B
 5. Problem 2 fixed (needed before any secret rotation).
 6. Decide whether direct connector writes are supported.
    - If yes:
-     1. Extract `prepareApprovedExecution` and `settleApprovedExecution` from the Inngest function, with no behaviour change, and make Inngest call them.
+     1. Extract `prepareApprovedExecution` and `settleApprovedExecution` from the Inngest function, and make Inngest call them. This moves the Inngest `store-result` tail onto the B4 continuation:
+        - the transaction-aware outbox insert;
+        - `approval_settlement_steps`;
+        - outcome insertion and booking as separate steps.
+
+        It ships and soaks on the Inngest path before any connector uses it.
+
      2. Build Phase B behind `GOVERNANCE_APPROVAL_ROUND=on` on one server and one `enforce` contract.
+
    - If no: refuse `mcp:write` on direct connector tokens under `enforce`.
+
 7. Update `governance-runtime.md` and `confirmation-mrtr.md` here, and `governance-decision-token.md` and `approval-lifecycle.md` there.
 
 ## Open questions
 
 - How does a direct-access token name its connection (the Phase B precondition)? A new claim on the access JWT, or `allowedConnectionIds`?
-- `W`, `R`, the state TTL, the 15-minute duplicate window and the dispatch deadline `D` are placeholders until the probe and one real write measure them.
+- `W`, `R`, the state TTL, the 15-minute duplicate window, the lease `L`, the recovery deadline `X` and the dispatch deadline `D` are placeholders until the probe and one real write measure them.
 - Should the Tasks extension (`io.modelcontextprotocol/tasks`, also GA in Claude) replace the bounded wait for clients that declare it? A task survives a long human step without burning rounds, but the gateway would then implement `tasks/get`, `tasks/update` and `tasks/cancel` as well.
 - Should `warn` mode offer the round as an optional "approve now", to collect approvals before `enforce`?
 - Bulk tools: one approval per call (one `actionHash`), or split per entity through `change_set_approvals`?
