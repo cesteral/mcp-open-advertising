@@ -128,6 +128,16 @@ async function fetchFromNetwork(config: SchemaExtractionConfig): Promise<Discove
       );
     }
 
+    // The revision is what the committed schemas are pinned to
+    // (discovery-revision.json); a document without one cannot be pinned.
+    if (typeof data.revision !== "string" || data.revision === "") {
+      throw new ExtractionError(
+        "Invalid Discovery document: missing revision",
+        ErrorCodes.DISCOVERY_INVALID_FORMAT,
+        { url }
+      );
+    }
+
     return data as DiscoveryDocument;
   } catch (error: any) {
     if (error.name === "AbortError") {

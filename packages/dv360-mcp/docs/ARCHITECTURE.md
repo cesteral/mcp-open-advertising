@@ -55,6 +55,7 @@ Entity types are declared in `STATIC_ENTITY_API_METADATA` in `src/mcp-server/too
 
 - Regenerate: `pnpm run generate:schemas` in this package. Configuration is `config/schema-extraction.config.ts`; the design is in [openapi-schema-extraction-spec.md](./openapi-schema-extraction-spec.md).
 - Generation fetches the live Discovery document, so it is not part of `build`. The scheduled **Codegen drift** workflow (`.github/workflows/codegen-drift.yml`, `pnpm run check:dv360-codegen-drift`) compares the committed schemas with the live document weekly, so an upstream change shows up as a dated signal and does not break PR CI. A second weekly job, `pnpm run check:dv360-api-version-watch`, reports when to start moving off the API version we target (a newer version going GA, a deprecation date on ours, or ours leaving Discovery); `preferred` in Discovery is deliberately ignored because v5 is `preferred` while still in public beta.
+- **Revision pin.** Google edits the Discovery document in place, so `src/generated/schemas/discovery-revision.json` records the document `revision` the committed schemas were generated from; every regeneration rewrites it. The drift check uses it to tell the cases apart: the revision moved and the schemas changed (the API moved), the revision moved but the schemas are identical (not drift), and the schemas differ at the _same_ revision (the committed files were never generated from it, for example a hand edit). It is a record, not a fetch target: Discovery serves only its current document.
 
 ## Things that behave differently on DV360
 

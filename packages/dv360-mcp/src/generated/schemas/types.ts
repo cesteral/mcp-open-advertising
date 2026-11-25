@@ -7,7 +7,7 @@ export type paths = Record<string, never>;
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description A single ad group associated with a line item. */
+        /** @description LINT: LEGACY_NAMES A single ad group associated with a line item. */
         AdGroup: {
             /**
              * @description Required. Immutable. The format of the ads in the ad group.
@@ -47,7 +47,7 @@ export interface components {
             /** @description Optional. The [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the ad group. */
             targetingExpansion?: components["schemas"]["TargetingExpansionConfig"];
         };
-        /** @description LINT: LEGACY_NAMES A single ad associated with an ad group. */
+        /** @description A single ad associated with an ad group. */
         AdGroupAd: {
             /**
              * Format: int64
@@ -72,7 +72,7 @@ export interface components {
             audioAd?: components["schemas"]["AudioAd"];
             /** @description Optional. Details of a [non-skippable short video ad](//support.google.com/displayvideo/answer/6274216), equal to or less than 6 seconds, used for reach. */
             bumperAd?: components["schemas"]["BumperAd"];
-            /** @description Optional. The DCM tracking ad info. Only valid for Demand Gen ads. To remove the DCM tracking ad info, please leave this field empty. */
+            /** @description Optional. The DCM tracking ad info. To remove the DCM tracking ad info, please leave this field empty. */
             dcmTrackingInfo?: components["schemas"]["DcmTrackingInfo"];
             /** @description Optional. Details of a [Demand Gen carousel ad](//support.google.com/displayvideo/answer/15598924?&sjid=11207068802760924844-NC#CarouselAd). */
             demandGenCarouselAd?: components["schemas"]["DemandGenCarouselAd"];
@@ -101,7 +101,7 @@ export interface components {
             nonSkippableAd?: components["schemas"]["NonSkippableAd"];
             /** @description Output only. Details of an [ad promoting a video](//support.google.com/displayvideo/answer/6274216) that shows in places of discovery. */
             videoDiscoverAd?: components["schemas"]["VideoDiscoveryAd"];
-            /** @description Optional. Details of an [ad used in a video action campaign](//support.google.com/google-ads/answer/10147229) to drive actions to the business, service or product. */
+            /** @description Optional. Details of a YouTube ad that can be served across various formats, such as in-stream (bumper, skippable, non-skippable), Shorts, and in-feed. */
             videoPerformanceAd?: components["schemas"]["VideoPerformanceAd"];
         };
         /** @description The inventory control of the ad group. */
@@ -645,7 +645,7 @@ export interface components {
              * @enum {string}
              */
             inheritance?: "INHERITANCE_UNSPECIFIED" | "NOT_INHERITED" | "INHERITED_FROM_PARTNER" | "INHERITED_FROM_ADVERTISER";
-            /** @description Inventory source details. This field will be populated when the targeting_type is `TARGETING_TYPE_INVENTORY_SOURCE` or `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`. */
+            /** @description Inventory source details. This field will be populated when the targeting_type is `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`. */
             inventorySourceDetails?: components["schemas"]["InventorySourceAssignedTargetingOptionDetails"];
             /** @description Inventory source group details. This field will be populated when the targeting_type is `TARGETING_TYPE_INVENTORY_SOURCE_GROUP`. */
             inventorySourceGroupDetails?: components["schemas"]["InventorySourceGroupAssignedTargetingOptionDetails"];
@@ -722,7 +722,7 @@ export interface components {
             displayUrl?: string;
             /** @description The URL address of the webpage that people reach after they click the ad. */
             finalUrl?: string;
-            /** @description The URL address loaded in the background for tracking purposes. */
+            /** @description The URL address loaded in the background for tracking purposes. In v4 and earlier, this field represents the tracking URL specified by the user manually. This can be found at userSpecifiedTrackingUrl in v5. */
             trackingUrl?: string;
             /** @description The YouTube video of the ad. */
             video?: components["schemas"]["YoutubeVideoDetails"];
@@ -920,6 +920,11 @@ export interface components {
         CategoryAssignedTargetingOptionDetails: {
             /** @description Output only. The display name of the category. */
             displayName?: string;
+            /**
+             * @description Output only. The exclusion status of the category.
+             * @enum {string}
+             */
+            exclusionStatus?: "CATEGORY_EXCLUSION_STATUS_UNSPECIFIED" | "CATEGORY_EXCLUSION_STATUS_ALLOWED" | "CATEGORY_EXCLUSION_STATUS_DEPRECATED" | "CATEGORY_EXCLUSION_STATUS_NOT_ALLOWED";
             /** @description Indicates if this option is being negatively targeted. */
             negative?: boolean;
             /** @description Required. The targeting_option_id field when targeting_type is `TARGETING_TYPE_CATEGORY`. */
@@ -991,7 +996,7 @@ export interface components {
         };
         /** @description Common attributes for in-stream, non-skippable and bumper ads. */
         CommonInStreamAttribute: {
-            /** @description Optional. The text on the call-to-action button. */
+            /** @description Optional. The text on the call-to-action button. Must be set if actionHeadline is set. */
             actionButtonLabel?: string;
             /** @description Optional. The headline of the call-to-action banner. */
             actionHeadline?: string;
@@ -1001,7 +1006,7 @@ export interface components {
             displayUrl: string;
             /** @description Required. The URL address of the webpage that people reach after they click the ad. */
             finalUrl: string;
-            /** @description Output only. The URL address loaded in the background for tracking purposes. */
+            /** @description Output only. The URL address loaded in the background for tracking purposes. In v4 and earlier, this field represents the tracking URL specified by the user manually. This can be found at userSpecifiedTrackingUrl in v5. */
             trackingUrl?: string;
             /** @description Required. Immutable. The YouTube video of the ad. */
             video: components["schemas"]["YoutubeVideoDetails"];
@@ -1561,7 +1566,7 @@ export interface components {
             deviceType: "DEVICE_TYPE_UNSPECIFIED" | "DEVICE_TYPE_COMPUTER" | "DEVICE_TYPE_CONNECTED_TV" | "DEVICE_TYPE_SMART_PHONE" | "DEVICE_TYPE_TABLET" | "DEVICE_TYPE_CONNECTED_DEVICE";
             /**
              * Format: double
-             * @description Optional. Bid multiplier allows you to show your ads more or less frequently based on the device type. It will apply a multiplier on the original bid price. When this field is 0, it indicates this field is not applicable instead of multiplying 0 on the original bid price. For example, if the bid price without multiplier is $10.0 and the multiplier is 1.5 for Tablet, the resulting bid price for Tablet will be $15.0. Only applicable to YouTube and Partners line items.
+             * @description Output only. Bid multiplier allows you to show your ads more or less frequently based on the device type. It will apply a multiplier on the original bid price. When this field is 0, it indicates this field is not applicable instead of multiplying 0 on the original bid price. For example, if the bid price without multiplier is $10.0 and the multiplier is 1.5 for Tablet, the resulting bid price for Tablet will be $15.0. Only applicable to YouTube and Partners line items.
              */
             youtubeAndPartnersBidMultiplier?: number;
         };
@@ -1898,7 +1903,7 @@ export interface components {
             /** @description Output only. The resource name of the insertion order. */
             name?: string;
             /**
-             * @description Optional. Required. The optimization objective of the insertion order.
+             * @description Required. The optimization objective of the insertion order.
              * @enum {string}
              */
             optimizationObjective?: "OPTIMIZATION_OBJECTIVE_UNSPECIFIED" | "CONVERSION" | "CLICK" | "BRAND_AWARENESS" | "CUSTOM" | "NO_OBJECTIVE";
@@ -2025,7 +2030,7 @@ export interface components {
             /** @description An external identifier to be associated with the entry. The integration code will show up together with the entry in many places in the system, for example, reporting. Must be UTF-8 encoded with a length of no more than 500 characters. */
             integrationCode?: string;
         };
-        /** @description Targeting details for inventory source. This will be populated in the details field of an AssignedTargetingOption when targeting_type is one of `TARGETING_TYPE_INVENTORY_SOURCE` or `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`. */
+        /** @description Targeting details for inventory source. This will be populated in the details field of an AssignedTargetingOption when targeting_type is `TARGETING_TYPE_INVENTORY_SOURCE_DEAL`. */
         InventorySourceAssignedTargetingOptionDetails: {
             /**
              * Format: int64
@@ -2534,7 +2539,7 @@ export interface components {
              */
             feeType: "PARTNER_COST_FEE_TYPE_UNSPECIFIED" | "PARTNER_COST_FEE_TYPE_CPM_FEE" | "PARTNER_COST_FEE_TYPE_MEDIA_FEE";
             /**
-             * @description The invoice type for this partner cost. * Required when cost_type is one of: - `PARTNER_COST_TYPE_ADLOOX` - `PARTNER_COST_TYPE_DOUBLE_VERIFY` - `PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE`. * Output only for other types.
+             * @description The invoice type for this partner cost. * Required when cost_type is one of: - `PARTNER_COST_TYPE_PEER39` - `PARTNER_COST_TYPE_DOUBLE_VERIFY` - `PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE`. * Output only for other types.
              * @enum {string}
              */
             invoiceType?: "PARTNER_COST_INVOICE_TYPE_UNSPECIFIED" | "PARTNER_COST_INVOICE_TYPE_DV360" | "PARTNER_COST_INVOICE_TYPE_PARTNER";
@@ -3009,19 +3014,21 @@ export interface components {
         };
         /** @description Details for a video performance ad. */
         VideoPerformanceAd: {
-            /** @description Optional. The list of text assets shown on the call-to-action button. */
+            /** @description Optional. The list of text assets shown on the call-to-action button. Must be set if headlines is set. */
             actionButtonLabels?: string[];
+            /** @description Optional. The business name shown on the ad. This setting is required unless defaultBusinessName is set for the parent advertiser. If this field is unset, the advertiser's default business name is used. */
+            businessName?: string;
             /** @description Optional. The list of companion banners used by this ad. */
             companionBanners?: components["schemas"]["ImageAsset"][];
             /** @description Optional. The custom parameters and accompanying values to add to the tracking URL. */
             customParameters?: {
                 [key: string]: string;
             };
-            /** @description Optional. The list of descriptions shown on the call-to-action banner. */
+            /** @description Optional. The list of descriptions shown on the call-to-action banner. Must be set unless the parent line item's lineItemType is `LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE`, in which case this field cannot be set. */
             descriptions?: string[];
             /** @description Optional. The first piece after the domain in the display URL. */
             displayUrlBreadcrumb1?: string;
-            /** @description Optional. The second piece after the domain in the display URL. */
+            /** @description Optional. The second piece after the domain in the display URL. Can only be set if displayUrlBreadcrumb1 is also set. */
             displayUrlBreadcrumb2?: string;
             /** @description Output only. The domain of the display URL. */
             domain?: string;
@@ -3029,9 +3036,11 @@ export interface components {
             finalUrl: string;
             /** @description Optional. The list of headlines shown on the call-to-action banner. */
             headlines?: string[];
-            /** @description Optional. The list of long headlines shown on the call-to-action banner. */
+            /** @description Optional. The logo image used by this ad. This setting is required unless defaultLogoAssetId is set for the parent advertiser. If this field is unset, the advertiser's default logo asset is used. */
+            logo?: components["schemas"]["ImageAsset"];
+            /** @description Optional. The list of long headlines shown on the call-to-action banner. Must be set unless the parent line item's lineItemType is `LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE`, in which case this field cannot be set. */
             longHeadlines?: string[];
-            /** @description Output only. The URL address loaded in the background for tracking purposes. */
+            /** @description Output only. The URL address loaded in the background for tracking purposes. In v4 and earlier, this field represents the tracking URL specified by the user manually. This can be found at userSpecifiedTrackingUrl in v5. */
             trackingUrl?: string;
             /** @description Required. The list of YouTube video assets used by this ad. */
             videos: components["schemas"]["YoutubeVideoDetails"][];
