@@ -41,3 +41,19 @@ jobs:
 
       - name: Check dv360 schemas against the live Discovery document
         run: pnpm run check:dv360-codegen-drift
+
+  # A separate job, not a step: a failing schema-drift step would skip it.
+  # Reads only vendor pages and the repo's config, so no pnpm install.
+  dv360-api-version-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+
+      - name: Check whether dv360-mcp should start moving to a newer API version
+        run: node scripts/check/check-dv360-api-version-watch.mjs

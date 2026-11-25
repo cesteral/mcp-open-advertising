@@ -42,6 +42,7 @@
     "check:contract-schema-parity": "node scripts/check/check-contract-schema-published-parity.mjs",
     "check:contract-hash-parity": "node scripts/check/check-contract-hash-published-parity.mjs",
     "check:dv360-codegen-drift": "node scripts/check/check-dv360-codegen-drift.mjs",
+    "check:dv360-api-version-watch": "node scripts/check/check-dv360-api-version-watch.mjs",
     "check:terraform-drift": "node scripts/check/check-terraform-drift.mjs",
     "check:platform-facts": "node scripts/check/check-platform-facts.mjs",
     "check:platform-facts:freshness": "node scripts/check/check-platform-facts.mjs --freshness",
