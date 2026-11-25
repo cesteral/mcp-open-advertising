@@ -150,7 +150,12 @@ function sign(key: Buffer, body: string): Buffer {
   return createHmac("sha256", key).update(body).digest();
 }
 
-function principalTag(key: Buffer, principal: string): string {
+/**
+ * A keyed, non-reversible tag of the principal. Sealed into every
+ * `requestState`, and logged as the confirmation audit record's `principalTag`,
+ * so the two can be matched without either carrying the principal itself.
+ */
+export function principalTag(key: Buffer, principal: string): string {
   return b64url(
     createHmac("sha256", key).update(`principal:${principal}`).digest().subarray(0, 16)
   );
@@ -235,6 +240,12 @@ export interface ConfirmationRound {
    * replayed approval into a fresh state.
    */
   used: Record<string, ElicitAnswer>;
+  /**
+   * Request keys answered in an EARLIER round and only carried forward in the
+   * sealed state (not re-sent in this round's `inputResponses`). Their decision
+   * was audited on the round that received it.
+   */
+  carried: ReadonlySet<string>;
 }
 
 /** `ctx.mcpReq.inputResponses` entries that are well-formed elicitation answers. */
@@ -281,7 +292,7 @@ export function resolveRound(input: RoundInput): ConfirmationRound {
   const argsDigest = digestArguments(input.rawArgs);
   const hasResponses = !!input.inputResponses && Object.keys(input.inputResponses).length > 0;
   if (input.requestState === undefined && !hasResponses) {
-    return { tool: input.tool, argsDigest, answered: {}, used: {} };
+    return { tool: input.tool, argsDigest, answered: {}, used: {}, carried: new Set() };
   }
   // Answers without a state we sealed cannot be tied to these arguments.
   if (typeof input.requestState !== "string") throw invalidRequestState();
@@ -294,12 +305,14 @@ export function resolveRound(input: RoundInput): ConfirmationRound {
   // Same state, different call: an approval for one tool or one set of
   // arguments never rides on another.
   if (payload.t !== input.tool || payload.a !== argsDigest) throw invalidRequestState();
+  const fresh = answersFromResponses(input.inputResponses);
   return {
     tool: input.tool,
     argsDigest,
-    answered: { ...payload.ans, ...answersFromResponses(input.inputResponses) },
+    answered: { ...payload.ans, ...fresh },
     nonce: payload.n,
     used: {},
+    carried: new Set(Object.keys(payload.ans).filter((k) => !(k in fresh))),
   };
 }
 

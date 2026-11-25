@@ -8,8 +8,16 @@
  */
 
 import { createLogger } from "../observability/logger.js";
+import { getRequestContext } from "../observability/request-context.js";
+import { redactSecretsInText } from "../observability/secret-redaction.js";
+import {
+  logDestructiveConfirmation,
+  type DestructiveConfirmationOutcome,
+} from "../../governance/audit.js";
 
 const logger = createLogger("elicitation-helpers");
+/** Used only when no tool-handler factory scope is in force (direct calls, tests). */
+const auditLogger = createLogger("governance-audit");
 
 /** Minimal duck-typed interface for sdkContext — avoids importing from MCP SDK. */
 export interface ElicitContext {
@@ -108,16 +116,23 @@ const IMPACT_PREVIEW_CAP = 5;
 async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean> {
   // Explicit operator opt-out wins, so a headless deployment that has chosen
   // this posture is unaffected by the fail-closed branch below.
-  if (shouldSkipElicitation()) return true;
+  if (shouldSkipElicitation()) {
+    audit(opts, "skipped_by_env");
+    return true;
+  }
 
   if (!opts.sdkContext?.elicitInput) {
-    if (!opts.irreversible) return true;
+    if (!opts.irreversible) {
+      audit(opts, "allowed_no_channel");
+      return true;
+    }
     logger.warn(
-      { action: opts.action, env: ELICIT_ENV_VAR },
+      { action: redactSecretsInText(opts.action), env: ELICIT_ENV_VAR },
       `Refusing an irreversible operation: the client advertises no elicitation ` +
         `capability, so there is no way to confirm it. Use a client that supports ` +
         `elicitation, or set ${ELICIT_ENV_VAR}=skip to accept these operations unconfirmed.`
     );
+    audit(opts, "refused_no_channel");
     return false;
   }
 
@@ -135,7 +150,7 @@ async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean
 
   const message = `${opts.action}\n\n${opts.consequence}${previewLines}`;
 
-  const result = (await opts.sdkContext.elicitInput({
+  const elicitParams = {
     message,
     requestedSchema: {
       type: "object",
@@ -148,9 +163,43 @@ async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean
         },
       },
     },
-  })) as ElicitInputResult;
+  };
+  // A `ConfirmationRequired` thrown here (an MRTR round that only asks) and any
+  // SDK error propagate before the audit call below: neither is a decision.
+  const result = (await opts.sdkContext.elicitInput(elicitParams)) as ElicitInputResult;
 
-  return result.action === "accept" && result.content?.confirm === true;
+  const confirmed = result.action === "accept" && result.content?.confirm === true;
+  // On a later MRTR round the handler re-runs from the top, and an answer given
+  // in an earlier round is replayed from the sealed state: that decision was
+  // audited when it arrived, so it is not recorded twice.
+  if (!getRequestContext()?.confirmationAudit?.isCarriedAnswer?.(elicitParams)) {
+    audit(opts, confirmed ? "accepted" : result.action === "cancel" ? "cancelled" : "declined");
+  }
+  return confirmed;
+}
+
+/**
+ * One `governance-audit` record per confirmation decision. The call's tool,
+ * args digest, principal tag and verified token ids come from the request
+ * context the tool-handler factory installs; outside the factory (a unit test,
+ * a direct call) the record carries the action and outcome only.
+ */
+function audit(opts: ConfirmDestructiveOpts, outcome: DestructiveConfirmationOutcome): void {
+  const scope = getRequestContext()?.confirmationAudit;
+  logDestructiveConfirmation(scope?.logger ?? auditLogger, {
+    // The action text can quote entity names from the platform; strip anything
+    // secret-shaped the same way failure records are.
+    action: redactSecretsInText(opts.action),
+    outcome,
+    irreversible: opts.irreversible === true,
+    scope: scope && {
+      toolName: scope.toolName,
+      argsDigest: scope.argsDigest,
+      principalTag: scope.principalTag,
+      jti: scope.jti,
+      approvalId: scope.approvalId,
+    },
+  });
 }
 
 /** Confirm an archive operation (soft delete that cannot be reactivated on most platforms). */

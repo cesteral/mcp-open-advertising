@@ -6,7 +6,7 @@ import type { DecisionTokenVerdict } from "./decision-token.js";
 import type { TokenMode } from "./config.js";
 
 /** Minimal structural logger (pino-compatible) so this stays test-friendly. */
-interface AuditLogger {
+export interface AuditLogger {
   info: (obj: unknown, msg?: string) => void;
   warn: (obj: unknown, msg?: string) => void;
 }
@@ -52,4 +52,83 @@ export function logDecisionTokenVerdict(
   }
 
   recordDecisionTokenVerification(verdict.reasonCode, mode);
+}
+
+/**
+ * How one destructive-operation confirmation was decided.
+ *
+ *  - `accepted` / `declined` / `cancelled`: the user answered. Accepting the
+ *    form without ticking the confirm box is `declined`.
+ *  - `refused_no_channel`: an irreversible operation, and the client cannot
+ *    answer a form on this call, so it was refused.
+ *  - `allowed_no_channel`: a reversible operation, and the client cannot
+ *    answer, so it went ahead unconfirmed (the permissive fallback).
+ *  - `skipped_by_env`: `MCP_ELICIT_DESTRUCTIVE=skip`; nobody was asked.
+ */
+export type DestructiveConfirmationOutcome =
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "refused_no_channel"
+  | "allowed_no_channel"
+  | "skipped_by_env";
+
+/**
+ * What the tool-handler factory knows about the call a confirmation belongs to.
+ * The factory puts it on the call's request context (`confirmationAudit`), so
+ * the confirmation helpers read it without any call site passing it in. Every
+ * field is already safe to log: digests and tags, never raw values.
+ */
+export interface ConfirmationAuditScope {
+  /** The server's logger, so the record carries the server's bindings. */
+  logger: AuditLogger;
+  toolName: string;
+  /** `digestArguments` of the call's raw arguments (SHA-256, hex). */
+  argsDigest: string;
+  /** HMAC tag of the principal: the same tag a sealed `requestState` carries. */
+  principalTag: string;
+  /** From a decision token that verified on this call; absent otherwise. */
+  jti?: string;
+  approvalId?: string;
+  /**
+   * True when the answer to this prompt was given in an EARLIER round and is
+   * only carried forward in the sealed `requestState`. That decision was
+   * recorded on the round that received it, so it is not recorded again.
+   */
+  isCarriedAnswer?: (elicitParams: Record<string, unknown>) => boolean;
+}
+
+/**
+ * Emit the `governance-audit` record for one destructive-operation
+ * confirmation decision. A refusal for lack of a channel and the env bypass log
+ * at `warn`, everything else at `info`. The caller passes the action text
+ * already redacted; nothing here carries a raw token or raw arguments.
+ */
+export function logDestructiveConfirmation(
+  logger: AuditLogger,
+  args: {
+    action: string;
+    outcome: DestructiveConfirmationOutcome;
+    irreversible: boolean;
+    scope?: Omit<ConfirmationAuditScope, "logger" | "isCarriedAnswer">;
+  }
+): void {
+  const { action, outcome, irreversible, scope } = args;
+  const record = {
+    component: "governance-audit",
+    event: "destructive_confirmation",
+    outcome,
+    action,
+    irreversible,
+    toolName: scope?.toolName,
+    argsDigest: scope?.argsDigest,
+    principalTag: scope?.principalTag,
+    jti: scope?.jti,
+    approvalId: scope?.approvalId,
+  };
+  if (outcome === "refused_no_channel" || outcome === "skipped_by_env") {
+    logger.warn(record, `destructive confirmation: ${outcome}`);
+  } else {
+    logger.info(record, `destructive confirmation: ${outcome}`);
+  }
 }
