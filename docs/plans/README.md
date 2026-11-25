@@ -8,9 +8,10 @@ When you add a plan, put a `Status` line under the title and add it here. When i
 
 ## Active
 
-| Doc                                                                                | What                                                                       |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [2026-10-09-hash-alg-selector-handoff.md](2026-10-09-hash-alg-selector-handoff.md) | `hashAlg` selector: slice 1 shipped; slice 2 waits on governance-side work |
+| Doc                                                                                | What                                                                                                   |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [2026-10-09-hash-alg-selector-handoff.md](2026-10-09-hash-alg-selector-handoff.md) | `hashAlg` selector: slice 1 shipped; slice 2 waits on governance-side work                             |
+| [2026-11-25-skills-over-mcp-prototype.md](2026-11-25-skills-over-mcp-prototype.md) | Skills over MCP (SEP-2640) prototype on meta-mcp, off by default; keep prompts and skills side by side |
 
 ## Partly implemented
 

@@ -13,6 +13,7 @@ export * from "./mcp/client-validation-helpers.js";
 // The one confirmation-rounds name a tool may need: a catch that wraps a prompt must rethrow it.
 export { ConfirmationRequired } from "./mcp/confirmation-rounds.js";
 export * from "./mcp/cross-platform-prompts.js";
+export * from "./mcp/cross-platform-skills.js";
 export * from "./mcp/elicitation-helpers.js";
 export * from "./mcp/governed-dry-run.js";
 export * from "./mcp/pagination.js";

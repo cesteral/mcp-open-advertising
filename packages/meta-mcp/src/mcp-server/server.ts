@@ -6,7 +6,8 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createPlatformMcpServer } from "@cesteral/shared";
+import { CROSS_PLATFORM_SKILL_FILES, createPlatformMcpServer } from "@cesteral/shared";
+import { mcpConfig } from "../config/index.js";
 import { sessionServiceStore } from "../services/session-services.js";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
@@ -86,5 +87,7 @@ export async function createMcpServer(
     workflowIdByToolName: metaWorkflowIdByToolName,
     manifestUrl: new URL("../cesteral-manifest.json", import.meta.url),
     sessionServiceStore,
+    // Prototype, off by default (MCP_SKILLS_ENABLED).
+    ...(mcpConfig.mcpSkillsEnabled && { skills: { files: CROSS_PLATFORM_SKILL_FILES } }),
   });
 }
