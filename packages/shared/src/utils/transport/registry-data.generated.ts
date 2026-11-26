@@ -16,6 +16,7 @@ export interface RegistryServerEntry {
       readonly operations: readonly string[];
       readonly note: string;
     }[];
+    readonly terminalStatusValues: readonly string[];
   };
   readonly untrustedPathReporting: "unsupported" | "per-response";
 }
@@ -47,7 +48,8 @@ export const REGISTRY_DATA: RegistryData = {
         ]
       },
       "operational": {
-        "terminalOperations": []
+        "terminalOperations": [],
+        "terminalStatusValues": []
       },
       "untrustedPathReporting": "per-response"
     },
@@ -104,6 +106,9 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "Each item is an update_entity PATCH, so a batch can set entityStatus=ENTITY_STATUS_ARCHIVED, the same irreversible value dv360_update_entity is declared for. Terminal only for that status value."
           }
+        ],
+        "terminalStatusValues": [
+          "ENTITY_STATUS_ARCHIVED"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -162,6 +167,13 @@ export const REGISTRY_DATA: RegistryData = {
             "note": "Accepts Archived, which the tool documents as permanent (cannot be un-archived). Terminal only when the batch sets Archived."
           },
           {
+            "tool": "ttd_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is a partial PUT like ttd_update_entity, so a batch can set Availability=Archived, the same terminal value ttd_update_entity is declared for. Terminal only for that value."
+          },
+          {
             "tool": "ttd_graphql_mutation_bulk",
             "operations": [
               "bulk_job"
@@ -182,6 +194,9 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "The delete action removes a bid list. No tool on this server restores it. Terminal only for action=delete."
           }
+        ],
+        "terminalStatusValues": [
+          "Archived"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -232,6 +247,9 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "Sends caller-built :mutate operations, which may include `remove` (the same irreversible removal gads_remove_entity is declared for) or an update to status REMOVED. Terminal for those operations; create and other updates are not."
           }
+        ],
+        "terminalStatusValues": [
+          "REMOVED"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -274,7 +292,18 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts ARCHIVED, which the tool documents as permanent and not reversible. Terminal only when the batch sets ARCHIVED."
+          },
+          {
+            "tool": "meta_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is a field update like meta_update_entity, so a batch can set status=ARCHIVED or DELETED, the values meta_update_entity is declared terminal for. Terminal only for those values."
           }
+        ],
+        "terminalStatusValues": [
+          "ARCHIVED",
+          "DELETED"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -309,15 +338,26 @@ export const REGISTRY_DATA: RegistryData = {
             "operations": [
               "update_status"
             ],
-            "note": "Setting status=ARCHIVED or CANCELED is terminal through this server — the bulk tool documents that ARCHIVED entities cannot be reactivated, and CANCELED is LinkedIn's end state. Terminal only for those values."
+            "note": "Setting status (a creative's intendedStatus) to CANCELED or PENDING_DELETION is terminal through this server: CANCELED is LinkedIn's end state and PENDING_DELETION is how LinkedIn deletes anything that is not DRAFT. ARCHIVED is reversible (set ACTIVE or PAUSED again). Terminal only for those values."
           },
           {
             "tool": "linkedin_bulk_update_status",
             "operations": [
               "bulk_job"
             ],
-            "note": "Accepts ARCHIVED (documented by the tool as not reactivatable) and CANCELED. Terminal only when the batch sets one of those; ACTIVE/PAUSED/DRAFT are reversible."
+            "note": "Accepts CANCELED, LinkedIn's end state. Terminal only when the batch sets CANCELED; ACTIVE/PAUSED/DRAFT/ARCHIVED are reversible."
+          },
+          {
+            "tool": "linkedin_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is a PARTIAL_UPDATE like linkedin_update_entity, so a batch can set status (intendedStatus) to CANCELED or PENDING_DELETION, the values linkedin_update_entity is declared terminal for. Terminal only for those values."
           }
+        ],
+        "terminalStatusValues": [
+          "CANCELED",
+          "PENDING_DELETION"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -368,6 +408,9 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "Accepts DELETE for Upgraded Smart+ campaigns, ad groups and ads, which is irreversible on TikTok. Terminal only when the batch sets DELETE; ENABLE/DISABLE are reversible."
           }
+        ],
+        "terminalStatusValues": [
+          "DELETE"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -425,6 +468,10 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "PATCHes arbitrary fields per item, so a batch can set a placement's activeStatus to PLACEMENT_STATUS_PERMANENTLY_ARCHIVED, the same irreversible value cm360_update_entity is declared for. Terminal only for that value."
           }
+        ],
+        "terminalStatusValues": [
+          "PERMANENTLY_ARCHIVED",
+          "PLACEMENT_STATUS_PERMANENTLY_ARCHIVED"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -454,7 +501,8 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "Bulk entity removal. No tool on this server restores it."
           }
-        ]
+        ],
+        "terminalStatusValues": []
       },
       "untrustedPathReporting": "per-response"
     },
@@ -475,7 +523,8 @@ export const REGISTRY_DATA: RegistryData = {
         ]
       },
       "operational": {
-        "terminalOperations": []
+        "terminalOperations": [],
+        "terminalStatusValues": []
       },
       "untrustedPathReporting": "per-response"
     },
@@ -517,7 +566,17 @@ export const REGISTRY_DATA: RegistryData = {
               "bulk_job"
             ],
             "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
+          },
+          {
+            "tool": "pinterest_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is a field update like pinterest_update_entity, so a batch can set status=ARCHIVED, the value pinterest_update_entity is declared terminal for. Terminal only for that value."
           }
+        ],
+        "terminalStatusValues": [
+          "ARCHIVED"
         ]
       },
       "untrustedPathReporting": "per-response"
@@ -547,7 +606,8 @@ export const REGISTRY_DATA: RegistryData = {
             ],
             "note": "Bulk removal: Unified API delete of targets / ad associations (POST /adsApi/v1/delete/targets|adAssociations), and the legacy PUT state=ARCHIVED of orders / line items (the Unified API has no campaign or ad group delete and no ARCHIVED update state). No tool on this server restores either."
           }
-        ]
+        ],
+        "terminalStatusValues": []
       },
       "untrustedPathReporting": "per-response"
     },
@@ -589,7 +649,24 @@ export const REGISTRY_DATA: RegistryData = {
               "update_status"
             ],
             "note": "Setting Status=Deleted removes the entity; Microsoft Advertising has no undelete and no tool on this server restores it. Terminal only for that status value."
+          },
+          {
+            "tool": "msads_bulk_update_entities",
+            "operations": [
+              "bulk_job"
+            ],
+            "note": "Each item is an Update like msads_update_entity, so a batch can set Status=Deleted, the value msads_update_entity is declared terminal for. Terminal only for that value."
+          },
+          {
+            "tool": "msads_manage_criterions",
+            "operations": [
+              "manage"
+            ],
+            "note": "The delete operation removes targeting criterions; re-adding one creates a new criterion with a new id. No tool on this server restores the deleted one. Terminal only for operation=delete."
           }
+        ],
+        "terminalStatusValues": [
+          "Deleted"
         ]
       },
       "untrustedPathReporting": "per-response"

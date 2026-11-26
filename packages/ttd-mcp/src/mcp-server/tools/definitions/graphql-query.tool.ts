@@ -5,6 +5,8 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  elicitIrreversibleOperationConfirmation,
+  irreversibleNotConfirmedError,
   spillJson,
   formatBoundedText,
   EffectResultSchema,
@@ -98,12 +100,45 @@ function fingerprintQuery(input: GraphqlInput): string {
   return `gql-${hash}`;
 }
 
+/**
+ * The named operations of a document that defines a mutation, or null when it
+ * defines none. Block strings, strings and comments are blanked first, so the
+ * word inside them does not count. It errs towards "mutation": a false positive
+ * costs one confirmation.
+ */
+export function mutationOperations(query: string): string[] | null {
+  const code = query
+    .replace(/"""[\s\S]*?"""/g, '""')
+    .replace(/"(?:[^"\\\n]|\\.)*"/g, '""')
+    .replace(/#[^\n]*/g, "");
+  if (!/(^|[^\w$])mutation\b/.test(code)) return null;
+  return [...code.matchAll(/(?:^|[^\w$])mutation\s+([A-Za-z_]\w*)/g)].map((m) => m[1]!);
+}
+
 export async function graphqlQueryLogic(
   input: GraphqlInput,
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GraphqlOutput & { _spillResult?: SpillResult; _fullText?: string }> {
   const { ttdService } = resolveSessionServices(sdkContext);
+
+  // A query changes nothing and does not prompt. A mutation is free-form: this
+  // server cannot tell a create from a bidListDelete, and no tool reverses a
+  // delete or archive, so every mutation is confirmed as irreversible.
+  const mutations = mutationOperations(input.query);
+  if (mutations) {
+    const confirmed = await elicitIrreversibleOperationConfirmation({
+      action: "You are about to run a GraphQL mutation against The Trade Desk.",
+      consequence:
+        "This server cannot tell what a free-form mutation changes. It may delete or archive " +
+        "entities, which no tool on this server can reverse, so every mutation is confirmed as irreversible.",
+      impactPreview: mutations.length > 0 ? mutations.map((name) => `mutation ${name}`) : undefined,
+      confirmTitle: "Confirm GraphQL mutation",
+      confirmDescription: "Run this GraphQL mutation",
+      sdkContext,
+    });
+    if (!confirmed) throw irreversibleNotConfirmedError("the GraphQL mutation");
+  }
 
   const result = (await ttdService.graphqlQuery(input.query, input.variables, context, {
     betaFeatures: input.betaFeatures,

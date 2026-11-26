@@ -41,7 +41,14 @@ const slim = {
     // is the one hand-authored value in the operational block, so it travels
     // through the same registry -> generated-module path as the rest of the
     // card's metadata rather than being restated per transport.
-    operational: { terminalOperations: s.operational?.terminalOperations ?? [] },
+    operational: {
+      terminalOperations: s.operational?.terminalOperations ?? [],
+      // The status values that are a one-way door on this platform. The tools
+      // read them from here (`terminalStatusValuesFor` in @cesteral/shared) to
+      // decide when a status change needs an irreversible confirmation, so the
+      // registry is the only copy of the list.
+      terminalStatusValues: s.operational?.terminalStatusValues ?? [],
+    },
     // #204: whether every tool on this server reports where platform text sits
     // in its results. Absent means "unsupported", which is always safe to claim.
     untrustedPathReporting: s.untrustedContent?.pathReporting ?? "unsupported",
@@ -67,6 +74,7 @@ const body = `export interface RegistryServerEntry {
       readonly operations: readonly string[];
       readonly note: string;
     }[];
+    readonly terminalStatusValues: readonly string[];
   };
   readonly untrustedPathReporting: "unsupported" | "per-response";
 }

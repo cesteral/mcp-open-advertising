@@ -16,7 +16,11 @@ import {
 import { EffectResultSchema, EffectDryRunResultSchema } from "@cesteral/shared";
 
 const ctx = { requestId: "r" } as any;
-const sdk = { sessionId: "s" } as any;
+/** A client that accepts every confirmation, so a terminal operation goes ahead. */
+const sdk = {
+  sessionId: "s",
+  elicitInput: async () => ({ action: "accept", content: { confirm: true } }),
+} as any;
 
 const baseInput = {
   entityType: "campaign",

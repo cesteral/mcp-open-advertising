@@ -1,0 +1,172 @@
+{
+  "$comment": "Tools that irreversible-confirmation.test.mjs would require to confirm an irreversible change (destructiveHint: true, or a registry.json terminal operation) but that have no irreversible path: state why, naming the call that reverses the effect. `exempt` may only shrink: an entry whose tool now confirms as irreversible, is no longer a candidate, or is gone fails the ratchet. `reversibleStatusValues` lists status values that look one-way to destructive-tools.mjs but can be set back on that platform.",
+  "exempt": [
+    {
+      "package": "amazon-dsp-mcp",
+      "tool": "amazon_dsp_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "amazon-dsp-mcp",
+      "tool": "amazon_dsp_bulk_update_entities",
+      "reason": "Each item is an amazon_dsp_update_entity update, whose `state` accepts ENABLED or PAUSED only (ARCHIVED is not an update state on the Unified API); every field it sets can be set back."
+    },
+    {
+      "package": "amazon-dsp-mcp",
+      "tool": "amazon_dsp_bulk_update_status",
+      "reason": "operationStatus is ENABLED or PAUSED only: each reverses the other with the same tool. Archival is amazon_dsp_delete_entity, which confirms as irreversible."
+    },
+    {
+      "package": "amazon-dsp-mcp",
+      "tool": "amazon_dsp_update_commitment",
+      "reason": "Overwrites a commitment's fields (name, spend, dates, ids); no status or delete field exists, and the previous values can be set again with the same tool."
+    },
+    {
+      "package": "amazon-dsp-mcp",
+      "tool": "amazon_dsp_update_entity",
+      "reason": "`state` accepts ENABLED or PAUSED only (the tool refuses ARCHIVED and points at amazon_dsp_delete_entity); every other field it sets can be set back with the same tool."
+    },
+    {
+      "package": "dv360-mcp",
+      "tool": "dv360_adjust_line_item_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "dv360-mcp",
+      "tool": "dv360_manage_custom_bidding_rules",
+      "reason": "Actions are upload, list, get and getActive. upload adds a new rules version; earlier versions stay on the algorithm and can be uploaded again. Nothing is deleted."
+    },
+    {
+      "package": "dv360-mcp",
+      "tool": "dv360_manage_custom_bidding_script",
+      "reason": "Actions are upload, list, get and getActive. upload adds a new script version; earlier versions stay on the algorithm and can be uploaded again. Nothing is deleted."
+    },
+    {
+      "package": "gads-mcp",
+      "tool": "gads_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "linkedin-mcp",
+      "tool": "linkedin_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "meta-mcp",
+      "tool": "meta_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "msads-mcp",
+      "tool": "msads_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "msads-mcp",
+      "tool": "msads_bulk_update_status",
+      "reason": "status is Active or Paused only (Deleted is internal-only and not offered): each reverses the other with the same tool. Deleting is msads_delete_entity, which confirms as irreversible."
+    },
+    {
+      "package": "msads-mcp",
+      "tool": "msads_delete_report_schedule",
+      "reason": "A stub: Microsoft Advertising Reporting v13 has no report schedules, so it refuses every call without contacting the API (registry.json declares it only because its name marks it destructive)."
+    },
+    {
+      "package": "msads-mcp",
+      "tool": "msads_manage_ad_extensions",
+      "reason": "deleteAssociations removes only the links between extensions and campaigns or ad groups; the extensions are untouched, and setAssociations with the same AdExtensionIdToEntityIdAssociations restores them. setAssociations and getAssociations remove nothing."
+    },
+    {
+      "package": "pinterest-mcp",
+      "tool": "pinterest_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "sa360-mcp",
+      "tool": "sa360_update_conversions",
+      "reason": "Updates existing offline conversions; a later update can set the previous values again. Confirmed as reversible (elicitConversionUploadConfirmation). Nothing is deleted."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_bulk_update_entities",
+      "reason": "Each item is a snapchat_update_entity update, whose status accepts ACTIVE or PAUSED only (symbolicValidate); deletion is snapchat_delete_entity, which confirms as irreversible."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_bulk_update_status",
+      "reason": "operationStatus is ACTIVE or PAUSED only: each reverses the other with the same tool. Deletion is snapchat_delete_entity, which confirms as irreversible."
+    },
+    {
+      "package": "snapchat-mcp",
+      "tool": "snapchat_update_entity",
+      "reason": "status accepts ACTIVE or PAUSED only (symbolicValidate refuses anything else before a write); every other field it sets can be set back with the same tool."
+    },
+    {
+      "package": "tiktok-mcp",
+      "tool": "tiktok_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "tiktok-mcp",
+      "tool": "tiktok_bulk_update_entities",
+      "reason": "POSTs each item to {entity}/update/, whose bodies carry no operation_status, so it cannot delete; DELETE is reachable only through tiktok_delete_entity and tiktok_bulk_update_status, which confirm it as irreversible."
+    },
+    {
+      "package": "tiktok-mcp",
+      "tool": "tiktok_update_entity",
+      "reason": "Refuses operation_status DELETE before any write (updateStatusShapeErrors: DELETE_NOT_SUPPORTED, pointing at tiktok_delete_entity); ENABLE/DISABLE and field updates can be set back. The registry declaration predates that refusal."
+    },
+    {
+      "package": "tiktok-mcp",
+      "tool": "tiktok_update_smart_plus_entity",
+      "reason": "Status changes are not update fields here (they go through tiktok_update_smart_plus_status, which confirms DELETE as irreversible); every field it sets can be set back."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_adjust_bids",
+      "reason": "Sets absolute bid values on existing entities; the previous bid is read back by the tool's own pre-read and can be set again with the same tool. No status changes, nothing deleted. Confirmed as reversible (elicitBidChangeConfirmation)."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_bulk_manage_bid_lists",
+      "reason": "batch_get reads; batch_update replaces bid lists' lines with complete BidListUpdateInputs, which a later batch_update can set back. No bid list is deleted (that is ttd_manage_bid_list delete)."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_cancel_report_execution",
+      "reason": "Stops an in-flight report run; nothing on the platform is destroyed, and the report can be run again (ttd_rerun_report_schedule, ttd_execute_entity_report)."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_graphql_cancel_bulk_job",
+      "reason": "Cancelling a bulk job stops further work and destroys nothing; a cancelled job can be submitted again. The mutations it may already have run were confirmed when the job was submitted."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_manage_seed",
+      "reason": "Operations are create, update, get, set_default_advertiser and attach_to_campaign: each overwrites or adds, and the previous seed or default can be set again. Nothing is deleted."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_update_report_schedule",
+      "reason": "Overwrites a schedule's settings; the previous settings can be set again with the same tool. Deleting a schedule is ttd_delete_report_schedule, which confirms as irreversible."
+    },
+    {
+      "package": "ttd-mcp",
+      "tool": "ttd_update_report_template",
+      "reason": "Overwrites a report template's settings; the previous settings can be set again with the same tool. Nothing is deleted."
+    }
+  ],
+  "reversibleStatusValues": [
+    {
+      "package": "linkedin-mcp",
+      "value": "ARCHIVED",
+      "reason": "LinkedIn reactivates an archived campaign, campaign group or creative: linkedin_update_entity or linkedin_bulk_update_status sets ACTIVE or PAUSED again (both tools' descriptions say ARCHIVED is reversible)."
+    }
+  ]
+}

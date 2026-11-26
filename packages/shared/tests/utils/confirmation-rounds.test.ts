@@ -28,7 +28,11 @@ import {
   type ToolSdkContext,
 } from "../../src/utils/mcp/tool-handler-factory.js";
 import { extractZodShape } from "../../src/utils/mcp/zod-helpers.js";
-import { elicitDeleteConfirmation } from "../../src/utils/mcp/elicitation-helpers.js";
+import {
+  elicitDeleteConfirmation,
+  elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+} from "../../src/utils/mcp/elicitation-helpers.js";
 import { NO_UNTRUSTED_CONTENT } from "../../src/utils/mcp/untrusted-content.js";
 import {
   runWithRequestContext,
@@ -151,6 +155,32 @@ const twoQuestionTool: ToolDefinitionForFactory = {
   },
 };
 
+/**
+ * A bulk update where two of three items set a terminal status: the shape of
+ * every `*_bulk_update_entities` tool. One irreversible question for the batch,
+ * asked before any write.
+ */
+const terminalBatchTool: ToolDefinitionForFactory = {
+  ...deleteTool,
+  name: "mrtr_terminal_batch",
+  logic: async (input: { id: string }, _ctx: unknown, sdk?: ToolSdkContext) => {
+    const items = [
+      { id: `${input.id}-a`, payload: { status: "ARCHIVED" } },
+      { id: `${input.id}-b`, payload: { name: "renamed" } },
+      { id: `${input.id}-c`, payload: { status: "ARCHIVED" } },
+    ];
+    const confirmed = await elicitBulkMutationConfirmation({
+      count: items.length,
+      entityLabel: "ad",
+      summary: "Applying field updates.",
+      terminalItems: findTerminalTransitions(new Set(["ARCHIVED"]), items),
+      sdkContext: sdk,
+    });
+    if (confirmed) executions.push(...items.map((it) => it.id));
+    return { confirmed };
+  },
+};
+
 interface Fixture {
   jtiStore: InMemoryJtiStore;
   /** Defaults to a silent logger. */
@@ -168,7 +198,14 @@ function buildServer(f: Fixture): McpServer {
   );
   registerToolsFromDefinitions({
     server: server as never,
-    tools: [deleteTool, otherTool, dryRunAsksTool, governedTool, twoQuestionTool],
+    tools: [
+      deleteTool,
+      otherTool,
+      dryRunAsksTool,
+      governedTool,
+      twoQuestionTool,
+      terminalBatchTool,
+    ],
     logger: f.logger ?? pino({ level: "silent" }),
     sessionId: f.sessionId ?? "principal-a",
     transformSchema: (s) => extractZodShape(s),
@@ -298,6 +335,35 @@ describe("destructive confirmation as a Multi Round-Trip Request (#244)", () => 
       expect(done.result.resultType).not.toBe("input_required");
       expect(resultText(done)).toContain("confirmed=true");
       expect(executions).toEqual(["123"]);
+    });
+
+    it("a batch with terminal items asks exactly once, then writes every item", async () => {
+      const first = await call(f, "mrtr_terminal_batch", { id: "b" });
+      expect(first.result.resultType).toBe("input_required");
+      const requests = Object.entries(first.result.inputRequests) as Array<[string, any]>;
+      expect(requests).toHaveLength(1);
+      const [[key, request]] = requests;
+      expect(request.params.message).toContain("irreversible change to 2 of 3 ad(s)");
+      expect(request.params.message).toContain("b-a: status=ARCHIVED");
+      expect(request.params.message).not.toContain("b-b");
+      expect(executions).toEqual([]);
+
+      const done = await call(
+        f,
+        "mrtr_terminal_batch",
+        { id: "b" },
+        { requestState: first.result.requestState, inputResponses: accept(key) }
+      );
+      expect(done.result.resultType).not.toBe("input_required");
+      expect(resultText(done)).toContain("confirmed=true");
+      expect(executions).toEqual(["b-a", "b-b", "b-c"]);
+    });
+
+    it("a batch with terminal items is refused for a client that cannot answer", async () => {
+      const done = await call(f, "mrtr_terminal_batch", { id: "b" }, { capabilities: {} });
+      expect(done.result.resultType).not.toBe("input_required");
+      expect(resultText(done)).toContain("confirmed=false");
+      expect(executions).toEqual([]);
     });
 
     it("a declined answer refuses the operation", async () => {

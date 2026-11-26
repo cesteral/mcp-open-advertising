@@ -23,6 +23,10 @@ import {
 } from "../utils/capture-snapshot.js";
 import {
   createLogger,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
+  restrictToUpdateMask,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
   DispatchedCapabilitySchema,
@@ -38,6 +42,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_update_entity";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 
 // Generate dynamic description with examples and hierarchy
 function generateToolDescription(): string {
@@ -168,6 +174,21 @@ export async function updateEntityLogic(
       dispatchedCapability,
     };
   }
+
+  // A terminal status (registry.json `terminalStatusValues`) is a one-way door:
+  // confirm it as irreversible before the first write. An update that sets no
+  // terminal value does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: 1,
+    entityLabel: validatedInput.entityType,
+    terminalItems: findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+      {
+        id: String(entityIds[`${validatedInput.entityType}Id`] ?? validatedInput.entityType),
+        payload: restrictToUpdateMask(mergedData, validatedInput.updateMask),
+      },
+    ]),
+    sdkContext,
+  });
 
   try {
     const current = (await dv360Service.getEntity(

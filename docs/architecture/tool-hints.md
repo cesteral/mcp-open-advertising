@@ -38,7 +38,7 @@ A new write tool must be added to `WRITE_SUFFIX_CLASS`: the ratchet fails naming
 
 ## Effect on the destructive-op confirmation prompt (#244, #396)
 
-None. The prompt is requested by each handler (`elicitArchiveConfirmation`, `elicitDeleteConfirmation`, `elicitBulkStatusChangeConfirmation`, `elicitBidChangeConfirmation`, ...) and nothing in `createPlatformMcpServer`, the tool-handler factory or the confirmation rounds reads an annotation. No operation gains or loses a prompt from this change. What does change is what a client that gates on `destructiveHint` itself sees: it now flags `update`, `bulk_update`, `bulk_update_status`, `adjust_bids` and the `manage_*` tools everywhere, and no longer flags `create`, `bulk_create`, `duplicate` or `upload`.
+None. The prompt is requested by each handler (`elicitArchiveConfirmation`, `elicitDeleteConfirmation`, `elicitBulkStatusChangeConfirmation`, `elicitBidChangeConfirmation`, ...) and nothing in `createPlatformMcpServer`, the tool-handler factory or the confirmation rounds reads an annotation. No operation gains or loses a prompt from this change. Since then `destructiveHint` is tied to the prompts the other way: every tool that carries it must confirm an irreversible path as irreversible or be exempt with a reason (`scripts/lib/irreversible-confirmation.test.mjs`, [confirmation-mrtr.md](confirmation-mrtr.md#the-ratchet)). What does change is what a client that gates on `destructiveHint` itself sees: it now flags `update`, `bulk_update`, `bulk_update_status`, `adjust_bids` and the `manage_*` tools everywhere, and no longer flags `create`, `bulk_create`, `duplicate` or `upload`.
 
 ## Movement
 

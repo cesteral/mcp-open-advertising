@@ -8,6 +8,8 @@ import { getStatusCapableEntityTypeEnum, type GAdsEntityType } from "../utils/en
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import {
   elicitBulkStatusChangeConfirmation,
+  isTerminalStatusValue,
+  terminalStatusValuesFor,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -25,6 +27,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_bulk_update_status";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update Google Ads Entity Status";
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_DESCRIPTION = `Batch update the status for multiple Google Ads entities of the same type.
@@ -138,6 +142,8 @@ export async function bulkUpdateStatusLogic(
     count: input.entityIds.length,
     entityLabel: input.entityType,
     targetStatus: input.status,
+    // A terminal target is confirmed as irreversible: refused with no channel.
+    irreversible: isTerminalStatusValue(TERMINAL_STATUS_VALUES, input.status),
     impactPreview: input.entityIds,
     sdkContext,
   });

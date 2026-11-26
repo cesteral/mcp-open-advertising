@@ -8,6 +8,8 @@ import {
   McpError,
   JsonRpcErrorCode,
   assertGovernedEffectDryRun,
+  elicitBulkDeleteConfirmation,
+  irreversibleNotConfirmedError,
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
@@ -156,6 +158,23 @@ export async function manageCriterionsLogic(
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const op = getOperation(input.operation, input.entityLevel);
+
+  // A deleted criterion cannot be restored (re-adding one makes a new criterion
+  // with a new id): confirm the delete as irreversible before it is sent. Add,
+  // update and the reads do not prompt.
+  if (input.operation === "delete") {
+    const idsField = op.batch?.itemsField ?? "";
+    const ids = Array.isArray(input.data[idsField]) ? (input.data[idsField] as unknown[]) : [];
+    const confirmed = await elicitBulkDeleteConfirmation({
+      count: ids.length,
+      entityLabel: `${input.entityLevel} criterion`,
+      impactPreview: ids.map(String),
+      sdkContext,
+    });
+    if (!confirmed) {
+      throw irreversibleNotConfirmedError(`the ${input.entityLevel} criterion delete`);
+    }
+  }
 
   // Writes go through the PartialErrors mapping: a batch whose every item was
   // rejected throws; a partial success is reported in the effect summary.

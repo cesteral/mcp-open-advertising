@@ -7,6 +7,8 @@ import {
   McpError,
   JsonRpcErrorCode,
   assertGovernedEffectDryRun,
+  elicitIrreversibleOperationConfirmation,
+  irreversibleNotConfirmedError,
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
@@ -242,6 +244,21 @@ export async function graphqlMutationBulkLogic(
     mutation: input.mutation,
     mutationVariables: input.inputs.map((entry) => JSON.stringify({ [variableName]: entry })),
   };
+
+  // The job runs a free-form mutation once per input. This server cannot tell
+  // what it changes, a running job may not be cancellable, and no tool reverses
+  // a delete or archive, so every job is confirmed as irreversible, once, before
+  // it is submitted.
+  const confirmed = await elicitIrreversibleOperationConfirmation({
+    action: `You are about to submit a TTD bulk mutation job over ${input.inputs.length} input(s).`,
+    consequence:
+      "The job runs the mutation once per input. This server cannot tell what a free-form " +
+      "mutation changes; it may delete or archive entities, which no tool on this server can reverse.",
+    confirmTitle: "Confirm bulk mutation job",
+    confirmDescription: `Run the mutation for ${input.inputs.length} input(s)`,
+    sdkContext,
+  });
+  if (!confirmed) throw irreversibleNotConfirmedError("the bulk mutation job");
 
   const result = (await ttdService.graphqlQuery(
     CREATE_MUTATION_BULK_MUTATION,

@@ -132,6 +132,8 @@ export async function updateSmartPlusStatusLogic(
           count: input.entityIds.length,
           entityLabel: `Upgraded Smart+ ${input.entityType}`,
           targetStatus: input.operationStatus,
+          // ENABLE / DISABLE: DELETE, the one terminal value, took the branch above.
+          irreversible: false,
           impactPreview: input.entityIds,
           sdkContext,
         });

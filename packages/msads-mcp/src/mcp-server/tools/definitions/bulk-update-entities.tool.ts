@@ -14,6 +14,8 @@ import {
   McpError,
   JsonRpcErrorCode,
   elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -32,6 +34,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_bulk_update_entities";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update Microsoft Ads Entities";
 const TOOL_DESCRIPTION = `Batch update multiple Microsoft Advertising entities.
 
@@ -165,12 +169,20 @@ export async function bulkUpdateEntitiesLogic(
     items.length
   );
 
+  // An item that sets a terminal status (registry.json `terminalStatusValues`)
+  // turns the one prompt into an irreversible confirmation for the whole batch,
+  // listing those items; it is refused when the client cannot answer.
+  const terminalItems = findTerminalTransitions(
+    TERMINAL_STATUS_VALUES,
+    items.map((it) => ({ id: String(it.Id ?? it.id ?? "(unknown)"), payload: it }))
+  );
   const confirmed = await elicitBulkMutationConfirmation({
     count: items.length,
     entityLabel: input.entityType,
     summary: "Applying field updates across multiple Microsoft Ads entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(items),
     impactPreview: items.map((it) => String(it.Id ?? it.id ?? "(unknown)")),
+    terminalItems,
     sdkContext,
   });
   if (!confirmed) {

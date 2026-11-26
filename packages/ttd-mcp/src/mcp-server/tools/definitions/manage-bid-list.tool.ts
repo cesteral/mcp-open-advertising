@@ -6,6 +6,8 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   McpError,
   JsonRpcErrorCode,
+  elicitDeleteConfirmation,
+  irreversibleNotConfirmedError,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -129,6 +131,17 @@ export async function bidListLogic(
 
   const { ttdService } = resolveSessionServices(sdkContext);
   const selection = input.selection ?? "id name";
+
+  // A deleted bid list cannot be restored through this server: confirm it as
+  // irreversible before the mutation is sent. The other operations do not prompt.
+  if (input.operation === "delete" && input.data) {
+    const confirmed = await elicitDeleteConfirmation({
+      entityLabel: "bid list",
+      entityId: String(input.data.id ?? input.data.bidListId ?? input.bidListId ?? "(unknown)"),
+      sdkContext,
+    });
+    if (!confirmed) throw irreversibleNotConfirmedError("the bid list delete");
+  }
 
   let result: Record<string, unknown>;
   switch (input.operation) {

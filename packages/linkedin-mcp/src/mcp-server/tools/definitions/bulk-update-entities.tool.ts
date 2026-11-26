@@ -17,6 +17,8 @@ import {
   JsonRpcErrorCode,
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -35,6 +37,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_bulk_update_entities";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update LinkedIn Ads Entities";
 const TOOL_DESCRIPTION = `Batch update multiple LinkedIn Ads entities with arbitrary data.
 
@@ -152,12 +156,20 @@ export async function bulkUpdateEntitiesLogic(
   }
 
   const payloads = input.items.map((it) => it.data ?? {});
+  // An item that sets a terminal status (registry.json `terminalStatusValues`)
+  // turns the one prompt into an irreversible confirmation for the whole batch,
+  // listing those items; it is refused when the client cannot answer.
+  const terminalItems = findTerminalTransitions(
+    TERMINAL_STATUS_VALUES,
+    input.items.map((it) => ({ id: it.entityUrn, payload: it.data ?? {} }))
+  );
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
     summary: "Applying field updates across multiple LinkedIn Ads entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityUrn),
+    terminalItems,
     sdkContext,
   });
   if (!confirmed) {

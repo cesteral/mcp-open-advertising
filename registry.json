@@ -183,6 +183,7 @@
       ],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["ENTITY_STATUS_ARCHIVED"],
         "terminalOperations": [
           {
             "tool": "dv360_delete_entity",
@@ -356,6 +357,7 @@
       ],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["Archived"],
         "terminalOperations": [
           {
             "tool": "ttd_delete_entity",
@@ -381,6 +383,11 @@
             "tool": "ttd_bulk_update_status",
             "operations": ["bulk_job"],
             "note": "Accepts Archived, which the tool documents as permanent (cannot be un-archived). Terminal only when the batch sets Archived."
+          },
+          {
+            "tool": "ttd_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is a partial PUT like ttd_update_entity, so a batch can set Availability=Archived, the same terminal value ttd_update_entity is declared for. Terminal only for that value."
           },
           {
             "tool": "ttd_graphql_mutation_bulk",
@@ -494,6 +501,7 @@
       "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["REMOVED"],
         "terminalOperations": [
           {
             "tool": "gads_remove_entity",
@@ -670,6 +678,7 @@
       ],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["ARCHIVED", "DELETED"],
         "terminalOperations": [
           {
             "tool": "meta_delete_entity",
@@ -685,6 +694,11 @@
             "tool": "meta_bulk_update_status",
             "operations": ["bulk_job"],
             "note": "Accepts ARCHIVED, which the tool documents as permanent and not reversible. Terminal only when the batch sets ARCHIVED."
+          },
+          {
+            "tool": "meta_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is a field update like meta_update_entity, so a batch can set status=ARCHIVED or DELETED, the values meta_update_entity is declared terminal for. Terminal only for those values."
           }
         ]
       },
@@ -781,6 +795,7 @@
       "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["CANCELED", "PENDING_DELETION"],
         "terminalOperations": [
           {
             "tool": "linkedin_delete_entity",
@@ -790,12 +805,17 @@
           {
             "tool": "linkedin_update_entity",
             "operations": ["update_status"],
-            "note": "Setting status=ARCHIVED or CANCELED is terminal through this server — the bulk tool documents that ARCHIVED entities cannot be reactivated, and CANCELED is LinkedIn's end state. Terminal only for those values."
+            "note": "Setting status (a creative's intendedStatus) to CANCELED or PENDING_DELETION is terminal through this server: CANCELED is LinkedIn's end state and PENDING_DELETION is how LinkedIn deletes anything that is not DRAFT. ARCHIVED is reversible (set ACTIVE or PAUSED again). Terminal only for those values."
           },
           {
             "tool": "linkedin_bulk_update_status",
             "operations": ["bulk_job"],
-            "note": "Accepts ARCHIVED (documented by the tool as not reactivatable) and CANCELED. Terminal only when the batch sets one of those; ACTIVE/PAUSED/DRAFT are reversible."
+            "note": "Accepts CANCELED, LinkedIn's end state. Terminal only when the batch sets CANCELED; ACTIVE/PAUSED/DRAFT/ARCHIVED are reversible."
+          },
+          {
+            "tool": "linkedin_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is a PARTIAL_UPDATE like linkedin_update_entity, so a batch can set status (intendedStatus) to CANCELED or PENDING_DELETION, the values linkedin_update_entity is declared terminal for. Terminal only for those values."
           }
         ]
       },
@@ -898,6 +918,7 @@
       "tags": ["advertising", "tiktok", "campaign-management", "social", "video"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["DELETE"],
         "terminalOperations": [
           {
             "tool": "tiktok_delete_entity",
@@ -1036,6 +1057,7 @@
       "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["PERMANENTLY_ARCHIVED", "PLACEMENT_STATUS_PERMANENTLY_ARCHIVED"],
         "terminalOperations": [
           {
             "tool": "cm360_delete_entity",
@@ -1443,6 +1465,7 @@
       "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["ARCHIVED"],
         "terminalOperations": [
           {
             "tool": "pinterest_delete_entity",
@@ -1458,6 +1481,11 @@
             "tool": "pinterest_bulk_update_status",
             "operations": ["bulk_job"],
             "note": "Accepts ARCHIVED (documented by the tool as a soft delete); no tool on this server reverses it. Terminal only when the batch sets ARCHIVED."
+          },
+          {
+            "tool": "pinterest_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is a field update like pinterest_update_entity, so a batch can set status=ARCHIVED, the value pinterest_update_entity is declared terminal for. Terminal only for that value."
           }
         ]
       },
@@ -1719,6 +1747,7 @@
       "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"],
       "untrustedContent": { "pathReporting": "per-response" },
       "operational": {
+        "terminalStatusValues": ["Deleted"],
         "terminalOperations": [
           {
             "tool": "msads_delete_entity",
@@ -1734,6 +1763,16 @@
             "tool": "msads_update_entity",
             "operations": ["update_status"],
             "note": "Setting Status=Deleted removes the entity; Microsoft Advertising has no undelete and no tool on this server restores it. Terminal only for that status value."
+          },
+          {
+            "tool": "msads_bulk_update_entities",
+            "operations": ["bulk_job"],
+            "note": "Each item is an Update like msads_update_entity, so a batch can set Status=Deleted, the value msads_update_entity is declared terminal for. Terminal only for that value."
+          },
+          {
+            "tool": "msads_manage_criterions",
+            "operations": ["manage"],
+            "note": "The delete operation removes targeting criterions; re-adding one creates a new criterion with a new id. No tool on this server restores the deleted one. Terminal only for operation=delete."
           }
         ]
       },

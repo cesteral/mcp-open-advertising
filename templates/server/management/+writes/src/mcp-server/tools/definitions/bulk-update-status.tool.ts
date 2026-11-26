@@ -10,7 +10,9 @@
  * `assertGovernedEffectDryRun`, and a wire-request test that calls
  * `bulkUpdateStatusLogic` with only `fetch` stubbed. A status the platform
  * cannot reverse (ARCHIVED, DELETED) must also be declared in registry.json's
- * terminalOperations.
+ * terminalOperations and terminalStatusValues, and confirmed as irreversible:
+ * `irreversible: isTerminalStatusValue(terminalStatusValuesFor(TOOL_NAME), status)`
+ * (scripts/lib/irreversible-confirmation.test.mjs).
  */
 
 import { z } from "zod";
