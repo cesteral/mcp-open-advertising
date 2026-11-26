@@ -91,8 +91,9 @@ const IMPACT_PREVIEW_CAP = 5;
 
 /**
  * Returns `true` (allow) when `MCP_ELICIT_DESTRUCTIVE=skip` is set, when the
- * user accepts, or — for reversible operations only — when there is no
- * elicitation channel. Returns `false` when the user declines, and when an
+ * call carries a verified decision token with an `approvalId` (a person
+ * approved this exact call in governance), when the user accepts, or — for
+ * reversible operations only — when there is no elicitation channel. Returns `false` when the user declines, and when an
  * IRREVERSIBLE operation has no channel to confirm through.
  *
  * That last case is the change (sweep 2026-07-25, 05-F2). The no-channel branch
@@ -118,6 +119,16 @@ async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean
   // this posture is unaffected by the fail-closed branch below.
   if (shouldSkipElicitation()) {
     audit(opts, "skipped_by_env");
+    return true;
+  }
+
+  // A person already approved exactly this call in governance (B6): the
+  // decision token verified on this call (`actionHash` binds the executable
+  // args and contract, the `jti` is consumed once) and names an `approvalId`.
+  // That approval is the confirmation, so the in-client question is not asked
+  // again, irreversible or not, with a channel or without one.
+  if (hasGovernanceApproval()) {
+    audit(opts, "approved_by_governance");
     return true;
   }
 
@@ -176,6 +187,27 @@ async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean
     audit(opts, confirmed ? "accepted" : result.action === "cancel" ? "cancelled" : "declined");
   }
   return confirmed;
+}
+
+/**
+ * True only when the tool-handler factory verified a decision token on THIS
+ * call and that token names an `approvalId`. The factory sets `jti` and
+ * `approvalId` on the call's scope only for a verified verdict, in every token
+ * mode (a warn-mode token that fails verification sets neither), and mode
+ * `off` verifies nothing. A verified token without `approvalId` is a machine
+ * caller admitted by policy, not by a person, and does not count. A dry run
+ * never counts: it must not be confirmed by anyone. Outside a factory scope
+ * there is no verified token, so this is false.
+ */
+function hasGovernanceApproval(): boolean {
+  const scope = getRequestContext()?.confirmationAudit;
+  if (!scope || scope.dryRun) return false;
+  return (
+    typeof scope.jti === "string" &&
+    scope.jti.length > 0 &&
+    typeof scope.approvalId === "string" &&
+    scope.approvalId.length > 0
+  );
 }
 
 /**

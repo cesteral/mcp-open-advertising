@@ -79,7 +79,9 @@ afterEach(() => {
 describe("destructive_confirmation audit record", () => {
   it("accepted: one info record with the call's scope", async () => {
     const logger = fakeLogger();
-    const ok = await inScope(scope(logger, { jti: "jti-1", approvalId: "appr-1" }), () =>
+    // A verified token without an `approvalId` (a machine caller admitted by
+    // policy): the user is still asked, and the record carries the jti.
+    const ok = await inScope(scope(logger, { jti: "jti-1" }), () =>
       elicitDeleteConfirmation({
         entityLabel: "campaign",
         entityId: "123",
@@ -100,8 +102,79 @@ describe("destructive_confirmation audit record", () => {
       argsDigest: "d".repeat(64),
       principalTag: "tag-1",
       jti: "jti-1",
-      approvalId: "appr-1",
+      approvalId: undefined,
     });
+  });
+
+  it("approved_by_governance: a verified approval is the confirmation, nobody is asked", async () => {
+    const logger = fakeLogger();
+    const elicitInput = vi.fn();
+    const ok = await inScope(scope(logger, { jti: "jti-1", approvalId: "appr-1" }), () =>
+      elicitDeleteConfirmation({
+        entityLabel: "campaign",
+        entityId: "123",
+        sdkContext: { elicitInput },
+      })
+    );
+    expect(ok).toBe(true);
+    expect(elicitInput).not.toHaveBeenCalled();
+    const recs = records(logger);
+    expect(recs).toHaveLength(1);
+    expect(recs[0]).toMatchObject({
+      level: "info",
+      obj: {
+        outcome: "approved_by_governance",
+        irreversible: true,
+        jti: "jti-1",
+        approvalId: "appr-1",
+      },
+    });
+  });
+
+  it("approved_by_governance also holds with no elicitation channel, for reversible ops too", async () => {
+    const logger = fakeLogger();
+    const s = scope(logger, { jti: "jti-2", approvalId: "appr-2" });
+    expect(
+      await inScope(s, () => elicitArchiveConfirmation({ count: 1, entityLabel: "campaign" }))
+    ).toBe(true);
+    expect(
+      await inScope(s, () =>
+        elicitBulkStatusChangeConfirmation({ count: 3, entityLabel: "ad", targetStatus: "PAUSED" })
+      )
+    ).toBe(true);
+    expect(records(logger).map((r) => [r.obj.outcome, r.obj.irreversible])).toEqual([
+      ["approved_by_governance", true],
+      ["approved_by_governance", false],
+    ]);
+  });
+
+  it("no approval skip on a dry run, without a jti, or with an empty approvalId", async () => {
+    for (const extra of [
+      { jti: "jti-3", approvalId: "appr-3", dryRun: true },
+      { approvalId: "appr-3" },
+      { jti: "jti-3", approvalId: "" },
+    ]) {
+      const logger = fakeLogger();
+      const ok = await inScope(scope(logger, extra), () =>
+        elicitArchiveConfirmation({ count: 1, entityLabel: "campaign" })
+      );
+      expect(ok).toBe(false);
+      expect(records(logger).map((r) => r.obj.outcome)).toEqual(["refused_no_channel"]);
+    }
+  });
+
+  it("MCP_ELICIT_DESTRUCTIVE=skip is still evaluated first", async () => {
+    process.env[ENV_KEY] = "skip";
+    const logger = fakeLogger();
+    await inScope(scope(logger, { jti: "jti-4", approvalId: "appr-4" }), () =>
+      elicitDeleteConfirmation({ entityLabel: "campaign", entityId: "1" })
+    );
+    expect(records(logger).map((r) => r.obj.outcome)).toEqual(["skipped_by_env"]);
+  });
+
+  it("outside a factory scope there is no approval to honour", async () => {
+    const ok = await elicitArchiveConfirmation({ count: 1, entityLabel: "campaign" });
+    expect(ok).toBe(false);
   });
 
   it("declined: an explicit decline", async () => {
