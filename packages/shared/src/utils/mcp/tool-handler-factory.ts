@@ -1137,13 +1137,18 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             // What a confirmation's audit record needs about this call. On the
             // call's own request context, so `confirmDestructive` reads it and
             // none of its call sites change. Digests and tags only.
+            const dryRun = (validatedInput as { dry_run?: unknown } | null)?.dry_run === true;
             toolAlsContext.confirmationAudit = {
               logger,
               toolName: tool.name,
               argsDigest: digestArguments(rawToolArgs !== undefined ? rawToolArgs : args),
               principalTag: principalTag(requestStateKey, principalOf()),
               jti: idempotencyKey,
+              // Set only on a verified verdict (above): with `jti`, it is what
+              // lets `confirmDestructive` take a governance approval as the
+              // confirmation (B6). Never on a dry run.
               approvalId: verifiedApprovalId,
+              dryRun,
               isCarriedAnswer: (params) =>
                 round?.carried.has(requestKeyFor(params as ElicitParams)) ?? false,
             };
@@ -1154,7 +1159,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               elicitInput: round
                 ? createElicitInput({
                     round,
-                    dryRun: (validatedInput as { dry_run?: unknown } | null)?.dry_run === true,
+                    dryRun,
                     // The approval's nonce shares the governance store, under its own prefix.
                     consumeNonce: (nonce) =>
                       jtiStore.consumeOnce(

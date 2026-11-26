@@ -64,6 +64,9 @@ export function logDecisionTokenVerdict(
  *  - `allowed_no_channel`: a reversible operation, and the client cannot
  *    answer, so it went ahead unconfirmed (the permissive fallback).
  *  - `skipped_by_env`: `MCP_ELICIT_DESTRUCTIVE=skip`; nobody was asked.
+ *  - `approved_by_governance`: the call carries a decision token that verified
+ *    on this call and names an `approvalId`, so a person already approved
+ *    exactly this call in governance; nobody was asked again (B6).
  */
 export type DestructiveConfirmationOutcome =
   | "accepted"
@@ -71,7 +74,8 @@ export type DestructiveConfirmationOutcome =
   | "cancelled"
   | "refused_no_channel"
   | "allowed_no_channel"
-  | "skipped_by_env";
+  | "skipped_by_env"
+  | "approved_by_governance";
 
 /**
  * What the tool-handler factory knows about the call a confirmation belongs to.
@@ -87,9 +91,16 @@ export interface ConfirmationAuditScope {
   argsDigest: string;
   /** HMAC tag of the principal: the same tag a sealed `requestState` carries. */
   principalTag: string;
-  /** From a decision token that verified on this call; absent otherwise. */
+  /**
+   * From a decision token that verified on this call; absent otherwise. The
+   * factory sets them only on a verified verdict, in every token mode, so a
+   * non-empty `approvalId` here means a person approved exactly this call:
+   * `confirmDestructive` treats it as the confirmation (B6).
+   */
   jti?: string;
   approvalId?: string;
+  /** The call is a dry run: never confirmed, by a person or by governance. */
+  dryRun?: boolean;
   /**
    * True when the answer to this prompt was given in an EARLIER round and is
    * only carried forward in the sealed `requestState`. That decision was
@@ -110,7 +121,7 @@ export function logDestructiveConfirmation(
     action: string;
     outcome: DestructiveConfirmationOutcome;
     irreversible: boolean;
-    scope?: Omit<ConfirmationAuditScope, "logger" | "isCarriedAnswer">;
+    scope?: Omit<ConfirmationAuditScope, "logger" | "isCarriedAnswer" | "dryRun">;
   }
 ): void {
   const { action, outcome, irreversible, scope } = args;

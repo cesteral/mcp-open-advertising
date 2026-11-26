@@ -772,7 +772,9 @@ describe("confirmation audit across rounds", () => {
     expect(audits().map((r) => r.outcome)).toEqual(["skipped_by_env"]);
   });
 
-  it("a verified decision token's jti and approvalId are on the record, the token is not", async () => {
+  // With an `approvalId` the question is not asked at all (B6); that record is
+  // pinned in `governance-approval-confirms.test.ts`.
+  it("a verified decision token's jti is on the record, the token is not", async () => {
     const args = { entityId: "9" };
     const now = Math.floor(Date.now() / 1000);
     const token = await new jose.SignJWT({
@@ -785,7 +787,6 @@ describe("confirmation audit across rounds", () => {
         canonicalizeExecutableArgs({ rawArgs: args, exclude: ["dry_run"] })
       ),
       jti: "jti-audit-1",
-      approvalId: "approval-audit-1",
       iat: now - 5,
       exp: now + 3600,
     })
@@ -810,8 +811,8 @@ describe("confirmation audit across rounds", () => {
       outcome: "accepted",
       toolName: "mrtr_governed_delete",
       jti: "jti-audit-1",
-      approvalId: "approval-audit-1",
     });
+    expect(recs[0].approvalId).toBeUndefined();
     expect(JSON.stringify(lines)).not.toContain(token);
   });
 });

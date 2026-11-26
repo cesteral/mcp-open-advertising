@@ -10,9 +10,26 @@ One handler serves both eras. On a 2025-era connection the SDK's legacy shim sen
 
 No tool changed. The 51 confirmation call sites still call `elicit*Confirmation(...)` from `elicitation-helpers.ts`, which still calls `sdkContext.elicitInput(...)`. The factory supplies a different `elicitInput`: it answers from the retry's `inputResponses`, or throws `ConfirmationRequired`, which the factory turns into the `input_required` result. Code: `packages/shared/src/utils/mcp/confirmation-rounds.ts`, wired in `tool-handler-factory.ts`.
 
+## A governance approval is the confirmation (B6)
+
+On the governed path a person has already approved the write in governance, so the connector does not ask again. When the call carries a decision token that **verified on this call** and names an `approvalId`, `confirmDestructive` returns `true` without eliciting, for irreversible and reversible operations alike, and audits `approved_by_governance`. The token's `actionHash` binds the exact executable args and contract, and its `jti` is consumed once, so that approval covers exactly this call. In-client elicitation is for callers without one. This is what lets the Intelligence gateway, whose MCP client declares no elicitation capability, execute an approved irreversible write instead of getting `refused_no_channel`.
+
+The order in `confirmDestructive`: `MCP_ELICIT_DESTRUCTIVE=skip` first, as before; then the governance approval; then the no-channel and elicit branches. The factory puts the verified `jti` and `approvalId` on the call's `confirmationAudit` scope, only when the verdict is `ok`, in `warn` mode as in `enforce`, and `confirmDestructive` reads them there, so no call site changed.
+
+None of these skip:
+
+- no token;
+- a token that fails verification, in any mode (under `enforce` the call is rejected first; under `warn` it goes on and is asked or refused as today), including a token approved for different args;
+- a verified token without `approvalId`, which is a machine caller admitted by policy, not by a person;
+- token mode `off`, where nothing is verified;
+- a dry run, which still never prompts and never executes;
+- field elicitation (`ensureRequiredFieldValue` and other direct `elicitInput` calls), because a missing value is not a confirmation.
+
+Tests: `packages/shared/tests/utils/governance-approval-confirms.test.ts`, through the real factory on both eras.
+
 ## Capability, per request
 
-`elicitInput` exists only when the client can answer a form on **this** call: `_meta["io.modelcontextprotocol/clientCapabilities"]` (read from `ctx.mcpReq.envelope`) on a 2026-07-28 request, the `initialize`-time capabilities on a 2025-era one. A URL-only client (`elicitation: { url: {} }`) cannot answer a form. With no capability `elicitInput` is undefined, and an irreversible operation is **refused** unless `MCP_ELICIT_DESTRUCTIVE=skip`; a reversible one proceeds. That is unchanged. If the guard below cannot be installed, no channel is offered at all (same refusal, never a silent approval).
+`elicitInput` exists only when the client can answer a form on **this** call: `_meta["io.modelcontextprotocol/clientCapabilities"]` (read from `ctx.mcpReq.envelope`) on a 2026-07-28 request, the `initialize`-time capabilities on a 2025-era one. A URL-only client (`elicitation: { url: {} }`) cannot answer a form. With no capability `elicitInput` is undefined, and an irreversible operation is **refused** unless `MCP_ELICIT_DESTRUCTIVE=skip` or a verified governance approval (above); a reversible one proceeds. That is unchanged. If the guard below cannot be installed, no channel is offered at all (same refusal, never a silent approval).
 
 ## `requestState` is never trusted
 
@@ -35,7 +52,7 @@ The handler re-runs from the top, so the confirmation must not be a second way t
 
 ## Audit record
 
-Every confirmation decision leaves one Pino record, `component: "governance-audit"`, `event: "destructive_confirmation"`, beside the `decision_token_verification` record (`logDestructiveConfirmation` in `governance/audit.ts`). It carries the action text (passed through `redactSecretsInText`), `outcome`, `irreversible`, `toolName`, `argsDigest` (`digestArguments` of the raw arguments, the same digest `requestState` is bound to), `principalTag` (the HMAC tag sealed into `requestState`, so never the client id or fingerprint itself), and the `jti` / `approvalId` of a decision token that verified on this call. No raw arguments, no token, no answers. Outcomes: `accepted`, `declined` (including accepting without ticking the box), `cancelled`, `refused_no_channel` (irreversible, no form capability), `allowed_no_channel` (reversible, no form capability, the permissive fallback) and `skipped_by_env` (`MCP_ELICIT_DESTRUCTIVE=skip`). The two bypass-or-refusal outcomes `refused_no_channel` and `skipped_by_env` log at `warn`, the rest at `info`.
+Every confirmation decision leaves one Pino record, `component: "governance-audit"`, `event: "destructive_confirmation"`, beside the `decision_token_verification` record (`logDestructiveConfirmation` in `governance/audit.ts`). It carries the action text (passed through `redactSecretsInText`), `outcome`, `irreversible`, `toolName`, `argsDigest` (`digestArguments` of the raw arguments, the same digest `requestState` is bound to), `principalTag` (the HMAC tag sealed into `requestState`, so never the client id or fingerprint itself), and the `jti` / `approvalId` of a decision token that verified on this call. No raw arguments, no token, no answers. Outcomes: `accepted`, `declined` (including accepting without ticking the box), `cancelled`, `refused_no_channel` (irreversible, no form capability), `allowed_no_channel` (reversible, no form capability, the permissive fallback), `skipped_by_env` (`MCP_ELICIT_DESTRUCTIVE=skip`) and `approved_by_governance` (a verified decision token with an `approvalId`; the record carries its `jti` and `approvalId`). The two bypass-or-refusal outcomes `refused_no_channel` and `skipped_by_env` log at `warn`, the rest at `info`.
 
 The factory puts what the record needs on the call's own request context (`RequestContext.confirmationAudit`), and `confirmDestructive` reads it there, so none of the 51 call sites changed. **Exactly one record per decision, not per round:** a round that only asks throws `ConfirmationRequired` before the record is written; a replayed retry is asked again and so also writes nothing; and on a later round, an answer replayed from the sealed state (`ConfirmationRound.carried`, an answer given in an earlier round and not re-sent) is not recorded again, because the round that received it already did. SDK errors and the dry-run refusal propagate and are not decisions either.
 
