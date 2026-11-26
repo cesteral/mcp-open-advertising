@@ -58,7 +58,11 @@ const DOC_INPUTS = [
 
 const SANDBOX_GRAPHQL = "https://ext-api.sb.thetradedesk.com/graphql";
 const ctx = { requestId: "req" } as any;
-const sdk = { sessionId: "s" } as any;
+/** A client that accepts every confirmation, so a terminal operation goes ahead. */
+const sdk = {
+  sessionId: "s",
+  elicitInput: async () => ({ action: "accept", content: { confirm: true } }),
+} as any;
 
 describe("inspectBulkMutation", () => {
   it("finds the one variable and one operation in TTD's documented example", () => {

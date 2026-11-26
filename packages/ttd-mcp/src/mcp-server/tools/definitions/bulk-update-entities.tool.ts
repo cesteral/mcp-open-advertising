@@ -9,6 +9,8 @@ import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/paren
 import {
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -27,6 +29,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_update_entities";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update TTD Entities";
 const TOOL_DESCRIPTION = `Update multiple The Trade Desk entities of the same type in a single batch operation.
 
@@ -144,6 +148,13 @@ export async function bulkUpdateEntitiesLogic(
   assertBulkCapacityAll([capacityCheck]);
 
   const payloads = input.items.map((it) => it.data ?? {});
+  // An item that sets a terminal status (registry.json `terminalStatusValues`)
+  // turns the one prompt into an irreversible confirmation for the whole batch,
+  // listing those items; it is refused when the client cannot answer.
+  const terminalItems = findTerminalTransitions(
+    TERMINAL_STATUS_VALUES,
+    input.items.map((it) => ({ id: it.entityId, payload: it.data ?? {} }))
+  );
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
@@ -151,6 +162,7 @@ export async function bulkUpdateEntitiesLogic(
       "Applying field updates across multiple entities (partial PUT: only the sent fields change).",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
+    terminalItems,
     sdkContext,
   });
   if (!confirmed) {

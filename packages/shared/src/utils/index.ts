@@ -15,6 +15,7 @@ export { ConfirmationRequired } from "./mcp/confirmation-rounds.js";
 export * from "./mcp/cross-platform-prompts.js";
 export * from "./mcp/cross-platform-skills.js";
 export * from "./mcp/elicitation-helpers.js";
+export * from "./mcp/terminal-values.js";
 export * from "./mcp/governed-dry-run.js";
 export * from "./mcp/pagination.js";
 export * from "./mcp/prompt-handler-factory.js";

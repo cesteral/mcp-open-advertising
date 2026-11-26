@@ -69,7 +69,11 @@ import {
 } from "../../src/mcp-server/tools/definitions/manage-seed.tool.js";
 
 const ctx = { requestId: "r" } as any;
-const sdk = { sessionId: "s" } as any;
+/** A client that accepts every confirmation, so a terminal operation goes ahead. */
+const sdk = {
+  sessionId: "s",
+  elicitInput: async () => ({ action: "accept", content: { confirm: true } }),
+} as any;
 
 function effectAnnotation(tool: { annotations: { cesteral?: any } }) {
   return tool.annotations.cesteral;

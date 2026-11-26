@@ -93,6 +93,7 @@ describe("confirmDestructive (via elicitArchiveConfirmation)", () => {
       count: 3,
       entityLabel: "campaign",
       targetStatus: "PAUSED",
+      irreversible: false,
     });
     expect(result).toBe(true);
   });
@@ -331,6 +332,7 @@ describe("elicitBulkStatusChangeConfirmation", () => {
       count: 1,
       entityLabel: "campaign",
       targetStatus: "PAUSED",
+      irreversible: false,
       sdkContext: ctx,
     });
     expect(calls).toHaveLength(1);
@@ -342,6 +344,7 @@ describe("elicitBulkStatusChangeConfirmation", () => {
       count: 5,
       entityLabel: "ad group",
       targetStatus: "ARCHIVED",
+      irreversible: false,
       sdkContext: ctx,
     });
     const message = calls[0]!.message as string;
@@ -408,6 +411,7 @@ describe("impact preview", () => {
       count: 8,
       entityLabel: "campaign",
       targetStatus: "PAUSED",
+      irreversible: false,
       impactPreview: ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"],
       sdkContext: ctx,
     });
@@ -424,6 +428,7 @@ describe("impact preview", () => {
       count: 2,
       entityLabel: "campaign",
       targetStatus: "PAUSED",
+      irreversible: false,
       impactPreview: ["c1", "c2"],
       sdkContext: ctx,
     });

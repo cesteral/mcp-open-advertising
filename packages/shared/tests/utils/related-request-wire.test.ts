@@ -37,7 +37,11 @@ import {
   type ToolSdkContext,
 } from "../../src/utils/mcp/tool-handler-factory.js";
 import { extractZodShape } from "../../src/utils/mcp/zod-helpers.js";
-import { elicitDeleteConfirmation } from "../../src/utils/mcp/elicitation-helpers.js";
+import {
+  elicitDeleteConfirmation,
+  elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+} from "../../src/utils/mcp/elicitation-helpers.js";
 import { NO_UNTRUSTED_CONTENT } from "../../src/utils/mcp/untrusted-content.js";
 
 const PROTO = "2025-06-18";
@@ -107,6 +111,39 @@ const tools: ToolDefinitionForFactory[] = [
     ],
   },
 ];
+
+/** Items the terminal batch tool wrote, in order. Reset per test. */
+let batchWrites: string[] = [];
+
+tools.push({
+  // A bulk update where two of three items set a terminal status: one
+  // irreversible question for the whole batch, before any write.
+  name: "wire_terminal_batch",
+  title: "Wire Terminal Batch",
+  description: "Updates three items, two to a terminal status, after one confirmation.",
+  untrustedContent: NO_UNTRUSTED_CONTENT,
+  inputSchema: z.object({}),
+  annotations: { destructiveHint: true },
+  logic: async (_input: unknown, _context: unknown, sdkContext?: ToolSdkContext) => {
+    const items = [
+      { id: "a", payload: { status: "ARCHIVED" } },
+      { id: "b", payload: { name: "renamed" } },
+      { id: "c", payload: { status: "ARCHIVED" } },
+    ];
+    const confirmed = await elicitBulkMutationConfirmation({
+      count: items.length,
+      entityLabel: "ad",
+      summary: "Applying field updates.",
+      terminalItems: findTerminalTransitions(new Set(["ARCHIVED"]), items),
+      sdkContext,
+    });
+    if (confirmed) batchWrites.push(...items.map((it) => it.id));
+    return { confirmed };
+  },
+  responseFormatter: (r: { confirmed: boolean }) => [
+    { type: "text" as const, text: `confirmed=${r.confirmed}` },
+  ],
+});
 
 async function startServer(): Promise<{ http: McpHttpServer; baseUrl: string }> {
   const logger = pino({ level: "silent" });
@@ -388,6 +425,33 @@ describe("server→client messages ride the tools/call POST stream (#241)", () =
     expect(JSON.stringify(result.result)).toContain("first=true second=false");
     // Exactly two questions: the first was not asked again when the handler re-ran.
     expect(stream.received.filter((m) => m.method === "elicitation/create")).toHaveLength(2);
+    await stream.cancel();
+  });
+
+  it("a batch with terminal items asks exactly once, then writes every item", async () => {
+    batchWrites = [];
+    const sessionId = await openSession({ elicitation: { form: {} } });
+    const call = await post(
+      {
+        jsonrpc: "2.0",
+        id: 11,
+        method: "tools/call",
+        params: { name: "wire_terminal_batch", arguments: {} },
+      },
+      sessionId
+    );
+    const stream = new SseReader(call);
+    const q = await stream.until((m) => m.method === "elicitation/create", "the question");
+    expect(String(q.params?.message)).toContain("irreversible change to 2 of 3 ad(s)");
+    expect(batchWrites).toEqual([]);
+    await post(
+      { jsonrpc: "2.0", id: q.id, result: { action: "accept", content: { confirm: true } } },
+      sessionId
+    );
+    const result = await stream.until((m) => m.id === 11, "tools/call result");
+    expect(JSON.stringify(result.result)).toContain("confirmed=true");
+    expect(stream.received.filter((m) => m.method === "elicitation/create")).toHaveLength(1);
+    expect(batchWrites).toEqual(["a", "b", "c"]);
     await stream.cancel();
   });
 

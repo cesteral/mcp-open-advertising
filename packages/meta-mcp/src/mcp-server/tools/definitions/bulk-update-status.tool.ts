@@ -11,6 +11,8 @@ import {
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import {
   elicitBulkStatusChangeConfirmation,
+  isTerminalStatusValue,
+  terminalStatusValuesFor,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -28,6 +30,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_bulk_update_status";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update Meta Ads Entity Status";
 const TOOL_DESCRIPTION = `Batch update status for multiple Meta Ads entities.
 
@@ -145,6 +149,8 @@ export async function bulkUpdateStatusLogic(
     count: input.entityIds.length,
     entityLabel: input.entityType ?? "entity",
     targetStatus: input.status,
+    // A terminal target is confirmed as irreversible: refused with no channel.
+    irreversible: isTerminalStatusValue(TERMINAL_STATUS_VALUES, input.status),
     impactPreview: input.entityIds,
     sdkContext,
   });

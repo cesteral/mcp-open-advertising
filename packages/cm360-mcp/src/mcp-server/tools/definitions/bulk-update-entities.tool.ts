@@ -8,6 +8,8 @@ import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping
 import { assertCM360BulkCapacity, cm360BulkCapacityDryRunError } from "../utils/bulk-capacity.js";
 import {
   elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -26,6 +28,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_bulk_update_entities";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update CM360 Entities";
 const TOOL_DESCRIPTION = `Batch update multiple CM360 entities of the same type.
 
@@ -129,12 +133,20 @@ export async function bulkUpdateEntitiesLogic(
   assertCM360BulkCapacity(TOOL_NAME, "update", cm360Service.quotaUser, input.items.length);
 
   const payloads = input.items.map((it) => it.data ?? {});
+  // An item that sets a terminal status (registry.json `terminalStatusValues`)
+  // turns the one prompt into an irreversible confirmation for the whole batch,
+  // listing those items; it is refused when the client cannot answer.
+  const terminalItems = findTerminalTransitions(
+    TERMINAL_STATUS_VALUES,
+    input.items.map((it) => ({ id: it.entityId, payload: it.data ?? {} }))
+  );
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
     summary: "Applying partial field updates (PATCH) across multiple CM360 entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
+    terminalItems,
     sdkContext,
   });
   if (!confirmed) {

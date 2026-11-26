@@ -13,6 +13,9 @@ import {
 import { captureCm360Snapshot, snapshotFromCm360Entity } from "../utils/capture-snapshot.js";
 import {
   McpError,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -22,6 +25,8 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_update_entity";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Update CM360 Entity";
 const TOOL_DESCRIPTION = `Update a Campaign Manager 360 entity.
 
@@ -117,6 +122,18 @@ export async function updateEntityLogic(
       `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // A terminal status (registry.json `terminalStatusValues`) is a one-way door:
+  // confirm it as irreversible before the first write. An update that sets no
+  // terminal value does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: 1,
+    entityLabel: input.entityType,
+    terminalItems: findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+      { id: input.entityId, payload: input.data },
+    ]),
+    sdkContext,
+  });
 
   // R4-U2: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined.

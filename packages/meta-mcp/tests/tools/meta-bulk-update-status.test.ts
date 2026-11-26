@@ -36,8 +36,12 @@ function createMockContext() {
   } as any;
 }
 
+/** A client that accepts every confirmation, so a terminal operation goes ahead. */
 function createMockSdkContext(sessionId = "session-123") {
-  return { sessionId } as any;
+  return {
+    sessionId,
+    elicitInput: async () => ({ action: "accept", content: { confirm: true } }),
+  } as any;
 }
 
 // ---------------------------------------------------------------------------

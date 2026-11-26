@@ -136,6 +136,8 @@ export async function bulkUpdateStatusLogic(
     count: input.entityIds.length,
     entityLabel: input.entityType,
     targetStatus: input.operationStatus,
+    // Every status the schema offers can be set back: none is terminal here.
+    irreversible: false,
     impactPreview: input.entityIds,
     sdkContext,
   });

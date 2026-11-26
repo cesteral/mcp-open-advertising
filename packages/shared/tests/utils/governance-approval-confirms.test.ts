@@ -120,6 +120,7 @@ const statusTool: ToolDefinitionForFactory = {
       count: 3,
       entityLabel: "ad",
       targetStatus: "PAUSED",
+      irreversible: false,
       sdkContext: sdk,
     });
     if (confirmed) writes.push(`status:${input.entityId}`);

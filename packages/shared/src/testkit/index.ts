@@ -13,3 +13,4 @@
 export * from "./cross-server-contract.js";
 export * from "./schema-size.js";
 export * from "./server-card.js";
+export * from "./terminal-confirmation.js";

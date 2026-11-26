@@ -10,6 +10,10 @@ import { runGAdsUpdateDryRun, resolveGAdsDispatchedCapability } from "../utils/d
 import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
 import {
   McpError,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
+  restrictToUpdateMask,
   JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -19,6 +23,8 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_update_entity";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Update Google Ads Entity";
 const TOOL_DESCRIPTION = `Update an existing Google Ads entity using the :mutate API with updateMask discipline.
 
@@ -124,6 +130,18 @@ export async function updateEntityLogic(
       "`data` must contain at least one field to update a Google Ads entity."
     );
   }
+
+  // A terminal status (registry.json `terminalStatusValues`) is a one-way door:
+  // confirm it as irreversible before the first write. An update that sets no
+  // terminal value does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: 1,
+    entityLabel: input.entityType,
+    terminalItems: findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+      { id: input.entityId, payload: restrictToUpdateMask(input.data, input.updateMask) },
+    ]),
+    sdkContext,
+  });
 
   // R2-U3: capture pre-state before mutating. Best-effort — out-of-scope
   // entity types and read failures leave `before` undefined and consumers

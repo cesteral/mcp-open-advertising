@@ -8,6 +8,10 @@ import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import {
   assertGovernedEffectDryRun,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  restrictToUpdateMask,
+  terminalStatusValuesFor,
   EffectResultSchema,
   EffectDryRunResultSchema,
   DispatchedCapabilitySchema,
@@ -21,9 +25,12 @@ import type {
   DispatchedCapability,
   DryRunValidationError,
   CesteralWriteToolAnnotations,
+  TerminalTransitionItem,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_bulk_mutate";
+/** Google Ads' one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Mutate Google Ads Entities";
 const EFFECT_KIND = "bulk_mutation";
 const TOOL_DESCRIPTION = `Execute multiple create/update/remove operations in a single API call.
@@ -133,6 +140,16 @@ export async function bulkMutateLogic(
 
   const { gadsService } = resolveSessionServices(sdkContext);
 
+  // A `remove`, or an `update` whose mask sets status REMOVED, cannot be undone.
+  // Ask once for the whole batch, before the single :mutate call, listing those
+  // operations. A batch of creates and ordinary updates does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: input.operations.length,
+    entityLabel: `${input.entityType} operation`,
+    terminalItems: terminalOperationsOf(input.operations),
+    sdkContext,
+  });
+
   const result = await gadsService.bulkMutate(
     input.entityType as GAdsEntityType,
     input.customerId,
@@ -169,6 +186,42 @@ export async function bulkMutateLogic(
     effect,
     dispatchedCapability,
   };
+}
+
+/**
+ * The operations of a batch that cannot be undone: every `remove` (the effect
+ * of gads_remove_entity), and every `update` that sets a terminal status within
+ * its `updateMask`. Pure (no I/O).
+ */
+function terminalOperationsOf(
+  operations: ReadonlyArray<Record<string, any>>
+): TerminalTransitionItem[] {
+  const terminal: TerminalTransitionItem[] = [];
+  operations.forEach((op, i) => {
+    if (!op || typeof op !== "object") return;
+    if ("remove" in op) {
+      terminal.push({
+        id: typeof op.remove === "string" ? op.remove : `operations[${i}]`,
+        transitions: ["remove"],
+      });
+      return;
+    }
+    const update = op.update;
+    if (update && typeof update === "object") {
+      terminal.push(
+        ...findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+          {
+            id: typeof update.resourceName === "string" ? update.resourceName : `operations[${i}]`,
+            payload: restrictToUpdateMask(
+              update as Record<string, unknown>,
+              typeof op.updateMask === "string" ? op.updateMask : undefined
+            ),
+          },
+        ])
+      );
+    }
+  });
+  return terminal;
 }
 
 /**

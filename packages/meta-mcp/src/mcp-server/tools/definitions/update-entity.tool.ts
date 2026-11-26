@@ -19,6 +19,9 @@ import {
 } from "../utils/v26-targeting-warnings.js";
 import {
   McpError,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -32,6 +35,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_update_entity";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Update Meta Ads Entity";
 const TOOL_DESCRIPTION = `Update an existing Meta Ads entity.
 
@@ -141,6 +146,18 @@ export async function updateEntityLogic(
       `Invalid update payload: ${validationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // A terminal status (registry.json `terminalStatusValues`) is a one-way door:
+  // confirm it as irreversible before the first write. An update that sets no
+  // terminal value does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: 1,
+    entityLabel: input.entityType ?? "entity",
+    terminalItems: findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+      { id: input.entityId, payload: input.data },
+    ]),
+    sdkContext,
+  });
 
   // PR-D: capture pre-state before mutating. Best-effort — out-of-scope entity
   // types and read failures leave `before` undefined and consumers fall back

@@ -9,6 +9,8 @@ import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import {
   BulkOperationResultSchema,
   elicitBulkStatusChangeConfirmation,
+  isTerminalStatusValue,
+  terminalStatusValuesFor,
   assertGovernedEffectDryRun,
   EffectResultSchema,
   EffectDryRunResultSchema,
@@ -26,6 +28,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_bulk_update_status";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const EFFECT_KIND = "entity_statuses_updated";
 const TOOL_TITLE = "Bulk Update Entity Status";
 
@@ -202,6 +206,8 @@ export async function bulkUpdateStatusLogic(
     count: input.entityIds.length,
     entityLabel: input.entityType,
     targetStatus: input.status,
+    // A terminal target is confirmed as irreversible: refused with no channel.
+    irreversible: isTerminalStatusValue(TERMINAL_STATUS_VALUES, input.status),
     impactPreview: input.entityIds,
     sdkContext,
   });

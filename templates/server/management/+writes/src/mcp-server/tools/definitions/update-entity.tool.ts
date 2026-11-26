@@ -9,6 +9,9 @@
  * TODO(scaffold): implement the update call, a symbolic dry-run (see
  * pinterest-mcp's `runPinterestUpdateDryRun`), the `before`/`after` snapshots,
  * and a wire-request test that calls `updateEntityLogic` with only `fetch` stubbed.
+ * If `data` can set a status the platform cannot reverse, confirm it before the
+ * write with `assertTerminalTransitionsConfirmed` (or list the tool in
+ * scripts/lib/irreversible-confirmation-allowlist.json with the reason it cannot).
  */
 
 import { z } from "zod";

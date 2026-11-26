@@ -11,6 +11,9 @@ import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import {
   BulkOperationResultSchema,
   elicitBulkMutationConfirmation,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
+  restrictToUpdateMask,
   hasSensitiveBulkField,
   assertGovernedEffectDryRun,
   EffectResultSchema,
@@ -29,6 +32,8 @@ import type {
 } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_bulk_update_entities";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Bulk Update DV360 Entities";
 
 const TOOL_DESCRIPTION =
@@ -168,12 +173,23 @@ export async function bulkUpdateEntitiesLogic(
   assertBulkCapacityAll(capacityChecks);
 
   const payloads = input.items.map((it) => it.data ?? {});
+  // An item that sets a terminal status (registry.json `terminalStatusValues`)
+  // turns the one prompt into an irreversible confirmation for the whole batch,
+  // listing those items; it is refused when the client cannot answer.
+  const terminalItems = findTerminalTransitions(
+    TERMINAL_STATUS_VALUES,
+    input.items.map((it) => ({
+      id: it.entityId,
+      payload: restrictToUpdateMask(it.data ?? {}, it.updateMask),
+    }))
+  );
   const confirmed = await elicitBulkMutationConfirmation({
     count: input.items.length,
     entityLabel: input.entityType,
     summary: input.reason ?? "Applying field updates across multiple entities.",
     hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
     impactPreview: input.items.map((it) => it.entityId),
+    terminalItems,
     sdkContext,
   });
   if (!confirmed) {

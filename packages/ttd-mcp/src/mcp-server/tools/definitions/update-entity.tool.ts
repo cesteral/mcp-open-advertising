@@ -13,6 +13,9 @@ import {
 import { captureTtdSnapshot, snapshotFromTtdEntity } from "../utils/capture-snapshot.js";
 import {
   McpError,
+  assertTerminalTransitionsConfirmed,
+  findTerminalTransitions,
+  terminalStatusValuesFor,
   JsonRpcErrorCode,
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -22,6 +25,8 @@ import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_update_entity";
+/** This platform's one-way statuses, from registry.json (`terminalStatusValues`). */
+const TERMINAL_STATUS_VALUES = terminalStatusValuesFor(TOOL_NAME);
 const TOOL_TITLE = "Update TTD Entity";
 const TOOL_DESCRIPTION = `Update an existing The Trade Desk entity.
 
@@ -137,6 +142,18 @@ export async function updateEntityLogic(
       `Invalid update payload: ${updateValidationErrors.map((e) => e.message).join("; ")}`
     );
   }
+
+  // A terminal status (registry.json `terminalStatusValues`) is a one-way door:
+  // confirm it as irreversible before the first write. An update that sets no
+  // terminal value does not prompt.
+  await assertTerminalTransitionsConfirmed({
+    count: 1,
+    entityLabel: input.entityType,
+    terminalItems: findTerminalTransitions(TERMINAL_STATUS_VALUES, [
+      { id: input.entityId, payload: data },
+    ]),
+    sdkContext,
+  });
 
   const entity = await ttdService.updateEntity(
     input.entityType as TtdEntityType,

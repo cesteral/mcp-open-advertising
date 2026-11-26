@@ -139,7 +139,12 @@ describe("destructive_confirmation audit record", () => {
     ).toBe(true);
     expect(
       await inScope(s, () =>
-        elicitBulkStatusChangeConfirmation({ count: 3, entityLabel: "ad", targetStatus: "PAUSED" })
+        elicitBulkStatusChangeConfirmation({
+          count: 3,
+          entityLabel: "ad",
+          targetStatus: "PAUSED",
+          irreversible: false,
+        })
       )
     ).toBe(true);
     expect(records(logger).map((r) => [r.obj.outcome, r.obj.irreversible])).toEqual([
@@ -237,6 +242,7 @@ describe("destructive_confirmation audit record", () => {
         count: 3,
         entityLabel: "line item",
         targetStatus: "PAUSED",
+        irreversible: false,
       })
     );
     expect(ok).toBe(true);
